@@ -6,8 +6,22 @@ on:
     branches: [ master, pre-build ]
   pull_request:
     branches: [ master ]
+  workflow_dispatch:
 
 jobs:
+
+  arm-linux:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: pguyot/arm-runner-action@v2
+      with:
+        commands: |
+          apt update -y
+          apt install -y meson ninja libgtk-3-dev
+          meson setup builddir --buildtype=release --default-library=shared
+          ninja -C builddir --verbose
+
   meson-linux:
     strategy:
       fail-fast: false
