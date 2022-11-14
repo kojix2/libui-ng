@@ -25,6 +25,16 @@ jobs:
           pip3 install meson ninja
           meson setup builddir --buildtype=release --default-library=shared
           ninja -C builddir --verbose
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: Raspbian-aarch64-shared-release
+        path: |
+          !builddir/meson-out/*.p/
+          builddir/meson-out/*
+          ui_unix.h
+          ui.h
+          builddir/meson-logs/*.txt
 
   meson-linux:
     strategy:
