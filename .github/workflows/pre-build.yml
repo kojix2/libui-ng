@@ -25,6 +25,10 @@ jobs:
           pip3 install meson ninja
           meson setup builddir --buildtype=release --default-library=shared
           ninja -C builddir --verbose
+          tar -zcvf meson-out.tar.gz meson-out
+    - name: Extract compressed meson-out
+      run: |
+        gzip -d meson-out.tar.gz
     - name: Upload artifacts
       uses: actions/upload-artifact@v3
       with:
