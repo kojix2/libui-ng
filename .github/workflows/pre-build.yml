@@ -29,8 +29,8 @@ jobs:
           tar -zcvf builddir.tar.gz builddir
     - name: Extract compressed builddir
       run: |
-        ls -l
         gzip -d builddir.tar.gz
+        ls -l
     - name: Upload artifacts
       uses: actions/upload-artifact@v3
       with:
