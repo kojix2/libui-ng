@@ -27,10 +27,11 @@ jobs:
           ninja -C builddir --verbose
           ls
           tree
-          tar -zcvf meson-out.tar.gz builddir
+          tar -zcvf builddir.tar.gz builddir
     - name: Extract compressed builddir
       run: |
-        gzip -d meson-out.tar.gz
+        ls -l
+        gzip -d builddir.tar.gz
     - name: Upload artifacts
       uses: actions/upload-artifact@v3
       with:
