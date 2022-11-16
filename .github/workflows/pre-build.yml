@@ -17,6 +17,7 @@ jobs:
     - uses: pguyot/arm-runner-action@v2
       with:
         image_additional_mb: 1024
+        copy_artifact_path: builddir.tar.gz
         commands: |
           apt update -y
           apt upgrade -y
@@ -25,8 +26,6 @@ jobs:
           pip3 install meson ninja
           meson setup builddir --buildtype=release --default-library=shared
           ninja -C builddir --verbose
-          ls
-          tree
           tar -zcvf builddir.tar.gz builddir
     - name: Extract compressed builddir
       run: |
