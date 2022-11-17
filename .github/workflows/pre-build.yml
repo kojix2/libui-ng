@@ -3,7 +3,7 @@ name: CI
 
 on:
   push:
-    branches: [ master, pre-build, pre-build-1 ]
+    branches: [ master, pre-build ]
   pull_request:
     branches: [ master ]
   workflow_dispatch:
