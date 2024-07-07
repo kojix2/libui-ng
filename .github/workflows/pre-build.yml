@@ -1,0 +1,234 @@
+name: Pre-build + Release
+
+on:
+  push:
+    branches: [master, pre-build]
+    tags:
+      - "commit-*"
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  meson-linux:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm]
+        libtype: [static, shared]
+        buildtype: [release, debug]
+        include:
+          - os: ubuntu-latest
+            arch: x64
+          - os: ubuntu-24.04-arm
+            arch: arm64
+    runs-on: ${{ matrix.os }}
+    name: Ubuntu-${{ matrix.arch }}-${{ matrix.libtype }}
+    steps:
+      - name: Install Meson and Linux Deps
+        run: |
+          python3 -m pip install --upgrade pip setuptools wheel
+          pip3 install meson ninja
+          sudo apt-get update -y
+          sudo apt-get install -y libgtk-3-dev xvfb
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Meson Setup Build
+        run: meson setup builddir --buildtype=${{ matrix.buildtype }} --default-library=${{ matrix.libtype }}
+      - name: Ninja Build
+        run: ninja -C builddir --verbose
+      - name: Run Tests
+        run: xvfb-run meson test -C builddir --verbose
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Ubuntu-${{ matrix.arch }}-${{ matrix.libtype }}-${{ matrix.buildtype }}
+          # lib + header + examples + test + build-log
+          path: |
+            !builddir/meson-out/*.p/
+            builddir/meson-out/*
+            ui_unix.h
+            ui.h
+            builddir/meson-logs/*.txt
+
+  meson-windows:
+    strategy:
+      fail-fast: false
+      matrix:
+        # windows-latest, windows-2022
+        os: [windows-latest]
+        arch: [x86, x64]
+        libtype: [static, shared]
+        # debug, debugoptimized, release
+        buildtype: [release, debug]
+    runs-on: ${{ matrix.os }}
+    name: Win-${{ matrix.arch }}-${{ matrix.libtype }}
+    steps:
+      # Setup build env
+      - uses: actions/checkout@v4
+      - name: Install Meson+Ninja
+        run: |
+          python -m pip install --upgrade pip
+          pip install meson ninja
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: ${{ matrix.arch }}
+
+      - name: Meson Setup Build
+        shell: cmd
+        run: |
+          meson setup builddir --buildtype=${{ matrix.buildtype }} --default-library=${{ matrix.libtype }}
+          meson configure builddir -Dc_args="/MT" -Dcpp_args="/MT"
+      - name: Ninja Build
+        run: ninja -C builddir --verbose
+      - name: Run Tests
+        run: meson test -C builddir --verbose
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Win-${{ matrix.arch }}-${{ matrix.libtype }}-${{ matrix.buildtype }}
+          # lib + header + examples + test + build-log
+          path: |
+            !builddir/meson-out/*.p/
+            builddir/meson-out/libui.*
+            ui_windows.h
+            ui.h
+            builddir/meson-out/*.exe
+            builddir/meson-out/*.pdb
+            builddir/meson-logs/*.txt
+
+  meson-windows-mingw:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest]
+        arch: [x64]
+        # only support static
+        libtype: [static]
+        # debug, debugoptimized, release
+        buildtype: [release, debug]
+    runs-on: ${{ matrix.os }}
+    name: Mingw-${{ matrix.arch }}-${{ matrix.libtype }}
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      # Setup build env
+      - uses: msys2/setup-msys2@v2
+        with:
+          update: true
+          install: base-devel git
+          pacboy: toolchain:x meson:x
+      - uses: actions/checkout@v4
+      - name: Meson Setup Build
+        run: meson setup builddir --buildtype=${{ matrix.buildtype }} --default-library=static
+      - name: Ninja Build
+        run: ninja -C builddir --verbose
+      - name: Run Tests
+        run: meson test -C builddir --verbose
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Mingw-${{ matrix.arch }}-static-${{ matrix.buildtype }}
+          # lib + header + examples + test + build-log
+          path: |
+            builddir/meson-out/libui.a
+            ui_windows.h
+            ui.h
+            builddir/meson-out/*.exe
+            builddir/meson-logs/*.txt
+
+  meson-macos:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-13, macos-latest]
+        libtype: [static, shared]
+        # debug, debugoptimized, release
+        buildtype: [release, debug]
+        include:
+          - os: macos-13
+            arch: x64
+          - os: macos-latest
+            arch: arm64
+    runs-on: ${{ matrix.os }}
+    name: macOS-${{ matrix.arch }}-${{ matrix.libtype }}
+    steps:
+      - name: Install Meson and macOS Deps
+        run: |
+          brew update
+          brew install meson ninja
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Meson Setup Build
+        run: meson setup builddir --buildtype=${{ matrix.buildtype }} --default-library=${{ matrix.libtype }}
+      - name: Ninja Build
+        run: ninja -C builddir --verbose
+      - name: Run Tests
+        run: meson test -C builddir --verbose
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macOS-${{ matrix.arch }}-${{ matrix.libtype }}-${{ matrix.buildtype }}
+          # lib + header + examples + test + build-log
+          path: |
+            !builddir/meson-out/*.p/
+            builddir/meson-out/*
+            ui_darwin.h
+            ui.h
+            builddir/meson-logs/*.txt
+
+  # ------------------ Release Job ------------------
+  release:
+    needs: [meson-linux, meson-windows, meson-windows-mingw, meson-macos]
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: Create ZIP files for each platform
+        run: |
+          # Create directory for zip files
+          mkdir -p zips
+
+          # Create zip for Ubuntu builds
+          find dist/Ubuntu-* -type d -maxdepth 0 | while read dir; do
+            platform_name=$(basename "$dir")
+            (cd "dist/$platform_name" && zip -r "../../zips/$platform_name.zip" .)
+          done
+
+          # Create zip for Windows builds
+          find dist/Win-* -type d -maxdepth 0 | while read dir; do
+            platform_name=$(basename "$dir")
+            (cd "dist/$platform_name" && zip -r "../../zips/$platform_name.zip" .)
+          done
+
+          # Create zip for MinGW builds
+          find dist/Mingw-* -type d -maxdepth 0 | while read dir; do
+            platform_name=$(basename "$dir")
+            (cd "dist/$platform_name" && zip -r "../../zips/$platform_name.zip" .)
+          done
+
+          # Create zip for macOS builds
+          find dist/macOS-* -type d -maxdepth 0 | while read dir; do
+            platform_name=$(basename "$dir")
+            (cd "dist/$platform_name" && zip -r "../../zips/$platform_name.zip" .)
+          done
+
+          # List created zip files
+          ls -la zips/
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          files: |
+            zips/*.zip
