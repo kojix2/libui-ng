@@ -162,6 +162,7 @@ libui_libui = library('ui', libui_sources,
 	build_rpath: libui_rpath,
 	install_rpath: libui_rpath,
 	name_prefix: 'lib',		# always call it libui, even in Windows DLLs
+	name_suffix: libui_MSVC ? '.lib' : '.a',
 	install: true,
 	gnu_symbol_visibility: 'hidden',
 	c_args: ['-Dlibui_EXPORTS'],
