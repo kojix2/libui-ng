@@ -9,7 +9,7 @@ struct uiProgressBar {
 uiWindowsControlAllDefaults(uiProgressBar)
 
 // via http://msdn.microsoft.com/en-us/library/windows/desktop/dn742486.aspx#sizingandspacing
-#define pbarWidth 237
+#define pbarWidth 107
 #define pbarHeight 8
 
 static void uiProgressBarMinimumSize(uiWindowsControl *c, int *width, int *height)
