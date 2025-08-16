@@ -139,12 +139,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest]
+        os: [macos-13, macos-14]
         libtype: [static, shared]
         # debug, debugoptimized, release
         buildtype: [release, debug]
+        include:
+          - os: macos-13
+            arch: x64
+          - os: macos-14
+            arch: arm64
     runs-on: ${{ matrix.os }}
-    name: macOS-x64-${{ matrix.libtype }}
+    name: macOS-${{ matrix.arch }}-${{ matrix.libtype }}
     steps:
       - name: Install Meson and macOS Deps
         run: |
@@ -161,7 +166,7 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: macOS-x64-${{ matrix.libtype }}-${{ matrix.buildtype }}
+          name: macOS-${{ matrix.arch }}-${{ matrix.libtype }}-${{ matrix.buildtype }}
           # lib + header + examples + test + build-log
           path: |
             !builddir/meson-out/*.p/
