@@ -51,13 +51,14 @@ libui_sources += [
 	'darwin/window.m',
 	'darwin/winmoveresize.m',
 	'darwin/nstextfield.m',
+	'darwin/imageview.m',
 ]
 
 libui_deps += [
 	meson.get_compiler('objc').find_library('objc',
 		required: true),
 	dependency('appleframeworks',
-		modules: ['Foundation', 'AppKit'],
+		modules: ['Foundation', 'AppKit', 'QuartzCore'],
 		required: true),
 ]
 # the / is required by some older versions of OS X
