@@ -526,20 +526,29 @@ void uiDrawImage(uiDrawContext *c, uiImage *img, double x, double y, double widt
 	// Use render target DPI to guide bitmap creation
 	c->rt->GetDpi(&dpiX, &dpiY);
 
-	// For now we still select with NULL HDC; consider adding a DPI-aware selector
-	bitmap = uiprivImageAppropriateForDC(img, NULL);
+	// Try to get HDC from render target for better DPI awareness
+	HDC hdc = NULL;
+	ID2D1GdiInteropRenderTarget *gdiRT = NULL;
+	hr = c->rt->QueryInterface(__uuidof(ID2D1GdiInteropRenderTarget), (void**)&gdiRT);
+	if (SUCCEEDED(hr)) {
+		gdiRT->GetDC(D2D1_DC_INITIALIZE_MODE_COPY, &hdc);
+	}
+
+	bitmap = uiprivImageAppropriateForDC(img, hdc);
+	
+	// Release HDC and interface properly
+	if (gdiRT != NULL) {
+		if (hdc != NULL) {
+			gdiRT->ReleaseDC(NULL);
+		}
+		gdiRT->Release();
+	}
+
 	if (bitmap == NULL)
 		return;
 
-	// Provide DPI to D2D so scaling and sampling align to device-independent pixels
-	D2D1_BITMAP_PROPERTIES props = D2D1::BitmapProperties(
-		D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED),
-		dpiX, dpiY);
-
-	hr = c->rt->CreateBitmapFromWicBitmap(bitmap, &props, &d2dBitmap);
-
-	// Release WIC bitmap regardless of success/failure
-	bitmap->Release();
+	// Create D2D bitmap from WIC bitmap with proper DPI
+	hr = c->rt->CreateBitmapFromWicBitmap(bitmap, NULL, &d2dBitmap);
 
 	if (FAILED(hr)) {
 		logHRESULT(L"error creating D2D bitmap from WIC bitmap", hr);
