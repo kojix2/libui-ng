@@ -125,6 +125,13 @@ void areaDrawOnResize(uiArea *a, RECT *newClient)
 {
 	D2D1_SIZE_U size;
 
+	// Check if render target exists - it may be NULL after D2DERR_RECREATE_TARGET
+	if (a->rt == NULL) {
+		// Just invalidate the rect to trigger recreation on next paint
+		invalidateRect(a->hwnd, NULL, TRUE);
+		return;
+	}
+
 	size.width = newClient->right - newClient->left;
 	size.height = newClient->bottom - newClient->top;
 	// don't track the error; we'll get that in EndDraw()

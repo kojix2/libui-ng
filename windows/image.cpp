@@ -13,8 +13,10 @@ HRESULT uiprivInitImage(void)
 
 void uiprivUninitImage(void)
 {
-	uiprivWICFactory->Release();
-	uiprivWICFactory = NULL;
+	if (uiprivWICFactory != NULL) {
+		uiprivWICFactory->Release();
+		uiprivWICFactory = NULL;
+	}
 }
 
 struct uiImage {
@@ -65,15 +67,20 @@ void uiImageAppend(uiImage *i, void *pixels, int pixelWidth, int pixelHeight, in
 	hr = uiprivWICFactory->CreateBitmap(pixelWidth, pixelHeight,
 		formatForGDI, WICBitmapCacheOnDemand,
 		&b);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error calling CreateBitmap() in uiImageAppend()", hr);
+		return; // Failed to create bitmap, abort operation
+	}
 	r.X = 0;
 	r.Y = 0;
 	r.Width = pixelWidth;
 	r.Height = pixelHeight;
 	hr = b->Lock(&r, WICBitmapLockWrite, &l);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error calling Lock() in uiImageAppend()", hr);
+		b->Release();
+		return; // Failed to lock bitmap, abort operation
+	}
 
 	pix = (uint8_t *) pixels;
 	// TODO can size be NULL?
@@ -86,19 +93,10 @@ void uiImageAppend(uiImage *i, void *pixels, int pixelWidth, int pixelHeight, in
 		logHRESULT(L"error calling GetStride() in uiImageAppend()", hr);
 	for (y = 0; y < pixelHeight; y++) {
 		for (x = 0; x < pixelWidth * 4; x += 4) {
-			union {
-				uint32_t v32;
-				uint8_t v8[4];
-			} v;
-
-			v.v32 = ((uint32_t) (pix[x + 3])) << 24;
-			v.v32 |= ((uint32_t) (pix[x])) << 16;
-			v.v32 |= ((uint32_t) (pix[x + 1])) << 8;
-			v.v32 |= ((uint32_t) (pix[x + 2]));
-			data[x] = v.v8[0];
-			data[x + 1] = v.v8[1];
-			data[x + 2] = v.v8[2];
-			data[x + 3] = v.v8[3];
+			data[x] = pix[x + 2];
+			data[x + 1] = pix[x + 1];
+			data[x + 2] = pix[x];
+			data[x + 3] = pix[x + 3];
 		}
 		pix += byteStride;
 		data += realStride;
@@ -170,6 +168,27 @@ IWICBitmap *uiprivImageAppropriateForDC(uiImage *i, HDC dc)
 	// TODO explain this
 	m.targetX = MulDiv(i->width, GetDeviceCaps(dc, LOGPIXELSX), 96);
 	m.targetY = MulDiv(i->height, GetDeviceCaps(dc, LOGPIXELSY), 96);
+	m.foundLarger = false;
+	for (IWICBitmap *b : *(i->bitmaps))
+		match(b, &m);
+	return m.best;
+}
+
+// New function that takes DPI values directly instead of HDC
+// This avoids the need for GDI Interop and handles NULL HDC cases safely
+IWICBitmap *uiprivImageAppropriateForDPI(uiImage *i, float dpiX, float dpiY)
+{
+	struct matcher m;
+
+	if (i == NULL)
+		return NULL;
+
+	m.best = NULL;
+	m.distX = INT_MAX;
+	m.distY = INT_MAX;
+	// Use floating point calculation for better precision
+	m.targetX = (int)((i->width * dpiX) / 96.0f);
+	m.targetY = (int)((i->height * dpiY) / 96.0f);
 	m.foundLarger = false;
 	for (IWICBitmap *b : *(i->bitmaps))
 		match(b, &m);
@@ -278,4 +297,42 @@ fail:
 	}
 	src->Release();
 	return hr;
+}
+
+// Convert uiImage to ID2D1Bitmap for D2D1 rendering
+// Similar to uiprivImageAppropriateForDC but for D2D1 render targets
+extern "C" ID2D1Bitmap *uiprivImageToD2DBitmap(uiImage *img, ID2D1RenderTarget *rt)
+{
+	if (img == NULL || rt == NULL)
+		return NULL;
+
+	// Get render target DPI to select appropriate image size
+	FLOAT dpiX, dpiY;
+	rt->GetDpi(&dpiX, &dpiY);
+
+	// Find best matching bitmap size (similar to uiprivImageAppropriateForDC)
+	struct matcher m;
+	m.best = NULL;
+	m.distX = INT_MAX;
+	m.distY = INT_MAX;
+	// Scale target size based on DPI (similar to MulDiv logic in uiprivImageAppropriateForDC)
+	m.targetX = (int)((img->width * dpiX) / 96.0);
+	m.targetY = (int)((img->height * dpiY) / 96.0);
+	m.foundLarger = false;
+
+	for (IWICBitmap *b : *(img->bitmaps))
+		match(b, &m);
+
+	if (m.best == NULL)
+		return NULL;
+
+	// Create D2D1 bitmap from WIC bitmap
+	ID2D1Bitmap *d2dBitmap = NULL;
+	HRESULT hr = rt->CreateBitmapFromWicBitmap(m.best, NULL, &d2dBitmap);
+	if (hr != S_OK) {
+		logHRESULT(L"error calling CreateBitmapFromWicBitmap() in uiprivImageToD2DBitmap()", hr);
+		return NULL;
+	}
+
+	return d2dBitmap;
 }

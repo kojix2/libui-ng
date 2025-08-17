@@ -109,6 +109,7 @@ uiDrawContext *newContext(ID2D1RenderTarget *rt)
 
 	c = uiprivNew(uiDrawContext);
 	c->rt = rt;
+	c->currentClip = NULL;  // Initialize to prevent crash in freeContext()
 	c->states = new std::vector<struct drawState>;
 	resetTarget(c->rt);
 	return c;
@@ -523,23 +524,18 @@ void uiDrawImage(uiDrawContext *c, uiImage *img, double x, double y, double widt
 	if (c == NULL || img == NULL || width <= 0 || height <= 0)
 		return;
 
-	// Use render target DPI to guide bitmap creation
+	// Get DPI directly from render target - much simpler and more reliable
+	// than trying to use GDI Interop which fails on non-GDI-compatible targets
 	c->rt->GetDpi(&dpiX, &dpiY);
 
-	// For now we still select with NULL HDC; consider adding a DPI-aware selector
-	bitmap = uiprivImageAppropriateForDC(img, NULL);
+	// Use the new DPI-based function instead of the problematic HDC-based one
+	bitmap = uiprivImageAppropriateForDPI(img, dpiX, dpiY);
+
 	if (bitmap == NULL)
 		return;
 
-	// Provide DPI to D2D so scaling and sampling align to device-independent pixels
-	D2D1_BITMAP_PROPERTIES props = D2D1::BitmapProperties(
-		D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED),
-		dpiX, dpiY);
-
-	hr = c->rt->CreateBitmapFromWicBitmap(bitmap, &props, &d2dBitmap);
-
-	// Release WIC bitmap regardless of success/failure
-	bitmap->Release();
+	// Create D2D bitmap from WIC bitmap
+	hr = c->rt->CreateBitmapFromWicBitmap(bitmap, NULL, &d2dBitmap);
 
 	if (FAILED(hr)) {
 		logHRESULT(L"error creating D2D bitmap from WIC bitmap", hr);
