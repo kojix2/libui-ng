@@ -65,15 +65,20 @@ void uiImageAppend(uiImage *i, void *pixels, int pixelWidth, int pixelHeight, in
 	hr = uiprivWICFactory->CreateBitmap(pixelWidth, pixelHeight,
 		formatForGDI, WICBitmapCacheOnDemand,
 		&b);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error calling CreateBitmap() in uiImageAppend()", hr);
+		return; // Failed to create bitmap, abort operation
+	}
 	r.X = 0;
 	r.Y = 0;
 	r.Width = pixelWidth;
 	r.Height = pixelHeight;
 	hr = b->Lock(&r, WICBitmapLockWrite, &l);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error calling Lock() in uiImageAppend()", hr);
+		b->Release();
+		return; // Failed to lock bitmap, abort operation
+	}
 
 	pix = (uint8_t *) pixels;
 	// TODO can size be NULL?
@@ -278,4 +283,42 @@ fail:
 	}
 	src->Release();
 	return hr;
+}
+
+// Convert uiImage to ID2D1Bitmap for D2D1 rendering
+// Similar to uiprivImageAppropriateForDC but for D2D1 render targets
+ID2D1Bitmap *uiprivImageToD2DBitmap(uiImage *img, ID2D1RenderTarget *rt)
+{
+	if (img == NULL || rt == NULL)
+		return NULL;
+
+	// Get render target DPI to select appropriate image size
+	FLOAT dpiX, dpiY;
+	rt->GetDpi(&dpiX, &dpiY);
+	
+	// Find best matching bitmap size (similar to uiprivImageAppropriateForDC)
+	struct matcher m;
+	m.best = NULL;
+	m.distX = INT_MAX;
+	m.distY = INT_MAX;
+	// Scale target size based on DPI (similar to MulDiv logic in uiprivImageAppropriateForDC)
+	m.targetX = (int)((img->width * dpiX) / 96.0);
+	m.targetY = (int)((img->height * dpiY) / 96.0);
+	m.foundLarger = false;
+	
+	for (IWICBitmap *b : *(img->bitmaps))
+		match(b, &m);
+	
+	if (m.best == NULL)
+		return NULL;
+
+	// Create D2D1 bitmap from WIC bitmap
+	ID2D1Bitmap *d2dBitmap = NULL;
+	HRESULT hr = rt->CreateBitmapFromWicBitmap(m.best, NULL, &d2dBitmap);
+	if (hr != S_OK) {
+		logHRESULT(L"error calling CreateBitmapFromWicBitmap() in uiprivImageToD2DBitmap()", hr);
+		return NULL;
+	}
+	
+	return d2dBitmap;
 }

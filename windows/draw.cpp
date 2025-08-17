@@ -11,7 +11,7 @@
 static const GUID uipriv_IID_ID2D1Factory1 = { 0xbb12d362, 0xdaee, 0x4b9a, { 0xaa, 0x1d, 0x14, 0xba, 0x40, 0x1c, 0xfa, 0x1f } };
 
 // Detect D2D 1.1 support for cubic interpolation
-static bool uiprivD2DSupportsFactory1(ID2D1RenderTarget *rt)
+bool uiprivD2DSupportsFactory1(ID2D1RenderTarget *rt)
 {
 	if (!rt)
 		return false;
@@ -538,38 +538,17 @@ void uiDrawRestore(uiDrawContext *c)
 
 void uiDrawImage(uiDrawContext *c, uiImage *img, double x, double y, double width, double height)
 {
-	IWICBitmap *bitmap;
 	ID2D1Bitmap *d2dBitmap;
 	D2D1_RECT_F destRect;
 	ID2D1Layer *cliplayer;
-	FLOAT dpiX = 96.0f, dpiY = 96.0f;
-	HRESULT hr;
 
 	if (c == NULL || img == NULL || width <= 0 || height <= 0)
 		return;
 
-	// Use render target DPI to guide bitmap creation
-	c->rt->GetDpi(&dpiX, &dpiY);
-
-	// For now we still select with NULL HDC; consider adding a DPI-aware selector
-	bitmap = uiprivImageAppropriateForDC(img, NULL);
-	if (bitmap == NULL)
+	// Use safe DPI-aware bitmap selection
+	d2dBitmap = uiprivImageToD2DBitmap(img, c->rt);
+	if (d2dBitmap == NULL)
 		return;
-
-	// Provide DPI to D2D so scaling and sampling align to device-independent pixels
-	D2D1_BITMAP_PROPERTIES props = D2D1::BitmapProperties(
-		D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED),
-		dpiX, dpiY);
-
-	hr = c->rt->CreateBitmapFromWicBitmap(bitmap, &props, &d2dBitmap);
-
-	// Release WIC bitmap regardless of success/failure
-	bitmap->Release();
-
-	if (FAILED(hr)) {
-		logHRESULT(L"error creating D2D bitmap from WIC bitmap", hr);
-		return;
-	}
 
 	destRect.left = (FLOAT)x;
 	destRect.top = (FLOAT)y;

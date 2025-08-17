@@ -3232,6 +3232,61 @@ _UI_EXTERN void uiFreeImage(uiImage *i);
  */
 _UI_EXTERN void uiImageAppend(uiImage *i, void *pixels, int pixelWidth, int pixelHeight, int byteStride);
 
+
+/**
+ * A control to display an image.
+ *
+ * Copy-owned semantics: SetImage() copies or retains an internal native image.
+ * Caller may free the source uiImage right after calling SetImage().
+ *
+ * @struct uiImageView
+ * @extends uiControl
+ * @ingroup static
+ */
+typedef struct uiImageView uiImageView;
+#define uiImageView(this) ((uiImageView *)(this))
+
+/**
+ * Content modes for image display.
+ *
+ * @enum uiImageViewContentMode
+ */
+_UI_ENUM(uiImageViewContentMode) {
+	uiImageViewContentCenter = 0, //!< 1:1 center, may clip or leave margins
+	uiImageViewContentFit,        //!< aspect-fit (letterbox)
+	uiImageViewContentFill,       //!< aspect-fill (crop)
+};
+
+/**
+ * Creates a new image view control.
+ *
+ * @returns A new uiImageView instance.
+ * @memberof uiImageView @static
+ */
+_UI_EXTERN uiImageView* uiNewImageView(void);
+
+/**
+ * Sets the image to display.
+ *
+ * Internally keeps its own native image for display.
+ * The caller may destroy the source uiImage after this call.
+ * Replacing the image frees the previous internal copy automatically.
+ *
+ * @param iv uiImageView instance.
+ * @param image Image to display, `NULL` to clear.
+ * @memberof uiImageView
+ */
+_UI_EXTERN void uiImageViewSetImage(uiImageView* iv, const uiImage* image);
+
+/**
+ * Sets the scaling/content mode.
+ *
+ * @param iv uiImageView instance.
+ * @param mode Content mode to set. [Default: `uiImageViewContentFit`]
+ * @memberof uiImageView
+ */
+_UI_EXTERN void uiImageViewSetContentMode(uiImageView* iv, uiImageViewContentMode mode);
+
 /**
  * @addtogroup table
  * @{
