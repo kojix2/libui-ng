@@ -41,6 +41,10 @@ void uiImageAppend(uiImage *i, void *pixels, int pixelWidth, int pixelHeight, in
 		bytesPerRow:0
 		bitsPerPixel:32];
 
+	if (repCalibrated == nil) {
+		return; // Failed to create bitmap representation, abort operation
+	}
+
 	// Apple doesn't explicitly document this, but we apparently need to use native system endian for the data :|
 	// TODO split this into a utility routine?
 	// TODO find proper documentation

@@ -64,6 +64,7 @@ libui_sources += [
 	'windows/window.cpp',
 	'windows/winpublic.cpp',
 	'windows/winutil.cpp',
+	'windows/imageview.cpp',
 ]
 
 # resources.rc only contains the libui manifest.
