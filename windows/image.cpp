@@ -204,6 +204,27 @@ IWICBitmap *uiprivImageAppropriateForDC(uiImage *i, HDC dc)
 	return m.best;
 }
 
+// New function that takes DPI values directly instead of HDC
+// This avoids the need for GDI Interop and handles NULL HDC cases safely
+IWICBitmap *uiprivImageAppropriateForDPI(uiImage *i, float dpiX, float dpiY)
+{
+	struct matcher m;
+
+	if (i == NULL)
+		return NULL;
+
+	m.best = NULL;
+	m.distX = INT_MAX;
+	m.distY = INT_MAX;
+	// Use floating point calculation for better precision
+	m.targetX = (int)((i->width * dpiX) / 96.0f);
+	m.targetY = (int)((i->height * dpiY) / 96.0f);
+	m.foundLarger = false;
+	for (IWICBitmap *b : *(i->bitmaps))
+		match(b, &m);
+	return m.best;
+}
+
 // TODO this needs to center images if the given size is not the same aspect ratio
 HRESULT uiprivWICToGDI(IWICBitmap *b, HDC dc, int width, int height, HBITMAP *hb)
 {
