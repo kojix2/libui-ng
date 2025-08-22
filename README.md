@@ -1,5 +1,18 @@
 # libui-ng: a portable GUI library for C
 
+---
+
+## Unofficial libui-ng Build by kojix2
+
+- This repository uses [GitHub Actions](.github/workflows/pre-build.yml) to build and distribute libui-ng binaries.
+- Our primary focus is on building and distribution rather than development. 
+- As a result, pre-build branches may be frequently rebased and force-pushed.
+- For details about the changes included in each build, please refer to the tags associated with each release.
+
+### See [Releases](https://github.com/kojix2/libui-ng/releases)
+
+---
+
 Fork of [andlabs/libui](https://github.com/andlabs/libui). This README is being written.<br>
 [![Build Status, GitHub Actions](https://github.com/libui-ng/libui-ng/actions/workflows/build.yml/badge.svg)](https://github.com/libui-ng/libui-ng/actions/workflows/build.yml)
 [![GitLab](https://img.shields.io/badge/gitlab-%23181717.svg?style=for-the-badge&logo=gitlab&logoColor=white)](https://gitlab.com/libui-ng/libui-ng)
