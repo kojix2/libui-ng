@@ -49,6 +49,7 @@ libui_sources += [
 	'darwin/window.m',
 	'darwin/winmoveresize.m',
 	'darwin/nstextfield.m',
+	'darwin/imageview.m',
 ]
 
 libui_deps += [
