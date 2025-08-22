@@ -148,9 +148,59 @@ cairo_surface_t *uiprivImageAppropriateSurface(uiImage *i, GtkWidget *w)
 	m.best = NULL;
 	m.distX = G_MAXINT;
 	m.distY = G_MAXINT;
-	m.targetX = i->width * gtk_widget_get_scale_factor(w);
-	m.targetY = i->height * gtk_widget_get_scale_factor(w);
+	
+	// Use logical size for matching
+	m.targetX = i->width;
+	m.targetY = i->height;
 	m.foundLarger = FALSE;
 	g_ptr_array_foreach(i->images, match, &m);
+	
+	// Return the best match without copying (original contract)
 	return m.best;
+}
+
+cairo_surface_t *uiprivImageCopyAppropriateSurface(uiImage *i, GtkWidget *w)
+{
+	struct matcher m;
+	cairo_surface_t *copy;
+	cairo_t *cr;
+	int width, height;
+	cairo_format_t format;
+
+	m.best = NULL;
+	m.distX = G_MAXINT;
+	m.distY = G_MAXINT;
+	
+	// Use logical size for matching
+	m.targetX = i->width;
+	m.targetY = i->height;
+	m.foundLarger = FALSE;
+	g_ptr_array_foreach(i->images, match, &m);
+	
+	if (m.best == NULL)
+		return NULL;
+
+	// Create a copy of the surface to ensure copy-owned semantics
+	width = cairo_image_surface_get_width(m.best);
+	height = cairo_image_surface_get_height(m.best);
+	format = cairo_image_surface_get_format(m.best);
+	
+	copy = cairo_image_surface_create(format, width, height);
+	if (cairo_surface_status(copy) != CAIRO_STATUS_SUCCESS) {
+		cairo_surface_destroy(copy);
+		return NULL;
+	}
+	
+	cr = cairo_create(copy);
+	if (cairo_status(cr) != CAIRO_STATUS_SUCCESS) {
+		cairo_destroy(cr);
+		cairo_surface_destroy(copy);
+		return NULL;
+	}
+	
+	cairo_set_source_surface(cr, m.best, 0, 0);
+	cairo_paint(cr);
+	cairo_destroy(cr);
+	
+	return copy;
 }
