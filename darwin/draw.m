@@ -454,3 +454,64 @@ void uiDrawRestore(uiDrawContext *c)
 {
 	CGContextRestoreGState(c->c);
 }
+
+void uiDrawImage(uiDrawContext *c, uiImage *img, double x, double y, double width, double height)
+{
+	NSImage *nsimg;
+	NSImage *copyImg;
+	NSGraphicsContext *nsctx;
+	NSRect destRect;
+	NSDictionary *hints;
+	NSAffineTransform *ctmTransform;
+	BOOL respectFlipped;
+	NSCompositingOperation operation;
+
+	if (c == NULL || img == NULL || width <= 0 || height <= 0)
+		return;
+
+	nsimg = uiprivImageNSImage(img);
+	if (nsimg == NULL)
+		return;
+
+	// Create a copy to ensure copy semantics (consistent with Windows behavior)
+	copyImg = [nsimg copy];
+	if (copyImg == NULL)
+		return;
+
+	// Use NSImage's high-level API for automatic representation selection and coordinate handling
+	nsctx = [NSGraphicsContext currentContext];
+	respectFlipped = [nsctx isFlipped];
+
+	// Pass CTM to NSImage for optimal @2x/@3x representation selection
+	ctmTransform = [NSAffineTransform transform];
+	{
+		CGAffineTransform ctm = CGContextGetCTM(c->c);
+		NSAffineTransformStruct ts = { ctm.a, ctm.b, ctm.c, ctm.d, ctm.tx, ctm.ty };
+		[ctmTransform setTransformStruct:ts];
+	}
+
+	hints = @{
+		NSImageHintCTM: ctmTransform,
+		NSImageHintInterpolation: @(NSImageInterpolationHigh)
+	};
+
+	// Runtime compatibility for compositing operation
+	if (@available(macOS 10.10, *)) {
+		operation = NSCompositingOperationSourceOver;
+	} else {
+		operation = NSCompositeSourceOver;
+	}
+
+	destRect = NSMakeRect(x, y, width, height);
+
+	// Draw entire image (NSZeroRect) with full opacity (1.0), preserving pixel alpha
+	[copyImg drawInRect:destRect
+	          fromRect:NSZeroRect
+	         operation:operation
+	          fraction:1.0
+	   respectFlipped:respectFlipped
+	            hints:hints];
+
+	// Release the copied image
+	[copyImg release];
+}

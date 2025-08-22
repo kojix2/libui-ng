@@ -2043,6 +2043,7 @@ typedef struct uiAreaMouseEvent uiAreaMouseEvent;
 typedef struct uiAreaKeyEvent uiAreaKeyEvent;
 
 typedef struct uiDrawContext uiDrawContext;
+typedef struct uiImage uiImage;
 
 struct uiAreaHandler {
 	void (*Draw)(uiAreaHandler *, uiArea *, uiAreaDrawParams *);
@@ -2726,6 +2727,26 @@ _UI_EXTERN void uiDrawFreeTextLayout(uiDrawTextLayout *tl);
 // uiDrawText() draws tl in c with the top-left point of tl at (x, y).
 _UI_EXTERN void uiDrawText(uiDrawContext *c, uiDrawTextLayout *tl, double x, double y);
 
+/**
+ * Draws an image on the drawing context.
+ *
+ * The image will be scaled to fit the specified width and height.
+ * The function automatically selects the most appropriate image representation
+ * based on the current display's pixel density and scaling factor.
+ *
+ * Copy semantics: This function creates an internal copy of the image data
+ * for drawing purposes. The caller may safely free or modify the source
+ * uiImage immediately after this function returns.
+ *
+ * @param c Drawing context.
+ * @param img Image to draw. Must not be NULL.
+ * @param x X coordinate of the top-left corner.
+ * @param y Y coordinate of the top-left corner.
+ * @param width Width to draw the image. Must be positive.
+ * @param height Height to draw the image. Must be positive.
+ */
+_UI_EXTERN void uiDrawImage(uiDrawContext *c, uiImage *img, double x, double y, double width, double height);
+
 // uiDrawTextLayoutExtents() returns the width and height of tl
 // in width and height. The returned width may be smaller than
 // the width passed into uiDrawNewTextLayout() depending on
@@ -3171,7 +3192,6 @@ _UI_EXTERN uiGrid *uiNewGrid(void);
  * @struct uiImage
  * @ingroup static
  */
-typedef struct uiImage uiImage;
 
 /**
  * Creates a new image container.
