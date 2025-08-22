@@ -118,6 +118,7 @@ uiDrawContext *newContext(ID2D1RenderTarget *rt)
 
 	c = uiprivNew(uiDrawContext);
 	c->rt = rt;
+	c->currentClip = NULL;  // Initialize to prevent crash in freeContext()
 	c->states = new std::vector<struct drawState>;
 	resetTarget(c->rt);
 	return c;
@@ -558,4 +559,50 @@ void uiDrawRestore(uiDrawContext *c)
 		c->currentClip->Release();
 	// no need to explicitly addref or release; just transfer the ref
 	c->currentClip = state.clip;
+}
+
+
+void uiDrawImage(uiDrawContext *c, uiImage *img, double x, double y, double width, double height)
+{
+	IWICBitmap *bitmap;
+	ID2D1Bitmap *d2dBitmap;
+	D2D1_RECT_F destRect;
+	ID2D1Layer *cliplayer;
+	FLOAT dpiX = 96.0f, dpiY = 96.0f;
+	HRESULT hr;
+
+	if (c == NULL || img == NULL || width <= 0 || height <= 0)
+		return;
+
+	// Get DPI directly from render target - much simpler and more reliable
+	// than trying to use GDI Interop which fails on non-GDI-compatible targets
+	c->rt->GetDpi(&dpiX, &dpiY);
+
+	// Use the new DPI-based function instead of the problematic HDC-based one
+	bitmap = uiprivImageAppropriateForDPI(img, dpiX, dpiY);
+
+	if (bitmap == NULL)
+		return;
+
+	// Create D2D bitmap from WIC bitmap
+	hr = c->rt->CreateBitmapFromWicBitmap(bitmap, NULL, &d2dBitmap);
+
+	if (FAILED(hr)) {
+		logHRESULT(L"error creating D2D bitmap from WIC bitmap", hr);
+		return;
+	}
+
+	destRect.left = (FLOAT)x;
+	destRect.top = (FLOAT)y;
+	destRect.right = (FLOAT)(x + width);
+	destRect.bottom = (FLOAT)(y + height);
+
+	cliplayer = applyClip(c);
+
+	c->rt->DrawBitmap(d2dBitmap, &destRect, 1.0f,
+	                  D2D1_BITMAP_INTERPOLATION_MODE_LINEAR, NULL);
+
+	unapplyClip(c, cliplayer);
+
+	d2dBitmap->Release();
 }

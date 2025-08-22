@@ -489,3 +489,74 @@ void uiDrawRestore(uiDrawContext *c)
 {
 	CGContextRestoreGState(c->c);
 }
+
+void uiDrawImage(uiDrawContext *c, uiImage *img, double x, double y, double width, double height)
+{
+	NSImage *nsimg;
+	CGImageRef cgimg;
+	CGRect destRect;
+	NSRect proposedRect;
+	NSDictionary *hints;
+	NSGraphicsContext *nsctx;
+	NSAffineTransform *ctmTransform;
+
+	// Enhanced parameter validation
+	if (c == NULL || img == NULL || width <= 0 || height <= 0)
+		return;
+
+	// Get NSImage from uiImage
+	nsimg = uiprivImageNSImage(img);
+	if (nsimg == NULL)
+		return;
+
+	// Set proposed rectangle for appropriate representation selection
+	proposedRect = NSMakeRect(0, 0, width, height);
+	
+	// Try to get current NSGraphicsContext for better image selection
+	nsctx = [NSGraphicsContext currentContext];
+	
+	// Build an NSAffineTransform from the CGContext CTM (safe, no pointer punning)
+	ctmTransform = [NSAffineTransform transform];
+	{
+		CGAffineTransform ctm = CGContextGetCTM(c->c);
+		NSAffineTransformStruct ts = { ctm.a, ctm.b, ctm.c, ctm.d, ctm.tx, ctm.ty };
+		[ctmTransform setTransformStruct:ts];
+	}
+	
+	// Create hints for better image representation selection
+	hints = @{
+		NSImageHintCTM: ctmTransform,
+		NSImageHintInterpolation: @(NSImageInterpolationHigh)
+	};
+	
+	// Get CGImage with proper size hints for best representation
+	cgimg = [nsimg CGImageForProposedRect:&proposedRect 
+	                              context:nsctx 
+	                                hints:hints];
+	if (cgimg == NULL)
+		return;
+
+	// Set destination rectangle (use coordinates as-is, consistent with other drawing functions)
+	destRect = CGRectMake(x, y, width, height);
+
+	// Save graphics state
+	CGContextSaveGState(c->c);
+
+	// Set high-quality interpolation for smooth scaling
+	CGContextSetInterpolationQuality(c->c, kCGInterpolationHigh);
+	
+	// Set alpha blending mode for proper transparency handling
+	CGContextSetBlendMode(c->c, kCGBlendModeNormal);
+
+	// Apply Y-axis flip transformation for flipped coordinate system
+	// This corrects image orientation in NSView with isFlipped = YES
+	CGContextTranslateCTM(c->c, 0, y + height);
+	CGContextScaleCTM(c->c, 1.0, -1.0);
+	CGContextTranslateCTM(c->c, 0, -y);
+
+	// Draw the image
+	CGContextDrawImage(c->c, destRect, cgimg);
+
+	// Restore graphics state
+	CGContextRestoreGState(c->c);
+}
