@@ -172,7 +172,7 @@ extern IWICImagingFactory *uiprivWICFactory;
 extern HRESULT uiprivInitImage(void);
 extern void uiprivUninitImage(void);
 extern IWICBitmap *uiprivImageAppropriateForDC(uiImage *i, HDC dc);
+extern IWICBitmap *uiprivImageAppropriateForDPI(uiImage *i, float dpiX, float dpiY);
 extern HRESULT uiprivWICToGDI(IWICBitmap *b, HDC dc, int width, int height, HBITMAP *hb);
 
 #endif
-
