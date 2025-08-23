@@ -231,7 +231,6 @@ struct uiGrid {
 	return uiDarwinPaddingAmount(NULL);
 }
 
-// LONGTERM stop early if all controls are hidden
 - (void)establishOurConstraints
 {
 	gridChild *gc;
@@ -254,6 +253,18 @@ struct uiGrid {
 	[self removeOurConstraints];
 	if ([self->children count] == 0)
 		return;
+	
+	// stop early if all controls are hidden
+	BOOL hasVisibleChildren = NO;
+	for (gc in self->children) {
+		if (uiControlVisible(gc.c)) {
+			hasVisibleChildren = YES;
+			break;
+		}
+	}
+	if (!hasVisibleChildren)
+		return;
+	
 	padding = [self paddingAmount];
 
 	// first, figure out the minimum and maximum row and column numbers
@@ -519,7 +530,77 @@ struct uiGrid {
 		uiDarwinControlSetHuggingPriority(uiDarwinControl(gc.c), priority, NSLayoutConstraintOrientationVertical);
 	}
 
-	// TODO make all expanding rows/columns the same height/width
+	// make all expanding rows/columns the same height/width
+	// first, find the first expanding column and row for reference
+	int firstExpandingCol = -1, firstExpandingRow = -1;
+	for (x = 0; x < xcount; x++) {
+		if (hexpand[x]) {
+			firstExpandingCol = x;
+			break;
+		}
+	}
+	for (y = 0; y < ycount; y++) {
+		if (vexpand[y]) {
+			firstExpandingRow = y;
+			break;
+		}
+	}
+	
+	// make all other expanding columns the same width as the first
+	if (firstExpandingCol != -1) {
+		for (x = firstExpandingCol + 1; x < xcount; x++) {
+			if (hexpand[x]) {
+				// find representative views for width constraint
+				NSView *firstColView = nil, *thisColView = nil;
+				for (y = 0; y < ycount; y++) {
+					if (firstColView == nil && !gspan[y][firstExpandingCol])
+						firstColView = gv[y][firstExpandingCol];
+					if (thisColView == nil && !gspan[y][x])
+						thisColView = gv[y][x];
+					if (firstColView != nil && thisColView != nil)
+						break;
+				}
+				if (firstColView != nil && thisColView != nil) {
+					c = uiprivMkConstraint(firstColView, NSLayoutAttributeWidth,
+						NSLayoutRelationEqual,
+						thisColView, NSLayoutAttributeWidth,
+						1, 0,
+						@"uiGrid expanding column width constraint");
+					[c setPriority:NSLayoutPriorityDefaultHigh];
+					[self addConstraint:c];
+					[self->edges addObject:c];
+				}
+			}
+		}
+	}
+	
+	// make all other expanding rows the same height as the first
+	if (firstExpandingRow != -1) {
+		for (y = firstExpandingRow + 1; y < ycount; y++) {
+			if (vexpand[y]) {
+				// find representative views for height constraint
+				NSView *firstRowView = nil, *thisRowView = nil;
+				for (x = 0; x < xcount; x++) {
+					if (firstRowView == nil && !gspan[firstExpandingRow][x])
+						firstRowView = gv[firstExpandingRow][x];
+					if (thisRowView == nil && !gspan[y][x])
+						thisRowView = gv[y][x];
+					if (firstRowView != nil && thisRowView != nil)
+						break;
+				}
+				if (firstRowView != nil && thisRowView != nil) {
+					c = uiprivMkConstraint(firstRowView, NSLayoutAttributeHeight,
+						NSLayoutRelationEqual,
+						thisRowView, NSLayoutAttributeHeight,
+						1, 0,
+						@"uiGrid expanding row height constraint");
+					[c setPriority:NSLayoutPriorityDefaultHigh];
+					[self addConstraint:c];
+					[self->edges addObject:c];
+				}
+			}
+		}
+	}
 
 	// and finally clean up
 	uiprivFree(hexpand);
@@ -633,14 +714,14 @@ dispatch_get_main_queue(),
 
 - (BOOL)hugsTrailing
 {
-	// only hug if we have horizontally expanding
-	return [self nhexpand] != 0;
+	// only hug if we have NO horizontally expanding children
+	return [self nhexpand] == 0;
 }
 
 - (BOOL)hugsBottom
 {
-	// only hug if we have vertically expanding
-	return [self nvexpand] != 0;
+	// only hug if we have NO vertically expanding children
+	return [self nvexpand] == 0;
 }
 
 - (int)nhexpand
@@ -734,7 +815,17 @@ static void uiGridChildVisibilityChanged(uiDarwinControl *c)
 {
 	uiGrid *g = uiGrid(c);
 
+	int oldnh = [g->view nhexpand];
+	int oldnv = [g->view nvexpand];
+
 	[g->view establishOurConstraints];
+
+	int newnh = [g->view nhexpand];
+	int newnv = [g->view nvexpand];
+
+	// notify hugging change if there's a 0 ⇔ non-zero transition
+	if ((oldnh == 0) != (newnh == 0) || (oldnv == 0) != (newnv == 0))
+		uiDarwinNotifyEdgeHuggingChanged(uiDarwinControl(g));
 }
 
 static gridChild *toChild(uiControl *c, int xspan, int yspan, int hexpand, uiAlign halign, int vexpand, uiAlign valign, uiGrid *g)
