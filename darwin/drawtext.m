@@ -75,7 +75,8 @@
 			&unused);			// not documented as accepting NULL (TODO really?)
 
 		rect.origin = CGPointZero;
-		rect.size = self->size;
+		CGFloat frameWidth = (p->Width < 0) ? self->size.width : cgwidth;
+		rect.size = CGSizeMake(frameWidth, self->size.height);
 		self->path = CGPathCreateWithRect(rect, NULL);
 		self->frame = CTFramesetterCreateFrame(self->framesetter,
 			range,
@@ -230,4 +231,3 @@ void uiFreeFontDescriptor(uiFontDescriptor *desc)
 	// TODO ensure this is synchronized with fontmatch.m
 	uiFreeText((char *) (desc->Family));
 }
-
