@@ -28,14 +28,14 @@
 - Interpolation uses high-quality filtering on all platforms:
   - macOS: Uses NSImageView's built-in scaling for Center/Fit modes
   - Linux/GTK: Uses Cairo's CAIRO_FILTER_GOOD for high-quality scaling
-  - Windows: Uses D2D1 cubic interpolation for high-quality scaling
+  - Windows: Uses D2D1 linear interpolation for high-quality scaling
 - Background is transparent or system default color.
 - Color space assumes sRGB and converts to native OS format.
 - HiDPI handling is delegated to the OS (drawing based on logical points).
 
 ## Sizing
 - Final size is determined by the parent layout.
-- Preferred size when no image is set: 64x64 (MVP).
+- Preferred size when no image is set: Minimum size constraints apply.
 - Minimum size constraints:
   - macOS: No minimum size constraint (fully flexible via Auto Layout)
   - Windows: 16x16 minimum size (supports icon usage)
