@@ -37,6 +37,7 @@ libui_sources += [
 	'windows/grid.cpp',
 	'windows/group.cpp',
 	'windows/image.cpp',
+	'windows/imageview.cpp',
 	'windows/init.cpp',
 	'windows/label.cpp',
 	'windows/main.cpp',
