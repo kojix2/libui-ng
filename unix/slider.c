@@ -17,6 +17,8 @@ struct uiSlider {
 	void (*onReleased)(uiSlider *, void *);
 	void *onReleasedData;
 	gulong onChangedSignal;
+	int hasToolTip;
+	int controlTooltip;
 	gchar tooltip[MAX_STRLEN_FOR_NBITS_IN_DECIMAL(sizeof(int) * CHAR_BIT) + 1];
 };
 
@@ -32,7 +34,7 @@ static void onChanged(GtkRange *range, gpointer data)
 {
 	uiSlider *s = uiSlider(data);
 
-	if (uiSliderHasToolTip(s))
+	if (s->hasToolTip && !s->controlTooltip)
 		_uiSliderUpdateToolTip(s);
 
 	if (!uiprivUserCallbackEnter(uiControl(s)))
@@ -75,22 +77,38 @@ void uiSliderSetValue(uiSlider *s, int value)
 	g_signal_handler_block(s->range, s->onChangedSignal);
 	gtk_range_set_value(s->range, value);
 
-	if (uiSliderHasToolTip(s))
+	if (s->hasToolTip && !s->controlTooltip)
 		_uiSliderUpdateToolTip(s);
 	g_signal_handler_unblock(s->range, s->onChangedSignal);
 }
 
 int uiSliderHasToolTip(uiSlider *s)
 {
-	return gtk_widget_get_has_tooltip(s->widget);
+	return s->hasToolTip;
 }
 
 void uiSliderSetHasToolTip(uiSlider *s, int hasToolTip)
 {
-	gtk_widget_set_has_tooltip(s->widget, hasToolTip);
+	s->hasToolTip = hasToolTip != 0;
+	if (s->controlTooltip)
+		return;
 
-	if (hasToolTip)
+	if (s->hasToolTip)
 		_uiSliderUpdateToolTip(s);
+	else
+		gtk_widget_set_tooltip_text(s->widget, NULL);
+}
+
+void uiprivSliderSetControlTooltip(uiSlider *s, int active)
+{
+	s->controlTooltip = active != 0;
+	if (s->controlTooltip)
+		return;
+
+	if (s->hasToolTip)
+		_uiSliderUpdateToolTip(s);
+	else
+		gtk_widget_set_tooltip_text(s->widget, NULL);
 }
 
 void uiSliderOnChanged(uiSlider *s, void (*f)(uiSlider *, void *), void *data)

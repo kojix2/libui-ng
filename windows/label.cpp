@@ -16,6 +16,7 @@ static void uiLabelDestroy(uiControl *c)
 	uiLabel *l = uiLabel(c);
 	HFONT customFont = l->customFont;
 
+	uiprivDestroyTooltip(c);
 	uiWindowsEnsureDestroyWindow(l->hwnd);
 	if (customFont != NULL && DeleteObject(customFont) == 0)
 		logLastError(L"error deleting label font");

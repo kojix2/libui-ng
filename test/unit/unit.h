@@ -40,5 +40,6 @@ int drawImageRunUnitTests(void);
 int attrstrRunUnitTests(void);
 int tableRunUnitTests(void);
 int imageViewRunUnitTests(void);
+int tooltipRunUnitTests(void);
 
 #endif

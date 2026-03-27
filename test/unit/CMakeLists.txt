@@ -16,7 +16,7 @@ set(unit_sources
 	radiobuttons.c tab.c entry.c menu.c progressbar.c datetimepicker.c grid.c
 	drawmatrix.c drawimage.c attrstr.c imageview.c window.c box.c group.c
 	editablecombobox.c multilineentry.c
-	separator.c fontdescriptor.c fontbutton.c colorbutton.c form.c area.c image.c table.c
+	separator.c fontdescriptor.c fontbutton.c colorbutton.c form.c area.c image.c table.c tooltip.c
 )
 list(APPEND unit_sources table_fixture.c table_value.c table_width.c)
 if(NOT BUILD_SHARED_LIBS)
@@ -33,6 +33,11 @@ libui_add_test(unit ${unit_sources})
 target_link_libraries(unit PRIVATE libui_test_support)
 if(WIN32)
 	target_link_libraries(unit PRIVATE user32 comctl32)
+	add_executable(tooltip-windows-unit tooltip_windows.c resources.rc)
+	target_link_libraries(tooltip-windows-unit PRIVATE libui::ui)
+	libui_apply_internal_options(tooltip-windows-unit)
+	add_test(NAME tooltip-windows-unit COMMAND tooltip-windows-unit)
+	set_tests_properties(tooltip-windows-unit PROPERTIES TIMEOUT 60)
 endif()
 set_tests_properties(unit PROPERTIES
 	TIMEOUT 180 LABELS "contract;backend;gui;${unit_backend};${unit_linkage}")

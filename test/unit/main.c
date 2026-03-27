@@ -48,6 +48,7 @@ int main(int argc, char **argv)
 		{ "attrstr", attrstrRunUnitTests },
 		{ "table", tableRunUnitTests },
 		{ "imageview", imageViewRunUnitTests },
+		{ "tooltip", tooltipRunUnitTests },
 	};
 
 	/* Preserve the full runner and its order; optional names select components. */
