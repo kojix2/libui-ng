@@ -55,6 +55,7 @@ static void uiRadioButtonsDestroy(uiControl *c)
 		uiWindowsEnsureDestroyWindow(hwnd);
 	}
 	delete r->hwnds;
+	uiprivDestroyTooltip(c);
 	uiWindowsEnsureDestroyWindow(r->hwnd);
 	uiFreeControl(uiControl(r));
 }
@@ -177,6 +178,7 @@ void uiRadioButtonsAppend(uiRadioButtons *r, const char *text)
 	EnableWindow(hwnd, uiControlEnabledToUser(uiControl(r)));
 	uiWindowsRegisterWM_COMMANDHandler(hwnd, onWM_COMMAND, uiControl(r));
 	r->hwnds->push_back(hwnd);
+	uiprivAddTooltipToHWND(uiControl(r), hwnd);
 	radiobuttonsArrangeChildren(r);
 	uiWindowsControlMinimumSizeChanged(uiWindowsControl(r));
 }

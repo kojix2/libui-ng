@@ -335,6 +335,7 @@ static void uiWindowDestroy(uiControl *c)
 	for (auto frame : modalFrames)
 		frame->blocked.erase(w);
 	windows.erase(w);
+	uiprivDestroyTooltip(c);
 	uiWindowsEnsureDestroyWindow(w->hwnd);
 	uiFreeControl(uiControl(w));
 }
