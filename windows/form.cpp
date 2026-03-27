@@ -120,6 +120,7 @@ static void uiFormDestroy(uiControl *c)
 		uiWindowsEnsureDestroyWindow(fc.label);
 	}
 	delete f->controls;
+	uiprivDestroyTooltip(c);
 	uiWindowsEnsureDestroyWindow(f->hwnd);
 	uiFreeControl(uiControl(f));
 }
