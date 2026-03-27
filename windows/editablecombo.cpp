@@ -44,6 +44,7 @@ void uiEditableComboboxDestroy(uiControl *cc)
 	uiEditableCombobox *c = uiEditableCombobox(cc);
 
 	uiWindowsUnregisterWM_COMMANDHandler(c->hwnd);
+	uiprivDestroyTooltip(cc);
 	uiWindowsEnsureDestroyWindow(c->hwnd);
 	uiFreeControl(uiControl(c));
 }
