@@ -34,6 +34,7 @@ static void uiMultilineEntryDestroy(uiControl *c)
 	uiMultilineEntry *e = uiMultilineEntry(c);
 
 	uiWindowsUnregisterWM_COMMANDHandler(e->hwnd);
+	uiprivDestroyTooltip(c);
 	uiWindowsEnsureDestroyWindow(e->hwnd);
 	uiFreeControl(uiControl(e));
 }
