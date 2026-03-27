@@ -93,6 +93,7 @@ int main(void)
 		{ tableRunUnitTests },
 		{ toolbarRunUnitTests },
 		{ imageViewRunUnitTests },
+		{ tooltipRunUnitTests },
 	};
 
 	for (i = 0; i < sizeof(unitTests)/sizeof(*unitTests); ++i) {
