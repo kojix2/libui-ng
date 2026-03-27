@@ -13,6 +13,7 @@ struct uiSlider {
 	void (*onReleased)(uiSlider *, void *);
 	void *onReleasedData;
 	BOOL hasToolTip;
+	BOOL controlTooltip;
 };
 
 static void _uiSliderUpdateToolTip(uiSlider *s);
@@ -48,7 +49,7 @@ static void _uiSliderUpdateToolTip(uiSlider *s);
 	uiSlider *s = self->slider;
 
 	NSEvent *currentEvent = [[sender window] currentEvent];
-	if (s->hasToolTip)
+	if (s->hasToolTip && !s->controlTooltip)
 		_uiSliderUpdateToolTip(s);
 
 	if (!uiprivUserCallbackEnter(uiControl(s)))
@@ -94,9 +95,23 @@ int uiSliderHasToolTip(uiSlider *s)
 
 void uiSliderSetHasToolTip(uiSlider *s, int hasToolTip)
 {
-	s->hasToolTip = hasToolTip;
+	s->hasToolTip = hasToolTip != 0;
+	if (s->controlTooltip)
+		return;
 
-	if (hasToolTip)
+	if (s->hasToolTip)
+		_uiSliderUpdateToolTip(s);
+	else
+		[s->slider setToolTip:nil];
+}
+
+void uiprivSliderSetControlTooltip(uiSlider *s, int active)
+{
+	s->controlTooltip = active != 0;
+	if (s->controlTooltip)
+		return;
+
+	if (s->hasToolTip)
 		_uiSliderUpdateToolTip(s);
 	else
 		[s->slider setToolTip:nil];
@@ -111,7 +126,7 @@ void uiSliderSetValue(uiSlider *s, int value)
 {
 	[s->slider setIntegerValue:value];
 
-	if (s->hasToolTip)
+	if (s->hasToolTip && !s->controlTooltip)
 		_uiSliderUpdateToolTip(s);
 }
 

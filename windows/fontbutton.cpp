@@ -16,6 +16,7 @@ static void uiFontButtonDestroy(uiControl *c)
 
 	uiWindowsUnregisterWM_COMMANDHandler(b->hwnd);
 	uiprivDestroyFontDialogParams(&(b->params));
+	uiprivDestroyTooltip(c);
 	uiWindowsEnsureDestroyWindow(b->hwnd);
 	uiFreeControl(uiControl(b));
 }
