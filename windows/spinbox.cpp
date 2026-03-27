@@ -66,6 +66,7 @@ static void uiSpinboxDestroy(uiControl *c)
 	uiSpinbox *s = uiSpinbox(c);
 
 	uiWindowsUnregisterWM_COMMANDHandler(s->edit);
+	uiprivDestroyTooltip(c);
 	uiWindowsEnsureDestroyWindow(s->updown);
 	uiWindowsEnsureDestroyWindow(s->edit);
 	uiWindowsEnsureDestroyWindow(s->hwnd);
