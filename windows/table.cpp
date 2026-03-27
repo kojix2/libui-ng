@@ -754,6 +754,7 @@ static void uiTableDestroy(uiControl *c)
 		// The failure is already logged; destruction must continue.
 	}
 	uiWindowsUnregisterWM_NOTIFYHandler(t->hwnd);
+	uiprivDestroyTooltip(c);
 	uiWindowsEnsureDestroyWindow(t->hwnd);
 	// detach table from model
 	for (it = model->tables->begin(); it != model->tables->end(); it++) {
