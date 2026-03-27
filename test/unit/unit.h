@@ -51,6 +51,7 @@ int attrstrRunUnitTests(void);
 int tableRunUnitTests(void);
 int toolbarRunUnitTests(void);
 int imageViewRunUnitTests(void);
+int tooltipRunUnitTests(void);
 
 /**
  * Helper for general setup/teardown of controls embedded in a window.
