@@ -55,6 +55,7 @@ static void uiRadioButtonsDestroy(uiControl *c)
 		uiWindowsEnsureDestroyWindow(hwnd);
 	}
 	delete r->hwnds;
+	uiprivDestroyTooltip(c);
 	uiWindowsEnsureDestroyWindow(r->hwnd);
 	uiFreeControl(uiControl(r));
 }
