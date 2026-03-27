@@ -29,6 +29,7 @@ static void uiButtonDestroy(uiControl *c)
 	uiButton *b = uiButton(c);
 
 	uiWindowsUnregisterWM_COMMANDHandler(b->hwnd);
+	uiprivDestroyTooltip(c);
 	uiWindowsEnsureDestroyWindow(b->hwnd);
 	uiFreeControl(uiControl(b));
 }
