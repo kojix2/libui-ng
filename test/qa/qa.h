@@ -2,6 +2,7 @@
 #define __LIBUI_QA_H__
 
 #include "../../ui.h"
+#include "../../ui_ext.h"
 
 #define QA_WINDOW_WIDTH 960
 #define QA_WINDOW_HEIGHT 720
@@ -39,5 +40,7 @@ QA_DECLARE_TEST(windowResizeable);
 QA_DECLARE_TEST(windowFullscreenBorderless);
 QA_DECLARE_TEST(windowFullscreenResizeable);
 QA_DECLARE_TEST(windowResizeableBorderless);
+
+QA_DECLARE_TEST(tooltipTest);
 
 #endif

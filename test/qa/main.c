@@ -72,6 +72,11 @@ struct controlTestCase windowTestCases[] = {
 	{NULL, NULL, NULL}
 };
 
+struct controlTestCase tooltipTestCases[] = {
+	QA_TEST("1. Tooltips", tooltipTest),
+	{NULL, NULL, NULL}
+};
+
 struct controlTestGroup controlTestGroups[] = {
 	{"uiButton", buttonTestCases},
 	{"uiBox", boxTestCases},
@@ -82,6 +87,7 @@ struct controlTestGroup controlTestGroups[] = {
 	{"uiSeparator", separatorTestCases},
 	{"uiSpinbox", spinboxTestCases},
 	{"uiWindow", windowTestCases},
+	{"uiControlSetTooltip", tooltipTestCases},
 };
 
 uiControl *qaGuide(void)
