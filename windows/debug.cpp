@@ -5,7 +5,10 @@
 
 static void printDebug(const WCHAR *msg)
 {
-	OutputDebugStringW(msg);
+	if (IsDebuggerPresent())
+		OutputDebugStringW(msg);
+	else
+		fputws(msg, stderr);
 }
 
 HRESULT _logLastError(debugargs, const WCHAR *s)
