@@ -69,8 +69,34 @@ static void uiSpinboxDestroy(uiControl *c)
 	uiFreeControl(uiControl(s));
 }
 
-// TODO SyncEnableState
-uiWindowsControlAllDefaultsExceptDestroy(uiSpinbox)
+uiWindowsControlDefaultHandle(uiSpinbox)
+uiWindowsControlDefaultParent(uiSpinbox)
+uiWindowsControlDefaultSetParent(uiSpinbox)
+uiWindowsControlDefaultToplevel(uiSpinbox)
+uiWindowsControlDefaultVisible(uiSpinbox)
+uiWindowsControlDefaultShow(uiSpinbox)
+uiWindowsControlDefaultHide(uiSpinbox)
+uiWindowsControlDefaultEnabled(uiSpinbox)
+uiWindowsControlDefaultEnable(uiSpinbox)
+uiWindowsControlDefaultDisable(uiSpinbox)
+
+static void uiSpinboxSyncEnableState(uiWindowsControl *c, int enabled)
+{
+	uiSpinbox *s = uiSpinbox(c);
+
+	if (uiWindowsShouldStopSyncEnableState(uiWindowsControl(s), enabled))
+		return;
+	EnableWindow(s->hwnd, enabled);
+	EnableWindow(s->edit, enabled);
+	if (s->updown != NULL)
+		EnableWindow(s->updown, enabled);
+}
+
+uiWindowsControlDefaultSetParentHWND(uiSpinbox)
+uiWindowsControlDefaultMinimumSizeChanged(uiSpinbox)
+uiWindowsControlDefaultLayoutRect(uiSpinbox)
+uiWindowsControlDefaultAssignControlIDZOrder(uiSpinbox)
+uiWindowsControlDefaultChildVisibilityChanged(uiSpinbox)
 
 // from http://msdn.microsoft.com/en-us/library/windows/desktop/dn742486.aspx#sizingandspacing
 // TODO reduce this?
@@ -137,7 +163,8 @@ static void recreateUpDown(uiSpinbox *s)
 	}
 	// preserve the Z-order
 	spinboxArrangeChildren(s);
-	// TODO properly show/enable
+	// Preserve enabled state because the up-down control is recreated on relayout.
+	EnableWindow(s->updown, uiControlEnabledToUser(uiControl(s)));
 	ShowWindow(s->updown, SW_SHOW);
 	s->inhibitChanged = FALSE;
 }
