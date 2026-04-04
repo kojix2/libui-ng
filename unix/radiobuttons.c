@@ -77,7 +77,17 @@ int uiRadioButtonsSelected(uiRadioButtons *r)
 
 void uiRadioButtonsSetSelected(uiRadioButtons *r, int n)
 {
-	GtkToggleButton *tb = GTK_TOGGLE_BUTTON(g_ptr_array_index(r->buttons, n + 1));
+	GtkToggleButton *tb;
+
+	if (n < -1) {
+		uiprivUserBug("Index %d is out of range for a uiRadioButtons.", n);
+		return;
+	}
+	if ((guint) (n + 1) >= r->buttons->len) {
+		uiprivUserBug("Index %d is out of range for a uiRadioButtons.", n);
+		return;
+	}
+	tb = GTK_TOGGLE_BUTTON(g_ptr_array_index(r->buttons, n + 1));
 	// this is easier than remembering all the signals
 	r->changing = TRUE;
 	gtk_toggle_button_set_active(tb, TRUE);

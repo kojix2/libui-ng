@@ -191,6 +191,17 @@ int uiRadioButtonsSelected(uiRadioButtons *r)
 void uiRadioButtonsSetSelected(uiRadioButtons *r, int n)
 {
 	int m;
+	size_t count;
+
+	count = r->hwnds->size();
+	if (n < -1) {
+		uiprivUserBug("Index %d is out of range for a uiRadioButtons.", n);
+		return;
+	}
+	if (n >= 0 && ((size_t) n) >= count) {
+		uiprivUserBug("Index %d is out of range for a uiRadioButtons.", n);
+		return;
+	}
 
 	m = uiRadioButtonsSelected(r);
 	if (m != -1)

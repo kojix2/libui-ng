@@ -200,12 +200,25 @@ void uiRadioButtonsSetSelected(uiRadioButtons *r, int n)
 {
 	NSButton *b;
 	NSInteger state;
+	NSInteger previous;
+	NSUInteger count;
+
+	count = [r->buttons count];
+	if (n < -1) {
+		uiprivUserBug("Index %d is out of range for a uiRadioButtons.", n);
+		return;
+	}
+	if (n >= 0 && ((NSUInteger) n) >= count) {
+		uiprivUserBug("Index %d is out of range for a uiRadioButtons.", n);
+		return;
+	}
+	previous = r->selected;
 
 	r->selected = n;
 
 	state = NSOnState;
 	if (n == -1) {
-		n = uiRadioButtonsSelected(r);
+		n = previous;
 		if (n == -1)		// from nothing to nothing; do nothing
 			return;
 		state = NSOffState;
