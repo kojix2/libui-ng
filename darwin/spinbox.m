@@ -127,6 +127,16 @@ static CGFloat stepperYDelta(void)
 	[super dealloc];
 }
 
+- (NSView *)viewForFirstBaselineLayout
+{
+	return self->tf;
+}
+
+- (NSView *)viewForLastBaselineLayout
+{
+	return self->tf;
+}
+
 - (NSInteger)libui_value
 {
 	return self->value;
