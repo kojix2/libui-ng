@@ -65,25 +65,38 @@ void uiImageAppend(uiImage *i, void *pixels, int pixelWidth, int pixelHeight, in
 	hr = uiprivWICFactory->CreateBitmap(pixelWidth, pixelHeight,
 		formatForGDI, WICBitmapCacheOnDemand,
 		&b);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error calling CreateBitmap() in uiImageAppend()", hr);
+		return;
+	}
 	r.X = 0;
 	r.Y = 0;
 	r.Width = pixelWidth;
 	r.Height = pixelHeight;
 	hr = b->Lock(&r, WICBitmapLockWrite, &l);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error calling Lock() in uiImageAppend()", hr);
+		b->Release();
+		return;
+	}
 
 	pix = (uint8_t *) pixels;
 	// TODO can size be NULL?
 	hr = l->GetDataPointer(&size, &dipp);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error calling GetDataPointer() in uiImageAppend()", hr);
+		l->Release();
+		b->Release();
+		return;
+	}
 	data = (uint8_t *) dipp;
 	hr = l->GetStride(&realStride);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error calling GetStride() in uiImageAppend()", hr);
+		l->Release();
+		b->Release();
+		return;
+	}
 	for (y = 0; y < pixelHeight; y++) {
 		for (x = 0; x < pixelWidth * 4; x += 4) {
 			union {
