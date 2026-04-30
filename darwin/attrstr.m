@@ -432,7 +432,7 @@ static void applyFontAttributes(CFMutableAttributedStringRef mas, uiFontDescript
 
 	// and finally, get rid of all the uiprivCombinedFontAttrs as we won't need them anymore
 	range.location = 0;
-	range.length = 0;
+	range.length = n;
 	CFAttributedStringRemoveAttribute(mas, range, combinedFontAttrName);
 }
 
