@@ -41,10 +41,14 @@ void *uiprivRealloc(void *_p, size_t size, const char *type)
 {
 	uint8_t *p = (uint8_t *) _p;
 	byteArray *arr;
+	std::map<uint8_t *, byteArray *>::iterator it;
 
 	if (p == NULL)
 		return uiprivAlloc(size, type);
-	arr = heap[p];
+	it = heap.find(p);
+	if (it == heap.end())
+		uiprivImplBug("%p not found in heap in uiprivRealloc()", p);
+	arr = it->second;
 	// TODO does this fill in?
 	arr->resize(size, 0);
 	heap.erase(p);
@@ -55,10 +59,16 @@ void *uiprivRealloc(void *_p, size_t size, const char *type)
 void uiprivFree(void *_p)
 {
 	uint8_t *p = (uint8_t *) _p;
+	std::map<uint8_t *, byteArray *>::iterator it;
+	byteArray *arr;
 
 	if (p == NULL)
 		uiprivImplBug("attempt to uiprivFree(NULL)");
-	types.erase(heap[p]);
-	delete heap[p];
+	it = heap.find(p);
+	if (it == heap.end())
+		uiprivImplBug("%p not found in heap in uiprivFree()", p);
+	arr = it->second;
+	types.erase(arr);
+	delete arr;
 	heap.erase(p);
 }
