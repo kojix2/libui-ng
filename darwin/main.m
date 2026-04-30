@@ -6,6 +6,7 @@ static BOOL canQuit = NO;
 static NSAutoreleasePool *globalPool;
 static uiprivApplicationClass *app;
 static uiprivAppDelegate *delegate;
+static NSMutableSet *timers;
 
 static BOOL (^isRunning)(void);
 static BOOL stepsIsRunning;
@@ -122,6 +123,7 @@ const char *uiInit(uiInitOptions *o)
 		[uiprivNSApp() setDelegate:delegate];
 
 		uiprivInitAlloc();
+		timers = [NSMutableSet new];
 		uiprivLoadFutures();
 		uiprivLoadUndocumented();
 
@@ -139,10 +141,27 @@ const char *uiInit(uiInitOptions *o)
 	return NULL;
 }
 
+static void uiprivUninitTimers(void)
+{
+	NSArray *activeTimers;
+	NSTimer *timer;
+
+	if (timers == nil)
+		return;
+	activeTimers = [[timers allObjects] retain];
+	[timers removeAllObjects];
+	for (timer in activeTimers)
+		[timer invalidate];
+	[activeTimers release];
+	[timers release];
+	timers = nil;
+}
+
 void uiUninit(void)
 {
 	if (!globalPool)
 		uiprivUserBug("You must call uiInit() first!");
+	uiprivUninitTimers();
 	[globalPool release];
 
 	@autoreleasepool {
@@ -266,8 +285,10 @@ void uiQueueMain(void (*f)(void *data), void *data)
 
 - (void)doTimer:(NSTimer *)timer
 {
-        if (!(*(self->f))(self->data))
+        if (!(*(self->f))(self->data)) {
+                [timers removeObject:timer];
                 [timer invalidate];
+        }
 }
 
 @end
@@ -275,15 +296,15 @@ void uiQueueMain(void (*f)(void *data), void *data)
 void uiTimer(int milliseconds, int (*f)(void *data), void *data)
 {
         uiprivTimerDelegate *delegate;
+        NSTimer *timer;
 
         delegate = [[uiprivTimerDelegate alloc] initWithCallback:f data:data];
-        [NSTimer scheduledTimerWithTimeInterval:(milliseconds / 1000.0)
+        timer = [NSTimer scheduledTimerWithTimeInterval:(milliseconds / 1000.0)
                 target:delegate
                 selector:@selector(doTimer:)
                 userInfo:nil
                 repeats:YES];
+        if (timer != nil)
+                [timers addObject:timer];
         [delegate release];
 }
-
-// TODO figure out the best way to clean the above up in uiUninit(), if it's even necessary
-// TODO that means figure out if timers can still fire without the main loop
