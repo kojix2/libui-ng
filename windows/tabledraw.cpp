@@ -678,13 +678,12 @@ fail:
 }
 
 // TODO run again when the DPI or the theme changes
-// TODO properly clean things up here
-// TODO properly destroy the old lists here too
 HRESULT uiprivUpdateImageListSize(uiTable *t)
 {
 	HDC dc;
 	int cxList, cyList;
 	HTHEME theme;
+	HIMAGELIST imagelist, oldImagelist;
 	SIZE sizeCheck;
 	HRESULT hr;
 
@@ -693,6 +692,8 @@ HRESULT uiprivUpdateImageListSize(uiTable *t)
 		logLastError(L"GetDC()");
 		return E_FAIL;
 	}
+	theme = NULL;
+	imagelist = NULL;
 
 	cxList = GetSystemMetrics(SM_CXSMICON);
 	cyList = GetSystemMetrics(SM_CYSMICON);
@@ -705,7 +706,7 @@ HRESULT uiprivUpdateImageListSize(uiTable *t)
 			NULL, TS_DRAW, &sizeCheck);
 		if (hr != S_OK) {
 			logHRESULT(L"GetThemePartSize()", hr);
-			return hr;			// TODO fall back?
+			goto cleanup;			// TODO fall back?
 		}
 		// make sure these checkmarks fit
 		// unthemed checkmarks will by the code above be smaller than cxList/cyList here
@@ -714,26 +715,47 @@ HRESULT uiprivUpdateImageListSize(uiTable *t)
 		if (cyList < sizeCheck.cy)
 			cyList = sizeCheck.cy;
 		hr = CloseThemeData(theme);
+		theme = NULL;
 		if (hr != S_OK) {
 			logHRESULT(L"CloseThemeData()", hr);
-			return hr;
+			goto cleanup;
 		}
 	}
 
-	// TODO handle errors
-	t->imagelist = ImageList_Create(cxList, cyList,
+	imagelist = ImageList_Create(cxList, cyList,
 		ILC_COLOR32,
 		1, 1);
-	if (t->imagelist == NULL) {
+	if (imagelist == NULL) {
 		logLastError(L"ImageList_Create()");
-		return E_FAIL;
+		hr = E_FAIL;
+		goto cleanup;
 	}
 	// TODO will this return NULL here because it's an initial state?
-	SendMessageW(t->hwnd, LVM_SETIMAGELIST, LVSIL_SMALL, (LPARAM) (t->imagelist));
+	oldImagelist = t->imagelist;
+	SendMessageW(t->hwnd, LVM_SETIMAGELIST, LVSIL_SMALL, (LPARAM) imagelist);
+	t->imagelist = imagelist;
+	imagelist = NULL;
+	if (oldImagelist != NULL)
+		ImageList_Destroy(oldImagelist);
+	hr = S_OK;
 
+cleanup:
+	if (imagelist != NULL)
+		ImageList_Destroy(imagelist);
+	if (theme != NULL) {
+		HRESULT hrClose;
+
+		hrClose = CloseThemeData(theme);
+		if (hrClose != S_OK) {
+			logHRESULT(L"CloseThemeData()", hrClose);
+			if (hr == S_OK)
+				hr = hrClose;
+		}
+	}
 	if (ReleaseDC(t->hwnd, dc) == 0) {
 		logLastError(L"ReleaseDC()");
-		return E_FAIL;
+		if (hr == S_OK)
+			hr = E_FAIL;
 	}
-	return S_OK;
+	return hr;
 }
