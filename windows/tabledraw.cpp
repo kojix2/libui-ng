@@ -69,6 +69,7 @@ static HRESULT drawImagePart(HRESULT hr, struct drawState *s)
 	HBITMAP b;
 	RECT r;
 	UINT fStyle;
+	bool ok;
 
 	if (hr != S_OK)
 		return hr;
@@ -83,19 +84,20 @@ static HRESULT drawImagePart(HRESULT hr, struct drawState *s)
 	if (hr != S_OK)
 		return hr;
 	// TODO rewrite this condition to make more sense; possibly swap the if and else blocks too
-	// TODO proper cleanup
+	ok = true;
 	if (ImageList_GetImageCount(s->t->imagelist) > 1) {
 		if (ImageList_Replace(s->t->imagelist, 0, b, NULL) == 0) {
 			logLastError(L"ImageList_Replace()");
-			return E_FAIL;
+			ok = false;
 		}
 	} else
 		if (ImageList_Add(s->t->imagelist, b, NULL) == -1) {
 			logLastError(L"ImageList_Add()");
-			return E_FAIL;
+			ok = false;
 		}
-	// TODO error check
 	DeleteObject(b);
+	if (!ok)
+		return E_FAIL;
 
 	r = s->m->subitemIcon;
 	r.right = r.left + s->m->cxIcon;
