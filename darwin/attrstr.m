@@ -279,15 +279,14 @@ static CGColorRef mkcolor(double r, double g, double b, double a)
 
 	// TODO we should probably just create this once and recycle it throughout program execution...
 	colorspace = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
-	if (colorspace == NULL) {
-		// TODO
-	}
+	if (colorspace == NULL)
+		return NULL;
 	components[0] = r;
 	components[1] = g;
 	components[2] = b;
 	components[3] = a;
 	color = CGColorCreate(colorspace, components);
-	CFRelease(colorspace);
+	CGColorSpaceRelease(colorspace);
 	return color;
 }
 
@@ -301,6 +300,8 @@ static void addBackgroundAttribute(struct foreachParams *p, size_t start, size_t
 		CFRange range;
 
 		color = mkcolor(r, g, b, a);
+		if (color == NULL)
+			return;
 		range.location = start;
 		range.length = end - start;
 		CFAttributedStringSetAttribute(p->mas, range, *uiprivFUTURE_kCTBackgroundColorAttributeName, color);
@@ -339,6 +340,8 @@ static uiForEach processAttribute(const uiAttributedString *s, const uiAttribute
 	case uiAttributeTypeColor:
 		uiAttributeColor(attr, &r, &g, &b, &a);
 		color = mkcolor(r, g, b, a);
+		if (color == NULL)
+			break;
 		CFAttributedStringSetAttribute(p->mas, range, kCTForegroundColorAttributeName, color);
 		CFRelease(color);
 		break;
@@ -369,6 +372,7 @@ static uiForEach processAttribute(const uiAttributedString *s, const uiAttribute
 		break;
 	case uiAttributeTypeUnderlineColor:
 		uiAttributeUnderlineColor(attr, &colorType, &r, &g, &b, &a);
+		color = NULL;
 		switch (colorType) {
 		case uiUnderlineColorCustom:
 			color = mkcolor(r, g, b, a);
@@ -383,6 +387,8 @@ static uiForEach processAttribute(const uiAttributedString *s, const uiAttribute
 			color = [auxiliaryColor CGColor];
 			break;
 		}
+		if (color == NULL)
+			break;
 		CFAttributedStringSetAttribute(p->mas, range, kCTUnderlineColorAttributeName, color);
 		if (colorType == uiUnderlineColorCustom)
 			CFRelease(color);
