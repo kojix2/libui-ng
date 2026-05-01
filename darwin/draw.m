@@ -223,9 +223,8 @@ static void fillGradient(CGContextRef ctxt, uiDrawPath *p, uiDrawBrush *b)
 	// gradients need a color space
 	// for consistency with windows, use sRGB
 	colorspace = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
-	if (colorspace == NULL) {
-		// TODO
-	}
+	if (colorspace == NULL)
+		return;
 	// TODO add NULL check to other uses of CGColorSpace
 
 	// make the gradient
@@ -241,6 +240,10 @@ static void fillGradient(CGContextRef ctxt, uiDrawPath *p, uiDrawBrush *b)
 	gradient = CGGradientCreateWithColorComponents(colorspace, colors, locations, b->NumStops);
 	uiprivFree(locations);
 	uiprivFree(colors);
+	if (gradient == NULL) {
+		CGColorSpaceRelease(colorspace);
+		return;
+	}
 
 	// because we're mucking with clipping, we need to save the graphics state and restore it later
 	CGContextSaveGState(ctxt);
