@@ -303,7 +303,14 @@ static void drawGrid(ID2D1RenderTarget *rt, D2D1_RECT_F *fillRect)
 	ID2D1Bitmap *bitmap;
 	D2D1_BITMAP_BRUSH_PROPERTIES bbp;
 	ID2D1BitmapBrush *bb;
-	HRESULT hr;
+	HRESULT hr, hr2;
+	BOOL drawing;
+
+	brt = NULL;
+	brush = NULL;
+	bitmap = NULL;
+	bb = NULL;
+	drawing = FALSE;
 
 	// mind the divisions; they represent the fact the original uses a viewport
 	size.width = 100 / 10;
@@ -323,10 +330,13 @@ static void drawGrid(ID2D1RenderTarget *rt, D2D1_RECT_F *fillRect)
 	hr = rt->CreateCompatibleRenderTarget(&size, NULL,
 		&pformat, D2D1_COMPATIBLE_RENDER_TARGET_OPTIONS_NONE,
 		&brt);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error creating render target for grid", hr);
+		goto cleanup;
+	}
 
 	brt->BeginDraw();
+	drawing = TRUE;
 
 	color.r = 1.0;
 	color.g = 1.0;
@@ -340,8 +350,10 @@ static void drawGrid(ID2D1RenderTarget *rt, D2D1_RECT_F *fillRect)
 	bprop.transform._11 = 1;
 	bprop.transform._22 = 1;
 	hr = brt->CreateSolidColorBrush(&color, &bprop, &brush);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error creating brush for grid", hr);
+		goto cleanup;
+	}
 	rect.left = 0;
 	rect.top = 0;
 	rect.right = 50 / 10;
@@ -353,25 +365,47 @@ static void drawGrid(ID2D1RenderTarget *rt, D2D1_RECT_F *fillRect)
 	rect.bottom = 100 / 10;
 	brt->FillRectangle(&rect, brush);
 	brush->Release();
+	brush = NULL;
 
 	hr = brt->EndDraw(NULL, NULL);
-	if (hr != S_OK)
+	drawing = FALSE;
+	if (hr != S_OK) {
 		logHRESULT(L"error finalizing render target for grid", hr);
+		goto cleanup;
+	}
 	hr = brt->GetBitmap(&bitmap);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error getting bitmap for grid", hr);
+		goto cleanup;
+	}
 	brt->Release();
+	brt = NULL;
 
 	ZeroMemory(&bbp, sizeof (D2D1_BITMAP_BRUSH_PROPERTIES));
 	bbp.extendModeX = D2D1_EXTEND_MODE_WRAP;
 	bbp.extendModeY = D2D1_EXTEND_MODE_WRAP;
 	bbp.interpolationMode = D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR;
 	hr = rt->CreateBitmapBrush(bitmap, &bbp, &bprop, &bb);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error creating bitmap brush for grid", hr);
+		goto cleanup;
+	}
 	rt->FillRectangle(fillRect, bb);
-	bb->Release();
-	bitmap->Release();
+
+cleanup:
+	if (drawing) {
+		hr2 = brt->EndDraw(NULL, NULL);
+		if (hr2 != S_OK)
+			logHRESULT(L"error finalizing render target for grid", hr2);
+	}
+	if (bb != NULL)
+		bb->Release();
+	if (bitmap != NULL)
+		bitmap->Release();
+	if (brush != NULL)
+		brush->Release();
+	if (brt != NULL)
+		brt->Release();
 }
 
 // this interesting approach comes from http://blogs.msdn.com/b/wpfsdk/archive/2006/10/26/uncommon-dialogs--font-chooser-and-color-picker-dialogs.aspx
