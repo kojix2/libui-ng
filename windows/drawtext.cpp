@@ -465,8 +465,10 @@ public:
 				if (hr != S_OK)
 					return hr;
 				hr = path->Open(&sink);
-				if (hr != S_OK)
+				if (hr != S_OK) {
+					path->Release();
 					return hr;
+				}
 				amplitude = underline->thickness;
 				period = 5 * underline->thickness;
 				xOffset = baselineOriginX;
@@ -488,9 +490,11 @@ public:
 				}
 				sink->EndFigure(D2D1_FIGURE_END_OPEN);
 				hr = sink->Close();
-				if (hr != S_OK)
-					return hr;
 				sink->Release();
+				if (hr != S_OK) {
+					path->Release();
+					return hr;
+				}
 				this->rt->DrawGeometry(path, brush, underline->thickness);
 				path->Release();
 			}
