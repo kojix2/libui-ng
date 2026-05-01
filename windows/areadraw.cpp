@@ -125,6 +125,9 @@ void areaDrawOnResize(uiArea *a, RECT *newClient)
 {
 	D2D1_SIZE_U size;
 
+	if (a->rt == NULL)
+		return;
+
 	size.width = newClient->right - newClient->left;
 	size.height = newClient->bottom - newClient->top;
 	// don't track the error; we'll get that in EndDraw()

@@ -28,8 +28,9 @@ static LRESULT CALLBACK areaWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
 	if (a->rt == NULL)
 		a->rt = makeHWNDRenderTarget(a->hwnd);
 
-	if (areaDoDraw(a, uMsg, wParam, lParam, &lResult) != FALSE)
-		return lResult;
+	if (a->rt != NULL)
+		if (areaDoDraw(a, uMsg, wParam, lParam, &lResult) != FALSE)
+			return lResult;
 
 	if (uMsg == WM_WINDOWPOSCHANGED) {
 		if ((wp->flags & SWP_NOSIZE) != 0)
@@ -42,8 +43,9 @@ static LRESULT CALLBACK areaWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
 
 	if (areaDoScroll(a, uMsg, wParam, lParam, &lResult) != FALSE)
 		return lResult;
-	if (areaDoEvents(a, uMsg, wParam, lParam, &lResult) != FALSE)
-		return lResult;
+	if (a->rt != NULL)
+		if (areaDoEvents(a, uMsg, wParam, lParam, &lResult) != FALSE)
+			return lResult;
 
 	// nothing done
 	return DefWindowProc(hwnd, uMsg, wParam, lParam);

@@ -31,11 +31,15 @@ ID2D1HwndRenderTarget *makeHWNDRenderTarget(HWND hwnd)
 	ID2D1HwndRenderTarget *rt;
 	HRESULT hr;
 
+	rt = NULL;
+
 	// we need a DC for the DPI
 	// we *could* just use the screen DPI but why when we have a window handle and its DC has a DPI
 	dc = GetDC(hwnd);
-	if (dc == NULL)
+	if (dc == NULL) {
 		logLastError(L"error getting DC to find DPI");
+		return NULL;
+	}
 
 	ZeroMemory(&props, sizeof (D2D1_RENDER_TARGET_PROPERTIES));
 	props.type = D2D1_RENDER_TARGET_TYPE_DEFAULT;
@@ -62,8 +66,10 @@ ID2D1HwndRenderTarget *makeHWNDRenderTarget(HWND hwnd)
 		&props,
 		&hprops,
 		&rt);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error creating HWND render target", hr);
+		return NULL;
+	}
 	return rt;
 }
 

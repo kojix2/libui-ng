@@ -84,10 +84,13 @@ static LRESULT CALLBACK d2dScratchWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, L
 
 	switch (uMsg) {
 	case WM_DESTROY:
-		rt->Release();
+		if (rt != NULL)
+			rt->Release();
 		SetWindowLongPtrW(hwnd, 0, (LONG_PTR) FALSE);
 		break;
 	case WM_PAINT:
+		if (rt == NULL)
+			return DefWindowProcW(hwnd, uMsg, wParam, lParam);
 		hr = d2dScratchDoPaint(hwnd, rt);
 		switch (hr) {
 		case S_OK:
@@ -115,9 +118,13 @@ static LRESULT CALLBACK d2dScratchWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, L
 		dcrt->Release();
 		return 0;
 	case WM_LBUTTONDOWN:
+		if (rt == NULL)
+			return DefWindowProcW(hwnd, uMsg, wParam, lParam);
 		d2dScratchDoLButtonDown(hwnd, rt, lParam);
 		return 0;
 	case WM_MOUSEMOVE:
+		if (rt == NULL)
+			return DefWindowProcW(hwnd, uMsg, wParam, lParam);
 		// also send LButtonDowns when dragging
 		if ((wParam & MK_LBUTTON) != 0)
 			d2dScratchDoLButtonDown(hwnd, rt, lParam);
