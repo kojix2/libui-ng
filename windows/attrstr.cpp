@@ -231,7 +231,7 @@ public:
 
 static HRESULT addEffectAttributeToRange(struct foreachParams *p, size_t start, size_t end, uiAttribute *attr)
 {
-	IUnknown *u;
+	IUnknown *u = NULL;
 	combinedEffectsAttr *cea;
 	DWRITE_TEXT_RANGE range;
 	size_t diff;
@@ -282,7 +282,7 @@ static uiForEach processAttribute(const uiAttributedString *s, const uiAttribute
 	DWRITE_TEXT_RANGE range;
 	WCHAR *wfamily;
 	BOOL hasUnderline;
-	IDWriteTypography *dt;
+	IDWriteTypography *dt = NULL;
 	HRESULT hr;
 
 	start = uiprivAttributedStringUTF8ToUTF16(s, start);
@@ -366,7 +366,7 @@ static uiForEach processAttribute(const uiAttributedString *s, const uiAttribute
 
 static HRESULT applyEffectsAttributes(struct foreachParams *p)
 {
-	IUnknown *u;
+	IUnknown *u = NULL;
 	combinedEffectsAttr *cea;
 	drawingEffectsAttr *dea;
 	DWRITE_TEXT_RANGE range;

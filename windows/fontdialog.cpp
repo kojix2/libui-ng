@@ -101,7 +101,7 @@ static LRESULT cbGetCount(HWND cb)
 
 static void cbWipeAndReleaseData(HWND cb)
 {
-	IUnknown *obj;
+	IUnknown *obj = NULL;
 	LRESULT i, n;
 
 	n = cbGetCount(cb);
@@ -162,7 +162,7 @@ static void wipeStylesBox(struct fontDialog *f)
 
 static WCHAR *fontStyleName(struct fontCollection *fc, IDWriteFont *font)
 {
-	IDWriteLocalizedStrings *str;
+	IDWriteLocalizedStrings *str = NULL;
 	WCHAR *wstr;
 	HRESULT hr;
 
@@ -189,7 +189,7 @@ static void styleChanged(struct fontDialog *f)
 {
 	LRESULT pos;
 	BOOL selected;
-	IDWriteFont *font;
+	IDWriteFont *font = NULL;
 
 	selected = cbGetCurSel(f->styleCombobox, &pos);
 	if (!selected)		// on deselect, do nothing
@@ -215,8 +215,9 @@ static void familyChanged(struct fontDialog *f)
 {
 	LRESULT pos;
 	BOOL selected;
-	IDWriteFontFamily *family;
-	IDWriteFont *font, *matchFont;
+	IDWriteFontFamily *family = NULL;
+	IDWriteFont *font = NULL;
+	IDWriteFont *matchFont = NULL;
 	DWRITE_FONT_WEIGHT weight;
 	DWRITE_FONT_STYLE style;
 	DWRITE_FONT_STRETCH stretch;
@@ -346,13 +347,13 @@ static void fontDialogDrawSampleText(struct fontDialog *f, ID2D1RenderTarget *rt
 {
 	D2D1_COLOR_F color;
 	D2D1_BRUSH_PROPERTIES props;
-	ID2D1SolidColorBrush *black;
-	IDWriteFont *font;
-	IDWriteLocalizedStrings *sampleStrings;
+	ID2D1SolidColorBrush *black = NULL;
+	IDWriteFont *font = NULL;
+	IDWriteLocalizedStrings *sampleStrings = NULL;
 	BOOL exists;
 	WCHAR *sample;
 	WCHAR *family;
-	IDWriteTextFormat *format;
+	IDWriteTextFormat *format = NULL;
 	D2D1_RECT_F rect;
 	HRESULT hr;
 
@@ -432,7 +433,7 @@ static void fontDialogDrawSampleText(struct fontDialog *f, ID2D1RenderTarget *rt
 
 static LRESULT CALLBACK fontDialogSampleSubProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
 {
-	ID2D1RenderTarget *rt;
+	ID2D1RenderTarget *rt = NULL;
 	struct fontDialog *f;
 
 	switch (uMsg) {
@@ -484,7 +485,7 @@ static struct fontDialog *beginFontDialog(HWND hwnd, LPARAM lParam)
 {
 	struct fontDialog *f;
 	UINT32 i, nFamilies;
-	IDWriteFontFamily *family;
+	IDWriteFontFamily *family = NULL;
 	WCHAR *wname;
 	LRESULT pos;
 	HWND samplePlacement;
@@ -542,7 +543,7 @@ static void endFontDialog(struct fontDialog *f, INT_PTR code)
 
 static INT_PTR tryFinishDialog(struct fontDialog *f, WPARAM wParam)
 {
-	IDWriteFontFamily *family;
+	IDWriteFontFamily *family = NULL;
 
 	// cancelling
 	if (LOWORD(wParam) != IDOK) {
@@ -742,7 +743,7 @@ static IDWriteFontFamily *tryFindFamily(IDWriteFontCollection *fc, const WCHAR *
 {
 	UINT32 index;
 	BOOL exists;
-	IDWriteFontFamily *family;
+	IDWriteFontFamily *family = NULL;
 	HRESULT hr;
 
 	hr = fc->FindFamilyName(name, &index, &exists);
@@ -763,8 +764,8 @@ static IDWriteFontFamily *tryFindFamily(IDWriteFontCollection *fc, const WCHAR *
 void uiprivLoadInitialFontDialogParams(struct fontDialogParams *params)
 {
 	struct fontCollection *fc;
-	IDWriteFontFamily *family;
-	IDWriteFont *font;
+	IDWriteFontFamily *family = NULL;
+	IDWriteFont *font = NULL;
 	HRESULT hr;
 
 	// Our preferred font is Arial 10 Regular.

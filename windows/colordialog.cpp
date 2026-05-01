@@ -295,21 +295,17 @@ static void drawGrid(ID2D1RenderTarget *rt, D2D1_RECT_F *fillRect)
 {
 	D2D1_SIZE_F size;
 	D2D1_PIXEL_FORMAT pformat;
-	ID2D1BitmapRenderTarget *brt;
+	ID2D1BitmapRenderTarget *brt = NULL;
 	D2D1_COLOR_F color;
 	D2D1_BRUSH_PROPERTIES bprop;
-	ID2D1SolidColorBrush *brush;
+	ID2D1SolidColorBrush *brush = NULL;
 	D2D1_RECT_F rect;
-	ID2D1Bitmap *bitmap;
+	ID2D1Bitmap *bitmap = NULL;
 	D2D1_BITMAP_BRUSH_PROPERTIES bbp;
-	ID2D1BitmapBrush *bb;
+	ID2D1BitmapBrush *bb = NULL;
 	HRESULT hr, hr2;
 	BOOL drawing;
 
-	brt = NULL;
-	brush = NULL;
-	bitmap = NULL;
-	bb = NULL;
 	drawing = FALSE;
 
 	// mind the divisions; they represent the fact the original uses a viewport
@@ -431,11 +427,10 @@ static BOOL createSolidBrush(ID2D1RenderTarget *rt, D2D1_COLOR_F *color, D2D1_BR
 
 static BOOL createGradientBrush(ID2D1RenderTarget *rt, D2D1_GRADIENT_STOP *stops, UINT32 n, D2D1_GAMMA gamma, D2D1_EXTEND_MODE extend, D2D1_LINEAR_GRADIENT_BRUSH_PROPERTIES *lprop, D2D1_BRUSH_PROPERTIES *bprop, ID2D1LinearGradientBrush **out, const WCHAR *collectionErrmsg, const WCHAR *brushErrmsg)
 {
-	ID2D1GradientStopCollection *collection;
+	ID2D1GradientStopCollection *collection = NULL;
 	HRESULT hr;
 
 	*out = NULL;
-	collection = NULL;
 	hr = rt->CreateGradientStopCollection(stops, n, gamma, extend, &collection);
 	if (hr != S_OK) {
 		logHRESULT(collectionErrmsg, hr);
@@ -459,19 +454,14 @@ static void drawSVChooser(struct colorDialog *c, ID2D1RenderTarget *rt)
 	D2D1_GRADIENT_STOP stops[2];
 	D2D1_LINEAR_GRADIENT_BRUSH_PROPERTIES lprop;
 	D2D1_BRUSH_PROPERTIES bprop;
-	ID2D1LinearGradientBrush *brush;
-	ID2D1LinearGradientBrush *opacity;
-	ID2D1Layer *layer;
+	ID2D1LinearGradientBrush *brush = NULL;
+	ID2D1LinearGradientBrush *opacity = NULL;
+	ID2D1Layer *layer = NULL;
 	D2D1_LAYER_PARAMETERS layerparams;
 	D2D1_ELLIPSE mparam;
 	D2D1_COLOR_F mcolor;
-	ID2D1SolidColorBrush *markerBrush;
+	ID2D1SolidColorBrush *markerBrush = NULL;
 	HRESULT hr;
-
-	brush = NULL;
-	opacity = NULL;
-	layer = NULL;
-	markerBrush = NULL;
 
 	size = realGetSize(rt);
 	rect.left = 0;
@@ -618,7 +608,7 @@ cleanup:
 
 static LRESULT CALLBACK svChooserSubProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
 {
-	ID2D1RenderTarget *rt;
+	ID2D1RenderTarget *rt = NULL;
 	struct colorDialog *c;
 	D2D1_POINT_2F *pos;
 	D2D1_SIZE_F *size;
@@ -651,9 +641,7 @@ static void drawArrow(ID2D1RenderTarget *rt, D2D1_POINT_2F center, double hypot)
 	D2D1_MATRIX_3X2_F oldtf, rotate;
 	D2D1_COLOR_F color;
 	D2D1_BRUSH_PROPERTIES bprop;
-	ID2D1SolidColorBrush *brush;
-
-	brush = NULL;
+	ID2D1SolidColorBrush *brush = NULL;
 
 	// to avoid needing a geometry, this will just be a rotated square
 	// compute the length of each side; the diagonal of the square is 2 * offset to gradient
@@ -704,11 +692,9 @@ static void drawHSlider(struct colorDialog *c, ID2D1RenderTarget *rt)
 	double h;
 	D2D1_LINEAR_GRADIENT_BRUSH_PROPERTIES lprop;
 	D2D1_BRUSH_PROPERTIES bprop;
-	ID2D1LinearGradientBrush *brush;
+	ID2D1LinearGradientBrush *brush = NULL;
 	double hypot;
 	D2D1_POINT_2F center;
-
-	brush = NULL;
 
 	size = realGetSize(rt);
 	rect.left = size.width / 6;		// leftmost sixth for arrow
@@ -760,7 +746,7 @@ cleanup:
 
 static LRESULT CALLBACK hSliderSubProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
 {
-	ID2D1RenderTarget *rt;
+	ID2D1RenderTarget *rt = NULL;
 	struct colorDialog *c;
 	D2D1_POINT_2F *pos;
 	D2D1_SIZE_F *size;
@@ -792,9 +778,7 @@ static void drawPreview(struct colorDialog *c, ID2D1RenderTarget *rt)
 	double r, g, b;
 	D2D1_COLOR_F color;
 	D2D1_BRUSH_PROPERTIES bprop;
-	ID2D1SolidColorBrush *brush;
-
-	brush = NULL;
+	ID2D1SolidColorBrush *brush = NULL;
 
 	size = realGetSize(rt);
 	rect.left = 0;
@@ -819,7 +803,7 @@ static void drawPreview(struct colorDialog *c, ID2D1RenderTarget *rt)
 
 static LRESULT CALLBACK previewSubProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
 {
-	ID2D1RenderTarget *rt;
+	ID2D1RenderTarget *rt = NULL;
 	struct colorDialog *c;
 
 	c = (struct colorDialog *) dwRefData;
@@ -844,11 +828,9 @@ static void drawOpacitySlider(struct colorDialog *c, ID2D1RenderTarget *rt)
 	D2D1_GRADIENT_STOP stops[2];
 	D2D1_LINEAR_GRADIENT_BRUSH_PROPERTIES lprop;
 	D2D1_BRUSH_PROPERTIES bprop;
-	ID2D1LinearGradientBrush *brush;
+	ID2D1LinearGradientBrush *brush = NULL;
 	double hypot;
 	D2D1_POINT_2F center;
-
-	brush = NULL;
 
 	size = realGetSize(rt);
 	rect.left = 0;
@@ -898,7 +880,7 @@ cleanup:
 
 static LRESULT CALLBACK opacitySliderSubProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
 {
-	ID2D1RenderTarget *rt;
+	ID2D1RenderTarget *rt = NULL;
 	struct colorDialog *c;
 	D2D1_POINT_2F *pos;
 	D2D1_SIZE_F *size;

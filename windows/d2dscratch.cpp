@@ -64,8 +64,8 @@ static void d2dScratchDoLButtonDown(HWND hwnd, ID2D1RenderTarget *rt, LPARAM lPa
 static LRESULT CALLBACK d2dScratchWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	LONG_PTR init;
-	ID2D1HwndRenderTarget *rt;
-	ID2D1DCRenderTarget *dcrt;
+	ID2D1HwndRenderTarget *rt = NULL;
+	ID2D1DCRenderTarget *dcrt = NULL;
 	RECT client;
 	HRESULT hr;
 

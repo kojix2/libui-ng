@@ -45,7 +45,7 @@ void uiprivFontCollectionFree(fontCollection *fc)
 
 WCHAR *uiprivFontCollectionFamilyName(fontCollection *fc, IDWriteFontFamily *family)
 {
-	IDWriteLocalizedStrings *names;
+	IDWriteLocalizedStrings *names = NULL;
 	WCHAR *str;
 	HRESULT hr;
 

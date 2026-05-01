@@ -93,7 +93,7 @@ static void onWM_PAINT(uiArea *a)
 
 static void onWM_PRINTCLIENT(uiArea *a, HDC dc)
 {
-	ID2D1DCRenderTarget *rt;
+	ID2D1DCRenderTarget *rt = NULL;
 	RECT client;
 	HRESULT hr;
 

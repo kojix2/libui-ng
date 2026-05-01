@@ -51,9 +51,9 @@ void uiFreeImage(uiImage *i)
 
 void uiImageAppend(uiImage *i, void *pixels, int pixelWidth, int pixelHeight, int byteStride)
 {
-	IWICBitmap *b;
+	IWICBitmap *b = NULL;
 	WICRect r;
-	IWICBitmapLock *l;
+	IWICBitmapLock *l = NULL;
 	uint8_t *pix, *data;
 	// TODO WICInProcPointer is not available in MinGW-w64
 	BYTE *dipp;
@@ -194,7 +194,7 @@ HRESULT uiprivWICToGDI(IWICBitmap *b, HDC dc, int width, int height, HBITMAP *hb
 {
 	UINT ux, uy;
 	int x, y;
-	IWICBitmapSource *src;
+	IWICBitmapSource *src = NULL;
 	BITMAPINFO bmi;
 	VOID *bits;
 	BITMAP bmp;
@@ -215,9 +215,9 @@ HRESULT uiprivWICToGDI(IWICBitmap *b, HDC dc, int width, int height, HBITMAP *hb
 		b->AddRef();		// for the Release() later
 		src = b;
 	} else {
-		IWICBitmapScaler *scaler;
+		IWICBitmapScaler *scaler = NULL;
 		WICPixelFormatGUID guid;
-		IWICFormatConverter *conv;
+		IWICFormatConverter *conv = NULL;
 
 		hr = uiprivWICFactory->CreateBitmapScaler(&scaler);
 		if (hr != S_OK)

@@ -28,10 +28,8 @@ ID2D1HwndRenderTarget *makeHWNDRenderTarget(HWND hwnd)
 	D2D1_HWND_RENDER_TARGET_PROPERTIES hprops;
 	HDC dc;
 	RECT r;
-	ID2D1HwndRenderTarget *rt;
+	ID2D1HwndRenderTarget *rt = NULL;
 	HRESULT hr;
-
-	rt = NULL;
 
 	// we need a DC for the DPI
 	// we *could* just use the screen DPI but why when we have a window handle and its DC has a DPI
@@ -76,10 +74,8 @@ ID2D1HwndRenderTarget *makeHWNDRenderTarget(HWND hwnd)
 ID2D1DCRenderTarget *makeHDCRenderTarget(HDC dc, RECT *r)
 {
 	D2D1_RENDER_TARGET_PROPERTIES props;
-	ID2D1DCRenderTarget *rt;
+	ID2D1DCRenderTarget *rt = NULL;
 	HRESULT hr;
-
-	rt = NULL;
 
 	ZeroMemory(&props, sizeof (D2D1_RENDER_TARGET_PROPERTIES));
 	props.type = D2D1_RENDER_TARGET_TYPE_DEFAULT;
@@ -141,10 +137,8 @@ void freeContext(uiDrawContext *c)
 static ID2D1Brush *makeSolidBrush(uiDrawBrush *b, ID2D1RenderTarget *rt, D2D1_BRUSH_PROPERTIES *props)
 {
 	D2D1_COLOR_F color;
-	ID2D1SolidColorBrush *brush;
+	ID2D1SolidColorBrush *brush = NULL;
 	HRESULT hr;
-
-	brush = NULL;
 
 	color.r = b->R;
 	color.g = b->G;
@@ -164,12 +158,10 @@ static ID2D1Brush *makeSolidBrush(uiDrawBrush *b, ID2D1RenderTarget *rt, D2D1_BR
 
 static ID2D1GradientStopCollection *mkstops(uiDrawBrush *b, ID2D1RenderTarget *rt)
 {
-	ID2D1GradientStopCollection *s;
+	ID2D1GradientStopCollection *s = NULL;
 	D2D1_GRADIENT_STOP *stops;
 	size_t i;
 	HRESULT hr;
-
-	s = NULL;
 
 	stops = (D2D1_GRADIENT_STOP *) uiprivAlloc(b->NumStops * sizeof (D2D1_GRADIENT_STOP), "D2D1_GRADIENT_STOP[]");
 	for (i = 0; i < b->NumStops; i++) {
@@ -198,12 +190,10 @@ static ID2D1GradientStopCollection *mkstops(uiDrawBrush *b, ID2D1RenderTarget *r
 
 static ID2D1Brush *makeLinearBrush(uiDrawBrush *b, ID2D1RenderTarget *rt, D2D1_BRUSH_PROPERTIES *props)
 {
-	ID2D1LinearGradientBrush *brush;
+	ID2D1LinearGradientBrush *brush = NULL;
 	D2D1_LINEAR_GRADIENT_BRUSH_PROPERTIES gprops;
-	ID2D1GradientStopCollection *stops;
+	ID2D1GradientStopCollection *stops = NULL;
 	HRESULT hr;
-
-	brush = NULL;
 
 	ZeroMemory(&gprops, sizeof (D2D1_LINEAR_GRADIENT_BRUSH_PROPERTIES));
 	gprops.startPoint.x = b->X0;
@@ -233,12 +223,10 @@ static ID2D1Brush *makeLinearBrush(uiDrawBrush *b, ID2D1RenderTarget *rt, D2D1_B
 
 static ID2D1Brush *makeRadialBrush(uiDrawBrush *b, ID2D1RenderTarget *rt, D2D1_BRUSH_PROPERTIES *props)
 {
-	ID2D1RadialGradientBrush *brush;
+	ID2D1RadialGradientBrush *brush = NULL;
 	D2D1_RADIAL_GRADIENT_BRUSH_PROPERTIES gprops;
-	ID2D1GradientStopCollection *stops;
+	ID2D1GradientStopCollection *stops = NULL;
 	HRESULT hr;
-
-	brush = NULL;
 
 	ZeroMemory(&gprops, sizeof (D2D1_RADIAL_GRADIENT_BRUSH_PROPERTIES));
 	gprops.gradientOriginOffset.x = b->X0 - b->X1;
@@ -306,11 +294,9 @@ static ID2D1Brush *makeBrush(uiDrawBrush *b, ID2D1RenderTarget *rt)
 
 static ID2D1Layer *applyClip(uiDrawContext *c)
 {
-	ID2D1Layer *layer;
+	ID2D1Layer *layer = NULL;
 	D2D1_LAYER_PARAMETERS params;
 	HRESULT hr;
-
-	layer = NULL;
 
 	// if no clip, don't do anything
 	if (c->currentClip == NULL)
@@ -359,19 +345,17 @@ static void unapplyClip(uiDrawContext *c, ID2D1Layer *layer)
 
 void uiDrawStroke(uiDrawContext *c, uiDrawPath *p, uiDrawBrush *b, uiDrawStrokeParams *sp)
 {
-	ID2D1Brush *brush;
-	ID2D1StrokeStyle *style;
+	ID2D1Brush *brush = NULL;
+	ID2D1StrokeStyle *style = NULL;
 	D2D1_STROKE_STYLE_PROPERTIES dsp;
 	FLOAT *dashes;
 	size_t i;
-	ID2D1Layer *cliplayer;
+	ID2D1Layer *cliplayer = NULL;
 	HRESULT hr;
 
 	brush = makeBrush(b, c->rt);
 	if (brush == NULL)
 		return;
-	style = NULL;
-
 	ZeroMemory(&dsp, sizeof (D2D1_STROKE_STYLE_PROPERTIES));
 	switch (sp->Cap) {
 	case uiDrawLineCapFlat:
@@ -442,8 +426,8 @@ void uiDrawStroke(uiDrawContext *c, uiDrawPath *p, uiDrawBrush *b, uiDrawStrokeP
 
 void uiDrawFill(uiDrawContext *c, uiDrawPath *p, uiDrawBrush *b)
 {
-	ID2D1Brush *brush;
-	ID2D1Layer *cliplayer;
+	ID2D1Brush *brush = NULL;
+	ID2D1Layer *cliplayer = NULL;
 
 	brush = makeBrush(b, c->rt);
 	if (brush == NULL)
@@ -476,12 +460,9 @@ void uiDrawTransform(uiDrawContext *c, uiDrawMatrix *m)
 
 void uiDrawClip(uiDrawContext *c, uiDrawPath *path)
 {
-	ID2D1PathGeometry *newPath;
-	ID2D1GeometrySink *newSink;
+	ID2D1PathGeometry *newPath = NULL;
+	ID2D1GeometrySink *newSink = NULL;
 	HRESULT hr;
-
-	newPath = NULL;
-	newSink = NULL;
 
 	// if there's no current clip, borrow the path
 	if (c->currentClip == NULL) {

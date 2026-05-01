@@ -65,7 +65,7 @@ static void centerImageRect(RECT *image, RECT *space)
 static HRESULT drawImagePart(HRESULT hr, struct drawState *s)
 {
 	uiTableValue *value;
-	IWICBitmap *wb;
+	IWICBitmap *wb = NULL;
 	HBITMAP b;
 	RECT r;
 	UINT fStyle;

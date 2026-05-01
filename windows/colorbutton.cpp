@@ -54,11 +54,11 @@ static BOOL onWM_NOTIFY(uiControl *c, HWND hwnd, NMHDR *nmhdr, LRESULT *lResult)
 	uiColorButton *b = uiColorButton(c);
 	NMCUSTOMDRAW *nm = (NMCUSTOMDRAW *) nmhdr;
 	RECT client;
-	ID2D1DCRenderTarget *rt;
+	ID2D1DCRenderTarget *rt = NULL;
 	D2D1_RECT_F r;
 	D2D1_COLOR_F color;
 	D2D1_BRUSH_PROPERTIES bprop;
-	ID2D1SolidColorBrush *brush;
+	ID2D1SolidColorBrush *brush = NULL;
 	uiWindowsSizing sizing;
 	int x, y;
 	HRESULT hr;

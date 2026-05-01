@@ -157,7 +157,7 @@ static HRESULT mkSolidBrush(ID2D1RenderTarget *rt, double r, double g, double b,
 
 static ID2D1SolidColorBrush *mustMakeSolidBrush(ID2D1RenderTarget *rt, double r, double g, double b, double a)
 {
-	ID2D1SolidColorBrush *brush;
+	ID2D1SolidColorBrush *brush = NULL;
 	HRESULT hr;
 
 	hr = mkSolidBrush(rt, r, g, b, a, &brush);
@@ -345,11 +345,10 @@ public:
 	{
 		D2D1_POINT_2F baseline;
 		drawingEffectsAttr *dea = (drawingEffectsAttr *) clientDrawingEffect;
-		ID2D1SolidColorBrush *brush;
+		ID2D1SolidColorBrush *brush = NULL;
 
 		baseline.x = baselineOriginX;
 		baseline.y = baselineOriginY;
-		brush = NULL;
 		if (dea != NULL) {
 			HRESULT hr;
 
@@ -391,7 +390,7 @@ public:
 	{
 		drawingEffectsAttr *dea = (drawingEffectsAttr *) clientDrawingEffect;
 		uiUnderline utype;
-		ID2D1SolidColorBrush *brush;
+		ID2D1SolidColorBrush *brush = NULL;
 		D2D1_RECT_F rect;
 		D2D1::Matrix3x2F pixeltf;
 		FLOAT dpix, dpiy;
@@ -454,8 +453,8 @@ public:
 					// TODO properly clean resources on failure
 					// TODO use fully qualified C overloads for all methods
 					// TODO ensure all methods properly have errors handled
-				ID2D1PathGeometry *path;
-				ID2D1GeometrySink *sink;
+				ID2D1PathGeometry *path = NULL;
+				ID2D1GeometrySink *sink = NULL;
 				double amplitude, period, xOffset, yOffset;
 				double t;
 				bool first = true;
@@ -508,7 +507,7 @@ public:
 // TODO this ignores clipping?
 void uiDrawText(uiDrawContext *c, uiDrawTextLayout *tl, double x, double y)
 {
-	ID2D1SolidColorBrush *black;
+	ID2D1SolidColorBrush *black = NULL;
 	textRenderer *renderer;
 	HRESULT hr;
 
@@ -572,9 +571,9 @@ void uiDrawTextLayoutExtents(uiDrawTextLayout *tl, double *width, double *height
 void uiLoadControlFont(uiFontDescriptor *f)
 {
 	fontCollection *collection;
-	IDWriteGdiInterop *gdi;
-	IDWriteFont *dwfont;
-	IDWriteFontFamily *dwfamily;
+	IDWriteGdiInterop *gdi = NULL;
+	IDWriteFont *dwfont = NULL;
+	IDWriteFontFamily *dwfamily = NULL;
 	NONCLIENTMETRICSW metrics;
 	HDC dc;
 	WCHAR *family;
