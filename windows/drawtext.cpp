@@ -520,6 +520,8 @@ void uiDrawText(uiDrawContext *c, uiDrawTextLayout *tl, double x, double y)
 	// TODO document that fully opaque black is the default text color; figure out whether this is upheld in various scenarios on other platforms
 	// TODO figure out if this needs to be cleaned out
 	black = mustMakeSolidBrush(c->rt, 0.0, 0.0, 0.0, 1.0);
+	if (black == NULL)
+		return;
 
 #define renderD2D 0
 #define renderOur 1
@@ -537,6 +539,8 @@ void uiDrawText(uiDrawContext *c, uiDrawTextLayout *tl, double x, double y)
 	// TODO get the actual color Charles Petzold uses and use that
 	black->Release();
 	black = mustMakeSolidBrush(c->rt, 1.0, 0.0, 0.0, 0.75);
+	if (black == NULL)
+		return;
 #endif
 #if renderOur
 	renderer = new textRenderer(c->rt,
@@ -561,8 +565,12 @@ void uiDrawTextLayoutExtents(uiDrawTextLayout *tl, double *width, double *height
 	HRESULT hr;
 
 	hr = tl->layout->GetMetrics(&metrics);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error getting IDWriteTextLayout layout metrics", hr);
+		*width = 0;
+		*height = 0;
+		return;
+	}
 	*width = metrics.width;
 	// TODO make sure the behavior of this on empty strings is the same on all platforms (ideally should be 0-width, line height-height; TODO note this in the docs too)
 	*height = metrics.height;
@@ -570,51 +578,79 @@ void uiDrawTextLayoutExtents(uiDrawTextLayout *tl, double *width, double *height
 
 void uiLoadControlFont(uiFontDescriptor *f)
 {
-	fontCollection *collection;
+	fontCollection *collection = NULL;
 	IDWriteGdiInterop *gdi = NULL;
 	IDWriteFont *dwfont = NULL;
 	IDWriteFontFamily *dwfamily = NULL;
 	NONCLIENTMETRICSW metrics;
-	HDC dc;
-	WCHAR *family;
+	HDC dc = NULL;
+	WCHAR *family = NULL;
 	double size;
 	int pixels;
 	HRESULT hr;
 
-	metrics.cbSize = sizeof(metrics);
-	if (!SystemParametersInfoW(SPI_GETNONCLIENTMETRICS, metrics.cbSize, &metrics, 0))
-			logLastError(L"error getting non-client metrics");
+	ZeroMemory(&metrics, sizeof (metrics));
+	metrics.cbSize = sizeof (metrics);
+	if (!SystemParametersInfoW(SPI_GETNONCLIENTMETRICS, metrics.cbSize, &metrics, 0)) {
+		logLastError(L"error getting non-client metrics");
+		goto fail;
+	}
 	hr = dwfactory->GetGdiInterop(&gdi);
-	if (hr != S_OK)
-			logHRESULT(L"error getting GDI interop", hr);
+	if (hr != S_OK) {
+		logHRESULT(L"error getting GDI interop", hr);
+		goto fail;
+	}
 
 	hr = gdi->CreateFontFromLOGFONT(&metrics.lfMessageFont, &dwfont);
-	if (hr != S_OK)
-			logHRESULT(L"error loading font", hr);
+	if (hr != S_OK) {
+		logHRESULT(L"error loading font", hr);
+		goto fail;
+	}
 
 	hr = dwfont->GetFontFamily(&dwfamily);
-	if (hr != S_OK)
-			logHRESULT(L"error loading font family", hr);
+	if (hr != S_OK) {
+		logHRESULT(L"error loading font family", hr);
+		goto fail;
+	}
 	collection = uiprivLoadFontCollection();
 	family = uiprivFontCollectionFamilyName(collection, dwfamily);
 
 	dc = GetDC(NULL);
-	if (dc == NULL)
+	if (dc == NULL) {
 		logLastError(L"error getting DC");
+		goto fail;
+	}
 	pixels = GetDeviceCaps(dc, LOGPIXELSY);
-	if (pixels == 0)
-			logLastError(L"error getting device caps");
+	if (pixels == 0) {
+		logLastError(L"error getting device caps");
+		goto fail;
+	}
 	size = abs(metrics.lfMessageFont.lfHeight) * 72 / pixels;
 
 	uiprivFontDescriptorFromIDWriteFont(dwfont, f);
 	f->Family = toUTF8(family);
 	f->Size = size;
 
-	uiprivFree(family);
+	goto cleanup;
+
+fail:
+	f->Family = emptyUTF8();
+	f->Size = 0;
+	f->Weight = uiTextWeightNormal;
+	f->Italic = uiTextItalicNormal;
+	f->Stretch = uiTextStretchNormal;
+
+cleanup:
+	if (family != NULL)
+		uiprivFree(family);
 	uiprivFontCollectionFree(collection);
-	dwfamily->Release();
-	gdi->Release();
-	if (ReleaseDC(NULL, dc) == 0)
+	if (dwfamily != NULL)
+		dwfamily->Release();
+	if (dwfont != NULL)
+		dwfont->Release();
+	if (gdi != NULL)
+		gdi->Release();
+	if (dc != NULL && ReleaseDC(NULL, dc) == 0)
 		logLastError(L"error releasing DC");
 }
 

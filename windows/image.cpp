@@ -139,8 +139,10 @@ static void match(IWICBitmap *b, struct matcher *m)
 	HRESULT hr;
 
 	hr = b->GetSize(&ux, &uy);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error calling GetSize() in match()", hr);
+		return;
+	}
 	x = ux;
 	y = uy;
 	if (m->best == NULL)
