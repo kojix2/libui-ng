@@ -287,6 +287,8 @@ static ID2D1Layer *applyClip(uiDrawContext *c)
 	D2D1_LAYER_PARAMETERS params;
 	HRESULT hr;
 
+	layer = NULL;
+
 	// if no clip, don't do anything
 	if (c->currentClip == NULL)
 		return NULL;
@@ -294,8 +296,10 @@ static ID2D1Layer *applyClip(uiDrawContext *c)
 	// create a layer for clipping
 	// we have to explicitly make the layer because we're still targeting Windows 7
 	hr = c->rt->CreateLayer(NULL, &layer);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error creating clip layer", hr);
+		return NULL;
+	}
 
 	// apply it as the clip
 	ZeroMemory(&params, sizeof (D2D1_LAYER_PARAMETERS));
