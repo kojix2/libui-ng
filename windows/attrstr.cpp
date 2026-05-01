@@ -353,6 +353,8 @@ static uiForEach processAttribute(const uiAttributedString *s, const uiAttribute
 		if (uiAttributeFeatures(attr) == NULL)
 			break;
 		dt = uiprivOpenTypeFeaturesToIDWriteTypography(uiAttributeFeatures(attr));
+		if (dt == NULL)
+			break;
 		hr = p->layout->SetTypography(dt, range);
 		if (hr != S_OK)
 			logHRESULT(L"error applying features attribute", hr);

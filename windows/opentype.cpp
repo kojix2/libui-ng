@@ -26,8 +26,10 @@ IDWriteTypography *uiprivOpenTypeFeaturesToIDWriteTypography(const uiOpenTypeFea
 	HRESULT hr;
 
 	hr = dwfactory->CreateTypography(&dt);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error creating IDWriteTypography", hr);
+		return NULL;
+	}
 	uiOpenTypeFeaturesForEach(otf, addToTypography, dt);
 	return dt;
 }
