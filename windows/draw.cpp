@@ -508,13 +508,16 @@ void uiDrawSave(uiDrawContext *c)
 	struct drawState state;
 	HRESULT hr;
 
+	state.dsb = NULL;
 	hr = d2dfactory->CreateDrawingStateBlock(
 		// TODO verify that these are correct
 		NULL,
 		NULL,
 		&(state.dsb));
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error creating drawing state block", hr);
+		return;
+	}
 	c->rt->SaveDrawingState(state.dsb);
 
 	// if we have a clip, we need to hold another reference to it
