@@ -240,14 +240,19 @@ static void familyChanged(struct fontDialog *f)
 		f->stretch,
 		f->style,
 		&matchFont);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error finding first matching font to previous style in font dialog", hr);
-	// we can't just compare pointers; a "newly created" object comes out
-	// the Choose Font sample appears to do this instead
-	weight = matchFont->GetWeight();
-	style = matchFont->GetStyle();
-	stretch = matchFont->GetStretch();
-	matchFont->Release();
+		weight = f->weight;
+		style = f->style;
+		stretch = f->stretch;
+	} else {
+		// we can't just compare pointers; a "newly created" object comes out
+		// the Choose Font sample appears to do this instead
+		weight = matchFont->GetWeight();
+		style = matchFont->GetStyle();
+		stretch = matchFont->GetStretch();
+		matchFont->Release();
+	}
 
 	// TODO test mutliple streteches; all the fonts I have have only one stretch value?
 	wipeStylesBox(f);
@@ -255,8 +260,10 @@ static void familyChanged(struct fontDialog *f)
 	matching = 0;			// a safe/suitable default just in case
 	for (i = 0; i < n; i++) {
 		hr = family->GetFont(i, &font);
-		if (hr != S_OK)
+		if (hr != S_OK) {
 			logHRESULT(L"error getting font for filling styles box", hr);
+			continue;
+		}
 		label = fontStyleName(f->fc, font);
 		pos = cbAddString(f->styleCombobox, label);
 		uiprivFree(label);
@@ -264,7 +271,7 @@ static void familyChanged(struct fontDialog *f)
 		if (font->GetWeight() == weight &&
 			font->GetStyle() == style &&
 			font->GetStretch() == stretch)
-			matching = i;
+			matching = (UINT32) pos;
 	}
 
 	// and now, load the match
@@ -362,10 +369,16 @@ static void fontDialogDrawSampleText(struct fontDialog *f, ID2D1RenderTarget *rt
 		&color,
 		&props,
 		&black);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error creating solid brush", hr);
+		return;
+	}
 
 	font = (IDWriteFont *) cbGetItemData(f->styleCombobox, (WPARAM) f->curStyle);
+	if (font == NULL) {
+		black->Release();
+		return;
+	}
 	hr = font->GetInformationalStrings(DWRITE_INFORMATIONAL_STRING_SAMPLE_TEXT, &sampleStrings, &exists);
 	if (hr != S_OK)
 		exists = FALSE;
@@ -389,8 +402,14 @@ static void fontDialogDrawSampleText(struct fontDialog *f, ID2D1RenderTarget *rt
 		// TODO use the current locale again?
 		L"",
 		&format);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error creating IDWriteTextFormat", hr);
+		uiprivFree(family);
+		if (exists)
+			uiprivFree(sample);
+		black->Release();
+		return;
+	}
 	uiprivFree(family);
 
 	rect.left = 0;
