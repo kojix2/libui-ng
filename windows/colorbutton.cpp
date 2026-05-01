@@ -63,6 +63,8 @@ static BOOL onWM_NOTIFY(uiControl *c, HWND hwnd, NMHDR *nmhdr, LRESULT *lResult)
 	int x, y;
 	HRESULT hr;
 
+	brush = NULL;
+
 	if (nmhdr->code != NM_CUSTOMDRAW)
 		return FALSE;
 	// and allow the button to draw its background
@@ -93,8 +95,14 @@ static BOOL onWM_NOTIFY(uiControl *c, HWND hwnd, NMHDR *nmhdr, LRESULT *lResult)
 	bprop.transform._11 = 1;
 	bprop.transform._22 = 1;
 	hr = rt->CreateSolidColorBrush(&color, &bprop, &brush);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error creating brush for color button", hr);
+		hr = rt->EndDraw(NULL, NULL);
+		if (hr != S_OK)
+			logHRESULT(L"error drawing color on color button", hr);
+		rt->Release();
+		return FALSE;
+	}
 	rt->FillRectangle(&r, brush);
 	brush->Release();
 
