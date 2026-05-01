@@ -470,16 +470,21 @@ CFAttributedStringRef uiprivAttributedStringToCFAttributedString(uiDrawTextLayou
 	CFMutableAttributedStringRef mas;
 	struct foreachParams fep;
 
+	cfstr = NULL;
+	defaultAttrs = NULL;
+	ps = NULL;
+	base = NULL;
+	mas = NULL;
+	fep.backgroundParams = nil;
+
 	cfstr = CFStringCreateWithCharacters(NULL, uiprivAttributedStringUTF16String(p->String), uiprivAttributedStringUTF16Len(p->String));
-	if (cfstr == NULL) {
-		// TODO
-	}
+	if (cfstr == NULL)
+		goto fail;
 	defaultAttrs = CFDictionaryCreateMutable(NULL, 0,
 		&kCFCopyStringDictionaryKeyCallBacks,
 		&kCFTypeDictionaryValueCallBacks);
-	if (defaultAttrs == NULL) {
-		// TODO
-	}
+	if (defaultAttrs == NULL)
+		goto fail;
 #if 0 /* TODO */
 	ffp.desc = *(p->DefaultFont);
 	defaultCTFont = fontdescToCTFont(&ffp);
@@ -487,25 +492,50 @@ CFAttributedStringRef uiprivAttributedStringToCFAttributedString(uiDrawTextLayou
 	CFRelease(defaultCTFont);
 #endif
 	ps = mkParagraphStyle(p);
+	if (ps == NULL)
+		goto fail;
 	CFDictionaryAddValue(defaultAttrs, kCTParagraphStyleAttributeName, ps);
 	CFRelease(ps);
+	ps = NULL;
 
 	base = CFAttributedStringCreate(NULL, cfstr, defaultAttrs);
-	if (base == NULL) {
-		// TODO
-	}
+	if (base == NULL)
+		goto fail;
 	CFRelease(cfstr);
+	cfstr = NULL;
 	CFRelease(defaultAttrs);
+	defaultAttrs = NULL;
 	mas = CFAttributedStringCreateMutableCopy(NULL, 0, base);
 	CFRelease(base);
+	base = NULL;
+	if (mas == NULL)
+		goto fail;
 
-	CFAttributedStringBeginEditing(mas);
 	fep.mas = mas;
 	fep.backgroundParams = [NSMutableArray new];
+	if (fep.backgroundParams == nil)
+		goto fail;
+	CFAttributedStringBeginEditing(mas);
 	uiAttributedStringForEachAttribute(p->String, processAttribute, &fep);
 	applyFontAttributes(mas, p->DefaultFont);
 	CFAttributedStringEndEditing(mas);
 
 	*backgroundParams = fep.backgroundParams;
 	return mas;
+
+fail:
+	if (fep.backgroundParams != nil)
+		[fep.backgroundParams release];
+	if (mas != NULL)
+		CFRelease(mas);
+	if (base != NULL)
+		CFRelease(base);
+	if (ps != NULL)
+		CFRelease(ps);
+	if (defaultAttrs != NULL)
+		CFRelease(defaultAttrs);
+	if (cfstr != NULL)
+		CFRelease(cfstr);
+	*backgroundParams = nil;
+	return NULL;
 }
