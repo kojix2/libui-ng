@@ -174,6 +174,8 @@ void uiDrawStroke(uiDrawContext *c, uiDrawPath *path, uiDrawBrush *b, uiDrawStro
 			dashes,
 			p->NumDashes);
 		uiprivFree(dashes);
+		if (dashPath == NULL)
+			return;
 	}
 	// the documentation is wrong: this produces a path suitable for calling CGPathCreateCopyByStrokingPath(), not for filling directly
 	// the cast is safe; we never modify the CGPathRef and always cast it back to a CGPathRef anyway
@@ -185,6 +187,8 @@ void uiDrawStroke(uiDrawContext *c, uiDrawPath *path, uiDrawBrush *b, uiDrawStro
 		p->MiterLimit);
 	if (p->NumDashes != 0)
 		CGPathRelease(dashPath);
+	if (p2.path == NULL)
+		return;
 
 	// always draw stroke fills using the winding rule
 	// otherwise intersecting figures won't draw correctly
