@@ -51,9 +51,9 @@ void uiFreeImage(uiImage *i)
 
 void uiImageAppend(uiImage *i, void *pixels, int pixelWidth, int pixelHeight, int byteStride)
 {
-	IWICBitmap *b;
+	IWICBitmap *b = NULL;
 	WICRect r;
-	IWICBitmapLock *l;
+	IWICBitmapLock *l = NULL;
 	uint8_t *pix, *data;
 	// TODO WICInProcPointer is not available in MinGW-w64
 	BYTE *dipp;
@@ -65,25 +65,38 @@ void uiImageAppend(uiImage *i, void *pixels, int pixelWidth, int pixelHeight, in
 	hr = uiprivWICFactory->CreateBitmap(pixelWidth, pixelHeight,
 		formatForGDI, WICBitmapCacheOnDemand,
 		&b);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error calling CreateBitmap() in uiImageAppend()", hr);
+		return;
+	}
 	r.X = 0;
 	r.Y = 0;
 	r.Width = pixelWidth;
 	r.Height = pixelHeight;
 	hr = b->Lock(&r, WICBitmapLockWrite, &l);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error calling Lock() in uiImageAppend()", hr);
+		b->Release();
+		return;
+	}
 
 	pix = (uint8_t *) pixels;
 	// TODO can size be NULL?
 	hr = l->GetDataPointer(&size, &dipp);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error calling GetDataPointer() in uiImageAppend()", hr);
+		l->Release();
+		b->Release();
+		return;
+	}
 	data = (uint8_t *) dipp;
 	hr = l->GetStride(&realStride);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error calling GetStride() in uiImageAppend()", hr);
+		l->Release();
+		b->Release();
+		return;
+	}
 	for (y = 0; y < pixelHeight; y++) {
 		for (x = 0; x < pixelWidth * 4; x += 4) {
 			union {
@@ -126,8 +139,10 @@ static void match(IWICBitmap *b, struct matcher *m)
 	HRESULT hr;
 
 	hr = b->GetSize(&ux, &uy);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error calling GetSize() in match()", hr);
+		return;
+	}
 	x = ux;
 	y = uy;
 	if (m->best == NULL)
@@ -181,7 +196,7 @@ HRESULT uiprivWICToGDI(IWICBitmap *b, HDC dc, int width, int height, HBITMAP *hb
 {
 	UINT ux, uy;
 	int x, y;
-	IWICBitmapSource *src;
+	IWICBitmapSource *src = NULL;
 	BITMAPINFO bmi;
 	VOID *bits;
 	BITMAP bmp;
@@ -202,9 +217,9 @@ HRESULT uiprivWICToGDI(IWICBitmap *b, HDC dc, int width, int height, HBITMAP *hb
 		b->AddRef();		// for the Release() later
 		src = b;
 	} else {
-		IWICBitmapScaler *scaler;
+		IWICBitmapScaler *scaler = NULL;
 		WICPixelFormatGUID guid;
-		IWICFormatConverter *conv;
+		IWICFormatConverter *conv = NULL;
 
 		hr = uiprivWICFactory->CreateBitmapScaler(&scaler);
 		if (hr != S_OK)

@@ -93,12 +93,14 @@ static void onWM_PAINT(uiArea *a)
 
 static void onWM_PRINTCLIENT(uiArea *a, HDC dc)
 {
-	ID2D1DCRenderTarget *rt;
+	ID2D1DCRenderTarget *rt = NULL;
 	RECT client;
 	HRESULT hr;
 
 	uiWindowsEnsureGetClientRect(a->hwnd, &client);
 	rt = makeHDCRenderTarget(dc, &client);
+	if (rt == NULL)
+		return;
 	hr = doPaint(a, rt, &client);
 	if (hr != S_OK)
 		logHRESULT(L"error printing uiArea client area", hr);
@@ -124,6 +126,9 @@ BOOL areaDoDraw(uiArea *a, UINT uMsg, WPARAM wParam, LPARAM lParam, LRESULT *lRe
 void areaDrawOnResize(uiArea *a, RECT *newClient)
 {
 	D2D1_SIZE_U size;
+
+	if (a->rt == NULL)
+		return;
 
 	size.width = newClient->right - newClient->left;
 	size.height = newClient->bottom - newClient->top;

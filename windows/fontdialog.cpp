@@ -101,7 +101,7 @@ static LRESULT cbGetCount(HWND cb)
 
 static void cbWipeAndReleaseData(HWND cb)
 {
-	IUnknown *obj;
+	IUnknown *obj = NULL;
 	LRESULT i, n;
 
 	n = cbGetCount(cb);
@@ -162,13 +162,18 @@ static void wipeStylesBox(struct fontDialog *f)
 
 static WCHAR *fontStyleName(struct fontCollection *fc, IDWriteFont *font)
 {
-	IDWriteLocalizedStrings *str;
+	IDWriteLocalizedStrings *str = NULL;
 	WCHAR *wstr;
 	HRESULT hr;
 
+	if (font == NULL)
+		return emptyUTF16();
+
 	hr = font->GetFaceNames(&str);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error getting font style name for font dialog", hr);
+		return emptyUTF16();
+	}
 	wstr = uiprivFontCollectionCorrectString(fc, str);
 	str->Release();
 	return wstr;
@@ -184,7 +189,7 @@ static void styleChanged(struct fontDialog *f)
 {
 	LRESULT pos;
 	BOOL selected;
-	IDWriteFont *font;
+	IDWriteFont *font = NULL;
 
 	selected = cbGetCurSel(f->styleCombobox, &pos);
 	if (!selected)		// on deselect, do nothing
@@ -210,8 +215,9 @@ static void familyChanged(struct fontDialog *f)
 {
 	LRESULT pos;
 	BOOL selected;
-	IDWriteFontFamily *family;
-	IDWriteFont *font, *matchFont;
+	IDWriteFontFamily *family = NULL;
+	IDWriteFont *font = NULL;
+	IDWriteFont *matchFont = NULL;
 	DWRITE_FONT_WEIGHT weight;
 	DWRITE_FONT_STYLE style;
 	DWRITE_FONT_STRETCH stretch;
@@ -235,14 +241,19 @@ static void familyChanged(struct fontDialog *f)
 		f->stretch,
 		f->style,
 		&matchFont);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error finding first matching font to previous style in font dialog", hr);
-	// we can't just compare pointers; a "newly created" object comes out
-	// the Choose Font sample appears to do this instead
-	weight = matchFont->GetWeight();
-	style = matchFont->GetStyle();
-	stretch = matchFont->GetStretch();
-	matchFont->Release();
+		weight = f->weight;
+		style = f->style;
+		stretch = f->stretch;
+	} else {
+		// we can't just compare pointers; a "newly created" object comes out
+		// the Choose Font sample appears to do this instead
+		weight = matchFont->GetWeight();
+		style = matchFont->GetStyle();
+		stretch = matchFont->GetStretch();
+		matchFont->Release();
+	}
 
 	// TODO test mutliple streteches; all the fonts I have have only one stretch value?
 	wipeStylesBox(f);
@@ -250,8 +261,10 @@ static void familyChanged(struct fontDialog *f)
 	matching = 0;			// a safe/suitable default just in case
 	for (i = 0; i < n; i++) {
 		hr = family->GetFont(i, &font);
-		if (hr != S_OK)
+		if (hr != S_OK) {
 			logHRESULT(L"error getting font for filling styles box", hr);
+			continue;
+		}
 		label = fontStyleName(f->fc, font);
 		pos = cbAddString(f->styleCombobox, label);
 		uiprivFree(label);
@@ -259,7 +272,7 @@ static void familyChanged(struct fontDialog *f)
 		if (font->GetWeight() == weight &&
 			font->GetStyle() == style &&
 			font->GetStretch() == stretch)
-			matching = i;
+			matching = (UINT32) pos;
 	}
 
 	// and now, load the match
@@ -334,13 +347,13 @@ static void fontDialogDrawSampleText(struct fontDialog *f, ID2D1RenderTarget *rt
 {
 	D2D1_COLOR_F color;
 	D2D1_BRUSH_PROPERTIES props;
-	ID2D1SolidColorBrush *black;
-	IDWriteFont *font;
-	IDWriteLocalizedStrings *sampleStrings;
+	ID2D1SolidColorBrush *black = NULL;
+	IDWriteFont *font = NULL;
+	IDWriteLocalizedStrings *sampleStrings = NULL;
 	BOOL exists;
 	WCHAR *sample;
 	WCHAR *family;
-	IDWriteTextFormat *format;
+	IDWriteTextFormat *format = NULL;
 	D2D1_RECT_F rect;
 	HRESULT hr;
 
@@ -357,10 +370,16 @@ static void fontDialogDrawSampleText(struct fontDialog *f, ID2D1RenderTarget *rt
 		&color,
 		&props,
 		&black);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error creating solid brush", hr);
+		return;
+	}
 
 	font = (IDWriteFont *) cbGetItemData(f->styleCombobox, (WPARAM) f->curStyle);
+	if (font == NULL) {
+		black->Release();
+		return;
+	}
 	hr = font->GetInformationalStrings(DWRITE_INFORMATIONAL_STRING_SAMPLE_TEXT, &sampleStrings, &exists);
 	if (hr != S_OK)
 		exists = FALSE;
@@ -384,8 +403,14 @@ static void fontDialogDrawSampleText(struct fontDialog *f, ID2D1RenderTarget *rt
 		// TODO use the current locale again?
 		L"",
 		&format);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error creating IDWriteTextFormat", hr);
+		uiprivFree(family);
+		if (exists)
+			uiprivFree(sample);
+		black->Release();
+		return;
+	}
 	uiprivFree(family);
 
 	rect.left = 0;
@@ -408,7 +433,7 @@ static void fontDialogDrawSampleText(struct fontDialog *f, ID2D1RenderTarget *rt
 
 static LRESULT CALLBACK fontDialogSampleSubProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
 {
-	ID2D1RenderTarget *rt;
+	ID2D1RenderTarget *rt = NULL;
 	struct fontDialog *f;
 
 	switch (uMsg) {
@@ -460,7 +485,7 @@ static struct fontDialog *beginFontDialog(HWND hwnd, LPARAM lParam)
 {
 	struct fontDialog *f;
 	UINT32 i, nFamilies;
-	IDWriteFontFamily *family;
+	IDWriteFontFamily *family = NULL;
 	WCHAR *wname;
 	LRESULT pos;
 	HWND samplePlacement;
@@ -475,11 +500,18 @@ static struct fontDialog *beginFontDialog(HWND hwnd, LPARAM lParam)
 	f->sizeCombobox = getDlgItem(f->hwnd, rcFontSizeCombobox);
 
 	f->fc = uiprivLoadFontCollection();
+	if (f->fc == NULL) {
+		uiprivFree(f);
+		EndDialog(hwnd, 1);
+		return NULL;
+	}
 	nFamilies = f->fc->fonts->GetFontFamilyCount();
 	for (i = 0; i < nFamilies; i++) {
 		hr = f->fc->fonts->GetFontFamily(i, &family);
-		if (hr != S_OK)
+		if (hr != S_OK) {
 			logHRESULT(L"error getting font family", hr);
+			continue;
+		}
 		wname = uiprivFontCollectionFamilyName(f->fc, family);
 		pos = cbAddString(f->familyCombobox, wname);
 		uiprivFree(wname);
@@ -511,7 +543,7 @@ static void endFontDialog(struct fontDialog *f, INT_PTR code)
 
 static INT_PTR tryFinishDialog(struct fontDialog *f, WPARAM wParam)
 {
-	IDWriteFontFamily *family;
+	IDWriteFontFamily *family = NULL;
 
 	// cancelling
 	if (LOWORD(wParam) != IDOK) {
@@ -540,6 +572,8 @@ static INT_PTR CALLBACK fontDialogDlgProc(HWND hwnd, UINT uMsg, WPARAM wParam, L
 	if (f == NULL) {
 		if (uMsg == WM_INITDIALOG) {
 			f = beginFontDialog(hwnd, lParam);
+			if (f == NULL)
+				return TRUE;
 			SetWindowLongPtrW(hwnd, DWLP_USER, (LONG_PTR) f);
 			return TRUE;
 		}
@@ -690,6 +724,9 @@ static_assert(ARRAYSIZE(data_rcFontDialog) == 476, "wrong size for resource rcFo
 
 BOOL uiprivShowFontDialog(HWND parent, struct fontDialogParams *params)
 {
+	if (params->font == NULL)
+		return FALSE;
+
 	switch (DialogBoxIndirectParamW(hInstance, (const DLGTEMPLATE *) data_rcFontDialog, parent, fontDialogDlgProc, (LPARAM) params)) {
 	case 1:			// cancel
 		return FALSE;
@@ -706,25 +743,29 @@ static IDWriteFontFamily *tryFindFamily(IDWriteFontCollection *fc, const WCHAR *
 {
 	UINT32 index;
 	BOOL exists;
-	IDWriteFontFamily *family;
+	IDWriteFontFamily *family = NULL;
 	HRESULT hr;
 
 	hr = fc->FindFamilyName(name, &index, &exists);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error finding font family for font dialog", hr);
+		return NULL;
+	}
 	if (!exists)
 		return NULL;
 	hr = fc->GetFontFamily(index, &family);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error extracting found font family for font dialog", hr);
+		return NULL;
+	}
 	return family;
 }
 
 void uiprivLoadInitialFontDialogParams(struct fontDialogParams *params)
 {
 	struct fontCollection *fc;
-	IDWriteFontFamily *family;
-	IDWriteFont *font;
+	IDWriteFontFamily *family = NULL;
+	IDWriteFont *font = NULL;
 	HRESULT hr;
 
 	// Our preferred font is Arial 10 Regular.
@@ -734,6 +775,13 @@ void uiprivLoadInitialFontDialogParams(struct fontDialogParams *params)
 
 	// We need the correct localized name for Regular (and possibly Arial too? let's say yes to be safe), so let's grab the strings from DirectWrite instead of hardcoding them.
 	fc = uiprivLoadFontCollection();
+	if (fc == NULL) {
+		params->font = NULL;
+		params->size = 10;
+		params->familyName = emptyUTF16();
+		params->styleName = emptyUTF16();
+		return;
+	}
 	family = tryFindFamily(fc->fonts, L"Arial");
 	if (family == NULL) {
 		family = tryFindFamily(fc->fonts, L"Helvetica");
@@ -741,8 +789,15 @@ void uiprivLoadInitialFontDialogParams(struct fontDialogParams *params)
 			family = tryFindFamily(fc->fonts, L"MS Sans Serif");
 			if (family == NULL) {
 				hr = fc->fonts->GetFontFamily(0, &family);
-				if (hr != S_OK)
+				if (hr != S_OK) {
 					logHRESULT(L"error getting first font out of font collection (worst case scenario)", hr);
+					uiprivFontCollectionFree(fc);
+					params->font = NULL;
+					params->size = 10;
+					params->familyName = emptyUTF16();
+					params->styleName = emptyUTF16();
+					return;
+				}
 			}
 		}
 	}
@@ -753,8 +808,16 @@ void uiprivLoadInitialFontDialogParams(struct fontDialogParams *params)
 		DWRITE_FONT_STRETCH_NORMAL,
 		DWRITE_FONT_STYLE_NORMAL,
 		&font);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error getting Regular font from Arial", hr);
+		family->Release();
+		uiprivFontCollectionFree(fc);
+		params->font = NULL;
+		params->size = 10;
+		params->familyName = emptyUTF16();
+		params->styleName = emptyUTF16();
+		return;
+	}
 
 	params->font = font;
 	params->size = 10;
@@ -768,7 +831,8 @@ void uiprivLoadInitialFontDialogParams(struct fontDialogParams *params)
 
 void uiprivDestroyFontDialogParams(struct fontDialogParams *params)
 {
-	params->font->Release();
+	if (params->font != NULL)
+		params->font->Release();
 	uiprivFree(params->familyName);
 	uiprivFree(params->styleName);
 }

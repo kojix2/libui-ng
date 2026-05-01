@@ -28,14 +28,16 @@ ID2D1HwndRenderTarget *makeHWNDRenderTarget(HWND hwnd)
 	D2D1_HWND_RENDER_TARGET_PROPERTIES hprops;
 	HDC dc;
 	RECT r;
-	ID2D1HwndRenderTarget *rt;
+	ID2D1HwndRenderTarget *rt = NULL;
 	HRESULT hr;
 
 	// we need a DC for the DPI
 	// we *could* just use the screen DPI but why when we have a window handle and its DC has a DPI
 	dc = GetDC(hwnd);
-	if (dc == NULL)
+	if (dc == NULL) {
 		logLastError(L"error getting DC to find DPI");
+		return NULL;
+	}
 
 	ZeroMemory(&props, sizeof (D2D1_RENDER_TARGET_PROPERTIES));
 	props.type = D2D1_RENDER_TARGET_TYPE_DEFAULT;
@@ -62,15 +64,17 @@ ID2D1HwndRenderTarget *makeHWNDRenderTarget(HWND hwnd)
 		&props,
 		&hprops,
 		&rt);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error creating HWND render target", hr);
+		return NULL;
+	}
 	return rt;
 }
 
 ID2D1DCRenderTarget *makeHDCRenderTarget(HDC dc, RECT *r)
 {
 	D2D1_RENDER_TARGET_PROPERTIES props;
-	ID2D1DCRenderTarget *rt;
+	ID2D1DCRenderTarget *rt = NULL;
 	HRESULT hr;
 
 	ZeroMemory(&props, sizeof (D2D1_RENDER_TARGET_PROPERTIES));
@@ -83,11 +87,16 @@ ID2D1DCRenderTarget *makeHDCRenderTarget(HDC dc, RECT *r)
 	props.minLevel = D2D1_FEATURE_LEVEL_DEFAULT;
 
 	hr = d2dfactory->CreateDCRenderTarget(&props, &rt);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error creating DC render target", hr);
+		return NULL;
+	}
 	hr = rt->BindDC(dc, r);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error binding DC to DC render target", hr);
+		rt->Release();
+		return NULL;
+	}
 	return rt;
 }
 
@@ -128,7 +137,7 @@ void freeContext(uiDrawContext *c)
 static ID2D1Brush *makeSolidBrush(uiDrawBrush *b, ID2D1RenderTarget *rt, D2D1_BRUSH_PROPERTIES *props)
 {
 	D2D1_COLOR_F color;
-	ID2D1SolidColorBrush *brush;
+	ID2D1SolidColorBrush *brush = NULL;
 	HRESULT hr;
 
 	color.r = b->R;
@@ -140,14 +149,16 @@ static ID2D1Brush *makeSolidBrush(uiDrawBrush *b, ID2D1RenderTarget *rt, D2D1_BR
 		&color,
 		props,
 		&brush);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error creating solid brush", hr);
+		return NULL;
+	}
 	return brush;
 }
 
 static ID2D1GradientStopCollection *mkstops(uiDrawBrush *b, ID2D1RenderTarget *rt)
 {
-	ID2D1GradientStopCollection *s;
+	ID2D1GradientStopCollection *s = NULL;
 	D2D1_GRADIENT_STOP *stops;
 	size_t i;
 	HRESULT hr;
@@ -167,8 +178,11 @@ static ID2D1GradientStopCollection *mkstops(uiDrawBrush *b, ID2D1RenderTarget *r
 		D2D1_GAMMA_2_2,			// this is the default for the C++-only overload of ID2D1RenderTarget::GradientStopCollection()
 		D2D1_EXTEND_MODE_CLAMP,
 		&s);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error creating stop collection", hr);
+		uiprivFree(stops);
+		return NULL;
+	}
 
 	uiprivFree(stops);
 	return s;
@@ -176,9 +190,9 @@ static ID2D1GradientStopCollection *mkstops(uiDrawBrush *b, ID2D1RenderTarget *r
 
 static ID2D1Brush *makeLinearBrush(uiDrawBrush *b, ID2D1RenderTarget *rt, D2D1_BRUSH_PROPERTIES *props)
 {
-	ID2D1LinearGradientBrush *brush;
+	ID2D1LinearGradientBrush *brush = NULL;
 	D2D1_LINEAR_GRADIENT_BRUSH_PROPERTIES gprops;
-	ID2D1GradientStopCollection *stops;
+	ID2D1GradientStopCollection *stops = NULL;
 	HRESULT hr;
 
 	ZeroMemory(&gprops, sizeof (D2D1_LINEAR_GRADIENT_BRUSH_PROPERTIES));
@@ -188,14 +202,19 @@ static ID2D1Brush *makeLinearBrush(uiDrawBrush *b, ID2D1RenderTarget *rt, D2D1_B
 	gprops.endPoint.y = b->Y1;
 
 	stops = mkstops(b, rt);
+	if (stops == NULL)
+		return NULL;
 
 	hr = rt->CreateLinearGradientBrush(
 		&gprops,
 		props,
 		stops,
 		&brush);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error creating gradient brush", hr);
+		stops->Release();
+		return NULL;
+	}
 
 	// the example at https://msdn.microsoft.com/en-us/library/windows/desktop/dd756682%28v=vs.85%29.aspx says this is safe to do now
 	stops->Release();
@@ -204,9 +223,9 @@ static ID2D1Brush *makeLinearBrush(uiDrawBrush *b, ID2D1RenderTarget *rt, D2D1_B
 
 static ID2D1Brush *makeRadialBrush(uiDrawBrush *b, ID2D1RenderTarget *rt, D2D1_BRUSH_PROPERTIES *props)
 {
-	ID2D1RadialGradientBrush *brush;
+	ID2D1RadialGradientBrush *brush = NULL;
 	D2D1_RADIAL_GRADIENT_BRUSH_PROPERTIES gprops;
-	ID2D1GradientStopCollection *stops;
+	ID2D1GradientStopCollection *stops = NULL;
 	HRESULT hr;
 
 	ZeroMemory(&gprops, sizeof (D2D1_RADIAL_GRADIENT_BRUSH_PROPERTIES));
@@ -218,14 +237,19 @@ static ID2D1Brush *makeRadialBrush(uiDrawBrush *b, ID2D1RenderTarget *rt, D2D1_B
 	gprops.radiusY = b->OuterRadius;
 
 	stops = mkstops(b, rt);
+	if (stops == NULL)
+		return NULL;
 
 	hr = rt->CreateRadialGradientBrush(
 		&gprops,
 		props,
 		stops,
 		&brush);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error creating gradient brush", hr);
+		stops->Release();
+		return NULL;
+	}
 
 	stops->Release();
 	return brush;
@@ -270,7 +294,7 @@ static ID2D1Brush *makeBrush(uiDrawBrush *b, ID2D1RenderTarget *rt)
 
 static ID2D1Layer *applyClip(uiDrawContext *c)
 {
-	ID2D1Layer *layer;
+	ID2D1Layer *layer = NULL;
 	D2D1_LAYER_PARAMETERS params;
 	HRESULT hr;
 
@@ -281,8 +305,10 @@ static ID2D1Layer *applyClip(uiDrawContext *c)
 	// create a layer for clipping
 	// we have to explicitly make the layer because we're still targeting Windows 7
 	hr = c->rt->CreateLayer(NULL, &layer);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error creating clip layer", hr);
+		return NULL;
+	}
 
 	// apply it as the clip
 	ZeroMemory(&params, sizeof (D2D1_LAYER_PARAMETERS));
@@ -319,16 +345,17 @@ static void unapplyClip(uiDrawContext *c, ID2D1Layer *layer)
 
 void uiDrawStroke(uiDrawContext *c, uiDrawPath *p, uiDrawBrush *b, uiDrawStrokeParams *sp)
 {
-	ID2D1Brush *brush;
-	ID2D1StrokeStyle *style;
+	ID2D1Brush *brush = NULL;
+	ID2D1StrokeStyle *style = NULL;
 	D2D1_STROKE_STYLE_PROPERTIES dsp;
 	FLOAT *dashes;
 	size_t i;
-	ID2D1Layer *cliplayer;
+	ID2D1Layer *cliplayer = NULL;
 	HRESULT hr;
 
 	brush = makeBrush(b, c->rt);
-
+	if (brush == NULL)
+		return;
 	ZeroMemory(&dsp, sizeof (D2D1_STROKE_STYLE_PROPERTIES));
 	switch (sp->Cap) {
 	case uiDrawLineCapFlat:
@@ -375,8 +402,13 @@ void uiDrawStroke(uiDrawContext *c, uiDrawPath *p, uiDrawBrush *b, uiDrawStrokeP
 		dashes,
 		sp->NumDashes,
 		&style);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error creating stroke style", hr);
+		if (sp->NumDashes != 0)
+			uiprivFree(dashes);
+		brush->Release();
+		return;
+	}
 	if (sp->NumDashes != 0)
 		uiprivFree(dashes);
 
@@ -394,10 +426,12 @@ void uiDrawStroke(uiDrawContext *c, uiDrawPath *p, uiDrawBrush *b, uiDrawStrokeP
 
 void uiDrawFill(uiDrawContext *c, uiDrawPath *p, uiDrawBrush *b)
 {
-	ID2D1Brush *brush;
-	ID2D1Layer *cliplayer;
+	ID2D1Brush *brush = NULL;
+	ID2D1Layer *cliplayer = NULL;
 
 	brush = makeBrush(b, c->rt);
+	if (brush == NULL)
+		return;
 	cliplayer = applyClip(c);
 	c->rt->FillGeometry(
 		pathGeometry(p),
@@ -426,8 +460,8 @@ void uiDrawTransform(uiDrawContext *c, uiDrawMatrix *m)
 
 void uiDrawClip(uiDrawContext *c, uiDrawPath *path)
 {
-	ID2D1PathGeometry *newPath;
-	ID2D1GeometrySink *newSink;
+	ID2D1PathGeometry *newPath = NULL;
+	ID2D1GeometrySink *newSink = NULL;
 	HRESULT hr;
 
 	// if there's no current clip, borrow the path
@@ -441,11 +475,16 @@ void uiDrawClip(uiDrawContext *c, uiDrawPath *path)
 	// otherwise we have to intersect the current path with the new one
 	// we do that into a new path, and then replace c->currentClip with that new path
 	hr = d2dfactory->CreatePathGeometry(&newPath);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error creating new path", hr);
+		return;
+	}
 	hr = newPath->Open(&newSink);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error opening new path", hr);
+		newPath->Release();
+		return;
+	}
 	hr = c->currentClip->CombineWithGeometry(
 		pathGeometry(path),
 		D2D1_COMBINE_MODE_INTERSECT,
@@ -453,12 +492,19 @@ void uiDrawClip(uiDrawContext *c, uiDrawPath *path)
 		// TODO is this correct or can this be set per target?
 		D2D1_DEFAULT_FLATTENING_TOLERANCE,
 		newSink);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error intersecting old path with new path", hr);
+		newSink->Release();
+		newPath->Release();
+		return;
+	}
 	hr = newSink->Close();
-	if (hr != S_OK)
-		logHRESULT(L"error closing new path", hr);
 	newSink->Release();
+	if (hr != S_OK) {
+		logHRESULT(L"error closing new path", hr);
+		newPath->Release();
+		return;
+	}
 
 	// okay we have the new clip; we just need to replace the old one with it
 	c->currentClip->Release();
@@ -476,13 +522,16 @@ void uiDrawSave(uiDrawContext *c)
 	struct drawState state;
 	HRESULT hr;
 
+	state.dsb = NULL;
 	hr = d2dfactory->CreateDrawingStateBlock(
 		// TODO verify that these are correct
 		NULL,
 		NULL,
 		&(state.dsb));
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error creating drawing state block", hr);
+		return;
+	}
 	c->rt->SaveDrawingState(state.dsb);
 
 	// if we have a clip, we need to hold another reference to it

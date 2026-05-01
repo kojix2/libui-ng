@@ -82,6 +82,18 @@ static void radioButtonsSetSelectedNoCallback(void **state)
 	uiRadioButtonsSetSelected(*r, -1);
 }
 
+static void radioButtonsEnableDisable(void **state)
+{
+	uiRadioButtons **r = uiRadioButtonsPtrFromState(state);
+
+	*r = uiNewRadioButtons();
+	assert_int_equal(uiControlEnabled(uiControl(*r)), 1);
+	uiControlDisable(uiControl(*r));
+	assert_int_equal(uiControlEnabled(uiControl(*r)), 0);
+	uiControlEnable(uiControl(*r));
+	assert_int_equal(uiControlEnabled(uiControl(*r)), 1);
+}
+
 #define radioButtonsUnitTest(f) cmocka_unit_test_setup_teardown((f), \
 		unitTestSetup, unitTestTeardown)
 
@@ -94,6 +106,7 @@ int radioButtonsRunUnitTests(void)
 		radioButtonsUnitTest(radioButtonsAppendDuplicate),
 		radioButtonsUnitTest(radioButtonsSetSelected),
 		radioButtonsUnitTest(radioButtonsSetSelectedNoCallback),
+		radioButtonsUnitTest(radioButtonsEnableDisable),
 	};
 
 	return cmocka_run_group_tests_name("uiRadioButtons", tests, unitTestsSetup, unitTestsTeardown);

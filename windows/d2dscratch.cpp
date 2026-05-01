@@ -64,8 +64,8 @@ static void d2dScratchDoLButtonDown(HWND hwnd, ID2D1RenderTarget *rt, LPARAM lPa
 static LRESULT CALLBACK d2dScratchWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	LONG_PTR init;
-	ID2D1HwndRenderTarget *rt;
-	ID2D1DCRenderTarget *dcrt;
+	ID2D1HwndRenderTarget *rt = NULL;
+	ID2D1DCRenderTarget *dcrt = NULL;
 	RECT client;
 	HRESULT hr;
 
@@ -84,10 +84,13 @@ static LRESULT CALLBACK d2dScratchWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, L
 
 	switch (uMsg) {
 	case WM_DESTROY:
-		rt->Release();
+		if (rt != NULL)
+			rt->Release();
 		SetWindowLongPtrW(hwnd, 0, (LONG_PTR) FALSE);
 		break;
 	case WM_PAINT:
+		if (rt == NULL)
+			return DefWindowProcW(hwnd, uMsg, wParam, lParam);
 		hr = d2dScratchDoPaint(hwnd, rt);
 		switch (hr) {
 		case S_OK:
@@ -109,15 +112,21 @@ static LRESULT CALLBACK d2dScratchWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, L
 	case WM_PRINTCLIENT:
 		uiWindowsEnsureGetClientRect(hwnd, &client);
 		dcrt = makeHDCRenderTarget((HDC) wParam, &client);
+		if (dcrt == NULL)
+			return 0;
 		hr = d2dScratchDoPaint(hwnd, dcrt);
 		if (hr != S_OK)
 			logHRESULT(L"error printing D2D scratch window client area", hr);
 		dcrt->Release();
 		return 0;
 	case WM_LBUTTONDOWN:
+		if (rt == NULL)
+			return DefWindowProcW(hwnd, uMsg, wParam, lParam);
 		d2dScratchDoLButtonDown(hwnd, rt, lParam);
 		return 0;
 	case WM_MOUSEMOVE:
+		if (rt == NULL)
+			return DefWindowProcW(hwnd, uMsg, wParam, lParam);
 		// also send LButtonDowns when dragging
 		if ((wParam & MK_LBUTTON) != 0)
 			d2dScratchDoLButtonDown(hwnd, rt, lParam);

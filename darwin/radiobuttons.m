@@ -54,7 +54,35 @@ struct uiRadioButtons {
 
 @end
 
-uiDarwinControlAllDefaultsExceptDestroy(uiRadioButtons, view)
+uiDarwinControlDefaultHandle(uiRadioButtons, view)
+uiDarwinControlDefaultParent(uiRadioButtons, view)
+uiDarwinControlDefaultSetParent(uiRadioButtons, view)
+uiDarwinControlDefaultToplevel(uiRadioButtons, view)
+uiDarwinControlDefaultVisible(uiRadioButtons, view)
+uiDarwinControlDefaultShow(uiRadioButtons, view)
+uiDarwinControlDefaultHide(uiRadioButtons, view)
+uiDarwinControlDefaultEnabled(uiRadioButtons, view)
+uiDarwinControlDefaultEnable(uiRadioButtons, view)
+uiDarwinControlDefaultDisable(uiRadioButtons, view)
+
+static void uiRadioButtonsSyncEnableState(uiDarwinControl *c, int enabled)
+{
+	uiRadioButtons *r = uiRadioButtons(c);
+	NSButton *b;
+
+	if (uiDarwinShouldStopSyncEnableState(uiDarwinControl(r), enabled))
+		return;
+	for (b in r->buttons)
+		[b setEnabled:enabled];
+}
+
+uiDarwinControlDefaultSetSuperview(uiRadioButtons, view)
+uiDarwinControlDefaultHugsTrailingEdge(uiRadioButtons, view)
+uiDarwinControlDefaultHugsBottom(uiRadioButtons, view)
+uiDarwinControlDefaultChildEdgeHuggingChanged(uiRadioButtons, view)
+uiDarwinControlDefaultHuggingPriority(uiRadioButtons, view)
+uiDarwinControlDefaultSetHuggingPriority(uiRadioButtons, view)
+uiDarwinControlDefaultChildVisibilityChanged(uiRadioButtons, view)
 
 static void defaultOnSelected(uiRadioButtons *r, void *data)
 {
@@ -105,6 +133,7 @@ void uiRadioButtonsAppend(uiRadioButtons *r, const char *text)
 
 	[b setTarget:r->delegate];
 	[b setAction:@selector(onClicked:)];
+	[b setEnabled:uiControlEnabledToUser(uiControl(r))];
 
 	[r->buttons addObject:b];
 	[r->view addSubview:b];
@@ -171,12 +200,25 @@ void uiRadioButtonsSetSelected(uiRadioButtons *r, int n)
 {
 	NSButton *b;
 	NSInteger state;
+	NSInteger previous;
+	NSUInteger count;
+
+	count = [r->buttons count];
+	if (n < -1) {
+		uiprivUserBug("Index %d is out of range for a uiRadioButtons.", n);
+		return;
+	}
+	if (n >= 0 && ((NSUInteger) n) >= count) {
+		uiprivUserBug("Index %d is out of range for a uiRadioButtons.", n);
+		return;
+	}
+	previous = r->selected;
 
 	r->selected = n;
 
 	state = NSOnState;
 	if (n == -1) {
-		n = uiRadioButtonsSelected(r);
+		n = previous;
 		if (n == -1)		// from nothing to nothing; do nothing
 			return;
 		state = NSOffState;
@@ -197,10 +239,10 @@ uiRadioButtons *uiNewRadioButtons(void)
 
 	uiDarwinNewControl(uiRadioButtons, r);
 
-	r->view = [[NSView alloc] initWithFrame:NSZeroRect];
 	r->buttons = [NSMutableArray new];
 	r->constraints = [NSMutableArray new];
 	r->selected = -1;
+	r->view = [[NSView alloc] initWithFrame:NSZeroRect];
 
 	r->delegate = [[radioButtonsDelegate alloc] initWithR:r];
 

@@ -56,8 +56,33 @@ static void uiRadioButtonsDestroy(uiControl *c)
 	uiFreeControl(uiControl(r));
 }
 
-// TODO SyncEnableState
-uiWindowsControlAllDefaultsExceptDestroy(uiRadioButtons)
+uiWindowsControlDefaultHandle(uiRadioButtons)
+uiWindowsControlDefaultParent(uiRadioButtons)
+uiWindowsControlDefaultSetParent(uiRadioButtons)
+uiWindowsControlDefaultToplevel(uiRadioButtons)
+uiWindowsControlDefaultVisible(uiRadioButtons)
+uiWindowsControlDefaultShow(uiRadioButtons)
+uiWindowsControlDefaultHide(uiRadioButtons)
+uiWindowsControlDefaultEnabled(uiRadioButtons)
+uiWindowsControlDefaultEnable(uiRadioButtons)
+uiWindowsControlDefaultDisable(uiRadioButtons)
+
+static void uiRadioButtonsSyncEnableState(uiWindowsControl *c, int enabled)
+{
+	uiRadioButtons *r = uiRadioButtons(c);
+
+	if (uiWindowsShouldStopSyncEnableState(uiWindowsControl(r), enabled))
+		return;
+	EnableWindow(r->hwnd, enabled);
+	for (const HWND &hwnd : *(r->hwnds))
+		EnableWindow(hwnd, enabled);
+}
+
+uiWindowsControlDefaultSetParentHWND(uiRadioButtons)
+uiWindowsControlDefaultMinimumSizeChanged(uiRadioButtons)
+uiWindowsControlDefaultLayoutRect(uiRadioButtons)
+uiWindowsControlDefaultAssignControlIDZOrder(uiRadioButtons)
+uiWindowsControlDefaultChildVisibilityChanged(uiRadioButtons)
 
 // from http://msdn.microsoft.com/en-us/library/windows/desktop/dn742486.aspx#sizingandspacing
 #define radiobuttonHeight 10
@@ -146,6 +171,7 @@ void uiRadioButtonsAppend(uiRadioButtons *r, const char *text)
 		TRUE);
 	uiprivFree(wtext);
 	uiWindowsEnsureSetParentHWND(hwnd, r->hwnd);
+	EnableWindow(hwnd, uiControlEnabledToUser(uiControl(r)));
 	uiWindowsRegisterWM_COMMANDHandler(hwnd, onWM_COMMAND, uiControl(r));
 	r->hwnds->push_back(hwnd);
 	radiobuttonsArrangeChildren(r);
@@ -165,6 +191,17 @@ int uiRadioButtonsSelected(uiRadioButtons *r)
 void uiRadioButtonsSetSelected(uiRadioButtons *r, int n)
 {
 	int m;
+	size_t count;
+
+	count = r->hwnds->size();
+	if (n < -1) {
+		uiprivUserBug("Index %d is out of range for a uiRadioButtons.", n);
+		return;
+	}
+	if (n >= 0 && ((size_t) n) >= count) {
+		uiprivUserBug("Index %d is out of range for a uiRadioButtons.", n);
+		return;
+	}
 
 	m = uiRadioButtonsSelected(r);
 	if (m != -1)

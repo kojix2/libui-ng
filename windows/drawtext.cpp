@@ -39,6 +39,13 @@ uiDrawTextLayout *uiDrawNewTextLayout(uiDrawTextLayoutParams *p)
 	HRESULT hr;
 
 	tl = uiprivNew(uiDrawTextLayout);
+	tl->format = NULL;
+	tl->layout = NULL;
+	tl->backgroundParams = NULL;
+	tl->u8tou16 = NULL;
+	tl->nUTF8 = 0;
+	tl->u16tou8 = NULL;
+	tl->nUTF16 = 0;
 
 	wDefaultFamily = toUTF16(p->DefaultFont->Family);
 	hr = dwfactory->CreateTextFormat(
@@ -52,11 +59,15 @@ uiDrawTextLayout *uiDrawNewTextLayout(uiDrawTextLayoutParams *p)
 		L"",
 		&(tl->format));
 	uiprivFree(wDefaultFamily);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error creating IDWriteTextFormat", hr);
+		goto fail;
+	}
 	hr = tl->format->SetTextAlignment(dwriteAligns[p->Align]);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error applying text layout alignment", hr);
+		goto fail;
+	}
 
 	hr = dwfactory->CreateTextLayout(
 		(const WCHAR *) uiprivAttributedStringUTF16String(p->String), uiprivAttributedStringUTF16Len(p->String),
@@ -64,8 +75,10 @@ uiDrawTextLayout *uiDrawNewTextLayout(uiDrawTextLayoutParams *p)
 		// FLOAT is float, not double, so this should work... TODO
 		FLT_MAX, FLT_MAX,
 		&(tl->layout));
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error creating IDWriteTextLayout", hr);
+		goto fail;
+	}
 
 	// and set the width
 	// this is the only wrapping mode (apart from "no wrap") available prior to Windows 8.1 (TODO verify this fact) (TODO this should be the default anyway)
@@ -78,11 +91,15 @@ uiDrawTextLayout *uiDrawNewTextLayout(uiDrawTextLayoutParams *p)
 		maxWidth = FLT_MAX;		// see TODO above
 	}
 	hr = tl->layout->SetWordWrapping(wrap);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error setting IDWriteTextLayout word wrapping mode", hr);
+		goto fail;
+	}
 	hr = tl->layout->SetMaxWidth(maxWidth);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error setting IDWriteTextLayout max layout width", hr);
+		goto fail;
+	}
 
 	uiprivAttributedStringApplyAttributesToDWriteTextLayout(p, tl->layout, &(tl->backgroundParams));
 
@@ -91,17 +108,29 @@ uiDrawTextLayout *uiDrawNewTextLayout(uiDrawTextLayoutParams *p)
 	tl->u16tou8 = uiprivAttributedStringCopyUTF16ToUTF8Table(p->String, &(tl->nUTF16));
 
 	return tl;
+
+fail:
+	uiDrawFreeTextLayout(tl);
+	return NULL;
 }
 
 void uiDrawFreeTextLayout(uiDrawTextLayout *tl)
 {
-	uiprivFree(tl->u16tou8);
-	uiprivFree(tl->u8tou16);
-	for (auto p : *(tl->backgroundParams))
-		uiprivFree(p);
-	delete tl->backgroundParams;
-	tl->layout->Release();
-	tl->format->Release();
+	if (tl == NULL)
+		return;
+	if (tl->u16tou8 != NULL)
+		uiprivFree(tl->u16tou8);
+	if (tl->u8tou16 != NULL)
+		uiprivFree(tl->u8tou16);
+	if (tl->backgroundParams != NULL) {
+		for (auto p : *(tl->backgroundParams))
+			uiprivFree(p);
+		delete tl->backgroundParams;
+	}
+	if (tl->layout != NULL)
+		tl->layout->Release();
+	if (tl->format != NULL)
+		tl->format->Release();
 	uiprivFree(tl);
 }
 
@@ -128,7 +157,7 @@ static HRESULT mkSolidBrush(ID2D1RenderTarget *rt, double r, double g, double b,
 
 static ID2D1SolidColorBrush *mustMakeSolidBrush(ID2D1RenderTarget *rt, double r, double g, double b, double a)
 {
-	ID2D1SolidColorBrush *brush;
+	ID2D1SolidColorBrush *brush = NULL;
 	HRESULT hr;
 
 	hr = mkSolidBrush(rt, r, g, b, a, &brush);
@@ -316,11 +345,10 @@ public:
 	{
 		D2D1_POINT_2F baseline;
 		drawingEffectsAttr *dea = (drawingEffectsAttr *) clientDrawingEffect;
-		ID2D1SolidColorBrush *brush;
+		ID2D1SolidColorBrush *brush = NULL;
 
 		baseline.x = baselineOriginX;
 		baseline.y = baselineOriginY;
-		brush = NULL;
 		if (dea != NULL) {
 			HRESULT hr;
 
@@ -362,7 +390,7 @@ public:
 	{
 		drawingEffectsAttr *dea = (drawingEffectsAttr *) clientDrawingEffect;
 		uiUnderline utype;
-		ID2D1SolidColorBrush *brush;
+		ID2D1SolidColorBrush *brush = NULL;
 		D2D1_RECT_F rect;
 		D2D1::Matrix3x2F pixeltf;
 		FLOAT dpix, dpiy;
@@ -425,8 +453,8 @@ public:
 					// TODO properly clean resources on failure
 					// TODO use fully qualified C overloads for all methods
 					// TODO ensure all methods properly have errors handled
-				ID2D1PathGeometry *path;
-				ID2D1GeometrySink *sink;
+				ID2D1PathGeometry *path = NULL;
+				ID2D1GeometrySink *sink = NULL;
 				double amplitude, period, xOffset, yOffset;
 				double t;
 				bool first = true;
@@ -436,8 +464,10 @@ public:
 				if (hr != S_OK)
 					return hr;
 				hr = path->Open(&sink);
-				if (hr != S_OK)
+				if (hr != S_OK) {
+					path->Release();
 					return hr;
+				}
 				amplitude = underline->thickness;
 				period = 5 * underline->thickness;
 				xOffset = baselineOriginX;
@@ -459,9 +489,11 @@ public:
 				}
 				sink->EndFigure(D2D1_FIGURE_END_OPEN);
 				hr = sink->Close();
-				if (hr != S_OK)
-					return hr;
 				sink->Release();
+				if (hr != S_OK) {
+					path->Release();
+					return hr;
+				}
 				this->rt->DrawGeometry(path, brush, underline->thickness);
 				path->Release();
 			}
@@ -475,7 +507,7 @@ public:
 // TODO this ignores clipping?
 void uiDrawText(uiDrawContext *c, uiDrawTextLayout *tl, double x, double y)
 {
-	ID2D1SolidColorBrush *black;
+	ID2D1SolidColorBrush *black = NULL;
 	textRenderer *renderer;
 	HRESULT hr;
 
@@ -488,6 +520,8 @@ void uiDrawText(uiDrawContext *c, uiDrawTextLayout *tl, double x, double y)
 	// TODO document that fully opaque black is the default text color; figure out whether this is upheld in various scenarios on other platforms
 	// TODO figure out if this needs to be cleaned out
 	black = mustMakeSolidBrush(c->rt, 0.0, 0.0, 0.0, 1.0);
+	if (black == NULL)
+		return;
 
 #define renderD2D 0
 #define renderOur 1
@@ -505,6 +539,8 @@ void uiDrawText(uiDrawContext *c, uiDrawTextLayout *tl, double x, double y)
 	// TODO get the actual color Charles Petzold uses and use that
 	black->Release();
 	black = mustMakeSolidBrush(c->rt, 1.0, 0.0, 0.0, 0.75);
+	if (black == NULL)
+		return;
 #endif
 #if renderOur
 	renderer = new textRenderer(c->rt,
@@ -529,8 +565,12 @@ void uiDrawTextLayoutExtents(uiDrawTextLayout *tl, double *width, double *height
 	HRESULT hr;
 
 	hr = tl->layout->GetMetrics(&metrics);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error getting IDWriteTextLayout layout metrics", hr);
+		*width = 0;
+		*height = 0;
+		return;
+	}
 	*width = metrics.width;
 	// TODO make sure the behavior of this on empty strings is the same on all platforms (ideally should be 0-width, line height-height; TODO note this in the docs too)
 	*height = metrics.height;
@@ -538,51 +578,79 @@ void uiDrawTextLayoutExtents(uiDrawTextLayout *tl, double *width, double *height
 
 void uiLoadControlFont(uiFontDescriptor *f)
 {
-	fontCollection *collection;
-	IDWriteGdiInterop *gdi;
-	IDWriteFont *dwfont;
-	IDWriteFontFamily *dwfamily;
+	fontCollection *collection = NULL;
+	IDWriteGdiInterop *gdi = NULL;
+	IDWriteFont *dwfont = NULL;
+	IDWriteFontFamily *dwfamily = NULL;
 	NONCLIENTMETRICSW metrics;
-	HDC dc;
-	WCHAR *family;
+	HDC dc = NULL;
+	WCHAR *family = NULL;
 	double size;
 	int pixels;
 	HRESULT hr;
 
-	metrics.cbSize = sizeof(metrics);
-	if (!SystemParametersInfoW(SPI_GETNONCLIENTMETRICS, metrics.cbSize, &metrics, 0))
-			logLastError(L"error getting non-client metrics");
+	ZeroMemory(&metrics, sizeof (metrics));
+	metrics.cbSize = sizeof (metrics);
+	if (!SystemParametersInfoW(SPI_GETNONCLIENTMETRICS, metrics.cbSize, &metrics, 0)) {
+		logLastError(L"error getting non-client metrics");
+		goto fail;
+	}
 	hr = dwfactory->GetGdiInterop(&gdi);
-	if (hr != S_OK)
-			logHRESULT(L"error getting GDI interop", hr);
+	if (hr != S_OK) {
+		logHRESULT(L"error getting GDI interop", hr);
+		goto fail;
+	}
 
 	hr = gdi->CreateFontFromLOGFONT(&metrics.lfMessageFont, &dwfont);
-	if (hr != S_OK)
-			logHRESULT(L"error loading font", hr);
+	if (hr != S_OK) {
+		logHRESULT(L"error loading font", hr);
+		goto fail;
+	}
 
 	hr = dwfont->GetFontFamily(&dwfamily);
-	if (hr != S_OK)
-			logHRESULT(L"error loading font family", hr);
+	if (hr != S_OK) {
+		logHRESULT(L"error loading font family", hr);
+		goto fail;
+	}
 	collection = uiprivLoadFontCollection();
 	family = uiprivFontCollectionFamilyName(collection, dwfamily);
 
 	dc = GetDC(NULL);
-	if (dc == NULL)
+	if (dc == NULL) {
 		logLastError(L"error getting DC");
+		goto fail;
+	}
 	pixels = GetDeviceCaps(dc, LOGPIXELSY);
-	if (pixels == 0)
-			logLastError(L"error getting device caps");
+	if (pixels == 0) {
+		logLastError(L"error getting device caps");
+		goto fail;
+	}
 	size = abs(metrics.lfMessageFont.lfHeight) * 72 / pixels;
 
 	uiprivFontDescriptorFromIDWriteFont(dwfont, f);
 	f->Family = toUTF8(family);
 	f->Size = size;
 
-	uiprivFree(family);
+	goto cleanup;
+
+fail:
+	f->Family = emptyUTF8();
+	f->Size = 0;
+	f->Weight = uiTextWeightNormal;
+	f->Italic = uiTextItalicNormal;
+	f->Stretch = uiTextStretchNormal;
+
+cleanup:
+	if (family != NULL)
+		uiprivFree(family);
 	uiprivFontCollectionFree(collection);
-	dwfamily->Release();
-	gdi->Release();
-	if (ReleaseDC(NULL, dc) == 0)
+	if (dwfamily != NULL)
+		dwfamily->Release();
+	if (dwfont != NULL)
+		dwfont->Release();
+	if (gdi != NULL)
+		gdi->Release();
+	if (dc != NULL && ReleaseDC(NULL, dc) == 0)
 		logLastError(L"error releasing DC");
 }
 

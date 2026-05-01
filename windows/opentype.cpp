@@ -22,12 +22,14 @@ static uiForEach addToTypography(const uiOpenTypeFeatures *otf, char a, char b, 
 
 IDWriteTypography *uiprivOpenTypeFeaturesToIDWriteTypography(const uiOpenTypeFeatures *otf)
 {
-	IDWriteTypography *dt;
+	IDWriteTypography *dt = NULL;
 	HRESULT hr;
 
 	hr = dwfactory->CreateTypography(&dt);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error creating IDWriteTypography", hr);
+		return NULL;
+	}
 	uiOpenTypeFeaturesForEach(otf, addToTypography, dt);
 	return dt;
 }

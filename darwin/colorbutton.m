@@ -39,6 +39,13 @@ struct uiColorButton {
 	return self;
 }
 
+- (void)dealloc
+{
+	if (activeColorButton == self)
+		[self deactivate];
+	[super dealloc];
+}
+
 - (void)activate:(BOOL)exclusive
 {
 	if (activeColorButton != nil)

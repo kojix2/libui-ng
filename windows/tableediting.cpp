@@ -23,13 +23,23 @@ static HRESULT resizeEdit(uiTable *t, WCHAR *wstr, int iItem, int iSubItem)
 	r = m->realTextRect;
 	uiprivFree(m);
 
-	// TODO check errors for all these
 	dc = GetDC(t->hwnd);		// use the list view DC since we're using its coordinate space
+	if (dc == NULL)
+		return logLastError(L"GetDC()");
 	prevFont = (HFONT) SelectObject(dc, hMessageFont);
-	GetTextMetricsW(dc, &tm);
-	GetTextExtentPoint32W(dc, wstr, wcslen(wstr), &textSize);
+	if (GetTextMetricsW(dc, &tm) == 0) {
+		SelectObject(dc, prevFont);
+		ReleaseDC(t->hwnd, dc);
+		return logLastError(L"GetTextMetricsW()");
+	}
+	if (GetTextExtentPoint32W(dc, wstr, wcslen(wstr), &textSize) == 0) {
+		SelectObject(dc, prevFont);
+		ReleaseDC(t->hwnd, dc);
+		return logLastError(L"GetTextExtentPoint32W()");
+	}
 	SelectObject(dc, prevFont);
-	ReleaseDC(t->hwnd, dc);
+	if (ReleaseDC(t->hwnd, dc) == 0)
+		logLastError(L"ReleaseDC()");
 
 	SendMessageW(t->edit, EM_GETRECT, 0, (LPARAM) (&editRect));
 	r.left -= editRect.left;
@@ -127,9 +137,11 @@ static HRESULT openEditControl(uiTable *t, int iItem, int iSubItem, uiprivTableC
 	SetWindowSubclass(t->edit, editSubProc, 0, (DWORD_PTR) t);
 
 	hr = resizeEdit(t, wstr, iItem, iSubItem);
-	if (hr != S_OK)
-		// TODO proper cleanup
+	if (hr != S_OK) {
+		uiprivTableAbortEditingText(t);
+		uiprivFree(wstr);
 		return hr;
+	}
 	// TODO check errors on these two, if any
 	SetFocus(t->edit);
 	ShowWindow(t->edit, SW_SHOW);

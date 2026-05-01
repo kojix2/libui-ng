@@ -54,14 +54,16 @@ static BOOL onWM_NOTIFY(uiControl *c, HWND hwnd, NMHDR *nmhdr, LRESULT *lResult)
 	uiColorButton *b = uiColorButton(c);
 	NMCUSTOMDRAW *nm = (NMCUSTOMDRAW *) nmhdr;
 	RECT client;
-	ID2D1DCRenderTarget *rt;
+	ID2D1DCRenderTarget *rt = NULL;
 	D2D1_RECT_F r;
 	D2D1_COLOR_F color;
 	D2D1_BRUSH_PROPERTIES bprop;
-	ID2D1SolidColorBrush *brush;
+	ID2D1SolidColorBrush *brush = NULL;
 	uiWindowsSizing sizing;
 	int x, y;
 	HRESULT hr;
+
+	brush = NULL;
 
 	if (nmhdr->code != NM_CUSTOMDRAW)
 		return FALSE;
@@ -71,6 +73,8 @@ static BOOL onWM_NOTIFY(uiControl *c, HWND hwnd, NMHDR *nmhdr, LRESULT *lResult)
 
 	uiWindowsEnsureGetClientRect(b->hwnd, &client);
 	rt = makeHDCRenderTarget(nm->hdc, &client);
+	if (rt == NULL)
+		return FALSE;
 	rt->BeginDraw();
 
 	uiWindowsGetSizing(b->hwnd, &sizing);
@@ -91,8 +95,14 @@ static BOOL onWM_NOTIFY(uiControl *c, HWND hwnd, NMHDR *nmhdr, LRESULT *lResult)
 	bprop.transform._11 = 1;
 	bprop.transform._22 = 1;
 	hr = rt->CreateSolidColorBrush(&color, &bprop, &brush);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error creating brush for color button", hr);
+		hr = rt->EndDraw(NULL, NULL);
+		if (hr != S_OK)
+			logHRESULT(L"error drawing color on color button", hr);
+		rt->Release();
+		return FALSE;
+	}
 	rt->FillRectangle(&r, brush);
 	brush->Release();
 

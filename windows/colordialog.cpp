@@ -295,15 +295,18 @@ static void drawGrid(ID2D1RenderTarget *rt, D2D1_RECT_F *fillRect)
 {
 	D2D1_SIZE_F size;
 	D2D1_PIXEL_FORMAT pformat;
-	ID2D1BitmapRenderTarget *brt;
+	ID2D1BitmapRenderTarget *brt = NULL;
 	D2D1_COLOR_F color;
 	D2D1_BRUSH_PROPERTIES bprop;
-	ID2D1SolidColorBrush *brush;
+	ID2D1SolidColorBrush *brush = NULL;
 	D2D1_RECT_F rect;
-	ID2D1Bitmap *bitmap;
+	ID2D1Bitmap *bitmap = NULL;
 	D2D1_BITMAP_BRUSH_PROPERTIES bbp;
-	ID2D1BitmapBrush *bb;
-	HRESULT hr;
+	ID2D1BitmapBrush *bb = NULL;
+	HRESULT hr, hr2;
+	BOOL drawing;
+
+	drawing = FALSE;
 
 	// mind the divisions; they represent the fact the original uses a viewport
 	size.width = 100 / 10;
@@ -323,10 +326,13 @@ static void drawGrid(ID2D1RenderTarget *rt, D2D1_RECT_F *fillRect)
 	hr = rt->CreateCompatibleRenderTarget(&size, NULL,
 		&pformat, D2D1_COMPATIBLE_RENDER_TARGET_OPTIONS_NONE,
 		&brt);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error creating render target for grid", hr);
+		goto cleanup;
+	}
 
 	brt->BeginDraw();
+	drawing = TRUE;
 
 	color.r = 1.0;
 	color.g = 1.0;
@@ -340,8 +346,10 @@ static void drawGrid(ID2D1RenderTarget *rt, D2D1_RECT_F *fillRect)
 	bprop.transform._11 = 1;
 	bprop.transform._22 = 1;
 	hr = brt->CreateSolidColorBrush(&color, &bprop, &brush);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error creating brush for grid", hr);
+		goto cleanup;
+	}
 	rect.left = 0;
 	rect.top = 0;
 	rect.right = 50 / 10;
@@ -353,25 +361,88 @@ static void drawGrid(ID2D1RenderTarget *rt, D2D1_RECT_F *fillRect)
 	rect.bottom = 100 / 10;
 	brt->FillRectangle(&rect, brush);
 	brush->Release();
+	brush = NULL;
 
 	hr = brt->EndDraw(NULL, NULL);
-	if (hr != S_OK)
+	drawing = FALSE;
+	if (hr != S_OK) {
 		logHRESULT(L"error finalizing render target for grid", hr);
+		goto cleanup;
+	}
 	hr = brt->GetBitmap(&bitmap);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error getting bitmap for grid", hr);
+		goto cleanup;
+	}
 	brt->Release();
+	brt = NULL;
 
 	ZeroMemory(&bbp, sizeof (D2D1_BITMAP_BRUSH_PROPERTIES));
 	bbp.extendModeX = D2D1_EXTEND_MODE_WRAP;
 	bbp.extendModeY = D2D1_EXTEND_MODE_WRAP;
 	bbp.interpolationMode = D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR;
 	hr = rt->CreateBitmapBrush(bitmap, &bbp, &bprop, &bb);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error creating bitmap brush for grid", hr);
+		goto cleanup;
+	}
 	rt->FillRectangle(fillRect, bb);
-	bb->Release();
-	bitmap->Release();
+
+cleanup:
+	if (drawing) {
+		hr2 = brt->EndDraw(NULL, NULL);
+		if (hr2 != S_OK)
+			logHRESULT(L"error finalizing render target for grid", hr2);
+	}
+	if (bb != NULL)
+		bb->Release();
+	if (bitmap != NULL)
+		bitmap->Release();
+	if (brush != NULL)
+		brush->Release();
+	if (brt != NULL)
+		brt->Release();
+}
+
+static void initBrushProperties(D2D1_BRUSH_PROPERTIES *props, double opacity)
+{
+	ZeroMemory(props, sizeof (D2D1_BRUSH_PROPERTIES));
+	props->opacity = opacity;
+	props->transform._11 = 1;
+	props->transform._22 = 1;
+}
+
+static BOOL createSolidBrush(ID2D1RenderTarget *rt, D2D1_COLOR_F *color, D2D1_BRUSH_PROPERTIES *props, ID2D1SolidColorBrush **out, const WCHAR *errmsg)
+{
+	HRESULT hr;
+
+	*out = NULL;
+	hr = rt->CreateSolidColorBrush(color, props, out);
+	if (hr != S_OK) {
+		logHRESULT(errmsg, hr);
+		return FALSE;
+	}
+	return TRUE;
+}
+
+static BOOL createGradientBrush(ID2D1RenderTarget *rt, D2D1_GRADIENT_STOP *stops, UINT32 n, D2D1_GAMMA gamma, D2D1_EXTEND_MODE extend, D2D1_LINEAR_GRADIENT_BRUSH_PROPERTIES *lprop, D2D1_BRUSH_PROPERTIES *bprop, ID2D1LinearGradientBrush **out, const WCHAR *collectionErrmsg, const WCHAR *brushErrmsg)
+{
+	ID2D1GradientStopCollection *collection = NULL;
+	HRESULT hr;
+
+	*out = NULL;
+	hr = rt->CreateGradientStopCollection(stops, n, gamma, extend, &collection);
+	if (hr != S_OK) {
+		logHRESULT(collectionErrmsg, hr);
+		return FALSE;
+	}
+	hr = rt->CreateLinearGradientBrush(lprop, bprop, collection, out);
+	collection->Release();
+	if (hr != S_OK) {
+		logHRESULT(brushErrmsg, hr);
+		return FALSE;
+	}
+	return TRUE;
 }
 
 // this interesting approach comes from http://blogs.msdn.com/b/wpfsdk/archive/2006/10/26/uncommon-dialogs--font-chooser-and-color-picker-dialogs.aspx
@@ -381,16 +452,15 @@ static void drawSVChooser(struct colorDialog *c, ID2D1RenderTarget *rt)
 	D2D1_RECT_F rect;
 	double rTop, gTop, bTop;
 	D2D1_GRADIENT_STOP stops[2];
-	ID2D1GradientStopCollection *collection;
 	D2D1_LINEAR_GRADIENT_BRUSH_PROPERTIES lprop;
 	D2D1_BRUSH_PROPERTIES bprop;
-	ID2D1LinearGradientBrush *brush;
-	ID2D1LinearGradientBrush *opacity;
-	ID2D1Layer *layer;
+	ID2D1LinearGradientBrush *brush = NULL;
+	ID2D1LinearGradientBrush *opacity = NULL;
+	ID2D1Layer *layer = NULL;
 	D2D1_LAYER_PARAMETERS layerparams;
 	D2D1_ELLIPSE mparam;
 	D2D1_COLOR_F mcolor;
-	ID2D1SolidColorBrush *markerBrush;
+	ID2D1SolidColorBrush *markerBrush = NULL;
 	HRESULT hr;
 
 	size = realGetSize(rt);
@@ -414,28 +484,22 @@ static void drawSVChooser(struct colorDialog *c, ID2D1RenderTarget *rt)
 	stops[1].color.g = gTop;
 	stops[1].color.b = bTop;
 	stops[1].color.a = 1.0;
-	hr = rt->CreateGradientStopCollection(stops, 2,
-		D2D1_GAMMA_2_2, D2D1_EXTEND_MODE_CLAMP,
-		&collection);
-	if (hr != S_OK)
-		logHRESULT(L"error making gradient stop collection for first gradient in SV chooser", hr);
 	ZeroMemory(&lprop, sizeof (D2D1_LINEAR_GRADIENT_BRUSH_PROPERTIES));
 	lprop.startPoint.x = size.width / 2;
 	lprop.startPoint.y = size.height;
 	lprop.endPoint.x = size.width / 2;
 	lprop.endPoint.y = 0;
 	// TODO decide what to do about the duplication of this
-	ZeroMemory(&bprop, sizeof (D2D1_BRUSH_PROPERTIES));
-	bprop.opacity = c->a;		// note this part; we also use it below for the layer
-	bprop.transform._11 = 1;
-	bprop.transform._22 = 1;
-	hr = rt->CreateLinearGradientBrush(&lprop, &bprop,
-		collection, &brush);
-	if (hr != S_OK)
-		logHRESULT(L"error making gradient brush for first gradient in SV chooser", hr);
+	initBrushProperties(&bprop, c->a);		// note this part; we also use it below for the layer
+	if (!createGradientBrush(rt, stops, 2,
+		D2D1_GAMMA_2_2, D2D1_EXTEND_MODE_CLAMP,
+		&lprop, &bprop, &brush,
+		L"error making gradient stop collection for first gradient in SV chooser",
+		L"error making gradient brush for first gradient in SV chooser"))
+		goto cleanup;
 	rt->FillRectangle(&rect, brush);
 	brush->Release();
-	collection->Release();
+	brush = NULL;
 
 	// second, create an opacity mask for the third step: a horizontal gradientthat goes from opaque to translucent
 	stops[0].position = 0;
@@ -448,25 +512,18 @@ static void drawSVChooser(struct colorDialog *c, ID2D1RenderTarget *rt)
 	stops[1].color.g = 0.0;
 	stops[1].color.b = 0.0;
 	stops[1].color.a = 0.0;
-	hr = rt->CreateGradientStopCollection(stops, 2,
-		D2D1_GAMMA_2_2, D2D1_EXTEND_MODE_CLAMP,
-		&collection);
-	if (hr != S_OK)
-		logHRESULT(L"error making gradient stop collection for opacity mask gradient in SV chooser", hr);
 	ZeroMemory(&lprop, sizeof (D2D1_LINEAR_GRADIENT_BRUSH_PROPERTIES));
 	lprop.startPoint.x = 0;
 	lprop.startPoint.y = size.height / 2;
 	lprop.endPoint.x = size.width;
 	lprop.endPoint.y = size.height / 2;
-	ZeroMemory(&bprop, sizeof (D2D1_BRUSH_PROPERTIES));
-	bprop.opacity = 1.0;
-	bprop.transform._11 = 1;
-	bprop.transform._22 = 1;
-	hr = rt->CreateLinearGradientBrush(&lprop, &bprop,
-		collection, &opacity);
-	if (hr != S_OK)
-		logHRESULT(L"error making gradient brush for opacity mask gradient in SV chooser", hr);
-	collection->Release();
+	initBrushProperties(&bprop, 1.0);
+	if (!createGradientBrush(rt, stops, 2,
+		D2D1_GAMMA_2_2, D2D1_EXTEND_MODE_CLAMP,
+		&lprop, &bprop, &opacity,
+		L"error making gradient stop collection for opacity mask gradient in SV chooser",
+		L"error making gradient brush for opacity mask gradient in SV chooser"))
+		goto cleanup;
 
 	// finally, make a vertical gradient from white at the top to black at the bottom (right side up this time) and with the previous opacity mask
 	stops[0].position = 0;
@@ -479,30 +536,26 @@ static void drawSVChooser(struct colorDialog *c, ID2D1RenderTarget *rt)
 	stops[1].color.g = 0.0;
 	stops[1].color.b = 0.0;
 	stops[1].color.a = 1.0;
-	hr = rt->CreateGradientStopCollection(stops, 2,
-		D2D1_GAMMA_2_2, D2D1_EXTEND_MODE_CLAMP,
-		&collection);
-	if (hr != S_OK)
-		logHRESULT(L"error making gradient stop collection for second gradient in SV chooser", hr);
 	ZeroMemory(&lprop, sizeof (D2D1_LINEAR_GRADIENT_BRUSH_PROPERTIES));
 	lprop.startPoint.x = size.width / 2;
 	lprop.startPoint.y = 0;
 	lprop.endPoint.x = size.width / 2;
 	lprop.endPoint.y = size.height;
-	ZeroMemory(&bprop, sizeof (D2D1_BRUSH_PROPERTIES));
-	bprop.opacity = 1.0;
-	bprop.transform._11 = 1;
-	bprop.transform._22 = 1;
-	hr = rt->CreateLinearGradientBrush(&lprop, &bprop,
-		collection, &brush);
-	if (hr != S_OK)
-		logHRESULT(L"error making gradient brush for second gradient in SV chooser", hr);
+	initBrushProperties(&bprop, 1.0);
+	if (!createGradientBrush(rt, stops, 2,
+		D2D1_GAMMA_2_2, D2D1_EXTEND_MODE_CLAMP,
+		&lprop, &bprop, &brush,
+		L"error making gradient stop collection for second gradient in SV chooser",
+		L"error making gradient brush for second gradient in SV chooser"))
+		goto cleanup;
 	// oh but wait we can't use FillRectangle() with an opacity mask
 	// and we can't use FillGeometry() with both an opacity mask and a non-bitmap
 	// layers it is!
 	hr = rt->CreateLayer(&size, &layer);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error making layer for second gradient in SV chooser", hr);
+		goto cleanup;
+	}
 	ZeroMemory(&layerparams, sizeof (D2D1_LAYER_PARAMETERS));
 	layerparams.contentBounds = rect;
 	// TODO make sure these are right
@@ -517,9 +570,11 @@ static void drawSVChooser(struct colorDialog *c, ID2D1RenderTarget *rt)
 	rt->FillRectangle(&rect, brush);
 	rt->PopLayer();
 	layer->Release();
+	layer = NULL;
 	brush->Release();
-	collection->Release();
+	brush = NULL;
 	opacity->Release();
+	opacity = NULL;
 
 	// and now we just draw the marker
 	ZeroMemory(&mparam, sizeof (D2D1_ELLIPSE));
@@ -533,16 +588,27 @@ static void drawSVChooser(struct colorDialog *c, ID2D1RenderTarget *rt)
 	mcolor.b = 1.0;
 	mcolor.a = 1.0;
 	bprop.opacity = 1.0;		// the marker should always be opaque
-	hr = rt->CreateSolidColorBrush(&mcolor, &bprop, &markerBrush);
-	if (hr != S_OK)
-		logHRESULT(L"error creating brush for SV chooser marker", hr);
+	if (!createSolidBrush(rt, &mcolor, &bprop, &markerBrush,
+		L"error creating brush for SV chooser marker"))
+		goto cleanup;
 	rt->DrawEllipse(&mparam, markerBrush, 2, NULL);
 	markerBrush->Release();
+	markerBrush = NULL;
+
+cleanup:
+	if (markerBrush != NULL)
+		markerBrush->Release();
+	if (layer != NULL)
+		layer->Release();
+	if (brush != NULL)
+		brush->Release();
+	if (opacity != NULL)
+		opacity->Release();
 }
 
 static LRESULT CALLBACK svChooserSubProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
 {
-	ID2D1RenderTarget *rt;
+	ID2D1RenderTarget *rt = NULL;
 	struct colorDialog *c;
 	D2D1_POINT_2F *pos;
 	D2D1_SIZE_F *size;
@@ -575,8 +641,7 @@ static void drawArrow(ID2D1RenderTarget *rt, D2D1_POINT_2F center, double hypot)
 	D2D1_MATRIX_3X2_F oldtf, rotate;
 	D2D1_COLOR_F color;
 	D2D1_BRUSH_PROPERTIES bprop;
-	ID2D1SolidColorBrush *brush;
-	HRESULT hr;
+	ID2D1SolidColorBrush *brush = NULL;
 
 	// to avoid needing a geometry, this will just be a rotated square
 	// compute the length of each side; the diagonal of the square is 2 * offset to gradient
@@ -600,17 +665,15 @@ static void drawArrow(ID2D1RenderTarget *rt, D2D1_POINT_2F center, double hypot)
 	color.g = 0.0;
 	color.b = 0.0;
 	color.a = 1.0;
-	ZeroMemory(&bprop, sizeof (D2D1_BRUSH_PROPERTIES));
-	bprop.opacity = 1.0;
-	bprop.transform._11 = 1;
-	bprop.transform._22 = 1;
-	hr = rt->CreateSolidColorBrush(&color, &bprop, &brush);
-	if (hr != S_OK)
-		logHRESULT(L"error creating brush for arrow", hr);
+	initBrushProperties(&bprop, 1.0);
+	if (!createSolidBrush(rt, &color, &bprop, &brush,
+		L"error creating brush for arrow"))
+		goto cleanup;
 	rt->FillRectangle(&rect, brush);
 	brush->Release();
 
 	// clean up
+cleanup:
 	rt->SetTransform(&oldtf);
 }
 
@@ -627,13 +690,11 @@ static void drawHSlider(struct colorDialog *c, ID2D1RenderTarget *rt)
 	double r, g, b;
 	int i;
 	double h;
-	ID2D1GradientStopCollection *collection;
 	D2D1_LINEAR_GRADIENT_BRUSH_PROPERTIES lprop;
 	D2D1_BRUSH_PROPERTIES bprop;
-	ID2D1LinearGradientBrush *brush;
+	ID2D1LinearGradientBrush *brush = NULL;
 	double hypot;
 	D2D1_POINT_2F center;
-	HRESULT hr;
 
 	size = realGetSize(rt);
 	rect.left = size.width / 6;		// leftmost sixth for arrow
@@ -655,39 +716,37 @@ static void drawHSlider(struct colorDialog *c, ID2D1RenderTarget *rt)
 	// and pin the last one
 	stops[i - 1].position = 1.0;
 
-	hr = rt->CreateGradientStopCollection(stops, nStops,
-		// note that in this case this gamma is explicitly specified by the original
-		D2D1_GAMMA_2_2, D2D1_EXTEND_MODE_CLAMP,
-		&collection);
-	if (hr != S_OK)
-		logHRESULT(L"error creating stop collection for H slider gradient", hr);
 	ZeroMemory(&lprop, sizeof (D2D1_LINEAR_GRADIENT_BRUSH_PROPERTIES));
 	lprop.startPoint.x = (rect.right - rect.left) / 2;
 	lprop.startPoint.y = 0;
 	lprop.endPoint.x = (rect.right - rect.left) / 2;
 	lprop.endPoint.y = size.height;
-	ZeroMemory(&bprop, sizeof (D2D1_BRUSH_PROPERTIES));
-	bprop.opacity = 1.0;
-	bprop.transform._11 = 1;
-	bprop.transform._22 = 1;
-	hr = rt->CreateLinearGradientBrush(&lprop, &bprop,
-		collection, &brush);
-	if (hr != S_OK)
-		logHRESULT(L"error creating gradient brush for H slider", hr);
+	initBrushProperties(&bprop, 1.0);
+	if (!createGradientBrush(rt, stops, nStops,
+		// note that in this case this gamma is explicitly specified by the original
+		D2D1_GAMMA_2_2, D2D1_EXTEND_MODE_CLAMP,
+		&lprop, &bprop, &brush,
+		L"error creating stop collection for H slider gradient",
+		L"error creating gradient brush for H slider"))
+		goto cleanup;
 	rt->FillRectangle(&rect, brush);
 	brush->Release();
-	collection->Release();
+	brush = NULL;
 
 	// now draw a black arrow
 	center.x = 0;
 	center.y = c->h * size.height;
 	hypot = rect.left;
 	drawArrow(rt, center, hypot);
+
+cleanup:
+	if (brush != NULL)
+		brush->Release();
 }
 
 static LRESULT CALLBACK hSliderSubProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
 {
-	ID2D1RenderTarget *rt;
+	ID2D1RenderTarget *rt = NULL;
 	struct colorDialog *c;
 	D2D1_POINT_2F *pos;
 	D2D1_SIZE_F *size;
@@ -719,8 +778,7 @@ static void drawPreview(struct colorDialog *c, ID2D1RenderTarget *rt)
 	double r, g, b;
 	D2D1_COLOR_F color;
 	D2D1_BRUSH_PROPERTIES bprop;
-	ID2D1SolidColorBrush *brush;
-	HRESULT hr;
+	ID2D1SolidColorBrush *brush = NULL;
 
 	size = realGetSize(rt);
 	rect.left = 0;
@@ -735,20 +793,17 @@ static void drawPreview(struct colorDialog *c, ID2D1RenderTarget *rt)
 	color.g = g;
 	color.b = b;
 	color.a = c->a;
-	ZeroMemory(&bprop, sizeof (D2D1_BRUSH_PROPERTIES));
-	bprop.opacity = 1.0;
-	bprop.transform._11 = 1;
-	bprop.transform._22 = 1;
-	hr = rt->CreateSolidColorBrush(&color, &bprop, &brush);
-	if (hr != S_OK)
-		logHRESULT(L"error creating brush for preview", hr);
+	initBrushProperties(&bprop, 1.0);
+	if (!createSolidBrush(rt, &color, &bprop, &brush,
+		L"error creating brush for preview"))
+		return;
 	rt->FillRectangle(&rect, brush);
 	brush->Release();
 }
 
 static LRESULT CALLBACK previewSubProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
 {
-	ID2D1RenderTarget *rt;
+	ID2D1RenderTarget *rt = NULL;
 	struct colorDialog *c;
 
 	c = (struct colorDialog *) dwRefData;
@@ -771,13 +826,11 @@ static void drawOpacitySlider(struct colorDialog *c, ID2D1RenderTarget *rt)
 	D2D1_SIZE_F size;
 	D2D1_RECT_F rect;
 	D2D1_GRADIENT_STOP stops[2];
-	ID2D1GradientStopCollection *collection;
 	D2D1_LINEAR_GRADIENT_BRUSH_PROPERTIES lprop;
 	D2D1_BRUSH_PROPERTIES bprop;
-	ID2D1LinearGradientBrush *brush;
+	ID2D1LinearGradientBrush *brush = NULL;
 	double hypot;
 	D2D1_POINT_2F center;
-	HRESULT hr;
 
 	size = realGetSize(rt);
 	rect.left = 0;
@@ -797,39 +850,37 @@ static void drawOpacitySlider(struct colorDialog *c, ID2D1RenderTarget *rt)
 	stops[1].color.g = 1.0;
 	stops[1].color.b = 1.0;
 	stops[1].color.a = 0.0;
-	hr = rt->CreateGradientStopCollection(stops, 2,
-		// note that in this case this gamma is explicitly specified by the original
-		D2D1_GAMMA_2_2, D2D1_EXTEND_MODE_CLAMP,
-		&collection);
-	if (hr != S_OK)
-		logHRESULT(L"error creating stop collection for opacity slider gradient", hr);
 	ZeroMemory(&lprop, sizeof (D2D1_LINEAR_GRADIENT_BRUSH_PROPERTIES));
 	lprop.startPoint.x = 0;
 	lprop.startPoint.y = (rect.bottom - rect.top) / 2;
 	lprop.endPoint.x = size.width;
 	lprop.endPoint.y = (rect.bottom - rect.top) / 2;
-	ZeroMemory(&bprop, sizeof (D2D1_BRUSH_PROPERTIES));
-	bprop.opacity = 1.0;
-	bprop.transform._11 = 1;
-	bprop.transform._22 = 1;
-	hr = rt->CreateLinearGradientBrush(&lprop, &bprop,
-		collection, &brush);
-	if (hr != S_OK)
-		logHRESULT(L"error creating gradient brush for opacity slider", hr);
+	initBrushProperties(&bprop, 1.0);
+	if (!createGradientBrush(rt, stops, 2,
+		// note that in this case this gamma is explicitly specified by the original
+		D2D1_GAMMA_2_2, D2D1_EXTEND_MODE_CLAMP,
+		&lprop, &bprop, &brush,
+		L"error creating stop collection for opacity slider gradient",
+		L"error creating gradient brush for opacity slider"))
+		goto cleanup;
 	rt->FillRectangle(&rect, brush);
 	brush->Release();
-	collection->Release();
+	brush = NULL;
 
 	// now draw a black arrow
 	center.x = (1 - c->a) * size.width;
 	center.y = size.height;
 	hypot = size.height - rect.bottom;
 	drawArrow(rt, center, hypot);
+
+cleanup:
+	if (brush != NULL)
+		brush->Release();
 }
 
 static LRESULT CALLBACK opacitySliderSubProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
 {
-	ID2D1RenderTarget *rt;
+	ID2D1RenderTarget *rt = NULL;
 	struct colorDialog *c;
 	D2D1_POINT_2F *pos;
 	D2D1_SIZE_F *size;

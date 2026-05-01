@@ -18,12 +18,21 @@ uiDrawPath *uiDrawNewPath(uiDrawFillMode fillmode)
 	HRESULT hr;
 
 	p = uiprivNew(uiDrawPath);
+	p->path = NULL;
+	p->sink = NULL;
 	hr = d2dfactory->CreatePathGeometry(&(p->path));
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error creating path", hr);
+		uiprivFree(p);
+		return NULL;
+	}
 	hr = p->path->Open(&(p->sink));
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error opening path", hr);
+		p->path->Release();
+		uiprivFree(p);
+		return NULL;
+	}
 	switch (fillmode) {
 	case uiDrawFillModeWinding:
 		p->sink->SetFillMode(D2D1_FILL_MODE_WINDING);
@@ -143,9 +152,9 @@ static void drawArc(uiDrawPath *p, struct arc *a, void (*startFunction)(uiDrawPa
 	as.size.height = a->radius;
 	as.rotationAngle = 0;		// as above, not relevant for circles
 	if (a->negative)
-		as.sweepDirection = D2D1_SWEEP_DIRECTION_COUNTER_CLOCKWISE;
-	else
 		as.sweepDirection = D2D1_SWEEP_DIRECTION_CLOCKWISE;
+	else
+		as.sweepDirection = D2D1_SWEEP_DIRECTION_COUNTER_CLOCKWISE;
 	// TODO explain the outer if
 	if (!a->negative)
 		if (a->sweep > uiPi)

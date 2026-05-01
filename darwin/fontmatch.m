@@ -361,6 +361,10 @@ static CTFontDescriptorRef matchStyle(CTFontDescriptorRef against, uiFontDescrip
 
 	current = (CTFontDescriptorRef) CFArrayGetValueAtIndex(matching, 0);
 	d = [[uiprivFontStyleData alloc] initWithDescriptor:current];
+	if (d == nil) {
+		CFRelease(matching);
+		return against;
+	}
 	axisDict = nil;
 	// FIXME fixed1616 FPE
 	// if ([d variation] != NULL)
@@ -374,6 +378,11 @@ static CTFontDescriptorRef matchStyle(CTFontDescriptorRef against, uiFontDescrip
 		if (i != 0) {
 			current = (CTFontDescriptorRef) CFArrayGetValueAtIndex(matching, i);
 			d = [[uiprivFontStyleData alloc] initWithDescriptor:current];
+			if (d == nil) {
+				uiprivFree(closeness);
+				CFRelease(matching);
+				return against;
+			}
 		}
 		fillDescStyleFields(d, axisDict, &fields);
 		closeness[i].weight = fields.Weight - styles->Weight;
@@ -425,26 +434,51 @@ CTFontDescriptorRef uiprivFontDescriptorToCTFontDescriptor(uiFontDescriptor *fd)
 	CFNumberRef cfsize;
 	CTFontDescriptorRef basedesc;
 
+	if (fd == NULL)
+		uiprivUserBug("You cannot convert a NULL uiFontDescriptor to a Core Text font descriptor.");
+	if (fd->Family == NULL)
+		uiprivUserBug("You cannot convert a uiFontDescriptor with a NULL family to a Core Text font descriptor.");
+
+	attrs = NULL;
+	cffamily = NULL;
+	cfsize = NULL;
+	basedesc = NULL;
+
 	attrs = CFDictionaryCreateMutable(NULL, 2,
 		// TODO are these correct?
 		&kCFCopyStringDictionaryKeyCallBacks,
 		&kCFTypeDictionaryValueCallBacks);
-	if (attrs == NULL) {
-		// TODO
-	}
+	if (attrs == NULL)
+		goto fail;
 	cffamily = CFStringCreateWithCString(NULL, fd->Family, kCFStringEncodingUTF8);
-	if (cffamily == NULL) {
-		// TODO
-	}
+	if (cffamily == NULL)
+		goto fail;
 	CFDictionaryAddValue(attrs, kCTFontFamilyNameAttribute, cffamily);
 	CFRelease(cffamily);
+	cffamily = NULL;
 	cfsize = CFNumberCreate(NULL, kCFNumberDoubleType, &(fd->Size));
+	if (cfsize == NULL)
+		goto fail;
 	CFDictionaryAddValue(attrs, kCTFontSizeAttribute, cfsize);
 	CFRelease(cfsize);
+	cfsize = NULL;
 
 	basedesc = CTFontDescriptorCreateWithAttributes(attrs);
+	if (basedesc == NULL)
+		goto fail;
 	CFRelease(attrs);			// TODO correct?
 	return matchStyle(basedesc, fd);
+
+fail:
+	if (basedesc != NULL)
+		CFRelease(basedesc);
+	if (cfsize != NULL)
+		CFRelease(cfsize);
+	if (cffamily != NULL)
+		CFRelease(cffamily);
+	if (attrs != NULL)
+		CFRelease(attrs);
+	return NULL;
 }
 
 // fortunately features that aren't supported are simply ignored, so we can copy them all in
@@ -455,7 +489,11 @@ CTFontDescriptorRef uiprivCTFontDescriptorAppendFeatures(CTFontDescriptorRef des
 	CFDictionaryRef attrs;
 	const void *keys[1], *values[1];
 
+	if (desc == NULL)
+		return NULL;
 	featuresArray = uiprivOpenTypeFeaturesToCTFeatures(otf);
+	if (featuresArray == NULL)
+		return desc;
 	keys[0] = kCTFontFeatureSettingsAttribute;
 	values[0] = featuresArray;
 	attrs = CFDictionaryCreate(NULL,
@@ -464,8 +502,12 @@ CTFontDescriptorRef uiprivCTFontDescriptorAppendFeatures(CTFontDescriptorRef des
 		&kCFCopyStringDictionaryKeyCallBacks,
 		&kCFTypeDictionaryValueCallBacks);
 	CFRelease(featuresArray);
+	if (attrs == NULL)
+		return desc;
 	new = CTFontDescriptorCreateCopyWithAttributes(desc, attrs);
 	CFRelease(attrs);
+	if (new == NULL)
+		return desc;
 	CFRelease(desc);
 	return new;
 }

@@ -55,10 +55,15 @@
 	self = [super init];
 	if (self) {
 		self->attrstr = uiprivAttributedStringToCFAttributedString(p, &(self->backgroundParams));
+		if (self->attrstr == NULL) {
+			[self release];
+			return nil;
+		}
 		// TODO kCTParagraphStyleSpecifierMaximumLineSpacing, kCTParagraphStyleSpecifierMinimumLineSpacing, kCTParagraphStyleSpecifierLineSpacingAdjustment for line spacing
 		self->framesetter = CTFramesetterCreateWithAttributedString(self->attrstr);
 		if (self->framesetter == NULL) {
-			// TODO
+			[self release];
+			return nil;
 		}
 
 		range.location = 0;
@@ -75,15 +80,21 @@
 			&unused);			// not documented as accepting NULL (TODO really?)
 
 		rect.origin = CGPointZero;
-		rect.size = self->size;
+		CGFloat frameWidth = (p->Width < 0) ? self->size.width : cgwidth;
+		rect.size = CGSizeMake(frameWidth, self->size.height);
 		self->path = CGPathCreateWithRect(rect, NULL);
+		if (self->path == NULL) {
+			[self release];
+			return nil;
+		}
 		self->frame = CTFramesetterCreateFrame(self->framesetter,
 			range,
 			self->path,
 			// TODO kCTFramePathWidthAttributeName?
 			NULL);
 		if (self->frame == NULL) {
-			// TODO
+			[self release];
+			return nil;
 		}
 	}
 	return self;
@@ -91,11 +102,15 @@
 
 - (void)dealloc
 {
-	CFRelease(self->frame);
-	CFRelease(self->path);
-	CFRelease(self->framesetter);
+	if (self->frame != NULL)
+		CFRelease(self->frame);
+	if (self->path != NULL)
+		CFRelease(self->path);
+	if (self->framesetter != NULL)
+		CFRelease(self->framesetter);
 	[self->backgroundParams release];
-	CFRelease(self->attrstr);
+	if (self->attrstr != NULL)
+		CFRelease(self->attrstr);
 	[super dealloc];
 }
 
@@ -166,7 +181,16 @@ uiDrawTextLayout *uiDrawNewTextLayout(uiDrawTextLayoutParams *p)
 	uiDrawTextLayout *tl;
 
 	tl = uiprivNew(uiDrawTextLayout);
+	tl->frame = nil;
+	tl->forLines = nil;
+	tl->empty = NO;
+	tl->u8tou16 = NULL;
+	tl->nUTF8 = 0;
+	tl->u16tou8 = NULL;
+	tl->nUTF16 = 0;
 	tl->frame = [[uiprivTextFrame alloc] initWithLayoutParams:p];
+	if (tl->frame == nil)
+		goto fail;
 	if (uiAttributedStringLen(p->String) != 0)
 		tl->forLines = [tl->frame retain];
 	else {
@@ -179,18 +203,28 @@ uiDrawTextLayout *uiDrawNewTextLayout(uiDrawTextLayoutParams *p)
 		p2.String = space;
 		tl->forLines = [[uiprivTextFrame alloc] initWithLayoutParams:&p2];
 		uiFreeAttributedString(space);
+		if (tl->forLines == nil)
+			goto fail;
 	}
 
 	// and finally copy the UTF-8/UTF-16 conversion tables
 	tl->u8tou16 = uiprivAttributedStringCopyUTF8ToUTF16Table(p->String, &(tl->nUTF8));
 	tl->u16tou8 = uiprivAttributedStringCopyUTF16ToUTF8Table(p->String, &(tl->nUTF16));
 	return tl;
+
+fail:
+	uiDrawFreeTextLayout(tl);
+	return NULL;
 }
 
 void uiDrawFreeTextLayout(uiDrawTextLayout *tl)
 {
-	uiprivFree(tl->u16tou8);
-	uiprivFree(tl->u8tou16);
+	if (tl == NULL)
+		return;
+	if (tl->u16tou8 != NULL)
+		uiprivFree(tl->u16tou8);
+	if (tl->u8tou16 != NULL)
+		uiprivFree(tl->u8tou16);
 	[tl->forLines release];
 	[tl->frame release];
 	uiprivFree(tl);
@@ -199,6 +233,8 @@ void uiDrawFreeTextLayout(uiDrawTextLayout *tl)
 // TODO document that (x,y) is the top-left corner of the *entire frame*
 void uiDrawText(uiDrawContext *c, uiDrawTextLayout *tl, double x, double y)
 {
+	if (tl == NULL)
+		return;
 	[tl->frame draw:c textLayout:tl at:x y:y];
 }
 
@@ -208,6 +244,11 @@ void uiDrawText(uiDrawContext *c, uiDrawTextLayout *tl, double x, double y)
 // TODO standardize and document the behavior of this on an empty layout
 void uiDrawTextLayoutExtents(uiDrawTextLayout *tl, double *width, double *height)
 {
+	if (tl == NULL) {
+		*width = 0;
+		*height = 0;
+		return;
+	}
 	// TODO explain this, given the above
 	[tl->frame returnWidth:width height:NULL];
 	[tl->forLines returnWidth:NULL height:height];
@@ -230,4 +271,3 @@ void uiFreeFontDescriptor(uiFontDescriptor *desc)
 	// TODO ensure this is synchronized with fontmatch.m
 	uiFreeText((char *) (desc->Family));
 }
-

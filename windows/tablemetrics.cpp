@@ -65,6 +65,11 @@ HRESULT uiprivTableGetMetrics(uiTable *t, int iItem, int iSubItem, uiprivTableMe
 	}
 
 	header = (HWND) SendMessageW(t->hwnd, LVM_GETHEADER, 0, 0);
+	if (header == NULL) {
+		logLastError(L"LVM_GETHEADER");
+		hr = E_FAIL;
+		goto fail;
+	}
 	m->bitmapMargin = SendMessageW(header, HDM_GETBITMAPMARGIN, 0, 0);
 	if (ImageList_GetIconSize(t->imagelist, &(m->cxIcon), &(m->cyIcon)) == 0) {
 		logLastError(L"ImageList_GetIconSize()");

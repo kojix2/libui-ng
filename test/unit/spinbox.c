@@ -73,6 +73,18 @@ static void spinboxSetValueNoCallback(void **state)
 	uiSpinboxSetValue(*s, 0);
 }
 
+static void spinboxEnableDisable(void **state)
+{
+	uiSpinbox **s = uiSpinboxPtrFromState(state);
+
+	*s = uiNewSpinbox(0, 1);
+	assert_int_equal(uiControlEnabled(uiControl(*s)), 1);
+	uiControlDisable(uiControl(*s));
+	assert_int_equal(uiControlEnabled(uiControl(*s)), 0);
+	uiControlEnable(uiControl(*s));
+	assert_int_equal(uiControlEnabled(uiControl(*s)), 1);
+}
+
 #define spinboxUnitTest(f) cmocka_unit_test_setup_teardown((f), \
 		unitTestSetup, unitTestTeardown)
 
@@ -86,6 +98,7 @@ int spinboxRunUnitTests(void)
 		spinboxUnitTest(spinboxSetValueOutOfRangeClampLow),
 		spinboxUnitTest(spinboxSetValueOutOfRangeClampHigh),
 		spinboxUnitTest(spinboxSetValueNoCallback),
+		spinboxUnitTest(spinboxEnableDisable),
 	};
 
 	return cmocka_run_group_tests_name("uiSpinbox", tests, unitTestsSetup, unitTestsTeardown);

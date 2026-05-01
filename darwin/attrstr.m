@@ -222,6 +222,9 @@ static uiForEach featuresHash(const uiOpenTypeFeatures *otf, char a, char b, cha
 	CTFontDescriptorRef desc;
 	CTFontRef font;
 
+	if (defaultFont == NULL)
+		uiprivUserBug("You cannot create a Core Text font from a NULL default uiFontDescriptor.");
+
 	uidesc = *defaultFont;
 	if (self->attrs[cFamily] != NULL)
 		// TODO const-correct uiFontDescriptor or change this function below
@@ -235,8 +238,12 @@ static uiForEach featuresHash(const uiOpenTypeFeatures *otf, char a, char b, cha
 	if (self->attrs[cStretch] != NULL)
 		uidesc.Stretch = uiAttributeStretch(self->attrs[cStretch]);
 	desc = uiprivFontDescriptorToCTFontDescriptor(&uidesc);
+	if (desc == NULL)
+		return NULL;
 	if (self->attrs[cFeatures] != NULL)
 		desc = uiprivCTFontDescriptorAppendFeatures(desc, uiAttributeFeatures(self->attrs[cFeatures]));
+	if (desc == NULL)
+		return NULL;
 	font = CTFontCreateWithFontDescriptor(desc, uidesc.Size, NULL);
 	CFRelease(desc);			// TODO correct?
 	return font;
@@ -279,15 +286,14 @@ static CGColorRef mkcolor(double r, double g, double b, double a)
 
 	// TODO we should probably just create this once and recycle it throughout program execution...
 	colorspace = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
-	if (colorspace == NULL) {
-		// TODO
-	}
+	if (colorspace == NULL)
+		return NULL;
 	components[0] = r;
 	components[1] = g;
 	components[2] = b;
 	components[3] = a;
 	color = CGColorCreate(colorspace, components);
-	CFRelease(colorspace);
+	CGColorSpaceRelease(colorspace);
 	return color;
 }
 
@@ -301,6 +307,8 @@ static void addBackgroundAttribute(struct foreachParams *p, size_t start, size_t
 		CFRange range;
 
 		color = mkcolor(r, g, b, a);
+		if (color == NULL)
+			return;
 		range.location = start;
 		range.length = end - start;
 		CFAttributedStringSetAttribute(p->mas, range, *uiprivFUTURE_kCTBackgroundColorAttributeName, color);
@@ -339,6 +347,8 @@ static uiForEach processAttribute(const uiAttributedString *s, const uiAttribute
 	case uiAttributeTypeColor:
 		uiAttributeColor(attr, &r, &g, &b, &a);
 		color = mkcolor(r, g, b, a);
+		if (color == NULL)
+			break;
 		CFAttributedStringSetAttribute(p->mas, range, kCTForegroundColorAttributeName, color);
 		CFRelease(color);
 		break;
@@ -369,6 +379,7 @@ static uiForEach processAttribute(const uiAttributedString *s, const uiAttribute
 		break;
 	case uiAttributeTypeUnderlineColor:
 		uiAttributeUnderlineColor(attr, &colorType, &r, &g, &b, &a);
+		color = NULL;
 		switch (colorType) {
 		case uiUnderlineColorCustom:
 			color = mkcolor(r, g, b, a);
@@ -383,6 +394,8 @@ static uiForEach processAttribute(const uiAttributedString *s, const uiAttribute
 			color = [auxiliaryColor CGColor];
 			break;
 		}
+		if (color == NULL)
+			break;
 		CFAttributedStringSetAttribute(p->mas, range, kCTUnderlineColorAttributeName, color);
 		if (colorType == uiUnderlineColorCustom)
 			CFRelease(color);
@@ -391,7 +404,7 @@ static uiForEach processAttribute(const uiAttributedString *s, const uiAttribute
 	return uiForEachContinue;
 }
 
-static void applyFontAttributes(CFMutableAttributedStringRef mas, uiFontDescriptor *defaultFont)
+static int applyFontAttributes(CFMutableAttributedStringRef mas, uiFontDescriptor *defaultFont)
 {
 	uiprivCombinedFontAttr *cfa;
 	CTFontRef font;
@@ -405,6 +418,8 @@ static void applyFontAttributes(CFMutableAttributedStringRef mas, uiFontDescript
 	cfa = [uiprivCombinedFontAttr new];
 	font = [cfa toCTFontWithDefaultFont:defaultFont];
 	[cfa release];
+	if (font == NULL)
+		return 0;
 	range.location = 0;
 	range.length = n;
 	CFAttributedStringSetAttribute(mas, range, kCTFontAttributeName, font);
@@ -418,6 +433,8 @@ static void applyFontAttributes(CFMutableAttributedStringRef mas, uiFontDescript
 		cfa = (uiprivCombinedFontAttr *) CFAttributedStringGetAttribute(mas, range.location, combinedFontAttrName, &range);
 		if (cfa != nil) {
 			font = [cfa toCTFontWithDefaultFont:defaultFont];
+			if (font == NULL)
+				return 0;
 			CFAttributedStringSetAttribute(mas, range, kCTFontAttributeName, font);
 			CFRelease(font);
 		}
@@ -426,8 +443,9 @@ static void applyFontAttributes(CFMutableAttributedStringRef mas, uiFontDescript
 
 	// and finally, get rid of all the uiprivCombinedFontAttrs as we won't need them anymore
 	range.location = 0;
-	range.length = 0;
+	range.length = n;
 	CFAttributedStringRemoveAttribute(mas, range, combinedFontAttrName);
+	return 1;
 }
 
 static const CTTextAlignment ctaligns[] = {
@@ -464,16 +482,21 @@ CFAttributedStringRef uiprivAttributedStringToCFAttributedString(uiDrawTextLayou
 	CFMutableAttributedStringRef mas;
 	struct foreachParams fep;
 
+	cfstr = NULL;
+	defaultAttrs = NULL;
+	ps = NULL;
+	base = NULL;
+	mas = NULL;
+	fep.backgroundParams = nil;
+
 	cfstr = CFStringCreateWithCharacters(NULL, uiprivAttributedStringUTF16String(p->String), uiprivAttributedStringUTF16Len(p->String));
-	if (cfstr == NULL) {
-		// TODO
-	}
+	if (cfstr == NULL)
+		goto fail;
 	defaultAttrs = CFDictionaryCreateMutable(NULL, 0,
 		&kCFCopyStringDictionaryKeyCallBacks,
 		&kCFTypeDictionaryValueCallBacks);
-	if (defaultAttrs == NULL) {
-		// TODO
-	}
+	if (defaultAttrs == NULL)
+		goto fail;
 #if 0 /* TODO */
 	ffp.desc = *(p->DefaultFont);
 	defaultCTFont = fontdescToCTFont(&ffp);
@@ -481,25 +504,53 @@ CFAttributedStringRef uiprivAttributedStringToCFAttributedString(uiDrawTextLayou
 	CFRelease(defaultCTFont);
 #endif
 	ps = mkParagraphStyle(p);
+	if (ps == NULL)
+		goto fail;
 	CFDictionaryAddValue(defaultAttrs, kCTParagraphStyleAttributeName, ps);
 	CFRelease(ps);
+	ps = NULL;
 
 	base = CFAttributedStringCreate(NULL, cfstr, defaultAttrs);
-	if (base == NULL) {
-		// TODO
-	}
+	if (base == NULL)
+		goto fail;
 	CFRelease(cfstr);
+	cfstr = NULL;
 	CFRelease(defaultAttrs);
+	defaultAttrs = NULL;
 	mas = CFAttributedStringCreateMutableCopy(NULL, 0, base);
 	CFRelease(base);
+	base = NULL;
+	if (mas == NULL)
+		goto fail;
 
-	CFAttributedStringBeginEditing(mas);
 	fep.mas = mas;
 	fep.backgroundParams = [NSMutableArray new];
+	if (fep.backgroundParams == nil)
+		goto fail;
+	CFAttributedStringBeginEditing(mas);
 	uiAttributedStringForEachAttribute(p->String, processAttribute, &fep);
-	applyFontAttributes(mas, p->DefaultFont);
+	if (!applyFontAttributes(mas, p->DefaultFont)) {
+		CFAttributedStringEndEditing(mas);
+		goto fail;
+	}
 	CFAttributedStringEndEditing(mas);
 
 	*backgroundParams = fep.backgroundParams;
 	return mas;
+
+fail:
+	if (fep.backgroundParams != nil)
+		[fep.backgroundParams release];
+	if (mas != NULL)
+		CFRelease(mas);
+	if (base != NULL)
+		CFRelease(base);
+	if (ps != NULL)
+		CFRelease(ps);
+	if (defaultAttrs != NULL)
+		CFRelease(defaultAttrs);
+	if (cfstr != NULL)
+		CFRelease(cfstr);
+	*backgroundParams = nil;
+	return NULL;
 }

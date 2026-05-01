@@ -94,8 +94,11 @@ struct tabPage *newTabPage(uiControl *child)
 
 	// unfortunately this needs to be a proper dialog for EnableThemeDialogTexture() to work; CreateWindowExW() won't suffice
 	if (CreateDialogIndirectParamW(hInstance, (const DLGTEMPLATE *) data_rcTabPageDialog,
-		utilWindow, dlgproc, (LPARAM) tp) == NULL)
+		utilWindow, dlgproc, (LPARAM) tp) == NULL) {
 		logLastError(L"error creating tab page");
+		uiprivFree(tp);
+		return NULL;
+	}
 
 	tp->child = child;
 	if (tp->child != NULL) {

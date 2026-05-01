@@ -47,6 +47,13 @@ void uiprivFontDescriptorFromIDWriteFont(IDWriteFont *font, uiFontDescriptor *ui
 	DWRITE_FONT_STYLE dwitalic;
 	DWRITE_FONT_STRETCH dwstretch;
 
+	if (font == NULL) {
+		uidesc->Weight = uiTextWeightNormal;
+		uidesc->Italic = uiTextItalicNormal;
+		uidesc->Stretch = uiTextStretchNormal;
+		return;
+	}
+
 	dwitalic = font->GetStyle();
 	// TODO reverse the above misalignment if it is corrected
 	uidesc->Weight = (uiTextWeight) (font->GetWeight());
