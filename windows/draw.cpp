@@ -144,6 +144,8 @@ static ID2D1Brush *makeSolidBrush(uiDrawBrush *b, ID2D1RenderTarget *rt, D2D1_BR
 	ID2D1SolidColorBrush *brush;
 	HRESULT hr;
 
+	brush = NULL;
+
 	color.r = b->R;
 	color.g = b->G;
 	color.b = b->B;
@@ -153,8 +155,10 @@ static ID2D1Brush *makeSolidBrush(uiDrawBrush *b, ID2D1RenderTarget *rt, D2D1_BR
 		&color,
 		props,
 		&brush);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error creating solid brush", hr);
+		return NULL;
+	}
 	return brush;
 }
 
@@ -164,6 +168,8 @@ static ID2D1GradientStopCollection *mkstops(uiDrawBrush *b, ID2D1RenderTarget *r
 	D2D1_GRADIENT_STOP *stops;
 	size_t i;
 	HRESULT hr;
+
+	s = NULL;
 
 	stops = (D2D1_GRADIENT_STOP *) uiprivAlloc(b->NumStops * sizeof (D2D1_GRADIENT_STOP), "D2D1_GRADIENT_STOP[]");
 	for (i = 0; i < b->NumStops; i++) {
@@ -180,8 +186,11 @@ static ID2D1GradientStopCollection *mkstops(uiDrawBrush *b, ID2D1RenderTarget *r
 		D2D1_GAMMA_2_2,			// this is the default for the C++-only overload of ID2D1RenderTarget::GradientStopCollection()
 		D2D1_EXTEND_MODE_CLAMP,
 		&s);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error creating stop collection", hr);
+		uiprivFree(stops);
+		return NULL;
+	}
 
 	uiprivFree(stops);
 	return s;
@@ -194,6 +203,8 @@ static ID2D1Brush *makeLinearBrush(uiDrawBrush *b, ID2D1RenderTarget *rt, D2D1_B
 	ID2D1GradientStopCollection *stops;
 	HRESULT hr;
 
+	brush = NULL;
+
 	ZeroMemory(&gprops, sizeof (D2D1_LINEAR_GRADIENT_BRUSH_PROPERTIES));
 	gprops.startPoint.x = b->X0;
 	gprops.startPoint.y = b->Y0;
@@ -201,14 +212,19 @@ static ID2D1Brush *makeLinearBrush(uiDrawBrush *b, ID2D1RenderTarget *rt, D2D1_B
 	gprops.endPoint.y = b->Y1;
 
 	stops = mkstops(b, rt);
+	if (stops == NULL)
+		return NULL;
 
 	hr = rt->CreateLinearGradientBrush(
 		&gprops,
 		props,
 		stops,
 		&brush);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error creating gradient brush", hr);
+		stops->Release();
+		return NULL;
+	}
 
 	// the example at https://msdn.microsoft.com/en-us/library/windows/desktop/dd756682%28v=vs.85%29.aspx says this is safe to do now
 	stops->Release();
@@ -222,6 +238,8 @@ static ID2D1Brush *makeRadialBrush(uiDrawBrush *b, ID2D1RenderTarget *rt, D2D1_B
 	ID2D1GradientStopCollection *stops;
 	HRESULT hr;
 
+	brush = NULL;
+
 	ZeroMemory(&gprops, sizeof (D2D1_RADIAL_GRADIENT_BRUSH_PROPERTIES));
 	gprops.gradientOriginOffset.x = b->X0 - b->X1;
 	gprops.gradientOriginOffset.y = b->Y0 - b->Y1;
@@ -231,14 +249,19 @@ static ID2D1Brush *makeRadialBrush(uiDrawBrush *b, ID2D1RenderTarget *rt, D2D1_B
 	gprops.radiusY = b->OuterRadius;
 
 	stops = mkstops(b, rt);
+	if (stops == NULL)
+		return NULL;
 
 	hr = rt->CreateRadialGradientBrush(
 		&gprops,
 		props,
 		stops,
 		&brush);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error creating gradient brush", hr);
+		stops->Release();
+		return NULL;
+	}
 
 	stops->Release();
 	return brush;
@@ -345,6 +368,9 @@ void uiDrawStroke(uiDrawContext *c, uiDrawPath *p, uiDrawBrush *b, uiDrawStrokeP
 	HRESULT hr;
 
 	brush = makeBrush(b, c->rt);
+	if (brush == NULL)
+		return;
+	style = NULL;
 
 	ZeroMemory(&dsp, sizeof (D2D1_STROKE_STYLE_PROPERTIES));
 	switch (sp->Cap) {
@@ -392,8 +418,13 @@ void uiDrawStroke(uiDrawContext *c, uiDrawPath *p, uiDrawBrush *b, uiDrawStrokeP
 		dashes,
 		sp->NumDashes,
 		&style);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error creating stroke style", hr);
+		if (sp->NumDashes != 0)
+			uiprivFree(dashes);
+		brush->Release();
+		return;
+	}
 	if (sp->NumDashes != 0)
 		uiprivFree(dashes);
 
@@ -415,6 +446,8 @@ void uiDrawFill(uiDrawContext *c, uiDrawPath *p, uiDrawBrush *b)
 	ID2D1Layer *cliplayer;
 
 	brush = makeBrush(b, c->rt);
+	if (brush == NULL)
+		return;
 	cliplayer = applyClip(c);
 	c->rt->FillGeometry(
 		pathGeometry(p),
