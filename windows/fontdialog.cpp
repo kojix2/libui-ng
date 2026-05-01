@@ -166,9 +166,14 @@ static WCHAR *fontStyleName(struct fontCollection *fc, IDWriteFont *font)
 	WCHAR *wstr;
 	HRESULT hr;
 
+	if (font == NULL)
+		return emptyUTF16();
+
 	hr = font->GetFaceNames(&str);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error getting font style name for font dialog", hr);
+		return emptyUTF16();
+	}
 	wstr = uiprivFontCollectionCorrectString(fc, str);
 	str->Release();
 	return wstr;
@@ -475,11 +480,18 @@ static struct fontDialog *beginFontDialog(HWND hwnd, LPARAM lParam)
 	f->sizeCombobox = getDlgItem(f->hwnd, rcFontSizeCombobox);
 
 	f->fc = uiprivLoadFontCollection();
+	if (f->fc == NULL) {
+		uiprivFree(f);
+		EndDialog(hwnd, 1);
+		return NULL;
+	}
 	nFamilies = f->fc->fonts->GetFontFamilyCount();
 	for (i = 0; i < nFamilies; i++) {
 		hr = f->fc->fonts->GetFontFamily(i, &family);
-		if (hr != S_OK)
+		if (hr != S_OK) {
 			logHRESULT(L"error getting font family", hr);
+			continue;
+		}
 		wname = uiprivFontCollectionFamilyName(f->fc, family);
 		pos = cbAddString(f->familyCombobox, wname);
 		uiprivFree(wname);
@@ -540,6 +552,8 @@ static INT_PTR CALLBACK fontDialogDlgProc(HWND hwnd, UINT uMsg, WPARAM wParam, L
 	if (f == NULL) {
 		if (uMsg == WM_INITDIALOG) {
 			f = beginFontDialog(hwnd, lParam);
+			if (f == NULL)
+				return TRUE;
 			SetWindowLongPtrW(hwnd, DWLP_USER, (LONG_PTR) f);
 			return TRUE;
 		}
@@ -690,6 +704,9 @@ static_assert(ARRAYSIZE(data_rcFontDialog) == 476, "wrong size for resource rcFo
 
 BOOL uiprivShowFontDialog(HWND parent, struct fontDialogParams *params)
 {
+	if (params->font == NULL)
+		return FALSE;
+
 	switch (DialogBoxIndirectParamW(hInstance, (const DLGTEMPLATE *) data_rcFontDialog, parent, fontDialogDlgProc, (LPARAM) params)) {
 	case 1:			// cancel
 		return FALSE;
@@ -710,13 +727,17 @@ static IDWriteFontFamily *tryFindFamily(IDWriteFontCollection *fc, const WCHAR *
 	HRESULT hr;
 
 	hr = fc->FindFamilyName(name, &index, &exists);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error finding font family for font dialog", hr);
+		return NULL;
+	}
 	if (!exists)
 		return NULL;
 	hr = fc->GetFontFamily(index, &family);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error extracting found font family for font dialog", hr);
+		return NULL;
+	}
 	return family;
 }
 
@@ -734,6 +755,13 @@ void uiprivLoadInitialFontDialogParams(struct fontDialogParams *params)
 
 	// We need the correct localized name for Regular (and possibly Arial too? let's say yes to be safe), so let's grab the strings from DirectWrite instead of hardcoding them.
 	fc = uiprivLoadFontCollection();
+	if (fc == NULL) {
+		params->font = NULL;
+		params->size = 10;
+		params->familyName = emptyUTF16();
+		params->styleName = emptyUTF16();
+		return;
+	}
 	family = tryFindFamily(fc->fonts, L"Arial");
 	if (family == NULL) {
 		family = tryFindFamily(fc->fonts, L"Helvetica");
@@ -741,8 +769,15 @@ void uiprivLoadInitialFontDialogParams(struct fontDialogParams *params)
 			family = tryFindFamily(fc->fonts, L"MS Sans Serif");
 			if (family == NULL) {
 				hr = fc->fonts->GetFontFamily(0, &family);
-				if (hr != S_OK)
+				if (hr != S_OK) {
 					logHRESULT(L"error getting first font out of font collection (worst case scenario)", hr);
+					uiprivFontCollectionFree(fc);
+					params->font = NULL;
+					params->size = 10;
+					params->familyName = emptyUTF16();
+					params->styleName = emptyUTF16();
+					return;
+				}
 			}
 		}
 	}
@@ -753,8 +788,16 @@ void uiprivLoadInitialFontDialogParams(struct fontDialogParams *params)
 		DWRITE_FONT_STRETCH_NORMAL,
 		DWRITE_FONT_STYLE_NORMAL,
 		&font);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error getting Regular font from Arial", hr);
+		family->Release();
+		uiprivFontCollectionFree(fc);
+		params->font = NULL;
+		params->size = 10;
+		params->familyName = emptyUTF16();
+		params->styleName = emptyUTF16();
+		return;
+	}
 
 	params->font = font;
 	params->size = 10;
@@ -768,7 +811,8 @@ void uiprivLoadInitialFontDialogParams(struct fontDialogParams *params)
 
 void uiprivDestroyFontDialogParams(struct fontDialogParams *params)
 {
-	params->font->Release();
+	if (params->font != NULL)
+		params->font->Release();
 	uiprivFree(params->familyName);
 	uiprivFree(params->styleName);
 }

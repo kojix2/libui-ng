@@ -26,14 +26,19 @@ fontCollection *uiprivLoadFontCollection(void)
 	fc = uiprivNew(fontCollection);
 	// always get the latest available font information
 	hr = dwfactory->GetSystemFontCollection(&(fc->fonts), TRUE);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error getting system font collection", hr);
+		uiprivFree(fc);
+		return NULL;
+	}
 	fc->userLocaleSuccess = GetUserDefaultLocaleName(fc->userLocale, LOCALE_NAME_MAX_LENGTH);
 	return fc;
 }
 
 void uiprivFontCollectionFree(fontCollection *fc)
 {
+	if (fc == NULL)
+		return;
 	fc->fonts->Release();
 	uiprivFree(fc);
 }
@@ -44,9 +49,14 @@ WCHAR *uiprivFontCollectionFamilyName(fontCollection *fc, IDWriteFontFamily *fam
 	WCHAR *str;
 	HRESULT hr;
 
+	if (family == NULL)
+		return emptyUTF16();
+
 	hr = family->GetFamilyNames(&names);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error getting names of font out", hr);
+		return emptyUTF16();
+	}
 	str = uiprivFontCollectionCorrectString(fc, names);
 	names->Release();
 	return str;
@@ -60,6 +70,9 @@ WCHAR *uiprivFontCollectionCorrectString(fontCollection *fc, IDWriteLocalizedStr
 	WCHAR *wname;
 	HRESULT hr;
 
+	if (names == NULL)
+		return emptyUTF16();
+
 	// this is complex, but we ignore failure conditions to allow fallbacks
 	// 1) If the user locale name was successfully retrieved, try it
 	// 2) If the user locale name was not successfully retrieved, or that locale's string does not exist, or an error occurred, try L"en-us", the US English locale
@@ -69,7 +82,7 @@ WCHAR *uiprivFontCollectionCorrectString(fontCollection *fc, IDWriteLocalizedStr
 	// TODO does it skip step 2 entirely if step 1 fails? rewrite it to be a more pure conversion of the MSDN code?
 	hr = S_OK;
 	exists = FALSE;
-	if (fc->userLocaleSuccess != 0)
+	if (fc != NULL && fc->userLocaleSuccess != 0)
 		hr = names->FindLocaleName(fc->userLocale, &index, &exists);
 	if (hr != S_OK || (hr == S_OK && !exists))
 		hr = names->FindLocaleName(L"en-us", &index, &exists);
@@ -78,8 +91,10 @@ WCHAR *uiprivFontCollectionCorrectString(fontCollection *fc, IDWriteLocalizedStr
 		index = 0;
 
 	hr = names->GetStringLength(index, &length);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error getting length of font name", hr);
+		return emptyUTF16();
+	}
 	// GetStringLength() does not include the null terminator, but GetString() does
 	wname = (WCHAR *) uiprivAlloc((length + 1) * sizeof (WCHAR), "WCHAR[]");
 	hr = names->GetString(index, wname, length + 1);
