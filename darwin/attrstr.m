@@ -222,6 +222,9 @@ static uiForEach featuresHash(const uiOpenTypeFeatures *otf, char a, char b, cha
 	CTFontDescriptorRef desc;
 	CTFontRef font;
 
+	if (defaultFont == NULL)
+		uiprivUserBug("You cannot create a Core Text font from a NULL default uiFontDescriptor.");
+
 	uidesc = *defaultFont;
 	if (self->attrs[cFamily] != NULL)
 		// TODO const-correct uiFontDescriptor or change this function below
@@ -235,8 +238,12 @@ static uiForEach featuresHash(const uiOpenTypeFeatures *otf, char a, char b, cha
 	if (self->attrs[cStretch] != NULL)
 		uidesc.Stretch = uiAttributeStretch(self->attrs[cStretch]);
 	desc = uiprivFontDescriptorToCTFontDescriptor(&uidesc);
+	if (desc == NULL)
+		return NULL;
 	if (self->attrs[cFeatures] != NULL)
 		desc = uiprivCTFontDescriptorAppendFeatures(desc, uiAttributeFeatures(self->attrs[cFeatures]));
+	if (desc == NULL)
+		return NULL;
 	font = CTFontCreateWithFontDescriptor(desc, uidesc.Size, NULL);
 	CFRelease(desc);			// TODO correct?
 	return font;
@@ -397,7 +404,7 @@ static uiForEach processAttribute(const uiAttributedString *s, const uiAttribute
 	return uiForEachContinue;
 }
 
-static void applyFontAttributes(CFMutableAttributedStringRef mas, uiFontDescriptor *defaultFont)
+static int applyFontAttributes(CFMutableAttributedStringRef mas, uiFontDescriptor *defaultFont)
 {
 	uiprivCombinedFontAttr *cfa;
 	CTFontRef font;
@@ -411,6 +418,8 @@ static void applyFontAttributes(CFMutableAttributedStringRef mas, uiFontDescript
 	cfa = [uiprivCombinedFontAttr new];
 	font = [cfa toCTFontWithDefaultFont:defaultFont];
 	[cfa release];
+	if (font == NULL)
+		return 0;
 	range.location = 0;
 	range.length = n;
 	CFAttributedStringSetAttribute(mas, range, kCTFontAttributeName, font);
@@ -424,6 +433,8 @@ static void applyFontAttributes(CFMutableAttributedStringRef mas, uiFontDescript
 		cfa = (uiprivCombinedFontAttr *) CFAttributedStringGetAttribute(mas, range.location, combinedFontAttrName, &range);
 		if (cfa != nil) {
 			font = [cfa toCTFontWithDefaultFont:defaultFont];
+			if (font == NULL)
+				return 0;
 			CFAttributedStringSetAttribute(mas, range, kCTFontAttributeName, font);
 			CFRelease(font);
 		}
@@ -434,6 +445,7 @@ static void applyFontAttributes(CFMutableAttributedStringRef mas, uiFontDescript
 	range.location = 0;
 	range.length = n;
 	CFAttributedStringRemoveAttribute(mas, range, combinedFontAttrName);
+	return 1;
 }
 
 static const CTTextAlignment ctaligns[] = {
@@ -517,7 +529,10 @@ CFAttributedStringRef uiprivAttributedStringToCFAttributedString(uiDrawTextLayou
 		goto fail;
 	CFAttributedStringBeginEditing(mas);
 	uiAttributedStringForEachAttribute(p->String, processAttribute, &fep);
-	applyFontAttributes(mas, p->DefaultFont);
+	if (!applyFontAttributes(mas, p->DefaultFont)) {
+		CFAttributedStringEndEditing(mas);
+		goto fail;
+	}
 	CFAttributedStringEndEditing(mas);
 
 	*backgroundParams = fep.backgroundParams;
