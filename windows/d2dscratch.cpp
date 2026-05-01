@@ -112,6 +112,8 @@ static LRESULT CALLBACK d2dScratchWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, L
 	case WM_PRINTCLIENT:
 		uiWindowsEnsureGetClientRect(hwnd, &client);
 		dcrt = makeHDCRenderTarget((HDC) wParam, &client);
+		if (dcrt == NULL)
+			return 0;
 		hr = d2dScratchDoPaint(hwnd, dcrt);
 		if (hr != S_OK)
 			logHRESULT(L"error printing D2D scratch window client area", hr);

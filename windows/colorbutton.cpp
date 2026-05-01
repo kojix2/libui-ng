@@ -71,6 +71,8 @@ static BOOL onWM_NOTIFY(uiControl *c, HWND hwnd, NMHDR *nmhdr, LRESULT *lResult)
 
 	uiWindowsEnsureGetClientRect(b->hwnd, &client);
 	rt = makeHDCRenderTarget(nm->hdc, &client);
+	if (rt == NULL)
+		return FALSE;
 	rt->BeginDraw();
 
 	uiWindowsGetSizing(b->hwnd, &sizing);

@@ -99,6 +99,8 @@ static void onWM_PRINTCLIENT(uiArea *a, HDC dc)
 
 	uiWindowsEnsureGetClientRect(a->hwnd, &client);
 	rt = makeHDCRenderTarget(dc, &client);
+	if (rt == NULL)
+		return;
 	hr = doPaint(a, rt, &client);
 	if (hr != S_OK)
 		logHRESULT(L"error printing uiArea client area", hr);

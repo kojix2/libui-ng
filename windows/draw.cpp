@@ -79,6 +79,8 @@ ID2D1DCRenderTarget *makeHDCRenderTarget(HDC dc, RECT *r)
 	ID2D1DCRenderTarget *rt;
 	HRESULT hr;
 
+	rt = NULL;
+
 	ZeroMemory(&props, sizeof (D2D1_RENDER_TARGET_PROPERTIES));
 	props.type = D2D1_RENDER_TARGET_TYPE_DEFAULT;
 	props.pixelFormat.format = DXGI_FORMAT_B8G8R8A8_UNORM;
@@ -89,11 +91,16 @@ ID2D1DCRenderTarget *makeHDCRenderTarget(HDC dc, RECT *r)
 	props.minLevel = D2D1_FEATURE_LEVEL_DEFAULT;
 
 	hr = d2dfactory->CreateDCRenderTarget(&props, &rt);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error creating DC render target", hr);
+		return NULL;
+	}
 	hr = rt->BindDC(dc, r);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error binding DC to DC render target", hr);
+		rt->Release();
+		return NULL;
+	}
 	return rt;
 }
 
