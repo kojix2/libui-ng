@@ -39,6 +39,13 @@ uiDrawTextLayout *uiDrawNewTextLayout(uiDrawTextLayoutParams *p)
 	HRESULT hr;
 
 	tl = uiprivNew(uiDrawTextLayout);
+	tl->format = NULL;
+	tl->layout = NULL;
+	tl->backgroundParams = NULL;
+	tl->u8tou16 = NULL;
+	tl->nUTF8 = 0;
+	tl->u16tou8 = NULL;
+	tl->nUTF16 = 0;
 
 	wDefaultFamily = toUTF16(p->DefaultFont->Family);
 	hr = dwfactory->CreateTextFormat(
@@ -52,11 +59,15 @@ uiDrawTextLayout *uiDrawNewTextLayout(uiDrawTextLayoutParams *p)
 		L"",
 		&(tl->format));
 	uiprivFree(wDefaultFamily);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error creating IDWriteTextFormat", hr);
+		goto fail;
+	}
 	hr = tl->format->SetTextAlignment(dwriteAligns[p->Align]);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error applying text layout alignment", hr);
+		goto fail;
+	}
 
 	hr = dwfactory->CreateTextLayout(
 		(const WCHAR *) uiprivAttributedStringUTF16String(p->String), uiprivAttributedStringUTF16Len(p->String),
@@ -64,8 +75,10 @@ uiDrawTextLayout *uiDrawNewTextLayout(uiDrawTextLayoutParams *p)
 		// FLOAT is float, not double, so this should work... TODO
 		FLT_MAX, FLT_MAX,
 		&(tl->layout));
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error creating IDWriteTextLayout", hr);
+		goto fail;
+	}
 
 	// and set the width
 	// this is the only wrapping mode (apart from "no wrap") available prior to Windows 8.1 (TODO verify this fact) (TODO this should be the default anyway)
@@ -78,11 +91,15 @@ uiDrawTextLayout *uiDrawNewTextLayout(uiDrawTextLayoutParams *p)
 		maxWidth = FLT_MAX;		// see TODO above
 	}
 	hr = tl->layout->SetWordWrapping(wrap);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error setting IDWriteTextLayout word wrapping mode", hr);
+		goto fail;
+	}
 	hr = tl->layout->SetMaxWidth(maxWidth);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error setting IDWriteTextLayout max layout width", hr);
+		goto fail;
+	}
 
 	uiprivAttributedStringApplyAttributesToDWriteTextLayout(p, tl->layout, &(tl->backgroundParams));
 
@@ -91,17 +108,29 @@ uiDrawTextLayout *uiDrawNewTextLayout(uiDrawTextLayoutParams *p)
 	tl->u16tou8 = uiprivAttributedStringCopyUTF16ToUTF8Table(p->String, &(tl->nUTF16));
 
 	return tl;
+
+fail:
+	uiDrawFreeTextLayout(tl);
+	return NULL;
 }
 
 void uiDrawFreeTextLayout(uiDrawTextLayout *tl)
 {
-	uiprivFree(tl->u16tou8);
-	uiprivFree(tl->u8tou16);
-	for (auto p : *(tl->backgroundParams))
-		uiprivFree(p);
-	delete tl->backgroundParams;
-	tl->layout->Release();
-	tl->format->Release();
+	if (tl == NULL)
+		return;
+	if (tl->u16tou8 != NULL)
+		uiprivFree(tl->u16tou8);
+	if (tl->u8tou16 != NULL)
+		uiprivFree(tl->u8tou16);
+	if (tl->backgroundParams != NULL) {
+		for (auto p : *(tl->backgroundParams))
+			uiprivFree(p);
+		delete tl->backgroundParams;
+	}
+	if (tl->layout != NULL)
+		tl->layout->Release();
+	if (tl->format != NULL)
+		tl->format->Release();
 	uiprivFree(tl);
 }
 
