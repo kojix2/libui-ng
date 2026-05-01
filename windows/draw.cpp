@@ -443,6 +443,9 @@ void uiDrawClip(uiDrawContext *c, uiDrawPath *path)
 	ID2D1GeometrySink *newSink;
 	HRESULT hr;
 
+	newPath = NULL;
+	newSink = NULL;
+
 	// if there's no current clip, borrow the path
 	if (c->currentClip == NULL) {
 		c->currentClip = pathGeometry(path);
@@ -454,11 +457,16 @@ void uiDrawClip(uiDrawContext *c, uiDrawPath *path)
 	// otherwise we have to intersect the current path with the new one
 	// we do that into a new path, and then replace c->currentClip with that new path
 	hr = d2dfactory->CreatePathGeometry(&newPath);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error creating new path", hr);
+		return;
+	}
 	hr = newPath->Open(&newSink);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error opening new path", hr);
+		newPath->Release();
+		return;
+	}
 	hr = c->currentClip->CombineWithGeometry(
 		pathGeometry(path),
 		D2D1_COMBINE_MODE_INTERSECT,
@@ -466,12 +474,19 @@ void uiDrawClip(uiDrawContext *c, uiDrawPath *path)
 		// TODO is this correct or can this be set per target?
 		D2D1_DEFAULT_FLATTENING_TOLERANCE,
 		newSink);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error intersecting old path with new path", hr);
+		newSink->Release();
+		newPath->Release();
+		return;
+	}
 	hr = newSink->Close();
-	if (hr != S_OK)
-		logHRESULT(L"error closing new path", hr);
 	newSink->Release();
+	if (hr != S_OK) {
+		logHRESULT(L"error closing new path", hr);
+		newPath->Release();
+		return;
+	}
 
 	// okay we have the new clip; we just need to replace the old one with it
 	c->currentClip->Release();
