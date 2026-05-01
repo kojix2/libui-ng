@@ -216,6 +216,11 @@ void uiTabInsertAt(uiTab *t, const char *name, int n, uiControl *child)
 		uiControlSetParent(child, uiControl(t));
 
 	page = newTabPage(child);
+	if (page == NULL) {
+		if (child != NULL)
+			uiControlSetParent(child, NULL);
+		return;
+	}
 	uiWindowsEnsureSetParentHWND(page->hwnd, t->hwnd);
 	t->pages->insert(t->pages->begin() + n, page);
 	tabArrangePages(t);
