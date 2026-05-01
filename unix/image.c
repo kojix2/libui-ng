@@ -38,16 +38,30 @@ void uiImageAppend(uiImage *i, void *pixels, int pixelWidth, int pixelHeight, in
 	int realStride;
 	int x, y;
 
+	if (pixels == NULL)
+		uiprivUserBug("You cannot append a NULL pixel buffer to a uiImage.");
+	if (pixelWidth <= 0)
+		uiprivUserBug("You cannot append a uiImage representation with pixel width %d.", pixelWidth);
+	if (pixelHeight <= 0)
+		uiprivUserBug("You cannot append a uiImage representation with pixel height %d.", pixelHeight);
+	if (byteStride < pixelWidth * 4)
+		uiprivUserBug("You cannot append a uiImage representation with byte stride %d and pixel width %d.", byteStride, pixelWidth);
+
 	// note that this is native-endian
 	cs = cairo_image_surface_create(CAIRO_FORMAT_ARGB32,
 		pixelWidth, pixelHeight);
 	if (cairo_surface_status(cs) != CAIRO_STATUS_SUCCESS) {
-		/* TODO */
+		cairo_surface_destroy(cs);
+		return;
 	}
 	cairo_surface_flush(cs);
 
 	pix = (uint8_t *) pixels;
 	data = (uint8_t *) cairo_image_surface_get_data(cs);
+	if (data == NULL) {
+		cairo_surface_destroy(cs);
+		return;
+	}
 	realStride = cairo_image_surface_get_stride(cs);
 	for (y = 0; y < pixelHeight; y++) {
 		for (x = 0; x < pixelWidth * 4; x += 4) {
