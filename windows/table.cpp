@@ -20,6 +20,8 @@ uiTableModel *uiNewTableModel(uiTableModelHandler *mh)
 
 void uiFreeTableModel(uiTableModel *m)
 {
+	if (!m->tables->empty())
+		uiprivUserBug("You cannot free a uiTableModel while uiTables are using it.");
 	delete m->tables;
 	uiprivFree(m);
 }
