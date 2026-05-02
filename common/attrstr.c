@@ -328,6 +328,8 @@ size_t uiAttributedStringNumGraphemes(uiAttributedString *s)
 
 size_t uiAttributedStringByteIndexToGrapheme(uiAttributedString *s, size_t pos)
 {
+	if (pos > s->len)
+		uiprivUserBug("Byte index is out of bounds for a uiAttributedString.");
 	recomputeGraphemes(s);
 	if (uiprivGraphemesTakesUTF16())
 		pos = s->u8tou16[pos];
@@ -337,6 +339,8 @@ size_t uiAttributedStringByteIndexToGrapheme(uiAttributedString *s, size_t pos)
 size_t uiAttributedStringGraphemeToByteIndex(uiAttributedString *s, size_t pos)
 {
 	recomputeGraphemes(s);
+	if (pos > s->graphemes->len)
+		uiprivUserBug("Grapheme index is out of bounds for a uiAttributedString.");
 	pos = s->graphemes->graphemesToPoints[pos];
 	if (uiprivGraphemesTakesUTF16())
 		pos = s->u16tou8[pos];
