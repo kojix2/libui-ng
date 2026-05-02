@@ -598,6 +598,7 @@ void uiTableAppendTextColumn(uiTable *t, const char *name, int textModelColumn, 
 	str = [NSString stringWithUTF8String:name];
 	[col setTitle:str];
 	[t->tv addTableColumn:col];
+	[col release];
 }
 
 void uiTableAppendImageColumn(uiTable *t, const char *name, int imageModelColumn)
@@ -619,6 +620,7 @@ void uiTableAppendImageColumn(uiTable *t, const char *name, int imageModelColumn
 	str = [NSString stringWithUTF8String:name];
 	[col setTitle:str];
 	[t->tv addTableColumn:col];
+	[col release];
 }
 
 void uiTableAppendImageTextColumn(uiTable *t, const char *name, int imageModelColumn, int textModelColumn, int textEditableModelColumn, uiTableTextColumnOptionalParams *textParams)
@@ -648,6 +650,7 @@ void uiTableAppendImageTextColumn(uiTable *t, const char *name, int imageModelCo
 	str = [NSString stringWithUTF8String:name];
 	[col setTitle:str];
 	[t->tv addTableColumn:col];
+	[col release];
 }
 
 void uiTableAppendCheckboxColumn(uiTable *t, const char *name, int checkboxModelColumn, int checkboxEditableModelColumn)
@@ -670,6 +673,7 @@ void uiTableAppendCheckboxColumn(uiTable *t, const char *name, int checkboxModel
 	str = [NSString stringWithUTF8String:name];
 	[col setTitle:str];
 	[t->tv addTableColumn:col];
+	[col release];
 }
 
 void uiTableAppendCheckboxTextColumn(uiTable *t, const char *name, int checkboxModelColumn, int checkboxEditableModelColumn, int textModelColumn, int textEditableModelColumn, uiTableTextColumnOptionalParams *textParams)
@@ -700,6 +704,7 @@ void uiTableAppendCheckboxTextColumn(uiTable *t, const char *name, int checkboxM
 	str = [NSString stringWithUTF8String:name];
 	[col setTitle:str];
 	[t->tv addTableColumn:col];
+	[col release];
 }
 
 void uiTableAppendProgressBarColumn(uiTable *t, const char *name, int progressModelColumn)
@@ -713,6 +718,7 @@ void uiTableAppendProgressBarColumn(uiTable *t, const char *name, int progressMo
 	str = [NSString stringWithUTF8String:name];
 	[col setTitle:str];
 	[t->tv addTableColumn:col];
+	[col release];
 }
 
 void uiTableAppendButtonColumn(uiTable *t, const char *name, int buttonModelColumn, int buttonClickableModelColumn)
@@ -726,4 +732,5 @@ void uiTableAppendButtonColumn(uiTable *t, const char *name, int buttonModelColu
 	str = [NSString stringWithUTF8String:name];
 	[col setTitle:str];
 	[t->tv addTableColumn:col];
+	[col release];
 }
