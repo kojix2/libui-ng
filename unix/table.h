@@ -13,8 +13,11 @@ struct uiTableModel {
 	GObject parent_instance;
 	gint stamp;
 	uiTableModelHandler *mh;
+	GPtrArray *tables;
 };
 struct uiTableModelClass {
 	GObjectClass parent_class;
 };
 extern GType uiTableModel_get_type(void);
+extern void uiprivTableRowInserted(uiTable *t, int newIndex);
+extern void uiprivTableRowDeleted(uiTable *t, int oldIndex);
