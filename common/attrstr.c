@@ -138,6 +138,18 @@ static void validateDeleteRange(uiAttributedString *s, size_t start, size_t end)
 		uiprivUserBug("Deletion range end is not on a UTF-8 codepoint boundary for a uiAttributedString.");
 }
 
+static void validateAttributeRange(uiAttributedString *s, size_t start, size_t end)
+{
+	if (start > end)
+		uiprivUserBug("Attribute range start is after its end for a uiAttributedString.");
+	if (end > s->len)
+		uiprivUserBug("Attribute range is out of bounds for a uiAttributedString.");
+	if (!onCodepointBoundary(s, start))
+		uiprivUserBug("Attribute range start is not on a UTF-8 codepoint boundary for a uiAttributedString.");
+	if (!onCodepointBoundary(s, end))
+		uiprivUserBug("Attribute range end is not on a UTF-8 codepoint boundary for a uiAttributedString.");
+}
+
 void uiAttributedStringInsertAtUnattributed(uiAttributedString *s, const char *str, size_t at)
 {
 	uint32_t rune;
@@ -293,6 +305,7 @@ void uiAttributedStringDelete(uiAttributedString *s, size_t start, size_t end)
 
 void uiAttributedStringSetAttribute(uiAttributedString *s, uiAttribute *a, size_t start, size_t end)
 {
+	validateAttributeRange(s, start, end);
 	uiprivAttrListInsertAttribute(s->attrs, a, start, end);
 }
 
