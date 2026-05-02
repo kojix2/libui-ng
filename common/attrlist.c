@@ -78,7 +78,7 @@ static int attrRangeIntersect(struct attr *a, size_t *start, size_t *end)
 	// is the range outside a entirely?
 	if (*start >= a->end)
 		return 0;
-	if (*end < a->start)
+	if (*end <= a->start)
 		return 0;
 
 	// okay, so there is an overlap
