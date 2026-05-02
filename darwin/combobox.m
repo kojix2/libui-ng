@@ -56,7 +56,7 @@ static void uiComboboxDestroy(uiControl *cc)
 {
 	uiCombobox *c = uiCombobox(cc);
 
-	[c->pb unbind:@"contentObjects"];
+	[c->pb unbind:@"contentValues"];
 	[c->pb unbind:@"selectedIndex"];
 	[c->pbac release];
 	[c->pb release];
