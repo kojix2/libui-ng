@@ -329,7 +329,7 @@ struct textColumnCreateParams {
 {
 	uiprivTableCellView *cv;
 
-	cv = [[uiprivTextImageCheckboxTableCellView alloc] initWithFrame:NSZeroRect params:&(self->params)];
+	cv = [[[uiprivTextImageCheckboxTableCellView alloc] initWithFrame:NSZeroRect params:&(self->params)] autorelease];
 	[cv setIdentifier:[self identifier]];
 	return cv;
 }
@@ -446,7 +446,7 @@ struct textColumnCreateParams {
 {
 	uiprivTableCellView *cv;
 
-	cv = [[uiprivProgressBarTableCellView alloc] initWithFrame:NSZeroRect table:self->t model:self->m modelColumn:self->modelColumn];
+	cv = [[[uiprivProgressBarTableCellView alloc] initWithFrame:NSZeroRect table:self->t model:self->m modelColumn:self->modelColumn] autorelease];
 	[cv setIdentifier:[self identifier]];
 	return cv;
 }
@@ -567,7 +567,7 @@ struct textColumnCreateParams {
 {
 	uiprivTableCellView *cv;
 
-	cv = [[uiprivButtonTableCellView alloc] initWithFrame:NSZeroRect table:self->t model:self->m modelColumn:self->modelColumn editableColumn:self->editableColumn];
+	cv = [[[uiprivButtonTableCellView alloc] initWithFrame:NSZeroRect table:self->t model:self->m modelColumn:self->modelColumn editableColumn:self->editableColumn] autorelease];
 	[cv setIdentifier:[self identifier]];
 	return cv;
 }
