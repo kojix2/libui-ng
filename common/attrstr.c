@@ -118,7 +118,26 @@ static int onCodepointBoundary(uiAttributedString *s, size_t at)
 	return c < 0x80 || c >= 0xC0;
 }
 
-// TODO note that at must be on a codeoint boundary
+static void validateInsertPosition(uiAttributedString *s, size_t at)
+{
+	if (at > s->len)
+		uiprivUserBug("Insertion position is out of bounds for a uiAttributedString.");
+	if (!onCodepointBoundary(s, at))
+		uiprivUserBug("Insertion position is not on a UTF-8 codepoint boundary for a uiAttributedString.");
+}
+
+static void validateDeleteRange(uiAttributedString *s, size_t start, size_t end)
+{
+	if (start > end)
+		uiprivUserBug("Deletion range start is after its end for a uiAttributedString.");
+	if (end > s->len)
+		uiprivUserBug("Deletion range is out of bounds for a uiAttributedString.");
+	if (!onCodepointBoundary(s, start))
+		uiprivUserBug("Deletion range start is not on a UTF-8 codepoint boundary for a uiAttributedString.");
+	if (!onCodepointBoundary(s, end))
+		uiprivUserBug("Deletion range end is not on a UTF-8 codepoint boundary for a uiAttributedString.");
+}
+
 void uiAttributedStringInsertAtUnattributed(uiAttributedString *s, const char *str, size_t at)
 {
 	uint32_t rune;
@@ -131,9 +150,7 @@ void uiAttributedStringInsertAtUnattributed(uiAttributedString *s, const char *s
 	size_t at16;
 	size_t i;
 
-	if (!onCodepointBoundary(s, at)) {
-		// TODO
-	}
+	validateInsertPosition(s, at);
 
 	at16 = 0;
 	if (s->u8tou16 != NULL)
@@ -228,12 +245,7 @@ void uiAttributedStringDelete(uiAttributedString *s, size_t start, size_t end)
 	size_t count, count16;
 	size_t i;
 
-	if (!onCodepointBoundary(s, start)) {
-		// TODO
-	}
-	if (!onCodepointBoundary(s, end)) {
-		// TODO
-	}
+	validateDeleteRange(s, start, end);
 
 	count = end - start;
 	start16 = s->u8tou16[start];
