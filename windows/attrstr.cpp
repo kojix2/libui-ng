@@ -52,8 +52,8 @@ class combinedEffectsAttr : public IUnknown {
 			this->underlineAttr = uiprivAttributeRetain(a);
 			break;
 		case uiAttributeTypeUnderlineColor:
-			if (this->underlineAttr != NULL)
-				uiprivAttributeRelease(this->underlineAttr);
+			if (this->underlineColorAttr != NULL)
+				uiprivAttributeRelease(this->underlineColorAttr);
 			this->underlineColorAttr = uiprivAttributeRetain(a);
 			break;
 		}
