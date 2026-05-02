@@ -97,6 +97,13 @@ struct uiColorButton {
 
 	// the given color may not be an RGBA color, which will cause the -getRed:green:blue:alpha: call to throw an exception
 	rgba = [[self color] colorUsingColorSpace:[NSColorSpace sRGBColorSpace]];
+	if (rgba == nil) {
+		*r = 0.0;
+		*g = 0.0;
+		*b = 0.0;
+		*a = 1.0;
+		return;
+	}
 	[rgba getRed:&cr green:&cg blue:&cb alpha:&ca];
 	*r = cr;
 	*g = cg;
