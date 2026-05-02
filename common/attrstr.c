@@ -306,6 +306,10 @@ void uiAttributedStringDelete(uiAttributedString *s, size_t start, size_t end)
 void uiAttributedStringSetAttribute(uiAttributedString *s, uiAttribute *a, size_t start, size_t end)
 {
 	validateAttributeRange(s, start, end);
+	if (start == end) {
+		uiprivAttributeRelease(uiprivAttributeRetain(a));
+		return;
+	}
 	uiprivAttrListInsertAttribute(s->attrs, a, start, end);
 }
 
