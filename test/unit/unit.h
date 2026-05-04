@@ -26,6 +26,7 @@ int entryRunUnitTests(void);
 int menuRunUnitTests(void);
 int progressBarRunUnitTests(void);
 int drawMatrixRunUnitTests(void);
+int attrstrRunUnitTests(void);
 
 /**
  * Helper for general setup/teardown of controls embedded in a window.
@@ -68,4 +69,3 @@ int unitTestTeardown(void **state);
 #define uiControlPtrFromState(t, s) (t**)&(((struct state *)*(s))->c)
 
 #endif
-

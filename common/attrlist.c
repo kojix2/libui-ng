@@ -90,6 +90,18 @@ static int attrRangeIntersect(struct attr *a, size_t *start, size_t *end)
 	return 1;
 }
 
+static void attrInsertSortedByStart(uiprivAttrList *alist, struct attr *a)
+{
+	struct attr *before;
+
+	a->prev = NULL;
+	a->next = NULL;
+	for (before = alist->first; before != NULL; before = before->next)
+		if (before->start > a->start)
+			break;
+	attrInsertBefore(alist, a, before);
+}
+
 // returns the old a->next, for forward iteration
 static struct attr *attrUnlink(uiprivAttrList *alist, struct attr *a)
 {
@@ -187,27 +199,6 @@ static struct attr *attrDropRange(uiprivAttrList *alist, struct attr *a, size_t 
 
 	a->end = start;
 	return a->next;
-}
-
-static void attrGrow(uiprivAttrList *alist, struct attr *a, size_t start, size_t end)
-{
-	struct attr *before;
-
-	// adjusting the end is simple: if it ends before our new end, just set the new end
-	if (a->end < end)
-		a->end = end;
-
-	// adjusting the start is harder
-	// if the start is before our new start, we are done
-	// otherwise, we have to move the start back AND reposition the attribute to keep the sorted order
-	if (a->start <= start)
-		return;
-	a->start = start;
-	attrUnlink(alist, a);
-	for (before = alist->first; before != NULL; before = before->next)
-		if (before->start > a->start)
-			break;
-	attrInsertBefore(alist, a, before);
 }
 
 // returns the right side of the split, which is unlinked, or NULL if no split was done
@@ -309,64 +300,73 @@ void uiprivFreeAttrList(uiprivAttrList *alist)
 void uiprivAttrListInsertAttribute(uiprivAttrList *alist, uiAttribute *val, size_t start, size_t end)
 {
 	struct attr *a;
-	struct attr *before;
-	struct attr *tail = NULL;
-	int split = 0;
+	struct attr *tails = NULL;
 	uiAttributeType valtype;
+	int changed;
 
-	// first, figure out where in the list this should go
-	// in addition, if this attribute overrides one that already exists, split that one apart so this one can take over
-	before = alist->first;
 	valtype = uiAttributeGetType(val);
-	while (before != NULL) {
+
+	// Consecutive ranges with the same attribute type and value are kept merged.
+	// Grow the insertion range to include all same-valued ranges that overlap or touch it.
+	do {
+		changed = 0;
+		for (a = alist->first; a != NULL; a = a->next) {
+			if (uiAttributeGetType(a->val) != valtype)
+				continue;
+			if (!uiprivAttributeEqual(a->val, val))
+				continue;
+			if (a->end < start || a->start > end)
+				continue;
+			if (a->start < start) {
+				start = a->start;
+				changed = 1;
+			}
+			if (a->end > end) {
+				end = a->end;
+				changed = 1;
+			}
+		}
+	} while (changed);
+
+	// Remove all existing attributes of the same type inside the final range.
+	// Different attribute types are independent and may overlap this range.
+	a = alist->first;
+	while (a != NULL) {
 		size_t lstart, lend;
+		struct attr *tail;
 
-		// once we get to the first point after start, we know where to insert
-		if (before->start > start)
+		if (a->start >= end)
 			break;
-
-		// if we have already split a prior instance of this attribute, don't bother doing it again
-		if (split)
-			goto next;
-
-		// should we split this attribute?
-		if (uiAttributeGetType(before->val) != valtype)
+		if (uiAttributeGetType(a->val) != valtype)
 			goto next;
 		lstart = start;
 		lend = end;
-		if (!attrRangeIntersect(before, &lstart, &lend))
+		if (!attrRangeIntersect(a, &lstart, &lend))
 			goto next;
-
-		// okay so this might conflict; if the val is the same as the one we want, we need to expand the existing attribute, not fragment anything
-		// TODO will this reduce fragmentation if we first add from 0 to 2 and then from 2 to 4? or do we have to do that separately?
-		if (uiprivAttributeEqual(before->val, val)) {
-			attrGrow(alist, before, start, end);
-			return;
+		a = attrDropRange(alist, a, start, end, &tail);
+		if (tail != NULL) {
+			tail->next = tails;
+			tails = tail;
 		}
-		// okay the values are different; we need to split apart
-		before = attrDropRange(alist, before, start, end, &tail);
-		split = 1;
 		continue;
 
 	next:
-		before = before->next;
+		a = a->next;
 	}
 
-	// if we got here, we know we have to add the attribute before before
 	a = uiprivNew(struct attr);
 	a->val = uiprivAttributeRetain(val);
 	a->start = start;
 	a->end = end;
-	attrInsertBefore(alist, a, before);
+	attrInsertSortedByStart(alist, a);
 
-	// and finally, if we split, insert the remainder
-	if (tail == NULL)
-		return;
-	// note we start at before; it won't be inserted before that by the sheer nature of how the code above works
-	for (; before != NULL; before = before->next)
-		if (before->start > tail->start)
-			break;
-	attrInsertBefore(alist, tail, before);
+	while (tails != NULL) {
+		struct attr *next;
+
+		next = tails->next;
+		attrInsertSortedByStart(alist, tails);
+		tails = next;
+	}
 }
 
 void uiprivAttrListInsertCharactersUnattributed(uiprivAttrList *alist, size_t start, size_t count)
