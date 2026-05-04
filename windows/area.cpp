@@ -57,9 +57,8 @@ static LRESULT CALLBACK areaWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
 
 	if (areaDoScroll(a, uMsg, wParam, lParam, &lResult) != FALSE)
 		return lResult;
-	if (a->rt != NULL)
-		if (areaDoEvents(a, uMsg, wParam, lParam, &lResult) != FALSE)
-			return lResult;
+	if (areaDoEvents(a, uMsg, wParam, lParam, &lResult) != FALSE)
+		return lResult;
 
 	// nothing done
 	return DefWindowProc(hwnd, uMsg, wParam, lParam);

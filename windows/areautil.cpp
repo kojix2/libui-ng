@@ -5,15 +5,25 @@
 void loadAreaSize(uiArea *a, ID2D1RenderTarget *rt, double *width, double *height)
 {
 	D2D1_SIZE_F size;
+	RECT r;
 
 	*width = 0;
 	*height = 0;
 	if (!a->scrolling) {
-		if (rt == NULL)
-			rt = a->rt;
-		size = realGetSize(rt);
-		*width = size.width;
-		*height = size.height;
+		if (rt != NULL) {
+			size = realGetSize(rt);
+			*width = size.width;
+			*height = size.height;
+		} else if (a->rt != NULL) {
+			size = realGetSize(a->rt);
+			*width = size.width;
+			*height = size.height;
+		} else {
+			uiWindowsEnsureGetClientRect(a->hwnd, &r);
+			*width = r.right - r.left;
+			*height = r.bottom - r.top;
+			pixelsToDIP(a, width, height);
+		}
 	}
 }
 
