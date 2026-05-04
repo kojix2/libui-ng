@@ -246,6 +246,8 @@ uiTableModel *uiNewTableModel(uiTableModelHandler *mh)
 
 void uiFreeTableModel(uiTableModel *m)
 {
+	if (m->tables->len != 0)
+		uiprivUserBug("You cannot free a uiTableModel while uiTables are using it.");
 	g_object_unref(m);
 }
 
