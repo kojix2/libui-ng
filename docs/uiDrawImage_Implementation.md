@@ -12,6 +12,9 @@ The `uiDrawImage` function provides a simple interface for drawing images with a
 void uiDrawImage(uiDrawContext *c, uiImage *img, double x, double y, double width, double height);
 ```
 
+`uiDrawImage()` borrows the `uiImage` only for the duration of the draw call.
+It does not copy or retain image data.
+
 ### Design Philosophy
 
 The API design follows libui-ng's established patterns with these key principles:
@@ -20,6 +23,12 @@ The API design follows libui-ng's established patterns with these key principles
 - **Simplicity**: Uses minimal parameters for basic image drawing needs
 - **Flexibility**: Built-in scaling support through width/height parameters
 - **Cross-platform**: Leverages existing platform-specific image selection systems
+
+### Ownership
+
+- `uiDrawImage()` is call-scoped borrowed. The `uiImage` must stay valid until the function returns.
+- `uiImageViewSetImage()` is copy-owned. The source `uiImage` may be freed after the call.
+- `uiTable` image cells are non-owned. The application must keep the `uiImage` alive while it is displayed.
 
 ## Architecture Integration
 
