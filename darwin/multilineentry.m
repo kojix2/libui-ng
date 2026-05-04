@@ -103,24 +103,32 @@ char *uiMultilineEntryText(uiMultilineEntry *e)
 	return uiDarwinNSStringToText([e->tv string]);
 }
 
+static void multilineEntryReplaceText(uiMultilineEntry *e, NSRange range, NSString *text)
+{
+	e->changing = YES;
+	@try {
+		if ([e->tv shouldChangeTextInRange:range replacementString:text]) {
+			[[e->tv textStorage] replaceCharactersInRange:range
+				withString:text];
+			[e->tv didChangeText];
+		}
+	}
+	@finally {
+		e->changing = NO;
+	}
+}
+
 void uiMultilineEntrySetText(uiMultilineEntry *e, const char *text)
 {
-	[[e->tv textStorage] replaceCharactersInRange:NSMakeRange(0, [[e->tv string] length])
-		withString:uiprivToNSString(text)];
-	// must be called explicitly according to the documentation of shouldChangeTextInRange:replacementString:
-	e->changing = YES;
-	[e->tv didChangeText];
-	e->changing = NO;
+	multilineEntryReplaceText(e, NSMakeRange(0, [[e->tv string] length]),
+		uiprivToNSString(text));
 }
 
 // TODO scroll to end?
 void uiMultilineEntryAppend(uiMultilineEntry *e, const char *text)
 {
-	[[e->tv textStorage] replaceCharactersInRange:NSMakeRange([[e->tv string] length], 0)
-		withString:uiprivToNSString(text)];
-	e->changing = YES;
-	[e->tv didChangeText];
-	e->changing = NO;
+	multilineEntryReplaceText(e, NSMakeRange([[e->tv string] length], 0),
+		uiprivToNSString(text));
 }
 
 void uiMultilineEntryOnChanged(uiMultilineEntry *e, void (*f)(uiMultilineEntry *e, void *data), void *data)
