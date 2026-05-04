@@ -237,7 +237,7 @@ int uiprivAttributeEqual(const uiAttribute *a, const uiAttribute *b)
 		return 0;
 	switch (a->type) {
 	case uiAttributeTypeFamily:
-		return uiprivStricmp(a->u.family, b->u.family);
+		return uiprivStricmp(a->u.family, b->u.family) == 0;
 	case uiAttributeTypeSize:
 		// TODO is the use of == correct?
 		return a->u.size == b->u.size;

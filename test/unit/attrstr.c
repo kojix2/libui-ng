@@ -4,6 +4,7 @@ struct expectedAttribute {
 	uiAttributeType type;
 	size_t start;
 	size_t end;
+	const char *family;
 	double r;
 	double g;
 	double b;
@@ -28,6 +29,8 @@ static uiForEach checkAttribute(const uiAttributedString *s, const uiAttribute *
 	assert_int_equal(e->type, uiAttributeGetType(a));
 	assert_int_equal(e->start, start);
 	assert_int_equal(e->end, end);
+	if (e->type == uiAttributeTypeFamily)
+		assert_string_equal(e->family, uiAttributeFamily(a));
 	if (e->type == uiAttributeTypeColor) {
 		uiAttributeColor(a, &r, &g, &b, &alpha);
 		assert_true(e->r == r);
@@ -70,8 +73,8 @@ static void attrstrSetAttributeDropsLaterOverlap(void **state)
 {
 	uiAttributedString *s;
 	const struct expectedAttribute expected[] = {
-		{ uiAttributeTypeColor, 1, 5, 0.0, 0.0, 1.0, 1.0 },
-		{ uiAttributeTypeColor, 5, 6, 1.0, 0.0, 0.0, 1.0 },
+		{ uiAttributeTypeColor, 1, 5, NULL, 0.0, 0.0, 1.0, 1.0 },
+		{ uiAttributeTypeColor, 5, 6, NULL, 1.0, 0.0, 0.0, 1.0 },
 	};
 
 	(void) state;
@@ -86,9 +89,9 @@ static void attrstrSetAttributeDropsMultipleOverlaps(void **state)
 {
 	uiAttributedString *s;
 	const struct expectedAttribute expected[] = {
-		{ uiAttributeTypeColor, 0, 1, 1.0, 0.0, 0.0, 1.0 },
-		{ uiAttributeTypeColor, 1, 5, 0.0, 0.0, 1.0, 1.0 },
-		{ uiAttributeTypeColor, 5, 6, 1.0, 0.0, 0.0, 1.0 },
+		{ uiAttributeTypeColor, 0, 1, NULL, 1.0, 0.0, 0.0, 1.0 },
+		{ uiAttributeTypeColor, 1, 5, NULL, 0.0, 0.0, 1.0, 1.0 },
+		{ uiAttributeTypeColor, 5, 6, NULL, 1.0, 0.0, 0.0, 1.0 },
 	};
 
 	(void) state;
@@ -104,13 +107,28 @@ static void attrstrSetAttributeMergesAdjacentEqualValues(void **state)
 {
 	uiAttributedString *s;
 	const struct expectedAttribute expected[] = {
-		{ uiAttributeTypeColor, 0, 4, 1.0, 0.0, 0.0, 1.0 },
+		{ uiAttributeTypeColor, 0, 4, NULL, 1.0, 0.0, 0.0, 1.0 },
 	};
 
 	(void) state;
 	s = uiNewAttributedString("abcd");
 	uiAttributedStringSetAttribute(s, uiNewColorAttribute(1.0, 0.0, 0.0, 1.0), 0, 2);
 	uiAttributedStringSetAttribute(s, uiNewColorAttribute(1.0, 0.0, 0.0, 1.0), 2, 4);
+	assertAttributes(s, expected, sizeof(expected) / sizeof(expected[0]));
+	uiFreeAttributedString(s);
+}
+
+static void attrstrSetFamilyAttributeMergesAdjacentEqualValues(void **state)
+{
+	uiAttributedString *s;
+	const struct expectedAttribute expected[] = {
+		{ uiAttributeTypeFamily, 0, 4, "Arial", 0.0, 0.0, 0.0, 0.0 },
+	};
+
+	(void) state;
+	s = uiNewAttributedString("abcd");
+	uiAttributedStringSetAttribute(s, uiNewFamilyAttribute("Arial"), 0, 2);
+	uiAttributedStringSetAttribute(s, uiNewFamilyAttribute("Arial"), 2, 4);
 	assertAttributes(s, expected, sizeof(expected) / sizeof(expected[0]));
 	uiFreeAttributedString(s);
 }
@@ -123,6 +141,8 @@ int attrstrRunUnitTests(void)
 		cmocka_unit_test_setup_teardown(attrstrSetAttributeDropsMultipleOverlaps,
 			attrstrSetup, attrstrTeardown),
 		cmocka_unit_test_setup_teardown(attrstrSetAttributeMergesAdjacentEqualValues,
+			attrstrSetup, attrstrTeardown),
+		cmocka_unit_test_setup_teardown(attrstrSetFamilyAttributeMergesAdjacentEqualValues,
 			attrstrSetup, attrstrTeardown),
 	};
 
