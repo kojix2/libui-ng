@@ -42,6 +42,21 @@ void uiFreeImage(uiImage *i)
 	uiprivFree(i);
 }
 
+uiImage *uiprivImageCopy(uiImage *i)
+{
+	uiImage *copy;
+
+	if (i == NULL)
+		return NULL;
+
+	copy = uiNewImage(i->width, i->height);
+	for (IWICBitmap *b : *(i->bitmaps)) {
+		b->AddRef();
+		copy->bitmaps->push_back(b);
+	}
+	return copy;
+}
+
 static uint8_t premultiply(uint8_t c, uint8_t a)
 {
 	return (uint8_t) ((((uint32_t) c) * ((uint32_t) a) + 127) / 255);
