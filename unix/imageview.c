@@ -21,6 +21,7 @@ static void uiImageViewDestroy(uiControl *c)
 		cairo_surface_destroy(v->surface);
 		v->surface = NULL;
 	}
+	g_object_unref(v->widget);
 	uiFreeControl(uiControl(v));
 }
 
