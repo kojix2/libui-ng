@@ -3183,7 +3183,7 @@ _UI_EXTERN uiGrid *uiNewGrid(void);
  * The system will automatically determine the correct image to render depending
  * on the screen's pixel density.
  *
- * uiImage only supports premultiplied 32-bit RGBA images.
+ * uiImage only supports 32-bit RGBA images.
  *
  * No image file loading or image format conversion utilities are provided.
  *
@@ -3216,7 +3216,7 @@ _UI_EXTERN void uiFreeImage(uiImage *i);
  * Appends a new image representation.
  *
  * @param i uiImage instance.
- * @param pixels Byte array of premultiplied pixels in [R G B A] order.\n
+ * @param pixels Byte array of pixels in [R G B A] order.\n
  *               `((uint8_t *) pixels)[0]` equals the **R** of the first pixel,
  *               `[3]` the **A** of the first pixel.\n
  *               `pixels` must be at least `byteStride * pixelHeight` bytes long.\n
