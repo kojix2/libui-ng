@@ -161,6 +161,7 @@ static void onMouseEntered(uiArea *a)
 		return;
 	if (a->capturing)		// we handle mouse crossing in areaMouseEvent()
 		return;
+	a->inside = TRUE;
 	track(a, TRUE);
 	(*(a->ah->MouseCrossed))(a->ah, a, 0);
 	// TODO figure out why we did this to begin with; either we do it on both GTK+ and Windows or not at all
