@@ -49,6 +49,16 @@ struct uiArea {
 	return self;
 }
 
+- (void)dealloc
+{
+	if (self->libui_ta != nil) {
+		[self removeTrackingArea:self->libui_ta];
+		[self->libui_ta release];
+		self->libui_ta = nil;
+	}
+	[super dealloc];
+}
+
 - (void)drawRect:(NSRect)r
 {
 	uiArea *a = self->libui_a;
@@ -212,7 +222,7 @@ if (@available(macOS 10.12, *)) {
 
 		if (buttonNumber == i)
 			continue;
-		j = 1 << (i - 1);
+		j = 1ULL << (i - 1);
 		if ((pmb & j) != 0)
 			me.Held1To64 |= j;
 	}
