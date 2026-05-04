@@ -82,6 +82,24 @@ static void attrstrSetAttributeDropsLaterOverlap(void **state)
 	uiFreeAttributedString(s);
 }
 
+static void attrstrSetAttributeDropsMultipleOverlaps(void **state)
+{
+	uiAttributedString *s;
+	const struct expectedAttribute expected[] = {
+		{ uiAttributeTypeColor, 0, 1, 1.0, 0.0, 0.0, 1.0 },
+		{ uiAttributeTypeColor, 1, 5, 0.0, 0.0, 1.0, 1.0 },
+		{ uiAttributeTypeColor, 5, 6, 1.0, 0.0, 0.0, 1.0 },
+	};
+
+	(void) state;
+	s = uiNewAttributedString("abcdef");
+	uiAttributedStringSetAttribute(s, uiNewColorAttribute(1.0, 0.0, 0.0, 1.0), 0, 2);
+	uiAttributedStringSetAttribute(s, uiNewColorAttribute(1.0, 0.0, 0.0, 1.0), 4, 6);
+	uiAttributedStringSetAttribute(s, uiNewColorAttribute(0.0, 0.0, 1.0, 1.0), 1, 5);
+	assertAttributes(s, expected, sizeof(expected) / sizeof(expected[0]));
+	uiFreeAttributedString(s);
+}
+
 static void attrstrSetAttributeMergesAdjacentEqualValues(void **state)
 {
 	uiAttributedString *s;
@@ -101,6 +119,8 @@ int attrstrRunUnitTests(void)
 {
 	const struct CMUnitTest tests[] = {
 		cmocka_unit_test_setup_teardown(attrstrSetAttributeDropsLaterOverlap,
+			attrstrSetup, attrstrTeardown),
+		cmocka_unit_test_setup_teardown(attrstrSetAttributeDropsMultipleOverlaps,
 			attrstrSetup, attrstrTeardown),
 		cmocka_unit_test_setup_teardown(attrstrSetAttributeMergesAdjacentEqualValues,
 			attrstrSetup, attrstrTeardown),
