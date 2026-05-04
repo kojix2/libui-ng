@@ -151,7 +151,9 @@ static void areaMouseEvent(uiArea *a, int down, int  up, WPARAM wParam, LPARAM l
 	if (me.Up != 0 && me.Held1To64 == 0)
 		capture(a, FALSE);
 
+	a->inMouseDownEvent = me.Down != 0;
 	(*(a->ah->MouseEvent))(a->ah, a, &me);
+	a->inMouseDownEvent = FALSE;
 }
 
 // TODO genericize this so it can be called above

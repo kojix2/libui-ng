@@ -132,8 +132,11 @@ void uiAreaBeginUserWindowMove(uiArea *a)
 {
 	HWND toplevel;
 
-	// TODO restrict execution
-	ReleaseCapture();		// TODO use properly and reset internal data structures
+	if (!a->inMouseDownEvent)
+		uiprivUserBug("cannot call uiAreaBeginUserWindowMove() outside of a Mouse() with Down != 0");
+	a->capturing = FALSE;
+	if (ReleaseCapture() == 0)
+		logLastError(L"error releasing capture before user window move");
 	toplevel = parentToplevel(a->hwnd);
 	if (toplevel == NULL) {
 		// TODO
@@ -149,8 +152,11 @@ void uiAreaBeginUserWindowResize(uiArea *a, uiWindowResizeEdge edge)
 	HWND toplevel;
 	WPARAM wParam;
 
-	// TODO restrict execution
-	ReleaseCapture();		// TODO use properly and reset internal data structures
+	if (!a->inMouseDownEvent)
+		uiprivUserBug("cannot call uiAreaBeginUserWindowResize() outside of a Mouse() with Down != 0");
+	a->capturing = FALSE;
+	if (ReleaseCapture() == 0)
+		logLastError(L"error releasing capture before user window resize");
 	toplevel = parentToplevel(a->hwnd);
 	if (toplevel == NULL) {
 		// TODO

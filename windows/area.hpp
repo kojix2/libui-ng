@@ -21,6 +21,7 @@ struct uiArea {
 
 	uiprivClickCounter cc;
 	BOOL capturing;
+	BOOL inMouseDownEvent;
 
 	BOOL inside;
 	BOOL tracking;
