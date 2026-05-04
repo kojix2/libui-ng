@@ -171,6 +171,7 @@ extern ID2D1DCRenderTarget *makeHDCRenderTarget(HDC dc, RECT *r);
 extern IWICImagingFactory *uiprivWICFactory;
 extern HRESULT uiprivInitImage(void);
 extern void uiprivUninitImage(void);
+extern uiImage *uiprivImageCopy(uiImage *i);
 extern IWICBitmap *uiprivImageAppropriateForDC(uiImage *i, HDC dc);
 extern IWICBitmap *uiprivImageAppropriateForDPI(uiImage *i, float dpiX, float dpiY);
 extern HRESULT uiprivWICToGDI(IWICBitmap *b, HDC dc, int width, int height, HBITMAP *hb);
