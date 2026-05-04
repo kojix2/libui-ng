@@ -7,7 +7,7 @@ struct uiImageView {
 	uiWindowsControl c;
 	HWND hwnd;
 	uiImageViewContentMode mode;
-	IWICBitmap *bitmap;  // owned copy for drawing (may be NULL)
+	uiImage *image;  // owned copy for drawing (may be NULL)
 };
 
 static LRESULT CALLBACK imageViewWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
@@ -73,6 +73,7 @@ static void paintImageView(uiImageView *iv, HDC hdc, RECT *rcPaint)
 {
 	RECT clientRect;
 	ID2D1DCRenderTarget *rt;
+	IWICBitmap *bitmap;
 	ID2D1Bitmap *d2dBitmap;
 	float dpiX, dpiY;
 	float viewW, viewH, imgWDIP, imgHDIP;
@@ -86,7 +87,7 @@ static void paintImageView(uiImageView *iv, HDC hdc, RECT *rcPaint)
 	if (!bk) bk = (HBRUSH)(COLOR_WINDOW + 1);
 	FillRect(hdc, &clientRect, bk);
 	
-	if (iv->bitmap == NULL) {
+	if (iv->image == NULL) {
 		// No image to draw, background already filled
 		return;
 	}
@@ -101,9 +102,17 @@ static void paintImageView(uiImageView *iv, HDC hdc, RECT *rcPaint)
 	// Clear background
 	rt->Clear(D2D1::ColorF(D2D1::ColorF::White, 0.0f)); // Transparent background
 
+	rt->GetDpi(&dpiX, &dpiY);
+	bitmap = uiprivImageAppropriateForDPI(iv->image, dpiX, dpiY);
+	if (bitmap == NULL) {
+		rt->EndDraw();
+		rt->Release();
+		return;
+	}
+
 	// Get image dimensions
 	UINT imgW, imgH;
-	hr = iv->bitmap->GetSize(&imgW, &imgH);
+	hr = bitmap->GetSize(&imgW, &imgH);
 	if (hr != S_OK) {
 		rt->EndDraw();
 		rt->Release();
@@ -111,7 +120,6 @@ static void paintImageView(uiImageView *iv, HDC hdc, RECT *rcPaint)
 	}
 
 	// Calculate target rectangle
-	rt->GetDpi(&dpiX, &dpiY);
 	viewW = ((float) (clientRect.right - clientRect.left)) * 96.0f / dpiX;
 	viewH = ((float) (clientRect.bottom - clientRect.top)) * 96.0f / dpiY;
 	imgWDIP = ((float) imgW) * 96.0f / dpiX;
@@ -120,7 +128,7 @@ static void paintImageView(uiImageView *iv, HDC hdc, RECT *rcPaint)
 	compute_target_rect(viewW, viewH, imgWDIP, imgHDIP, iv->mode, &dx, &dy, &dw, &dh);
 
 	// Create D2D bitmap from WIC bitmap
-	hr = rt->CreateBitmapFromWicBitmap(iv->bitmap, NULL, &d2dBitmap);
+	hr = rt->CreateBitmapFromWicBitmap(bitmap, NULL, &d2dBitmap);
 	if (hr != S_OK) {
 		rt->EndDraw();
 		rt->Release();
@@ -175,9 +183,9 @@ static void uiImageViewDestroy(uiControl *c)
 {
 	uiImageView *iv = uiImageView(c);
 
-	if (iv->bitmap != NULL) {
-		iv->bitmap->Release();
-		iv->bitmap = NULL;
+	if (iv->image != NULL) {
+		uiFreeImage(iv->image);
+		iv->image = NULL;
 	}
 	uiWindowsEnsureDestroyWindow(iv->hwnd);
 	uiFreeControl(uiControl(iv));
@@ -205,7 +213,7 @@ uiImageView *uiNewImageView(void)
 		FALSE);
 
 	iv->mode = uiImageViewContentFit;  // default mode
-	iv->bitmap = NULL;
+	iv->image = NULL;
 
 	return iv;
 }
@@ -218,10 +226,10 @@ void uiImageViewSetContentMode(uiImageView *iv, uiImageViewContentMode mode)
 
 void uiImageViewSetImage(uiImageView *iv, const uiImage *image)
 {
-	// Release old bitmap if exists
-	if (iv->bitmap != NULL) {
-		iv->bitmap->Release();
-		iv->bitmap = NULL;
+	// Release old image if exists
+	if (iv->image != NULL) {
+		uiFreeImage(iv->image);
+		iv->image = NULL;
 	}
 
 	if (image == NULL) {
@@ -230,20 +238,7 @@ void uiImageViewSetImage(uiImageView *iv, const uiImage *image)
 		return;
 	}
 
-	// Get appropriate bitmap for current DPI
-	// Use 96 DPI as default if we can't get system DPI
-	float dpiX = 96.0f, dpiY = 96.0f;
-	HDC hdc = GetDC(iv->hwnd);
-	if (hdc != NULL) {
-		dpiX = (float)GetDeviceCaps(hdc, LOGPIXELSX);
-		dpiY = (float)GetDeviceCaps(hdc, LOGPIXELSY);
-		ReleaseDC(iv->hwnd, hdc);
-	}
-
-	iv->bitmap = uiprivImageAppropriateForDPI((uiImage *)image, dpiX, dpiY);
-	if (iv->bitmap != NULL) {
-		iv->bitmap->AddRef();  // Take ownership
-	}
+	iv->image = uiprivImageCopy((uiImage *) image);
 
 	InvalidateRect(iv->hwnd, NULL, TRUE);
 }
