@@ -2747,11 +2747,12 @@ _UI_EXTERN void uiDrawTextLayoutExtents(uiDrawTextLayout *tl, double *width, dou
  * The function automatically selects the most appropriate image
  * representation based on the display's pixel density.
  *
- * The image data is copied internally; ownership of `img` is not
- * transferred. The caller may free `img` immediately after this call.
+ * `img` is borrowed only for the duration of this call. Image data is not
+ * copied or retained by uiDrawImage().
  * 
  * @param c Drawing context.
- * @param img Image to draw. Must not be NULL.
+ * @param img Image to draw. Must not be NULL and must remain valid for the
+ *            duration of this call.
  * @param x X coordinate of the top-left corner.
  * @param y Y coordinate of the top-left corner.
  * @param width Width to draw the image. Must be positive.
