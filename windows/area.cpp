@@ -109,6 +109,8 @@ void unregisterArea(void)
 
 void uiAreaSetSize(uiArea *a, int width, int height)
 {
+	if (!a->scrolling)
+		uiprivUserBug("You cannot call uiAreaSetSize() on a non-scrolling uiArea. (area: %p)", a);
 	a->scrollWidth = width;
 	a->scrollHeight = height;
 	areaUpdateScroll(a);
