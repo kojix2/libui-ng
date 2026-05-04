@@ -18,6 +18,7 @@ struct uiMultilineEntry {
 	void (*onChanged)(uiMultilineEntry *, void *);
 	void *onChangedData;
 	BOOL changing;
+	BOOL readonly;
 };
 
 @implementation intrinsicSizeTextView
@@ -53,7 +54,34 @@ struct uiMultilineEntry {
 
 @end
 
-uiDarwinControlAllDefaultsExceptDestroy(uiMultilineEntry, sv)
+uiDarwinControlDefaultHandle(uiMultilineEntry, sv)
+uiDarwinControlDefaultParent(uiMultilineEntry, sv)
+uiDarwinControlDefaultSetParent(uiMultilineEntry, sv)
+uiDarwinControlDefaultToplevel(uiMultilineEntry, sv)
+uiDarwinControlDefaultVisible(uiMultilineEntry, sv)
+uiDarwinControlDefaultShow(uiMultilineEntry, sv)
+uiDarwinControlDefaultHide(uiMultilineEntry, sv)
+uiDarwinControlDefaultEnabled(uiMultilineEntry, sv)
+uiDarwinControlDefaultEnable(uiMultilineEntry, sv)
+uiDarwinControlDefaultDisable(uiMultilineEntry, sv)
+
+static void uiMultilineEntrySyncEnableState(uiDarwinControl *c, int enabled)
+{
+	uiMultilineEntry *e = uiMultilineEntry(c);
+
+	if (uiDarwinShouldStopSyncEnableState(c, enabled))
+		return;
+	[e->tv setEditable:(enabled && !e->readonly)];
+	[e->tv setSelectable:enabled];
+}
+
+uiDarwinControlDefaultSetSuperview(uiMultilineEntry, sv)
+uiDarwinControlDefaultHugsTrailingEdge(uiMultilineEntry, sv)
+uiDarwinControlDefaultHugsBottom(uiMultilineEntry, sv)
+uiDarwinControlDefaultChildEdgeHuggingChanged(uiMultilineEntry, sv)
+uiDarwinControlDefaultHuggingPriority(uiMultilineEntry, sv)
+uiDarwinControlDefaultSetHuggingPriority(uiMultilineEntry, sv)
+uiDarwinControlDefaultChildVisibilityChanged(uiMultilineEntry, sv)
 
 static void uiMultilineEntryDestroy(uiControl *c)
 {
@@ -103,17 +131,13 @@ void uiMultilineEntryOnChanged(uiMultilineEntry *e, void (*f)(uiMultilineEntry *
 
 int uiMultilineEntryReadOnly(uiMultilineEntry *e)
 {
-	return [e->tv isEditable] == NO;
+	return e->readonly;
 }
 
 void uiMultilineEntrySetReadOnly(uiMultilineEntry *e, int readonly)
 {
-	BOOL editable;
-
-	editable = YES;
-	if (readonly)
-		editable = NO;
-	[e->tv setEditable:editable];
+	e->readonly = readonly != 0;
+	[e->tv setEditable:(uiControlEnabledToUser(uiControl(e)) && !e->readonly)];
 }
 
 static uiMultilineEntry *finishMultilineEntry(BOOL hscroll)
@@ -125,6 +149,7 @@ static uiMultilineEntry *finishMultilineEntry(BOOL hscroll)
 	uiDarwinNewControl(uiMultilineEntry, e);
 
 	e->tv = [[intrinsicSizeTextView alloc] initWithFrame:NSZeroRect e:e];
+	e->readonly = NO;
 if (@available(macOS 10.14, *)) {
 	[e->tv setUsesAdaptiveColorMappingForDarkAppearance:YES];
 }
