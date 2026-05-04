@@ -2,13 +2,14 @@
 #include "uipriv_unix.h"
 #include "draw.h"
 
-uiDrawContext *uiprivNewContext(cairo_t *cr, GtkStyleContext *style)
+uiDrawContext *uiprivNewContext(cairo_t *cr, GtkStyleContext *style, GtkWidget *widget)
 {
 	uiDrawContext *c;
 
 	c = uiprivNew(uiDrawContext);
 	c->cr = cr;
 	c->style = style;
+	c->widget = widget;
 	return c;
 }
 
@@ -147,42 +148,19 @@ void uiDrawRestore(uiDrawContext *c)
 	cairo_restore(c->cr);
 }
 
-// Helper function to get widget from style context
-static GtkWidget *uiprivGetWidgetFromStyleContext(GtkStyleContext *style)
-{
-	GtkWidgetPath *path;
-	
-	if (style == NULL)
-		return NULL;
-	
-	// Try to get the widget path and extract widget information
-	path = gtk_style_context_get_path(style);
-	if (path == NULL)
-		return NULL;
-	
-	// For now, we'll return NULL and let uiprivImageAppropriateSurface handle it
-	// This is a limitation of the current approach - we need the actual widget
-	// but the style context doesn't directly provide it
-	return NULL;
-}
-
 void uiDrawImage(uiDrawContext *c, uiImage *img, double x, double y, double width, double height)
 {
 	cairo_surface_t *surface;
 	cairo_pattern_t *pattern;
 	double scaleX, scaleY;
 	int surfaceWidth, surfaceHeight;
-	GtkWidget *widget;
 
 	// Enhanced parameter validation
 	if (c == NULL || img == NULL || width <= 0 || height <= 0)
 		return;
 
-	// Try to get widget context from drawing context for proper scale factor
-	widget = uiprivGetWidgetFromStyleContext(c->style);
-	
 	// Select appropriate resolution image with widget context
-	surface = uiprivImageAppropriateSurface(img, widget);
+	surface = uiprivImageAppropriateSurface(img, c->widget);
 	if (surface == NULL)
 		return;
 
