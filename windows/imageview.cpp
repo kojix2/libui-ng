@@ -36,10 +36,10 @@ static void initImageViewClass(void)
 		logLastError(L"error registering uiImageView window class");
 }
 
-static void compute_target_rect(int viewW, int viewH, int imgW, int imgH,
+static void compute_target_rect(float viewW, float viewH, float imgW, float imgH,
 	uiImageViewContentMode mode, float *dx, float *dy, float *dw, float *dh)
 {
-	float vw = (float)viewW, vh = (float)viewH, iw = (float)imgW, ih = (float)imgH;
+	float vw = viewW, vh = viewH, iw = imgW, ih = imgH;
 	
 	// Initialize output parameters
 	*dx = *dy = *dw = *dh = 0;
@@ -73,8 +73,9 @@ static void paintImageView(uiImageView *iv, HDC hdc, RECT *rcPaint)
 {
 	RECT clientRect;
 	ID2D1DCRenderTarget *rt;
-	D2D1_SIZE_F rtSize;
 	ID2D1Bitmap *d2dBitmap;
+	float dpiX, dpiY;
+	float viewW, viewH, imgWDIP, imgHDIP;
 	HRESULT hr;
 
 	GetClientRect(iv->hwnd, &clientRect);
@@ -110,10 +111,13 @@ static void paintImageView(uiImageView *iv, HDC hdc, RECT *rcPaint)
 	}
 
 	// Calculate target rectangle
+	rt->GetDpi(&dpiX, &dpiY);
+	viewW = ((float) (clientRect.right - clientRect.left)) * 96.0f / dpiX;
+	viewH = ((float) (clientRect.bottom - clientRect.top)) * 96.0f / dpiY;
+	imgWDIP = ((float) imgW) * 96.0f / dpiX;
+	imgHDIP = ((float) imgH) * 96.0f / dpiY;
 	float dx, dy, dw, dh;
-	compute_target_rect(clientRect.right - clientRect.left, 
-	                   clientRect.bottom - clientRect.top,
-	                   (int)imgW, (int)imgH, iv->mode, &dx, &dy, &dw, &dh);
+	compute_target_rect(viewW, viewH, imgWDIP, imgHDIP, iv->mode, &dx, &dy, &dw, &dh);
 
 	// Create D2D bitmap from WIC bitmap
 	hr = rt->CreateBitmapFromWicBitmap(iv->bitmap, NULL, &d2dBitmap);
