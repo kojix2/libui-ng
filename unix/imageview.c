@@ -9,7 +9,7 @@ struct uiImageView {
 	GtkWidget *widget;          // actual widget exposed to libui
 	GtkWidget *area;            // GtkDrawingArea for custom draw
 	uiImageViewContentMode mode;
-	cairo_surface_t *surface;   // owned copy for drawing (may be NULL)
+	uiImage *image;             // owned copy for drawing (may be NULL)
 };
 
 uiUnixControlAllDefaultsExceptDestroy(uiImageView)
@@ -17,15 +17,15 @@ uiUnixControlAllDefaultsExceptDestroy(uiImageView)
 static void uiImageViewDestroy(uiControl *c)
 {
 	uiImageView *v = uiImageView(c);
-	if (v->surface) {
-		cairo_surface_destroy(v->surface);
-		v->surface = NULL;
+	if (v->image) {
+		uiFreeImage(v->image);
+		v->image = NULL;
 	}
 	g_object_unref(v->widget);
 	uiFreeControl(uiControl(v));
 }
 
-static void compute_target_rect(int viewW, int viewH, int imgW, int imgH,
+static void compute_target_rect(int viewW, int viewH, double imgW, double imgH,
 	uiImageViewContentMode mode, double *dx, double *dy, double *dw, double *dh)
 {
 	double vw = viewW, vh = viewH, iw = imgW, ih = imgH;
@@ -56,23 +56,33 @@ static gboolean on_draw(GtkWidget *w, cairo_t *cr, gpointer data)
 {
 	uiImageView *v = uiImageView(data);
 	GtkAllocation a;
+	cairo_surface_t *surface;
+	double imgW, imgH;
+	int surfaceW, surfaceH;
 	gtk_widget_get_allocation(w, &a);
 
-	if (v->surface == NULL)
+	if (v->image == NULL)
 		return FALSE;
 
-	int iw = cairo_image_surface_get_width(v->surface);
-	int ih = cairo_image_surface_get_height(v->surface);
+	surface = uiprivImageAppropriateSurface(v->image, w);
+	if (surface == NULL)
+		return FALSE;
+
+	uiprivImageSize(v->image, &imgW, &imgH);
+	surfaceW = cairo_image_surface_get_width(surface);
+	surfaceH = cairo_image_surface_get_height(surface);
+	if (surfaceW <= 0 || surfaceH <= 0)
+		return FALSE;
 
 	double dx, dy, dw, dh;
-	compute_target_rect(a.width, a.height, iw, ih, v->mode, &dx, &dy, &dw, &dh);
+	compute_target_rect(a.width, a.height, imgW, imgH, v->mode, &dx, &dy, &dw, &dh);
 
 	cairo_save(cr);
 	cairo_translate(cr, dx, dy);
 	cairo_rectangle(cr, 0, 0, dw, dh);
 	cairo_clip(cr);
-	cairo_scale(cr, dw / iw, dh / ih);
-	cairo_set_source_surface(cr, v->surface, 0, 0);
+	cairo_scale(cr, dw / surfaceW, dh / surfaceH);
+	cairo_set_source_surface(cr, surface, 0, 0);
 	cairo_pattern_set_filter(cairo_get_source(cr), CAIRO_FILTER_GOOD);
 	cairo_paint(cr);
 	cairo_restore(cr);
@@ -88,7 +98,7 @@ uiImageView *uiNewImageView(void)
 	v->area = gtk_drawing_area_new();
 	v->widget = v->area;
 	v->mode = uiImageViewContentFit;
-	v->surface = NULL;
+	v->image = NULL;
 
 	// Default preferred size when no image (MVP)
 	gtk_widget_set_size_request(v->widget, 64, 64);
@@ -104,13 +114,11 @@ void uiImageViewSetContentMode(uiImageView *v, uiImageViewContentMode mode)
 	gtk_widget_queue_draw(v->area);
 }
 
-extern cairo_surface_t *uiprivImageCopyAppropriateSurface(uiImage *i, GtkWidget *forWidget);
-
 void uiImageViewSetImage(uiImageView *v, const uiImage *image)
 {
-	if (v->surface) {
-		cairo_surface_destroy(v->surface);
-		v->surface = NULL;
+	if (v->image) {
+		uiFreeImage(v->image);
+		v->image = NULL;
 	}
 
 	if (image == NULL) {
@@ -120,8 +128,7 @@ void uiImageViewSetImage(uiImageView *v, const uiImage *image)
 		return;
 	}
 
-	// Copy-owned: create a surface suitable for drawing
-	v->surface = uiprivImageCopyAppropriateSurface((uiImage *)image, v->area);
+	v->image = uiprivImageCopy((uiImage *)image);
 
 	// Set small minimum size to allow icon-sized usage (16x16)
 	// This allows the image to be displayed smaller than its original size
