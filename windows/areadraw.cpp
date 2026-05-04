@@ -9,16 +9,23 @@ static HRESULT doPaint(uiArea *a, ID2D1RenderTarget *rt, RECT *clip)
 	COLORREF bgcolorref;
 	D2D1_COLOR_F bgcolor;
 	D2D1_MATRIX_3X2_F scrollTransform;
+	double clipLeft, clipTop, clipRight, clipBottom;
 
 	// no need to save or restore the graphics state to reset transformations;  it's handled by resetTarget() in draw.c, called during the following
 	dp.Context = newContext(rt);
 
 	loadAreaSize(a, rt, &(dp.AreaWidth), &(dp.AreaHeight));
 
-	dp.ClipX = clip->left;
-	dp.ClipY = clip->top;
-	dp.ClipWidth = clip->right - clip->left;
-	dp.ClipHeight = clip->bottom - clip->top;
+	clipLeft = clip->left;
+	clipTop = clip->top;
+	clipRight = clip->right;
+	clipBottom = clip->bottom;
+	pixelsToDIPWithRT(rt, &clipLeft, &clipTop);
+	pixelsToDIPWithRT(rt, &clipRight, &clipBottom);
+	dp.ClipX = clipLeft;
+	dp.ClipY = clipTop;
+	dp.ClipWidth = clipRight - clipLeft;
+	dp.ClipHeight = clipBottom - clipTop;
 	if (a->scrolling) {
 		dp.ClipX += a->hscrollpos;
 		dp.ClipY += a->vscrollpos;

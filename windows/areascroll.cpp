@@ -3,12 +3,8 @@
 #include "area.hpp"
 
 // TODO
-// - move from pixels to points somehow
-// 	- add a function to offset points and rects by scrolling amounts; call it from doPaint() in areadraw.c
 // - recalculate scrolling after:
 // 	- creation?
-// 	- resize?
-// 	- recreating the render target? (after moving to points)
 // - error if these are called without scrollbars?
 
 struct scrollParams {
@@ -123,12 +119,14 @@ static void wheelscroll(uiArea *a, int which, struct scrollParams *p, WPARAM wPa
 static void hscrollParams(uiArea *a, struct scrollParams *p)
 {
 	RECT r;
+	double width;
 
 	ZeroMemory(p, sizeof (struct scrollParams));
 	p->pos = &(a->hscrollpos);
-	// TODO get rid of these and replace with points
 	uiWindowsEnsureGetClientRect(a->hwnd, &r);
-	p->pagesize = r.right - r.left;
+	width = r.right - r.left;
+	pixelsToDIP(a, &width, NULL);
+	p->pagesize = (int) width;
 	p->length = a->scrollWidth;
 	p->wheelCarry = &(a->hwheelCarry);
 	p->wheelSPIAction = SPI_GETWHEELSCROLLCHARS;
@@ -171,11 +169,14 @@ static void hwheelscroll(uiArea *a, WPARAM wParam, LPARAM lParam)
 static void vscrollParams(uiArea *a, struct scrollParams *p)
 {
 	RECT r;
+	double height;
 
 	ZeroMemory(p, sizeof (struct scrollParams));
 	p->pos = &(a->vscrollpos);
 	uiWindowsEnsureGetClientRect(a->hwnd, &r);
-	p->pagesize = r.bottom - r.top;
+	height = r.bottom - r.top;
+	pixelsToDIP(a, NULL, &height);
+	p->pagesize = (int) height;
 	p->length = a->scrollHeight;
 	p->wheelCarry = &(a->vwheelCarry);
 	p->wheelSPIAction = SPI_GETWHEELSCROLLLINES;
