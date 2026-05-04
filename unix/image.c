@@ -43,6 +43,29 @@ void uiFreeImage(uiImage *i)
 	uiprivFree(i);
 }
 
+uiImage *uiprivImageCopy(uiImage *i)
+{
+	uiImage *copy;
+	guint n;
+
+	if (i == NULL)
+		return NULL;
+
+	copy = uiNewImage(i->width, i->height);
+	for (n = 0; n < i->images->len; n++)
+		g_ptr_array_add(copy->images,
+			cairo_surface_reference(g_ptr_array_index(i->images, n)));
+	return copy;
+}
+
+void uiprivImageSize(uiImage *i, double *width, double *height)
+{
+	if (width != NULL)
+		*width = i->width;
+	if (height != NULL)
+		*height = i->height;
+}
+
 void uiImageAppend(uiImage *i, void *pixels, int pixelWidth, int pixelHeight, int byteStride)
 {
 	cairo_surface_t *cs;
@@ -162,14 +185,18 @@ writeMatch:
 cairo_surface_t *uiprivImageAppropriateSurface(uiImage *i, GtkWidget *w)
 {
 	struct matcher m;
+	int scale;
 
 	m.best = NULL;
 	m.distX = G_MAXINT;
 	m.distY = G_MAXINT;
 	
-	// Use logical size for matching
-	m.targetX = i->width;
-	m.targetY = i->height;
+	scale = 1;
+	if (w != NULL)
+		scale = gtk_widget_get_scale_factor(w);
+
+	m.targetX = i->width * scale;
+	m.targetY = i->height * scale;
 	m.foundLarger = FALSE;
 	g_ptr_array_foreach(i->images, match, &m);
 	
@@ -183,15 +210,19 @@ cairo_surface_t *uiprivImageCopyAppropriateSurface(uiImage *i, GtkWidget *w)
 	cairo_surface_t *copy;
 	cairo_t *cr;
 	int width, height;
+	int scale;
 	cairo_format_t format;
 
 	m.best = NULL;
 	m.distX = G_MAXINT;
 	m.distY = G_MAXINT;
 	
-	// Use logical size for matching
-	m.targetX = i->width;
-	m.targetY = i->height;
+	scale = 1;
+	if (w != NULL)
+		scale = gtk_widget_get_scale_factor(w);
+
+	m.targetX = i->width * scale;
+	m.targetY = i->height * scale;
 	m.foundLarger = FALSE;
 	g_ptr_array_foreach(i->images, match, &m);
 	
