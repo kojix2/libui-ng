@@ -132,7 +132,6 @@ static void hscrollParams(uiArea *a, struct scrollParams *p)
 	p->wheelSPIAction = SPI_GETWHEELSCROLLCHARS;
 }
 
-/*
 static void hscrollto(uiArea *a, int pos)
 {
 	struct scrollParams p;
@@ -140,7 +139,6 @@ static void hscrollto(uiArea *a, int pos)
 	hscrollParams(a, &p);
 	scrollto(a, SB_HORZ, &p, pos);
 }
-*/
 
 static void hscrollby(uiArea *a, int delta)
 {
@@ -182,7 +180,6 @@ static void vscrollParams(uiArea *a, struct scrollParams *p)
 	p->wheelSPIAction = SPI_GETWHEELSCROLLLINES;
 }
 
-/*
 static void vscrollto(uiArea *a, int pos)
 {
 	struct scrollParams p;
@@ -190,7 +187,6 @@ static void vscrollto(uiArea *a, int pos)
 	vscrollParams(a, &p);
 	scrollto(a, SB_VERT, &p, pos);
 }
-*/
 
 static void vscrollby(uiArea *a, int delta)
 {
@@ -242,6 +238,40 @@ BOOL areaDoScroll(uiArea *a, UINT uMsg, WPARAM wParam, LPARAM lParam, LRESULT *l
 void areaScrollOnResize(uiArea *a, RECT *client)
 {
 	areaUpdateScroll(a);
+}
+
+static int scrollToShow(int current, int pagesize, double start, double size)
+{
+	double end;
+	double visibleSize;
+
+	end = start + size;
+	if (end < start) {
+		double temp;
+
+		temp = start;
+		start = end;
+		end = temp;
+	}
+	visibleSize = end - start;
+	if (visibleSize > pagesize)
+		return (int) floor(start);
+	if (start < current)
+		return (int) floor(start);
+	if (end > current + pagesize)
+		return (int) ceil(end - pagesize);
+	return current;
+}
+
+void areaScrollTo(uiArea *a, double x, double y, double width, double height)
+{
+	struct scrollParams hp;
+	struct scrollParams vp;
+
+	hscrollParams(a, &hp);
+	vscrollParams(a, &vp);
+	hscrollto(a, scrollToShow(a->hscrollpos, hp.pagesize, x, width));
+	vscrollto(a, scrollToShow(a->vscrollpos, vp.pagesize, y, height));
 }
 
 void areaUpdateScroll(uiArea *a)

@@ -124,7 +124,9 @@ void uiAreaQueueRedrawAll(uiArea *a)
 
 void uiAreaScrollTo(uiArea *a, double x, double y, double width, double height)
 {
-	// TODO
+	if (!a->scrolling)
+		uiprivUserBug("You cannot call uiAreaScrollTo() on a non-scrolling uiArea. (area: %p)", a);
+	areaScrollTo(a, x, y, width, height);
 }
 
 void uiAreaBeginUserWindowMove(uiArea *a)

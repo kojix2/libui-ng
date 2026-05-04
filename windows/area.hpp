@@ -35,6 +35,7 @@ extern void areaDrawOnResize(uiArea *, RECT *);
 // areascroll.cpp
 extern BOOL areaDoScroll(uiArea *a, UINT uMsg, WPARAM wParam, LPARAM lParam, LRESULT *lResult);
 extern void areaScrollOnResize(uiArea *, RECT *);
+extern void areaScrollTo(uiArea *a, double x, double y, double width, double height);
 extern void areaUpdateScroll(uiArea *a);
 
 // areaevents.cpp
