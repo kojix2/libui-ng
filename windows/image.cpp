@@ -48,6 +48,11 @@ void uiFreeImage(uiImage *i)
 	uiprivFree(i);
 }
 
+static uint8_t premultiply(uint8_t c, uint8_t a)
+{
+	return (uint8_t) ((((uint32_t) c) * ((uint32_t) a) + 127) / 255);
+}
+
 // Store images as premultiplied BGRA, the format expected by Direct2D and by
 // AlphaBlend() on little-endian Windows.
 #define formatForGDI GUID_WICPixelFormat32bppPBGRA
@@ -118,11 +123,16 @@ void uiImageAppend(uiImage *i, void *pixels, int pixelWidth, int pixelHeight, in
 				uint32_t v32;
 				uint8_t v8[4];
 			} v;
+			uint8_t a, r, g, b;
 
-			v.v32 = ((uint32_t) (pix[x + 3])) << 24;
-			v.v32 |= ((uint32_t) (pix[x])) << 16;
-			v.v32 |= ((uint32_t) (pix[x + 1])) << 8;
-			v.v32 |= ((uint32_t) (pix[x + 2]));
+			a = pix[x + 3];
+			r = premultiply(pix[x], a);
+			g = premultiply(pix[x + 1], a);
+			b = premultiply(pix[x + 2], a);
+			v.v32 = ((uint32_t) a) << 24;
+			v.v32 |= ((uint32_t) r) << 16;
+			v.v32 |= ((uint32_t) g) << 8;
+			v.v32 |= ((uint32_t) b);
 			data[x] = v.v8[0];
 			data[x + 1] = v.v8[1];
 			data[x + 2] = v.v8[2];
