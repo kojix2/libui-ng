@@ -9,6 +9,7 @@ static HRESULT doPaint(uiArea *a, ID2D1RenderTarget *rt, RECT *clip)
 	COLORREF bgcolorref;
 	D2D1_COLOR_F bgcolor;
 	D2D1_MATRIX_3X2_F scrollTransform;
+	D2D1_RECT_F clipRect;
 	double clipLeft, clipTop, clipRight, clipBottom;
 
 	// no need to save or restore the graphics state to reset transformations;  it's handled by resetTarget() in draw.c, called during the following
@@ -43,9 +44,6 @@ static HRESULT doPaint(uiArea *a, ID2D1RenderTarget *rt, RECT *clip)
 		rt->SetTransform(&scrollTransform);
 	}
 
-	// TODO push axis aligned clip
-
-	// TODO only clear the clip area
 	// TODO clear with actual background brush
 	bgcolorref = GetSysColor(COLOR_BTNFACE);
 	bgcolor.r = ((float) GetRValue(bgcolorref)) / 255.0;
@@ -55,13 +53,20 @@ static HRESULT doPaint(uiArea *a, ID2D1RenderTarget *rt, RECT *clip)
 	bgcolor.g = ((float) ((BYTE) ((bgcolorref & 0xFF00) >> 8))) / 255.0;
 	bgcolor.b = ((float) GetBValue(bgcolorref)) / 255.0;
 	bgcolor.a = 1.0;
+
+	clipRect.left = dp.ClipX;
+	clipRect.top = dp.ClipY;
+	clipRect.right = dp.ClipX + dp.ClipWidth;
+	clipRect.bottom = dp.ClipY + dp.ClipHeight;
+	rt->PushAxisAlignedClip(&clipRect, D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
+
 	rt->Clear(&bgcolor);
 
 	(*(ah->Draw))(ah, a, &dp);
 
-	freeContext(dp.Context);
+	rt->PopAxisAlignedClip();
 
-	// TODO pop axis aligned clip
+	freeContext(dp.Context);
 
 	return rt->EndDraw(NULL, NULL);
 }
