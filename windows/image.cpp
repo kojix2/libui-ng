@@ -42,6 +42,11 @@ void uiFreeImage(uiImage *i)
 	uiprivFree(i);
 }
 
+static uint8_t premultiply(uint8_t c, uint8_t a)
+{
+	return (uint8_t) ((((uint32_t) c) * ((uint32_t) a) + 127) / 255);
+}
+
 // to make things easier, we store images in WIC in the same way we store them in GDI (as system-endian ARGB) and premultiplied (as that's what AlphaBlend() expects (TODO confirm this))
 // but what WIC format is system-endian ARGB? for a little-endian system, that's BGRA
 // it turns out that the Windows 8 BMP encoder uses BGRA if told to (https://docs.microsoft.com/en-us/windows/desktop/wic/bmp-format-overview)
@@ -116,11 +121,16 @@ void uiImageAppend(uiImage *i, void *pixels, int pixelWidth, int pixelHeight, in
 				uint32_t v32;
 				uint8_t v8[4];
 			} v;
+			uint8_t a, r, g, b;
 
-			v.v32 = ((uint32_t) (pix[x + 3])) << 24;
-			v.v32 |= ((uint32_t) (pix[x])) << 16;
-			v.v32 |= ((uint32_t) (pix[x + 1])) << 8;
-			v.v32 |= ((uint32_t) (pix[x + 2]));
+			a = pix[x + 3];
+			r = premultiply(pix[x], a);
+			g = premultiply(pix[x + 1], a);
+			b = premultiply(pix[x + 2], a);
+			v.v32 = ((uint32_t) a) << 24;
+			v.v32 |= ((uint32_t) r) << 16;
+			v.v32 |= ((uint32_t) g) << 8;
+			v.v32 |= ((uint32_t) b);
 			data[x] = v.v8[0];
 			data[x + 1] = v.v8[1];
 			data[x + 2] = v.v8[2];
