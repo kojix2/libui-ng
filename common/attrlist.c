@@ -473,25 +473,22 @@ uppercase = in original range, lowercase = not
 
 which results in our algorithm:
 	for each attribute
-		if start < insertion point
-			move start up
-		else if start == insertion point
-			if start != 0
-				move start up
-		if end <= insertion point
+		if the insertion point is before the attribute
+			move start and end up
+		else if the inserted characters inherit this attribute
 			move end up
 */
-// TODO does this ensure the list remains sorted?
 void uiprivAttrListInsertCharactersExtendingAttributes(uiprivAttrList *alist, size_t start, size_t count)
 {
 	struct attr *a;
 
 	for (a = alist->first; a != NULL; a = a->next) {
-		if (a->start < start)
+		if (a->start > start || (a->start == start && start != 0)) {
 			a->start += count;
-		else if (a->start == start && start != 0)
-			a->start += count;
-		if (a->end <= start)
+			a->end += count;
+			continue;
+		}
+		if (start == 0 || a->end >= start)
 			a->end += count;
 	}
 }
