@@ -130,16 +130,18 @@ static std::map<HWND, bool> wininichanges;
 
 void uiWindowsRegisterReceiveWM_WININICHANGE(HWND hwnd)
 {
-	if (wininichanges[hwnd])
+	if (wininichanges.find(hwnd) != wininichanges.end())
 		uiprivImplBug("window handle %p already subscribed to receive WM_WINICHANGEs", hwnd);
 	wininichanges[hwnd] = true;
 }
 
 void uiWindowsUnregisterReceiveWM_WININICHANGE(HWND hwnd)
 {
-	if (!wininichanges[hwnd])
+	auto iter = wininichanges.find(hwnd);
+
+	if (iter == wininichanges.end())
 		uiprivImplBug("window handle %p not registered to receive WM_WININICHANGEs", hwnd);
-	wininichanges[hwnd] = false;
+	wininichanges.erase(iter);
 }
 
 void issueWM_WININICHANGE(WPARAM wParam, LPARAM lParam)

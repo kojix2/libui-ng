@@ -364,6 +364,7 @@ struct uiGrid {
 				[gv[y][x] setTranslatesAutoresizingMaskIntoConstraints:NO];
 				[self addSubview:gv[y][x]];
 				[self->emptyCellViews addObject:gv[y][x]];
+				[gv[y][x] release];
 			} else {
 				gc = (gridChild *) [self->children objectAtIndex:gg[y][x]];
 				gv[y][x] = gc;

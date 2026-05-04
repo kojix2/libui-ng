@@ -122,7 +122,7 @@ void uiOpenTypeFeaturesRemove(uiOpenTypeFeatures *otf, char a, char b, char c, c
 
 	index = f - otf->data;
 	count = otf->len - index - 1;
-	memmove(f + 1, f, bytecount(count));
+	memmove(f, f + 1, bytecount(count));
 	otf->len--;
 }
 

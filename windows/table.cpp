@@ -20,8 +20,45 @@ uiTableModel *uiNewTableModel(uiTableModelHandler *mh)
 
 void uiFreeTableModel(uiTableModel *m)
 {
+	if (!m->tables->empty())
+		uiprivUserBug("You cannot free a uiTableModel while uiTables are using it.");
 	delete m->tables;
 	uiprivFree(m);
+}
+
+static void shiftIndeterminateProgressRows(uiTable *t, int start, int delta)
+{
+	std::map<std::pair<int, int>, LONG> shifted;
+
+	for (auto &i : *(t->indeterminatePositions)) {
+		std::pair<int, int> p = i.first;
+
+		if (p.first >= start)
+			p.first += delta;
+		shifted[p] = i.second;
+	}
+	t->indeterminatePositions->swap(shifted);
+}
+
+static void removeIndeterminateProgressRow(uiTable *t, int oldIndex)
+{
+	std::map<std::pair<int, int>, LONG> shifted;
+	bool wasRunning;
+
+	wasRunning = !t->indeterminatePositions->empty();
+	for (auto &i : *(t->indeterminatePositions)) {
+		std::pair<int, int> p = i.first;
+
+		if (p.first == oldIndex)
+			continue;
+		if (p.first > oldIndex)
+			p.first--;
+		shifted[p] = i.second;
+	}
+	t->indeterminatePositions->swap(shifted);
+	if (wasRunning && t->indeterminatePositions->empty())
+		if (KillTimer(t->hwnd, (UINT_PTR) t) == 0)
+			logLastError(L"KillTimer()");
 }
 
 void uiTableModelRowInserted(uiTableModel *m, int newIndex)
@@ -32,6 +69,7 @@ void uiTableModelRowInserted(uiTableModel *m, int newIndex)
 	item.iSubItem = 0;
 
 	for (auto t : *(m->tables)) {
+		shiftIndeterminateProgressRows(t, newIndex, 1);
 		if (ListView_InsertItem(t->hwnd, &item) == -1)
 			logLastError(L"error calling ListView_InsertItem in uiTableModelRowInserted()");
 		// redraw every row from the new row down to simulate adding it
@@ -51,6 +89,7 @@ void uiTableModelRowChanged(uiTableModel *m, int index)
 void uiTableModelRowDeleted(uiTableModel *m, int oldIndex)
 {
 	for (auto t : *(m->tables)) {
+		removeIndeterminateProgressRow(t, oldIndex);
 		if (ListView_DeleteItem(t->hwnd, oldIndex) == -1)
 			logLastError(L"error calling ListView_DeleteItem() in uiTableModelRowDeleted()");
 		// redraw every row from the new nth row down to simulate removing the old nth row

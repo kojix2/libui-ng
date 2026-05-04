@@ -9,7 +9,7 @@ G_DEFINE_TYPE_WITH_CODE(uiTableModel, uiTableModel, G_TYPE_OBJECT,
 
 static void uiTableModel_init(uiTableModel *m)
 {
-	// nothing to do
+	m->tables = g_ptr_array_new();
 }
 
 static void uiTableModel_dispose(GObject *obj)
@@ -19,6 +19,9 @@ static void uiTableModel_dispose(GObject *obj)
 
 static void uiTableModel_finalize(GObject *obj)
 {
+	uiTableModel *m = uiTableModel(obj);
+
+	g_ptr_array_free(m->tables, TRUE);
 	G_OBJECT_CLASS(uiTableModel_parent_class)->finalize(obj);
 }
 
@@ -243,6 +246,8 @@ uiTableModel *uiNewTableModel(uiTableModelHandler *mh)
 
 void uiFreeTableModel(uiTableModel *m)
 {
+	if (m->tables->len != 0)
+		uiprivUserBug("You cannot free a uiTableModel while uiTables are using it.");
 	g_object_unref(m);
 }
 
@@ -250,6 +255,10 @@ void uiTableModelRowInserted(uiTableModel *m, int newIndex)
 {
 	GtkTreePath *path;
 	GtkTreeIter iter;
+	guint i;
+
+	for (i = 0; i < m->tables->len; i++)
+		uiprivTableRowInserted(uiTable(g_ptr_array_index(m->tables, i)), newIndex);
 
 	path = gtk_tree_path_new_from_indices(newIndex, -1);
 	iter.stamp = m->stamp;
@@ -273,6 +282,10 @@ void uiTableModelRowChanged(uiTableModel *m, int index)
 void uiTableModelRowDeleted(uiTableModel *m, int oldIndex)
 {
 	GtkTreePath *path;
+	guint i;
+
+	for (i = 0; i < m->tables->len; i++)
+		uiprivTableRowDeleted(uiTable(g_ptr_array_index(m->tables, i)), oldIndex);
 
 	path = gtk_tree_path_new_from_indices(oldIndex, -1);
 	gtk_tree_model_row_deleted(GTK_TREE_MODEL(m), path);

@@ -258,6 +258,7 @@ void uiTabInsertAt(uiTab *t, const char *name, int n, uiControl *child)
 	[t->pages insertObject:page atIndex:n];
 
 	i = [[[NSTabViewItem alloc] initWithIdentifier:pageID] autorelease];
+	[pageID release];
 	[i setLabel:uiprivToNSString(name)];
 	[i setView:view];
 	[t->tabview insertTabViewItem:i atIndex:n];

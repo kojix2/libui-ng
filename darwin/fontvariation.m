@@ -276,11 +276,15 @@ NSDictionary *uiprivMakeVariationAxisDict(CFArrayRef axes, CFDataRef avarTable)
 	out = [NSMutableDictionary new];
 	for (i = 0; i < n; i++) {
 		CFNumberRef key;
+		fvarAxis *fa;
 
 		axis = (CFDictionaryRef) CFArrayGetValueAtIndex(axes, i);
 		key = (CFNumberRef) CFDictionaryGetValue(axis, kCTFontVariationAxisIdentifierKey);
-		[out setObject:[[fvarAxis alloc] initWithIndex:i dict:axis avarTable:avarTable]
-			forKey:((NSNumber *) key)];
+		fa = [[fvarAxis alloc] initWithIndex:i dict:axis avarTable:avarTable];
+		if (fa != nil) {
+			[out setObject:fa forKey:((NSNumber *) key)];
+			[fa release];
+		}
 	}
 	if (avarTable != NULL)
 		CFRelease(avarTable);

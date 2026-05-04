@@ -174,6 +174,50 @@ static void drawMatrixMultiply(void **state)
 	assertMatrixEqual(&expected, m);
 }
 
+static void drawMatrixInvertIdentity(void **state)
+{
+	uiDrawMatrix *m = *state;
+	uiDrawMatrix expected = {
+		1.0, 0.0,
+		0.0, 1.0,
+		0.0, 0.0
+	};
+
+	assert_true(uiDrawMatrixInvertible(m));
+	assert_true(uiDrawMatrixInvert(m));
+	assertMatrixEqual(&expected, m);
+}
+
+static void drawMatrixInvertSelfInverse(void **state)
+{
+	uiDrawMatrix *m = *state;
+	uiDrawMatrix expected = {
+		-1.0, 0.0,
+		0.0, -1.0,
+		0.0, 0.0
+	};
+
+	*m = expected;
+	assert_true(uiDrawMatrixInvertible(m));
+	assert_true(uiDrawMatrixInvert(m));
+	assertMatrixEqual(&expected, m);
+}
+
+static void drawMatrixInvertSingular(void **state)
+{
+	uiDrawMatrix *m = *state;
+	uiDrawMatrix expected = {
+		1.0, 0.0,
+		0.0, 0.0,
+		2.0, 3.0
+	};
+
+	*m = expected;
+	assert_false(uiDrawMatrixInvertible(m));
+	assert_false(uiDrawMatrixInvert(m));
+	assertMatrixEqual(&expected, m);
+}
+
 static int drawMatrixTestsSetup(void **state)
 {
 	*state = malloc(sizeof(uiDrawMatrix));
@@ -211,6 +255,9 @@ int drawMatrixRunUnitTests(void)
 		drawMatrixUnitTest(drawMatrixRotate),
 		drawMatrixUnitTest(drawMatrixTRS),
 		drawMatrixUnitTest(drawMatrixMultiply),
+		drawMatrixUnitTest(drawMatrixInvertIdentity),
+		drawMatrixUnitTest(drawMatrixInvertSelfInverse),
+		drawMatrixUnitTest(drawMatrixInvertSingular),
 	};
 
 	return cmocka_run_group_tests_name("uiDrawMatrix", tests, drawMatrixTestsSetup, drawMatrixTestsTeardown);

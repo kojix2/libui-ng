@@ -5,6 +5,14 @@
 // further reading:
 // - https://msdn.microsoft.com/en-us/library/ye4z8x58.aspx
 
+static void copyDispInfoText(NMLVDISPINFOW *nm, const WCHAR *text)
+{
+	if (nm->item.cchTextMax <= 0)
+		return;
+	wcsncpy(nm->item.pszText, text, nm->item.cchTextMax);
+	nm->item.pszText[nm->item.cchTextMax - 1] = L'\0';
+}
+
 static HRESULT handleLVIF_TEXT(uiTable *t, NMLVDISPINFOW *nm, uiprivTableColumnParams *p)
 {
 	int strcol;
@@ -33,8 +41,7 @@ static HRESULT handleLVIF_TEXT(uiTable *t, NMLVDISPINFOW *nm, uiprivTableColumnP
 		// as LVN_GETITEMRECT with LVIR_LABEL) will break this
 		// counting.
 		// TODO make it so we don't have to make a copy; instead we can convert directly into pszText (this will also avoid the risk of having a dangling surrogate pair at the end)
-		wcsncpy(nm->item.pszText, wstr, nm->item.cchTextMax);
-		nm->item.pszText[nm->item.cchTextMax - 1] = L'\0';
+		copyDispInfoText(nm, wstr);
 		uiprivFree(wstr);
 		return S_OK;
 	}
@@ -44,12 +51,13 @@ static HRESULT handleLVIF_TEXT(uiTable *t, NMLVDISPINFOW *nm, uiprivTableColumnP
 
 		if (progress == -1) {
 			// TODO either localize this or replace it with something that's language-neutral
-			// TODO ensure null terminator
-			wcsncpy(nm->item.pszText, L"Indeterminate", nm->item.cchTextMax);
+			copyDispInfoText(nm, L"Indeterminate");
 			return S_OK;
 		}
-		// TODO ensure null terminator
-		_snwprintf(nm->item.pszText, nm->item.cchTextMax, L"%d%%", progress);
+		if (nm->item.cchTextMax > 0) {
+			_snwprintf(nm->item.pszText, nm->item.cchTextMax, L"%d%%", progress);
+			nm->item.pszText[nm->item.cchTextMax - 1] = L'\0';
+		}
 		return S_OK;
 	}
 

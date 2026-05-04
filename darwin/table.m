@@ -360,6 +360,7 @@ void uiTableSetSelection(uiTable *t, uiTableSelection *sel)
 	for (i = 0; i < sel->NumRows; ++i)
 		[set addIndex: sel->Rows[i]];
 	[t->tv selectRowIndexes: set byExtendingSelection: FALSE];
+	[set release];
 }
 
 uiTable *uiNewTable(uiTableParams *p)

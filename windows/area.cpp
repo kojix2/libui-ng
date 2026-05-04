@@ -2,8 +2,15 @@
 #include "uipriv_windows.hpp"
 #include "area.hpp"
 
-// TODO handle WM_DESTROY/WM_NCDESTROY
 // TODO same for other Direct2D stuff
+static void releaseAreaRenderTarget(uiArea *a)
+{
+	if (a->rt != NULL) {
+		a->rt->Release();
+		a->rt = NULL;
+	}
+}
+
 static LRESULT CALLBACK areaWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	uiArea *a;
@@ -21,6 +28,13 @@ static LRESULT CALLBACK areaWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
 			SetWindowLongPtrW(hwnd, GWLP_USERDATA, (LONG_PTR) a);
 		}
 		// fall through to DefWindowProcW() anyway
+		return DefWindowProcW(hwnd, uMsg, wParam, lParam);
+	}
+
+	if (uMsg == WM_DESTROY || uMsg == WM_NCDESTROY) {
+		releaseAreaRenderTarget(a);
+		if (uMsg == WM_NCDESTROY)
+			SetWindowLongPtrW(hwnd, GWLP_USERDATA, (LONG_PTR) NULL);
 		return DefWindowProcW(hwnd, uMsg, wParam, lParam);
 	}
 
@@ -53,7 +67,16 @@ static LRESULT CALLBACK areaWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
 
 // control implementation
 
-uiWindowsControlAllDefaults(uiArea)
+static void uiAreaDestroy(uiControl *c)
+{
+	uiArea *a = uiArea(c);
+
+	uiWindowsEnsureDestroyWindow(a->hwnd);
+	releaseAreaRenderTarget(a);
+	uiFreeControl(uiControl(a));
+}
+
+uiWindowsControlAllDefaultsExceptDestroy(uiArea)
 
 static void uiAreaMinimumSize(uiWindowsControl *c, int *width, int *height)
 {

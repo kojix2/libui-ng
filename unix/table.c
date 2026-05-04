@@ -241,6 +241,69 @@ static gboolean rowcolEqual(gconstpointer a, gconstpointer b)
 	return (ra->row == rb->row) && (ra->col == rb->col);
 }
 
+static void insertIndeterminateProgress(GHashTable *positions, int row, int col, gint pulse)
+{
+	struct rowcol *rc;
+	gint *val;
+
+	rc = uiprivNew(struct rowcol);
+	rc->row = row;
+	rc->col = col;
+	val = uiprivNew(gint);
+	*val = pulse;
+	g_hash_table_insert(positions, rc, val);
+}
+
+void uiprivTableRowInserted(uiTable *t, int newIndex)
+{
+	GHashTable *shifted;
+	GHashTableIter iter;
+	gpointer key, value;
+	struct rowcol *rc;
+
+	shifted = g_hash_table_new_full(rowcolHash, rowcolEqual,
+		uiprivFree, uiprivFree);
+	g_hash_table_iter_init(&iter, t->indeterminatePositions);
+	while (g_hash_table_iter_next(&iter, &key, &value)) {
+		rc = (struct rowcol *) key;
+		insertIndeterminateProgress(shifted,
+			rc->row >= newIndex ? rc->row + 1 : rc->row,
+			rc->col,
+			*((gint *) value));
+	}
+	g_hash_table_destroy(t->indeterminatePositions);
+	t->indeterminatePositions = shifted;
+}
+
+void uiprivTableRowDeleted(uiTable *t, int oldIndex)
+{
+	GHashTable *shifted;
+	GHashTableIter iter;
+	gpointer key, value;
+	struct rowcol *rc;
+	gboolean wasRunning;
+
+	wasRunning = g_hash_table_size(t->indeterminatePositions) != 0;
+	shifted = g_hash_table_new_full(rowcolHash, rowcolEqual,
+		uiprivFree, uiprivFree);
+	g_hash_table_iter_init(&iter, t->indeterminatePositions);
+	while (g_hash_table_iter_next(&iter, &key, &value)) {
+		rc = (struct rowcol *) key;
+		if (rc->row == oldIndex)
+			continue;
+		insertIndeterminateProgress(shifted,
+			rc->row > oldIndex ? rc->row - 1 : rc->row,
+			rc->col,
+			*((gint *) value));
+	}
+	g_hash_table_destroy(t->indeterminatePositions);
+	t->indeterminatePositions = shifted;
+	if (wasRunning && g_hash_table_size(t->indeterminatePositions) == 0) {
+		g_source_remove(t->indeterminateTimer);
+		t->indeterminateTimer = 0;
+	}
+}
+
 static void pulseOne(gpointer key, gpointer value, gpointer data)
 {
 	uiTable *t = uiTable(data);
@@ -707,6 +770,7 @@ static void uiTableDestroy(uiControl *c)
 	uiTable *t = uiTable(c);
 	guint i;
 
+	g_ptr_array_remove(t->model->tables, t);
 	for (i = 0; i < t->columnParams->len; i++)
 		uiprivFree(g_ptr_array_index(t->columnParams, i));
 	g_ptr_array_free(t->columnParams, TRUE);
@@ -839,6 +903,8 @@ uiTable *uiNewTable(uiTableParams *p)
 	t->lastSelectedRow = -1;
 	t->lastSelectedRows = NULL;
 	t->lastSelectedRowsCount = 0;
+
+	g_ptr_array_add(t->model->tables, t);
 
 	return t;
 }
