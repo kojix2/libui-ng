@@ -4,6 +4,7 @@
 WCHAR *windowTextAndLen(HWND hwnd, LRESULT *len)
 {
 	LRESULT n;
+	int copied;
 	WCHAR *text;
 
 	n = SendMessageW(hwnd, WM_GETTEXTLENGTH, 0, 0);
@@ -11,13 +12,16 @@ WCHAR *windowTextAndLen(HWND hwnd, LRESULT *len)
 		*len = n;
 	// WM_GETTEXTLENGTH does not include the null terminator
 	text = (WCHAR *) uiprivAlloc((n + 1) * sizeof (WCHAR), "WCHAR[]");
-	// note the comparison: the size includes the null terminator, but the return does not
-	if (GetWindowTextW(hwnd, text, n + 1) != n) {
+	SetLastError(ERROR_SUCCESS);
+	copied = GetWindowTextW(hwnd, text, n + 1);
+	if (copied == 0 && GetLastError() != ERROR_SUCCESS) {
 		logLastError(L"error getting window text");
 		// on error, return an empty string to be safe
 		*text = L'\0';
 		if (len != NULL)
 			*len = 0;
+	} else if (len != NULL) {
+		*len = copied;
 	}
 	return text;
 }
