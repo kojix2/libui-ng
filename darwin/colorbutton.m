@@ -30,11 +30,12 @@ struct uiColorButton {
 {
 	self = [super initWithFrame:frame];
 	if (self) {
-		// the default color is white; set it to black first (see -setColor: below for why we do it first)
-		[self libuiSetColor:0.0 g:0.0 b:0.0 a:1.0];
-
 		self->libui_b = b;
 		self->libui_changing = NO;
+		self->libui_setting = NO;
+
+		// the default color is white; set it to black first (see -setColor: below for why we do it first)
+		[self libuiSetColor:0.0 g:0.0 b:0.0 a:1.0];
 	}
 	return self;
 }
@@ -84,9 +85,9 @@ struct uiColorButton {
 	uiColorButton *b = self->libui_b;
 
 	[super setColor:color];
-	// this is called by NSColorWell's init, so we have to guard
-	// also don't signal during a programmatic change
-	if (b != nil && !self->libui_setting)
+	// NSColorWell initialization can invoke -setColor: before libui callback wiring is complete.
+	// Ignore changes while setting color programmatically, and only signal when callback is ready.
+	if (b != nil && b->onChanged != NULL && !self->libui_setting)
 		(*(b->onChanged))(b, b->onChangedData);
 }
 
