@@ -445,7 +445,8 @@ static void uiprivDateTimePickerWidget_setTime(uiprivDateTimePickerWidget *d, GD
 		if (hour >= 12) {
 			hour -= 12;
 			setRealSpinValue(GTK_SPIN_BUTTON(d->ampm), 1, d->ampmBlock);
-		}
+		} else
+			setRealSpinValue(GTK_SPIN_BUTTON(d->ampm), 0, d->ampmBlock);
 		setRealSpinValue(GTK_SPIN_BUTTON(d->hours), hour, d->hoursBlock);
 		setRealSpinValue(GTK_SPIN_BUTTON(d->minutes), g_date_time_get_minute(dt), d->minutesBlock);
 		setRealSpinValue(GTK_SPIN_BUTTON(d->seconds), g_date_time_get_seconds(dt), d->secondsBlock);
