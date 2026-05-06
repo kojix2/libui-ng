@@ -322,6 +322,8 @@ uiMenuItem *uiMenuAppendAboutItem(uiMenu *m)
 
 void uiMenuAppendSeparator(uiMenu *m)
 {
+	if ([uiprivAppDelegate().menuManager finalized])
+		uiprivUserBug("You can't create a new menu item after menus have been finalized.");
 	[m->menu addItem:[NSMenuItem separatorItem]];
 }
 
