@@ -63,18 +63,13 @@ char *uiEntryText(uiEntry *e)
 
 void uiEntrySetText(uiEntry *e, const char *text)
 {
-	int l;
-	WCHAR *wtext;
 	// doing this raises an EN_CHANGED
 	e->inhibitChanged = TRUE;
 	uiWindowsSetWindowText(e->hwnd, text);
-	wtext = toUTF16(text);
-	l = (int)wcslen(wtext);
-	uiprivFree(wtext);
 	// Only set the cursor if the entry has focus to avoid weird scrolling upon window
 	// creation. Cursor placement is otherwise determined by mouse position upon click.
 	if (GetFocus() == e->hwnd)
-		Edit_SetSel(e->hwnd, l, l);
+		Edit_SetSel(e->hwnd, -1, -1);
 	e->inhibitChanged = FALSE;
 	// don't queue the control for resize; entry sizes are independent of their contents
 }
