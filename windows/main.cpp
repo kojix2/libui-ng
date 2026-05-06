@@ -154,7 +154,10 @@ void uiprivFreeTimer(uiprivTimer *t)
 void uiprivUninitTimers(void)
 {
 	// TODO why doesn't auto t : timers work?
-	for (auto t = timers.begin(); t != timers.end(); t++)
+	for (auto t = timers.begin(); t != timers.end(); t++) {
+		if (KillTimer(utilWindow, (UINT_PTR) t->first) == 0)
+			logLastError(L"error calling KillTimer() to clean up uiTimer() procedure");
 		uiprivFree(t->first);
+	}
 	timers.clear();
 }
