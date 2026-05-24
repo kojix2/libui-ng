@@ -130,10 +130,13 @@ static void setActive(uiprivDateTimePickerWidget *d, gboolean active)
 // like startGrab() below, a lot of this is in the order that GtkComboBox does it
 static void endGrab(uiprivDateTimePickerWidget *d)
 {
+	// This can be called during teardown even when no popup grab is active.
 	if (d->keyboard != NULL)
 		gdk_device_ungrab(d->keyboard, GDK_CURRENT_TIME);
-	gdk_device_ungrab(d->mouse, GDK_CURRENT_TIME);
-	gtk_device_grab_remove(d->window, d->mouse);
+	if (d->mouse != NULL) {
+		gdk_device_ungrab(d->mouse, GDK_CURRENT_TIME);
+		gtk_device_grab_remove(d->window, d->mouse);
+	}
 	d->keyboard = NULL;
 	d->mouse = NULL;
 }
@@ -194,7 +197,8 @@ static gboolean startGrab(uiprivDateTimePickerWidget *d)
 			return FALSE;
 		}
 
-	gtk_device_grab_add(d->window, mouse, TRUE);
+	if (mouse != NULL)
+		gtk_device_grab_add(d->window, mouse, TRUE);
 	d->keyboard = keyboard;
 	d->mouse = mouse;
 	return TRUE;
