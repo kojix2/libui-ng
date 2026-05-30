@@ -559,7 +559,7 @@ void uiAreaBeginUserWindowMove(uiArea *a)
 	}
 	gtk_window_begin_move_drag(GTK_WINDOW(toplevel),
 		a->dragevent->button,
-		a->dragevent->x_root,		// TODO are these correct?
+		a->dragevent->x_root,
 		a->dragevent->y_root,
 		a->dragevent->time);
 }
@@ -600,7 +600,7 @@ void uiAreaBeginUserWindowResize(uiArea *a, uiWindowResizeEdge edge)
 	gtk_window_begin_resize_drag(GTK_WINDOW(toplevel),
 		edges[edge],
 		a->dragevent->button,
-		a->dragevent->x_root,		// TODO are these correct?
+		a->dragevent->x_root,
 		a->dragevent->y_root,
 		a->dragevent->time);
 }
