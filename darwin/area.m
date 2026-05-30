@@ -446,7 +446,7 @@ void uiAreaBeginUserWindowMove(uiArea *a)
 	if (w == nil)
 		return;		// TODO
 	if (a->dragevent == nil)
-		return;		// TODO
+		uiprivUserBug("cannot call uiAreaBeginUserWindowMove() outside of a Mouse() with Down != 0");
 	[w uiprivDoMove:a->dragevent];
 }
 
@@ -458,7 +458,7 @@ void uiAreaBeginUserWindowResize(uiArea *a, uiWindowResizeEdge edge)
 	if (w == nil)
 		return;		// TODO
 	if (a->dragevent == nil)
-		return;		// TODO
+		uiprivUserBug("cannot call uiAreaBeginUserWindowResize() outside of a Mouse() with Down != 0");
 	[w uiprivDoResize:a->dragevent on:edge];
 }
 
