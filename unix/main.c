@@ -74,6 +74,7 @@ static gboolean stepsIteration(gboolean block)
 
 void uiMainSteps(void)
 {
+	stepsQuit = FALSE;
 	iteration = stepsIteration;
 }
 
