@@ -149,6 +149,11 @@ void uiTimer(int milliseconds, int (*f)(void *data), void *data)
 {
 	struct timer *t;
 
+	if (milliseconds <= 0)
+		uiprivUserBug("uiTimer() milliseconds must be > 0");
+	if (f == NULL)
+		uiprivUserBug("uiTimer() callback must not be NULL");
+
 	t = uiprivNew(struct timer);
 	t->f = f;
 	t->data = data;
