@@ -298,6 +298,13 @@ void uiTimer(int milliseconds, int (*f)(void *data), void *data)
         uiprivTimerDelegate *delegate;
         NSTimer *timer;
 
+        if (milliseconds <= 0)
+                uiprivUserBug("uiTimer() milliseconds must be > 0");
+        if (f == NULL)
+                uiprivUserBug("uiTimer() callback must not be NULL");
+        if (timers == nil)
+                uiprivUserBug("uiTimer() called before uiInit() or after uiUninit()");
+
         delegate = [[uiprivTimerDelegate alloc] initWithCallback:f data:data];
         timer = [NSTimer scheduledTimerWithTimeInterval:(milliseconds / 1000.0)
                 target:delegate
