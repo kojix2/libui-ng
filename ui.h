@@ -1821,7 +1821,7 @@ _UI_EXTERN void uiMenuItemDisable(uiMenuItem *m);
  * Registers a callback for when the menu item is clicked.
  *
  * @param m uiMenuItem instance.
- * @param f Callback function.\n
+ * @param f Callback function; must not be @c NULL.\n
  *          @p sender Back reference to the instance that triggered the callback.\n
  *          @p window Reference to the window from which the callback got triggered.\
  *          @p senderData User data registered with the sender instance.

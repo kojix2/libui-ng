@@ -240,6 +240,8 @@ void uiMenuItemOnClicked(uiMenuItem *item, void (*f)(uiMenuItem *, uiWindow *, v
 {
 	if (item->type == typeQuit)
 		uiprivUserBug("You can't call uiMenuItemOnClicked() on a Quit item; use uiOnShouldQuit() instead.");
+	if (f == NULL)
+		uiprivUserBug("uiMenuItemOnClicked() callback must not be NULL");
 	item->onClicked = f;
 	item->onClickedData = data;
 }
