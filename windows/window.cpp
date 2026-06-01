@@ -552,7 +552,7 @@ uiWindow *uiNewWindow(const char *title, int width, int height, int hasMenubar)
 
 	if (hasMenubar) {
 		w->menubar = makeMenubar();
-		if (SetMenu(w->hwnd, w->menubar) == 0)
+		if (w->menubar != NULL && SetMenu(w->hwnd, w->menubar) == 0)
 			logLastError(L"error giving menu to window");
 	}
 

@@ -234,8 +234,10 @@ static void appendMenuItem(HMENU menu, uiMenuItem *item)
 		if (item->checked)
 			uFlags |= MF_CHECKED;
 	}
-	if (AppendMenuW(menu, uFlags, item->id, item->name) == 0)
-		logLastError(L"error appending menu item");
+	if (AppendMenuW(menu, uFlags, item->id, item->name) == 0) {
+		logLastError(L"error appending menu item in appendMenuItem()");
+		return;
+	}
 
 	if (item->len >= item->cap) {
 		item->cap += grow;
@@ -251,12 +253,16 @@ static HMENU makeMenu(uiMenu *m)
 	size_t i;
 
 	menu = CreatePopupMenu();
-	if (menu == NULL)
-		logLastError(L"error creating menu");
+	if (menu == NULL) {
+		logLastError(L"error creating popup menu");
+		return NULL;
+	}
 	for (i = 0; i < m->len; i++)
 		appendMenuItem(menu, m->items[i]);
 	return menu;
 }
+
+static void freeMenu(uiMenu *m, HMENU submenu);
 
 HMENU makeMenubar(void)
 {
@@ -267,13 +273,21 @@ HMENU makeMenubar(void)
 	menusFinalized = TRUE;
 
 	menubar = CreateMenu();
-	if (menubar == NULL)
+	if (menubar == NULL) {
 		logLastError(L"error creating menubar");
+		return NULL;
+	}
 
 	for (i = 0; i < len; i++) {
 		menu = makeMenu(menus[i]);
-		if (AppendMenuW(menubar, MF_POPUP | MF_STRING, (UINT_PTR) menu, menus[i]->name) == 0)
+		if (menu == NULL)
+			continue;
+		if (AppendMenuW(menubar, MF_POPUP | MF_STRING, (UINT_PTR) menu, menus[i]->name) == 0) {
 			logLastError(L"error appending menu to menubar");
+			freeMenu(menus[i], menu);
+			if (DestroyMenu(menu) == 0)
+				logLastError(L"error destroying unattached popup menu");
+		}
 	}
 
 	return menubar;
@@ -318,7 +332,7 @@ static void freeMenu(uiMenu *m, HMENU submenu)
 			if (item->hmenus[j] == submenu)
 				break;
 		if (j >= item->len)
-			uiprivImplBug("submenu handle %p not found in freeMenu()", submenu);
+			continue;
 		for (; j < item->len - 1; j++)
 			item->hmenus[j] = item->hmenus[j + 1];
 		item->hmenus[j] = NULL;
@@ -326,18 +340,47 @@ static void freeMenu(uiMenu *m, HMENU submenu)
 	}
 }
 
-void freeMenubar(HMENU menubar)
+static uiMenu *findMenuForSubmenu(HMENU submenu)
 {
-	size_t i;
-	MENUITEMINFOW mi;
+	uiMenu *m;
+	uiMenuItem *item;
+	size_t i, j, k;
 
 	for (i = 0; i < len; i++) {
+		m = menus[i];
+		for (j = 0; j < m->len; j++) {
+			item = m->items[j];
+			for (k = 0; k < item->len; k++)
+				if (item->hmenus[k] == submenu)
+					return m;
+		}
+	}
+
+	return NULL;
+}
+
+void freeMenubar(HMENU menubar)
+{
+	int count;
+	int i;
+	MENUITEMINFOW mi;
+	uiMenu *m;
+
+	count = GetMenuItemCount(menubar);
+	if (count == -1) {
+		logLastError(L"error getting menubar item count");
+		return;
+	}
+
+	for (i = 0; i < count; i++) {
 		ZeroMemory(&mi, sizeof (MENUITEMINFOW));
 		mi.cbSize = sizeof (MENUITEMINFOW);
 		mi.fMask = MIIM_SUBMENU;
 		if (GetMenuItemInfoW(menubar, i, TRUE, &mi) == 0)
 			logLastError(L"error getting menu to delete item references from");
-		freeMenu(menus[i], mi.hSubMenu);
+		m = findMenuForSubmenu(mi.hSubMenu);
+		if (m != NULL)
+			freeMenu(m, mi.hSubMenu);
 	}
 	// no need to worry about destroying any menus; destruction of the window they're in will do it for us
 }
