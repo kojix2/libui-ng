@@ -358,24 +358,43 @@ void uiprivFinalizeMenus(void)
 
 void uiprivUninitMenus(void)
 {
+	NSArray *items;
 	NSMenuItem *mi;
 	NSMenu *sm;
 	NSMenuItem *smi;
 
-	for (mi in [[uiprivNSApp() mainMenu] itemArray]) {
+	items = [[[uiprivNSApp() mainMenu] itemArray] retain];
+	for (mi in items) {
 		if ([mi hasSubmenu]) {
 			sm = [mi submenu];
 			for (smi in [sm itemArray]) {
 				if ([smi isKindOfClass:[uiprivMenuItem class]]) {
 					uiprivMenuItem *x = (uiprivMenuItem *)smi;
-					if (x->item != NULL)
-						uiprivFree(x->item);
+					uiMenuItem *item = x->item;
+
+					if (item != NULL) {
+						x->item = NULL;
+						if (item->item == x) {
+							item->item = NULL;
+							if (item->type == typeRegular || item->type == typeCheckbox)
+								[x release];
+						}
+						uiprivFree(item);
+					}
 				}
 			}
 			if ([sm isKindOfClass:[uiprivMenu class]]) {
 				uiprivMenu *x = (uiprivMenu *)sm;
-				uiprivFree(x->menu);
+				uiMenu *menu = x->menu;
+
+				[[uiprivNSApp() mainMenu] removeItem:mi];
+				[mi setSubmenu:nil];
+				x->menu = NULL;
+				[mi release];
+				[sm release];
+				uiprivFree(menu);
 			}
 		}
 	}
+	[items release];
 }
