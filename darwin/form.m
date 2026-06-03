@@ -97,6 +97,8 @@ struct uiForm {
 
 - (void)onDestroy
 {
+	[self removeConstraint:self.leading];
+	self.leading = nil;
 	[self removeConstraint:self.trailing];
 	self.trailing = nil;
 	[self removeConstraint:self.top];
@@ -409,7 +411,11 @@ struct uiForm {
 	uiDarwinControlSetHuggingPriority(uiDarwinControl(fc.c), fc.oldHorzHuggingPri, NSLayoutConstraintOrientationHorizontal);
 	uiDarwinControlSetHuggingPriority(uiDarwinControl(fc.c), fc.oldVertHuggingPri, NSLayoutConstraintOrientationVertical);
 
+	[self removeConstraint:fc.baseline];
+	fc.baseline = nil;
+
 	[fc onDestroy];
+	[fc removeFromSuperview];
 	[self->children removeObjectAtIndex:n];
 
 	[self establishOurConstraints];
