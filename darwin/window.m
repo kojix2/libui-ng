@@ -315,9 +315,9 @@ void uiWindowSetFullscreen(uiWindow *w, int fullscreen)
 		return;
 	if (!w->fullscreen && !fullscreen)
 		return;
-	w->fullscreen = fullscreen;
-	if (w->fullscreen && w->borderless)		// borderless doesn't play nice with fullscreen; don't toggle while borderless
+	if (fullscreen && w->borderless)		// borderless doesn't play nice with fullscreen; don't toggle while borderless
 		return;
+	w->fullscreen = fullscreen;
 	w->suppressSizeChanged = YES;
 	[w->window toggleFullScreen:w->window];
 	w->suppressSizeChanged = NO;
@@ -362,12 +362,6 @@ void uiWindowSetBorderless(uiWindow *w, int borderless)
 			[w->window setStyleMask:NSBorderlessWindowMask];
 	} else {
 		[w->window setStyleMask:defaultStyleMask];
-		// borderless doesn't play nice with fullscreen; restore state
-		if (w->fullscreen) {
-			w->suppressSizeChanged = YES;
-			[w->window toggleFullScreen:w->window];
-			w->suppressSizeChanged = NO;
-		}
 	}
 }
 
