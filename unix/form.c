@@ -26,6 +26,32 @@ uiUnixControlAllDefaultsExceptDestroy(uiForm)
 
 #define ctrl(f, i) &g_array_index(f->children, struct formChild, i)
 
+static void formChildUnbindLabel(struct formChild *fc)
+{
+	if (fc->labelBinding == NULL)
+		return;
+	g_binding_unbind(fc->labelBinding);
+	fc->labelBinding = NULL;
+}
+
+static void formReattachChildren(uiForm *f)
+{
+	struct formChild *fc;
+	GtkWidget *widget;
+	guint i;
+
+	for (i = 0; i < f->children->len; i++) {
+		fc = ctrl(f, i);
+		widget = GTK_WIDGET(uiControlHandle(fc->c));
+		gtk_container_child_set(f->container, fc->label,
+			"top-attach", i,
+			NULL);
+		gtk_container_child_set(f->container, widget,
+			"top-attach", i,
+			NULL);
+	}
+}
+
 static void uiFormDestroy(uiControl *c)
 {
 	uiForm *f = uiForm(c);
@@ -37,6 +63,7 @@ static void uiFormDestroy(uiControl *c)
 	// free all controls
 	for (i = 0; i < f->children->len; i++) {
 		fc = ctrl(f, i);
+		formChildUnbindLabel(fc);
 		uiControlSetParent(fc->c, NULL);
 		uiUnixControlSetContainer(uiUnixControl(fc->c), f->container, TRUE);
 		uiControlDestroy(fc->c);
@@ -109,6 +136,7 @@ void uiFormDelete(uiForm *f, int index)
 	fc = ctrl(f, index);
 	widget = GTK_WIDGET(uiControlHandle(fc->c));
 
+	formChildUnbindLabel(fc);
 	gtk_widget_destroy(fc->label);
 
 	uiControlSetParent(fc->c, NULL);
@@ -122,6 +150,7 @@ void uiFormDelete(uiForm *f, int index)
 	gtk_widget_set_valign(widget, fc->oldvalign);
 
 	g_array_remove_index(f->children, index);
+	formReattachChildren(f);
 }
 
 int uiFormNumChildren(uiForm *f)
