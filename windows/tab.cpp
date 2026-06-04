@@ -21,6 +21,21 @@ static LRESULT curpage(uiTab *t)
 	return SendMessageW(t->tabHWND, TCM_GETCURSEL, 0, 0);
 }
 
+static int currentPageIndex(uiTab *t)
+{
+	LRESULT page;
+
+	page = curpage(t);
+	if (page < 0 || ((size_t) page) >= t->pages->size())
+		return -1;
+	return (int) page;
+}
+
+static void setCurrentPage(uiTab *t, int i)
+{
+	SendMessageW(t->tabHWND, TCM_SETCURSEL, (WPARAM) i, 0);
+}
+
 static struct tabPage *tabPage(uiTab *t, int i)
 {
 	return (*(t->pages))[i];
@@ -42,15 +57,17 @@ static void tabRelayout(uiTab *t)
 	RECT r;
 	LONG_PTR controlID;
 	HWND insertAfter;
+	int current;
 
 	// first move the tab control itself
 	uiWindowsEnsureGetClientRect(t->hwnd, &r);
 	uiWindowsEnsureMoveWindowDuringResize(t->tabHWND, r.left, r.top, r.right - r.left, r.bottom - r.top);
 
 	// then the current page
-	if (t->pages->size() == 0)
+	current = currentPageIndex(t);
+	if (current == -1)
 		return;
-	page = tabPage(t, curpage(t));
+	page = tabPage(t, current);
 	tabPageRect(t, &r);
 	controlID = 100;
 	insertAfter = NULL;
@@ -62,7 +79,7 @@ static void showHidePage(uiTab *t, LRESULT which, int hide)
 {
 	struct tabPage *page;
 
-	if (which == (LRESULT) (-1))
+	if (which < 0 || ((size_t) which) >= t->pages->size())
 		return;
 	page = tabPage(t, which);
 	if (hide)
@@ -147,12 +164,14 @@ static void uiTabMinimumSize(uiWindowsControl *c, int *width, int *height)
 	int pagewid, pageht;
 	struct tabPage *page;
 	RECT r;
+	int current;
 
 	// only consider the current page
 	pagewid = 0;
 	pageht = 0;
-	if (t->pages->size() != 0) {
-		page = tabPage(t, curpage(t));
+	current = currentPageIndex(t);
+	if (current != -1) {
+		page = tabPage(t, current);
 		tabPageMinimumSize(page, &pagewid, &pageht);
 	}
 
@@ -244,9 +263,16 @@ void uiTabInsertAt(uiTab *t, const char *name, int n, uiControl *child)
 void uiTabDelete(uiTab *t, int n)
 {
 	struct tabPage *page;
+	int old;
+	int selected;
+	int deletedCurrent;
 
+	old = currentPageIndex(t);
+	deletedCurrent = old == n;
+	if (deletedCurrent)
+		showHidePage(t, old, 1);
 	// first delete the tab from the tab control
-	// if this is the current tab, no tab will be selected, which is good
+	// if this was the current tab, select and show another page below
 	if (SendMessageW(t->tabHWND, TCM_DELETEITEM, (WPARAM) n, 0) == FALSE)
 		logLastError(L"error deleting uiTab tab");
 
@@ -256,6 +282,30 @@ void uiTabDelete(uiTab *t, int n)
 		uiControlSetParent(page->child, NULL);
 	tabPageDestroy(page);
 	t->pages->erase(t->pages->begin() + n);
+
+	if (t->pages->size() == 0) {
+		uiWindowsControlMinimumSizeChanged(uiWindowsControl(t));
+		return;
+	}
+
+	if (old == -1) {
+		selected = n;
+		if (((size_t) selected) >= t->pages->size())
+			selected = (int) t->pages->size() - 1;
+	} else if (n < old)
+		selected = old - 1;
+	else if (n > old)
+		selected = old;
+	else {
+		selected = n;
+		if (((size_t) selected) >= t->pages->size())
+			selected = (int) t->pages->size() - 1;
+	}
+	setCurrentPage(t, selected);
+	if (deletedCurrent || old == -1)
+		showHidePage(t, selected, 0);
+	else
+		tabRelayout(t);
 }
 
 int uiTabNumPages(uiTab *t)
@@ -299,7 +349,7 @@ void uiTabSetSelected(uiTab *t, int index)
 	if (index < 0 || index >= uiTabNumPages(t))
 		return;
 	showHidePage(t, curpage(t), 1);
-	SendMessageW(t->tabHWND, TCM_SETCURSEL, index, 0);
+	setCurrentPage(t, index);
 	showHidePage(t, index, 0);
 }
 
