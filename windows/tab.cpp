@@ -224,12 +224,13 @@ void uiTabAppend(uiTab *t, const char *name, uiControl *child)
 void uiTabInsertAt(uiTab *t, const char *name, int n, uiControl *child)
 {
 	struct tabPage *page;
-	LRESULT hide, show;
+	LRESULT res;
 	TCITEMW item;
 	WCHAR *wname;
+	int old;
+	int selected;
 
-	// see below
-	hide = curpage(t);
+	old = currentPageIndex(t);
 
 	if (child != NULL)
 		uiControlSetParent(child, uiControl(t));
@@ -241,23 +242,36 @@ void uiTabInsertAt(uiTab *t, const char *name, int n, uiControl *child)
 		return;
 	}
 	uiWindowsEnsureSetParentHWND(page->hwnd, t->hwnd);
-	t->pages->insert(t->pages->begin() + n, page);
-	tabArrangePages(t);
 
 	ZeroMemory(&item, sizeof (TCITEMW));
 	item.mask = TCIF_TEXT;
 	wname = toUTF16(name);
 	item.pszText = wname;
-	if (SendMessageW(t->tabHWND, TCM_INSERTITEM, (WPARAM) n, (LPARAM) (&item)) == (LRESULT) -1)
+	res = SendMessageW(t->tabHWND, TCM_INSERTITEM, (WPARAM) n, (LPARAM) (&item));
+	if (res == (LRESULT) -1) {
 		logLastError(L"error adding tab to uiTab");
+		tabPageDestroy(page);
+		if (child != NULL)
+			uiControlSetParent(child, NULL);
+		uiprivFree(wname);
+		return;
+	}
 	uiprivFree(wname);
 
-	// we need to do this because adding the first tab doesn't send a TCN_SELCHANGE; it just shows the page
-	show = curpage(t);
-	if (show != hide) {
-		showHidePage(t, hide, 1);
-		showHidePage(t, show, 0);
-	}
+	t->pages->insert(t->pages->begin() + (int) res, page);
+	tabArrangePages(t);
+
+	if (old == -1)
+		selected = (int) res;
+	else if (((int) res) <= old)
+		selected = old + 1;
+	else
+		selected = old;
+	setCurrentPage(t, selected);
+	if (old == -1)
+		showHidePage(t, selected, 0);
+	else
+		tabRelayout(t);
 }
 
 void uiTabDelete(uiTab *t, int n)
