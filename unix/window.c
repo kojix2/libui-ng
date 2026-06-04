@@ -85,6 +85,16 @@ static gboolean onLoseFocus(GtkWidget *win, GdkEvent *e, gpointer data)
 	return FALSE;
 }
 
+static gboolean onWindowState(GtkWidget *win, GdkEventWindowState *e, gpointer data)
+{
+	uiWindow *w = uiWindow(data);
+
+	if ((e->changed_mask & GDK_WINDOW_STATE_FULLSCREEN) != 0)
+		w->fullscreen = (e->new_window_state & GDK_WINDOW_STATE_FULLSCREEN) != 0;
+
+	return FALSE;
+}
+
 static gboolean onConfigure(GtkWidget *win, GdkEvent *e, gpointer data)
 {
 	uiWindow *w = uiWindow(data);
@@ -239,7 +249,6 @@ int uiWindowFullscreen(uiWindow *w)
 	return w->fullscreen;
 }
 
-// TODO use window-state-event to track
 // TODO does this send an extra size changed?
 // TODO what behavior do we want?
 void uiWindowSetFullscreen(uiWindow *w, int fullscreen)
@@ -381,6 +390,7 @@ uiWindow *uiNewWindow(const char *title, int width, int height, int hasMenubar)
 	g_signal_connect(w->childHolderWidget, "size-allocate", G_CALLBACK(onSizeAllocate), w);
 	g_signal_connect(w->widget, "focus-in-event", G_CALLBACK(onGetFocus), w);
 	g_signal_connect(w->widget, "focus-out-event", G_CALLBACK(onLoseFocus), w);
+	g_signal_connect(w->widget, "window-state-event", G_CALLBACK(onWindowState), w);
 	g_signal_connect(w->widget, "configure-event", G_CALLBACK(onConfigure), w);
 
 	uiWindowOnClosing(w, defaultOnClosing, NULL);
