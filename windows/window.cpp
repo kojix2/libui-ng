@@ -112,8 +112,9 @@ static LRESULT CALLBACK windowWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARA
 		return 0;
 	case WM_WINDOWPOSCHANGED:
 		if ((wp->flags & SWP_NOMOVE) == 0)
-			if (!w->changingPosition)
-				(*(w->onPositionChanged))(w, w->onPositionChangedData);
+			if (w->onPositionChanged != NULL)
+				if (!w->changingPosition)
+					(*(w->onPositionChanged))(w, w->onPositionChangedData);
 		if ((wp->flags & SWP_NOSIZE) != 0)
 			break;
 		if (w->onContentSizeChanged != NULL)		// TODO figure out why this is happening too early
