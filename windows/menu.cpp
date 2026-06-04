@@ -7,7 +7,12 @@ static uiMenu **menus = NULL;
 static size_t len = 0;
 static size_t cap = 0;
 static BOOL menusFinalized = FALSE;
-static WORD curID = 100;			// start somewhere safe
+enum {
+	firstMenuID = 100,			// start somewhere safe
+	maxMenuID = 0xFFFF,			// WM_COMMAND only carries the low WORD
+};
+
+static UINT curID = firstMenuID;
 static BOOL hasQuit = FALSE;
 static BOOL hasPreferences = FALSE;
 static BOOL hasAbout = FALSE;
@@ -22,7 +27,7 @@ struct uiMenu {
 struct uiMenuItem {
 	WCHAR *name;
 	int type;
-	WORD id;
+	UINT id;
 	void (*onClicked)(uiMenuItem *, uiWindow *, void *);
 	void *onClickedData;
 	BOOL disabled;				// template for new instances; kept in sync with everything else
@@ -144,6 +149,8 @@ static uiMenuItem *newItem(uiMenu *m, int type, const char *name)
 	}
 
 	if (item->type != typeSeparator) {
+		if (curID > maxMenuID)
+			uiprivUserBug("You can not create more than 65436 menu items on Windows.");
 		item->id = curID;
 		curID++;
 	}
@@ -293,7 +300,7 @@ HMENU makeMenubar(void)
 	return menubar;
 }
 
-void runMenuEvent(WORD id, uiWindow *w)
+void runMenuEvent(UINT id, uiWindow *w)
 {
 	uiMenu *m;
 	uiMenuItem *item;
@@ -309,7 +316,7 @@ void runMenuEvent(WORD id, uiWindow *w)
 		}
 	}
 	// no match
-	uiprivImplBug("unknown menu ID %hu in runMenuEvent()", id);
+	uiprivImplBug("unknown menu ID %u in runMenuEvent()", id);
 
 found:
 	// first toggle checkboxes, if any
@@ -417,7 +424,7 @@ void uninitMenus(void)
 	len = 0;
 	cap = 0;
 	menusFinalized = FALSE;
-	curID = 100;
+	curID = firstMenuID;
 	hasQuit = FALSE;
 	hasPreferences = FALSE;
 	hasAbout = FALSE;

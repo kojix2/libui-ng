@@ -30,6 +30,21 @@ struct uiWindow {
 	BOOL changingPosition;
 };
 
+static BOOL isMenuCommand(WPARAM wParam, LPARAM lParam)
+{
+	if (lParam != 0)
+		return FALSE;
+
+	// IsDialogMessage() will also generate IDOK and IDCANCEL when pressing
+	// Enter and Escape (respectively) on some controls, like EDIT controls.
+	// Swallow those too; they'll cause runMenuEvent() to panic.
+	// TODO fix the root cause somehow
+	if (HIWORD(wParam) != 0 || LOWORD(wParam) <= IDCANCEL)
+		return FALSE;
+
+	return TRUE;
+}
+
 // from https://msdn.microsoft.com/en-us/library/windows/desktop/dn742486.aspx#sizingandspacing
 #define windowMargin 7
 
@@ -100,13 +115,7 @@ static LRESULT CALLBACK windowWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARA
 		return lResult;
 	switch (uMsg) {
 	case WM_COMMAND:
-		// not a menu
-		if (lParam != 0)
-			break;
-		// IsDialogMessage() will also generate IDOK and IDCANCEL when pressing Enter and Escape (respectively) on some controls, like EDIT controls
-		// swallow those too; they'll cause runMenuEvent() to panic
-		// TODO fix the root cause somehow
-		if (HIWORD(wParam) != 0 || LOWORD(wParam) <= IDCANCEL)
+		if (!isMenuCommand(wParam, lParam))
 			break;
 		runMenuEvent(LOWORD(wParam), uiWindow(w));
 		return 0;

@@ -4,7 +4,7 @@
 // menu.c
 extern HMENU makeMenubar(void);
 extern const uiMenuItem *menuIDToItem(UINT_PTR);
-extern void runMenuEvent(WORD, uiWindow *);
+extern void runMenuEvent(UINT, uiWindow *);
 extern void freeMenubar(HMENU);
 extern void uninitMenus(void);
 
@@ -16,4 +16,3 @@ extern uiDrawContext *newContext(ID2D1RenderTarget *);
 extern void freeContext(uiDrawContext *);
 
 #endif
-
