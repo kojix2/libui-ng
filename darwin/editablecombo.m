@@ -77,6 +77,8 @@ static void uiEditableComboboxDestroy(uiControl *cc)
 {
 	uiEditableCombobox *c = uiEditableCombobox(cc);
 
+	[NSObject cancelPreviousPerformRequestsWithTarget:c->cb];
+	[c->cb setDelegate:nil];
 	[c->cb release];
 	uiFreeControl(uiControl(c));
 }
@@ -94,12 +96,16 @@ char *uiEditableComboboxText(uiEditableCombobox *c)
 void uiEditableComboboxSetText(uiEditableCombobox *c, const char *text)
 {
 	NSString *t;
+	id delegate;
 
 	t = uiprivToNSString(text);
+	delegate = [c->cb delegate];
+	[c->cb setDelegate:nil];
 	[c->cb setStringValue:t];
 	// yes, let's imitate the behavior that caused uiEditableCombobox to be separate in the first place!
 	// just to avoid confusion when users see an option in the list in the text field but not selected in the list
 	[c->cb selectItemWithObjectValue:t];
+	[c->cb setDelegate:delegate];
 }
 
 #if 0
