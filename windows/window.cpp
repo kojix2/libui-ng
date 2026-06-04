@@ -70,6 +70,14 @@ static void windowRelayout(uiWindow *w)
 	uiWindowsEnsureMoveWindowDuringResize(child, x, y, width, height);
 }
 
+static void updateFrame(uiWindow *w)
+{
+	if (SetWindowPos(w->hwnd, NULL,
+		0, 0, 0, 0,
+		SWP_FRAMECHANGED | SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOOWNERZORDER | SWP_NOSIZE | SWP_NOZORDER) == 0)
+		logLastError(L"error updating window frame");
+}
+
 static LRESULT CALLBACK windowWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	LONG_PTR ww;
@@ -447,11 +455,15 @@ int uiWindowBorderless(uiWindow *w)
 void uiWindowSetBorderless(uiWindow *w, int borderless)
 {
 	w->borderless = borderless;
-	if (w->borderless)
+	if (w->borderless) {
 		setStyle(w->hwnd, getStyle(w->hwnd) & ~WS_OVERLAPPEDWINDOW);
-	else
-		if (!w->fullscreen)		// keep borderless until leaving fullscreen
+		updateFrame(w);
+	} else {
+		if (!w->fullscreen) {		// keep borderless until leaving fullscreen
 			setStyle(w->hwnd, getStyle(w->hwnd) | WS_OVERLAPPEDWINDOW);
+			updateFrame(w);
+		}
+	}
 }
 
 void uiWindowSetChild(uiWindow *w, uiControl *child)
@@ -493,6 +505,7 @@ void uiWindowSetResizeable(uiWindow *w, int resizeable)
 	} else {
 		setStyle(w->hwnd, getStyle(w->hwnd) & ~WS_THICKFRAME & ~WS_MAXIMIZEBOX);
 	}
+	updateFrame(w);
 }
 
 // see http://blogs.msdn.com/b/oldnewthing/archive/2003/09/11/54885.aspx and http://blogs.msdn.com/b/oldnewthing/archive/2003/09/13/54917.aspx
