@@ -25,6 +25,16 @@ struct uiWindow {
 	int focused;
 };
 
+static NSUInteger windowStyleMask(uiWindow *w)
+{
+	NSUInteger styleMask;
+
+	styleMask = NSTitledWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask;
+	if (w->resizeable)
+		styleMask |= NSResizableWindowMask;
+	return styleMask;
+}
+
 @implementation uiprivNSWindow
 
 - (void)uiprivDoMove:(NSEvent *)initialEvent
@@ -95,6 +105,8 @@ struct uiWindow {
 
 	if (!w->suppressSizeChanged)
 		w->fullscreen = 0;
+	if (w->borderless)
+		[w->window setStyleMask:NSBorderlessWindowMask];
 }
 
 - (void)windowDidBecomeKey:(NSNotification *)note
@@ -361,7 +373,7 @@ void uiWindowSetBorderless(uiWindow *w, int borderless)
 		if (!w->fullscreen)
 			[w->window setStyleMask:NSBorderlessWindowMask];
 	} else {
-		[w->window setStyleMask:defaultStyleMask];
+		[w->window setStyleMask:windowStyleMask(w)];
 	}
 }
 
