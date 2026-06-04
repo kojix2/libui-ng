@@ -39,6 +39,14 @@ enum uiprivMenuItemType {
 }
 @end
 
+static uiWindow *currentMenuEventWindow(void)
+{
+	// macOS menu items belong to the application menu bar, not to a
+	// particular uiWindow. Pass the current key libui window as a best-effort
+	// source for the callback; this may legitimately be NULL.
+	return uiprivWindowFromNSWindow([uiprivNSApp() keyWindow]);
+}
+
 @implementation uiprivMenuItem
 - (id)initWithTitle:(NSString *)title uiMenuItem:(uiMenuItem *)i
 {
@@ -68,9 +76,7 @@ enum uiprivMenuItemType {
 		uiMenuItemSetChecked(self->item, !uiMenuItemChecked(self->item));
 		// fall through
 	default:
-		// use the key window as the source of the menu event; it's the active window
-		(*(self->item->onClicked))(self->item, uiprivWindowFromNSWindow([uiprivNSApp() keyWindow]),
-			self->item->onClickedData);
+		(*(self->item->onClicked))(self->item, currentMenuEventWindow(), self->item->onClickedData);
 		break;
 	}
 }
