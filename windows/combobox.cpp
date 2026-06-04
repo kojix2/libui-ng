@@ -55,6 +55,22 @@ static void defaultOnSelected(uiCombobox *c, void *data)
 	// do nothing
 }
 
+static void setComboboxSelected(uiCombobox *c, int n)
+{
+	// TODO error check
+	SendMessageW(c->hwnd, CB_SETCURSEL, (WPARAM) n, 0);
+}
+
+static int comboboxSelected(uiCombobox *c)
+{
+	LRESULT n;
+
+	n = SendMessage(c->hwnd, CB_GETCURSEL, 0, 0);
+	if (n == (LRESULT) CB_ERR)
+		return -1;
+	return n;
+}
+
 void uiComboboxAppend(uiCombobox *c, const char *text)
 {
 	WCHAR *wtext;
@@ -73,23 +89,43 @@ void uiComboboxInsertAt(uiCombobox *c, int n, const char *text)
 {
 	WCHAR *wtext;
 	LRESULT res;
+	int selected;
 
+	selected = comboboxSelected(c);
 	wtext = toUTF16(text);
 	res = SendMessageW(c->hwnd, CB_INSERTSTRING, (WPARAM)n, (LPARAM) wtext);
 	if (res == (LRESULT) CB_ERR)
 		logLastError(L"error inserting item to uiCombobox");
 	else if (res == (LRESULT) CB_ERRSPACE)
 		logLastError(L"memory exhausted inserting item to uiCombobox");
+	else {
+		if (selected != -1 && ((int) res) <= selected)
+			selected++;
+		setComboboxSelected(c, selected);
+	}
 	uiprivFree(wtext);
 }
 
 void uiComboboxDelete(uiCombobox *c, int n)
 {
 	LRESULT res;
+	int selected;
 
+	selected = comboboxSelected(c);
 	res = SendMessage(c->hwnd, CB_DELETESTRING, (WPARAM)n, 0);
 	if (res == (LRESULT) CB_ERR)
 		logLastError(L"error removing item from uiCombobox");
+	else {
+		if (selected != -1) {
+			if (n < selected)
+				selected--;
+			else if (n == selected)
+				selected = -1;
+		}
+		if (res == 0)
+			selected = -1;
+		setComboboxSelected(c, selected);
+	}
 }
 
 void uiComboboxClear(uiCombobox *c)
@@ -99,6 +135,8 @@ void uiComboboxClear(uiCombobox *c)
 	res = SendMessage(c->hwnd, CB_RESETCONTENT, 0, 0);
 	if (res == (LRESULT) CB_ERR)
 		logLastError(L"error clearing items from uiCombobox");
+	else
+		setComboboxSelected(c, -1);
 }
 
 int uiComboboxNumItems(uiCombobox *c)
@@ -113,18 +151,12 @@ int uiComboboxNumItems(uiCombobox *c)
 
 int uiComboboxSelected(uiCombobox *c)
 {
-	LRESULT n;
-
-	n = SendMessage(c->hwnd, CB_GETCURSEL, 0, 0);
-	if (n == (LRESULT) CB_ERR)
-		return -1;
-	return n;
+	return comboboxSelected(c);
 }
 
 void uiComboboxSetSelected(uiCombobox *c, int n)
 {
-	// TODO error check
-	SendMessageW(c->hwnd, CB_SETCURSEL, (WPARAM) n, 0);
+	setComboboxSelected(c, n);
 }
 
 void uiComboboxOnSelected(uiCombobox *c, void (*f)(uiCombobox *c, void *data), void *data)
