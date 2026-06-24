@@ -2,6 +2,7 @@
 #include "uipriv_windows.hpp"
 #include "draw.hpp"
 #include "attrstr.hpp"
+#include <dwrite_2.h>
 
 // TODO verify our renderer is correct, especially with regards to snapping
 
@@ -263,6 +264,7 @@ class textRenderer : public IDWriteTextRenderer {
 	ID2D1RenderTarget *rt;
 	BOOL snap;
 	ID2D1SolidColorBrush *black;
+	IDWriteFactory2 *dwfactory2;
 public:
 	textRenderer(ID2D1RenderTarget *rt, BOOL snap, ID2D1SolidColorBrush *black)
 	{
@@ -270,6 +272,8 @@ public:
 		this->rt = rt;
 		this->snap = snap;
 		this->black = black;
+		this->dwfactory2 = NULL;
+		dwfactory->QueryInterface(__uuidof (IDWriteFactory2), (void **) (&(this->dwfactory2)));
 	}
 
 	// IUnknown
@@ -298,6 +302,8 @@ public:
 	{
 		this->refcount--;
 		if (this->refcount == 0) {
+			if (this->dwfactory2 != NULL)
+				this->dwfactory2->Release();
 			delete this;
 			return 0;
 		}
@@ -360,11 +366,89 @@ public:
 			brush = this->black;
 			brush->AddRef();
 		}
-		this->rt->DrawGlyphRun(
-			baseline,
-			glyphRun,
-			brush,
-			measuringMode);
+
+		HRESULT hr = DWRITE_E_NOCOLOR;
+		IDWriteColorGlyphRunEnumerator *colorLayers = NULL;
+
+		if (this->dwfactory2 != NULL)
+			hr = this->dwfactory2->TranslateColorGlyphRun(
+				baselineOriginX,
+				baselineOriginY,
+				glyphRun,
+				glyphRunDescription,
+				measuringMode,
+				NULL,
+				0,
+				&colorLayers);
+
+		if (this->dwfactory2 == NULL || hr == DWRITE_E_NOCOLOR || hr == E_NOTIMPL) {
+			this->rt->DrawGlyphRun(
+				baseline,
+				glyphRun,
+				brush,
+				measuringMode);
+		} else if (FAILED(hr)) {
+			brush->Release();
+			return logHRESULT(L"error translating color glyph run", hr);
+		} else if (colorLayers == NULL) {
+			brush->Release();
+			return logHRESULT(L"error translating color glyph run", E_UNEXPECTED);
+		} else {
+			for (;;) {
+				BOOL haveRun = FALSE;
+				const DWRITE_COLOR_GLYPH_RUN *colorRun = NULL;
+				ID2D1Brush *layerBrush = NULL;
+				ID2D1SolidColorBrush *tempBrush = NULL;
+				D2D1_POINT_2F layerBaseline;
+
+				hr = colorLayers->MoveNext(&haveRun);
+				if (hr != S_OK) {
+					colorLayers->Release();
+					brush->Release();
+					return logHRESULT(L"error advancing color glyph run enumerator", hr);
+				}
+				if (!haveRun)
+					break;
+
+				hr = colorLayers->GetCurrentRun(&colorRun);
+				if (hr != S_OK || colorRun == NULL) {
+					colorLayers->Release();
+					brush->Release();
+					return logHRESULT(L"error getting current color glyph run", hr != S_OK ? hr : E_UNEXPECTED);
+				}
+
+				if (colorRun->paletteIndex == 0xFFFF) {
+					layerBrush = brush;
+				} else {
+					D2D1_COLOR_F color;
+
+					color.r = colorRun->runColor.r;
+					color.g = colorRun->runColor.g;
+					color.b = colorRun->runColor.b;
+					color.a = colorRun->runColor.a;
+					hr = this->rt->CreateSolidColorBrush(color, &tempBrush);
+					if (hr != S_OK) {
+						colorLayers->Release();
+						brush->Release();
+						return logHRESULT(L"error creating color glyph layer brush", hr);
+					}
+					layerBrush = tempBrush;
+				}
+
+				layerBaseline.x = colorRun->baselineOriginX;
+				layerBaseline.y = colorRun->baselineOriginY;
+				this->rt->DrawGlyphRun(
+					layerBaseline,
+					&(colorRun->glyphRun),
+					layerBrush,
+					measuringMode);
+
+				if (tempBrush != NULL)
+					tempBrush->Release();
+			}
+			colorLayers->Release();
+		}
+
 		brush->Release();
 		return S_OK;
 	}
