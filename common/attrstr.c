@@ -150,46 +150,38 @@ static void validateAttributeRange(uiAttributedString *s, size_t start, size_t e
 		uiprivUserBug("Attribute range end is not on a UTF-8 codepoint boundary for a uiAttributedString.");
 }
 
-void uiAttributedStringInsertAtUnattributed(uiAttributedString *s, const char *str, size_t at)
+static char *snapshotInputString(const char *str)
 {
-	uint32_t rune;
-	char buf[4];
-	uint16_t buf16[2];
 	char *copy;
-	size_t n8, n16;		// TODO make loop-local? to avoid using them in the wrong place again
-	size_t old, old16;
-	size_t oldn8, oldn16;
-	size_t oldlen, old16len;
-	size_t at16;
-	size_t i;
 	size_t len;
-
-	validateInsertPosition(s, at);
 
 	len = strlen(str);
 	copy = (char *) uiprivAlloc((len + 1) * sizeof (char), "char[] (uiAttributedString)");
 	memcpy(copy, str, (len + 1) * sizeof (char));
-	str = copy;
+	return copy;
+}
 
-	at16 = 0;
-	if (s->u8tou16 != NULL)
-		at16 = s->u8tou16[at];
+static size_t insertPositionUTF16(uiAttributedString *s, size_t at)
+{
+	if (s->u8tou16 == NULL)
+		return 0;
+	return s->u8tou16[at];
+}
 
-	// do this first to reclaim memory
-	invalidateGraphemes(s);
+static void measureInsertedString(const char *str, size_t *n8, size_t *n16)
+{
+	// This includes post-validated UTF-8.
+	u8u16len(str, n8, n16);
+}
 
-	// first figure out how much we need to grow by
-	// this includes post-validated UTF-8
-	u8u16len(str, &n8, &n16);
-
-	// and resize
-	old = at;
-	old16 = at16;
-	oldlen = s->len;
-	old16len = s->u16len;
+static void reserveStringStorage(uiAttributedString *s, size_t n8, size_t n16)
+{
 	resize(s, s->len + n8, s->u16len + n16);
+}
 
-	// move existing characters out of the way
+static void shiftExistingStorage(uiAttributedString *s, size_t at, size_t at16,
+	size_t n8, size_t n16, size_t oldlen, size_t old16len)
+{
 	// note the use of memmove(): https://twitter.com/rob_pike/status/737797688217894912
 	memmove(
 		s->s + at + n8,
@@ -208,12 +200,20 @@ void uiAttributedStringInsertAtUnattributed(uiAttributedString *s, const char *s
 		s->u16tou8 + at16 + n16,
 		s->u16tou8 + at16,
 		(old16len - at16 + 1) * sizeof (size_t));
-	oldn8 = n8;
-	oldn16 = n16;
+}
 
-	// and copy
+static void copyInsertedString(uiAttributedString *s, const char *str, size_t at, size_t at16)
+{
+	uint32_t rune;
+	char buf[4];
+	uint16_t buf16[2];
+	size_t old, old16;
+
+	old = at;
+	old16 = at16;
 	while (*str) {
 		size_t n;
+		size_t n16;
 
 		str = uiprivUTF8DecodeRune(str, 0, &rune);
 		n = uiprivUTF8EncodeRune(rune, buf);
@@ -245,13 +245,49 @@ void uiAttributedStringInsertAtUnattributed(uiAttributedString *s, const char *s
 	// TODO is this done by the below?
 //TODO	s->u8tou16[old] = old16;
 //TODO	s->u16tou8[old16] = old;
+}
 
-	// and adjust the prior values in the conversion tables
+static void shiftExistingIndexes(uiAttributedString *s, size_t at, size_t at16,
+	size_t n8, size_t n16, size_t oldlen, size_t old16len)
+{
+	size_t i;
+
 	// use <= so the terminating 0 gets updated too
 	for (i = 0; i <= oldlen - at; i++)
-		s->u8tou16[at + oldn8 + i] += s->u16len - old16len;
+		s->u8tou16[at + n8 + i] += s->u16len - old16len;
 	for (i = 0; i <= old16len - at16; i++)
-		s->u16tou8[at16 + oldn16 + i] += s->len - oldlen;
+		s->u16tou8[at16 + n16 + i] += s->len - oldlen;
+}
+
+void uiAttributedStringInsertAtUnattributed(uiAttributedString *s, const char *str, size_t at)
+{
+	char *copy;
+	size_t n8, n16;
+	size_t oldlen, old16len;
+	size_t at16;
+
+	validateInsertPosition(s, at);
+
+	copy = snapshotInputString(str);
+	str = copy;
+
+	at16 = insertPositionUTF16(s, at);
+
+	// do this first to reclaim memory
+	invalidateGraphemes(s);
+
+	measureInsertedString(str, &n8, &n16);
+
+	// and resize
+	oldlen = s->len;
+	old16len = s->u16len;
+	reserveStringStorage(s, n8, n16);
+
+	shiftExistingStorage(s, at, at16, n8, n16, oldlen, old16len);
+	copyInsertedString(s, str, at, at16);
+
+	// and adjust the prior values in the conversion tables
+	shiftExistingIndexes(s, at, at16, n8, n16, oldlen, old16len);
 
 	// and finally do the attributes
 	uiprivAttrListInsertCharactersUnattributed(s->attrs, at, n8);
