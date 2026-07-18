@@ -15,18 +15,6 @@ struct uiForm {
 	int padded;
 };
 
-static void formPadding(uiForm *f, int *xpadding, int *ypadding)
-{
-	uiWindowsSizing sizing;
-
-	*xpadding = 0;
-	*ypadding = 0;
-	if (f->padded) {
-		uiWindowsGetSizing(f->hwnd, &sizing);
-		uiWindowsSizingStandardPadding(&sizing, xpadding, ypadding);
-	}
-}
-
 // via http://msdn.microsoft.com/en-us/library/windows/desktop/dn742486.aspx#sizingandspacing
 #define labelHeight 8
 #define labelYOffset 3
@@ -54,7 +42,7 @@ static void formRelayout(uiForm *f)
 	height = r.bottom - r.top;
 
 	// 0) get this Form's padding
-	formPadding(f, &xpadding, &ypadding);
+	uiWindowsStandardPadding(f->hwnd, f->padded, &xpadding, &ypadding);
 
 	// 1) get width of labels and height of non-stretchy controls
 	// this will tell us how much space will be left for controls
@@ -178,7 +166,7 @@ static void uiFormMinimumSize(uiWindowsControl *c, int *width, int *height)
 		return;
 
 	// 0) get this Form's padding
-	formPadding(f, &xpadding, &ypadding);
+	uiWindowsStandardPadding(f->hwnd, f->padded, &xpadding, &ypadding);
 
 	// 1) determine the longest width of all controls and labels; add in the height of non-stretchy controls and get (but not add in) the largest heights of stretchy controls
 	// we still add in like direction of stretchy controls

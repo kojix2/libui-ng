@@ -16,18 +16,6 @@ struct uiBox {
 	int padded;
 };
 
-static void boxPadding(uiBox *b, int *xpadding, int *ypadding)
-{
-	uiWindowsSizing sizing;
-
-	*xpadding = 0;
-	*ypadding = 0;
-	if (b->padded) {
-		uiWindowsGetSizing(b->hwnd, &sizing);
-		uiWindowsSizingStandardPadding(&sizing, xpadding, ypadding);
-	}
-}
-
 static void boxRelayout(uiBox *b)
 {
 	RECT r;
@@ -48,7 +36,7 @@ static void boxRelayout(uiBox *b)
 	height = r.bottom - r.top;
 
 	// -1) get this Box's padding
-	boxPadding(b, &xpadding, &ypadding);
+	uiWindowsStandardPadding(b->hwnd, b->padded, &xpadding, &ypadding);
 
 	// 1) get width and height of non-stretchy controls
 	// this will tell us how much space will be left for stretchy controls
@@ -171,7 +159,7 @@ static void uiBoxMinimumSize(uiWindowsControl *c, int *width, int *height)
 		return;
 
 	// 0) get this Box's padding
-	boxPadding(b, &xpadding, &ypadding);
+	uiWindowsStandardPadding(b->hwnd, b->padded, &xpadding, &ypadding);
 
 	// 1) add in the size of non-stretchy controls and get (but not add in) the largest widths and heights of stretchy controls
 	// we still add in like direction of stretchy controls

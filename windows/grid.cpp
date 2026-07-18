@@ -174,18 +174,6 @@ public:
 	}
 };
 
-static void gridPadding(uiGrid *g, int *xpadding, int *ypadding)
-{
-	uiWindowsSizing sizing;
-
-	*xpadding = 0;
-	*ypadding = 0;
-	if (g->padded) {
-		uiWindowsGetSizing(g->hwnd, &sizing);
-		uiWindowsSizingStandardPadding(&sizing, xpadding, ypadding);
-	}
-}
-
 static void measureTracks(uiGrid *g, gridLayoutData *ld)
 {
 	int ix, iy;
@@ -431,7 +419,7 @@ static void gridRelayout(uiGrid *g)
 	width = r.right - r.left;
 	height = r.bottom - r.top;
 
-	gridPadding(g, &xpadding, &ypadding);
+	uiWindowsStandardPadding(g->hwnd, g->padded, &xpadding, &ypadding);
 	ld = new gridLayoutData(g);
 	if (ld->noVisible) {		// nothing to do
 		delete ld;
@@ -506,7 +494,7 @@ static void uiGridMinimumSize(uiWindowsControl *c, int *width, int *height)
 	if (g->children->size() == 0)
 		return;		// nothing to do
 
-	gridPadding(g, &xpadding, &ypadding);
+	uiWindowsStandardPadding(g->hwnd, g->padded, &xpadding, &ypadding);
 	ld = new gridLayoutData(g);
 	if (ld->noVisible) {		// nothing to do; return 0x0
 		delete ld;
