@@ -78,8 +78,7 @@ jobs:
       - name: Meson Setup Build
         shell: cmd
         run: |
-          meson setup builddir --buildtype=${{ matrix.buildtype }} --default-library=${{ matrix.libtype }}
-          meson configure builddir -Dc_args="/MT" -Dcpp_args="/MT"
+          meson setup builddir --buildtype=${{ matrix.buildtype }} --default-library=${{ matrix.libtype }} -Db_vscrt=mt
       - name: Ninja Build
         run: ninja -C builddir --verbose
       - name: Run Tests
