@@ -592,6 +592,7 @@ void uiTableSetSelection(uiTable *t, uiTableSelection *sel)
 	}
 
 	ts = gtk_tree_view_get_selection(t->tv);
+	g_signal_handler_block(ts, t->onSelectionChangedSignal);
 	gtk_tree_selection_unselect_all(ts);
 
 	for (i = 0; i < sel->NumRows; ++i) {
@@ -599,6 +600,9 @@ void uiTableSetSelection(uiTable *t, uiTableSelection *sel)
 		gtk_tree_selection_select_path(ts, path);
 		gtk_tree_path_free(path);
 	}
+
+	selectionChanged(t, ts);
+	g_signal_handler_unblock(ts, t->onSelectionChangedSignal);
 }
 
 static GtkTreeViewColumn *addColumn(uiTable *t, const char *name)
