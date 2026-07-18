@@ -133,6 +133,45 @@ static void attrstrSetFamilyAttributeMergesAdjacentEqualValues(void **state)
 	uiFreeAttributedString(s);
 }
 
+static void attrstrAppendSelf(void **state)
+{
+	uiAttributedString *s;
+	const char *p;
+
+	(void) state;
+	s = uiNewAttributedString("abc");
+	p = uiAttributedStringString(s);
+	uiAttributedStringAppendUnattributed(s, p);
+	assert_string_equal(uiAttributedStringString(s), "abcabc");
+	uiFreeAttributedString(s);
+}
+
+static void attrstrAppendSelfFromInteriorPointer(void **state)
+{
+	uiAttributedString *s;
+	const char *p;
+
+	(void) state;
+	s = uiNewAttributedString("abcdef");
+	p = uiAttributedStringString(s) + 2;
+	uiAttributedStringAppendUnattributed(s, p);
+	assert_string_equal(uiAttributedStringString(s), "abcdefcdef");
+	uiFreeAttributedString(s);
+}
+
+static void attrstrInsertSelfFromInteriorPointer(void **state)
+{
+	uiAttributedString *s;
+	const char *p;
+
+	(void) state;
+	s = uiNewAttributedString("abcdef");
+	p = uiAttributedStringString(s) + 2;
+	uiAttributedStringInsertAtUnattributed(s, p, 3);
+	assert_string_equal(uiAttributedStringString(s), "abccdefdef");
+	uiFreeAttributedString(s);
+}
+
 int attrstrRunUnitTests(void)
 {
 	const struct CMUnitTest tests[] = {
@@ -143,6 +182,12 @@ int attrstrRunUnitTests(void)
 		cmocka_unit_test_setup_teardown(attrstrSetAttributeMergesAdjacentEqualValues,
 			attrstrSetup, attrstrTeardown),
 		cmocka_unit_test_setup_teardown(attrstrSetFamilyAttributeMergesAdjacentEqualValues,
+			attrstrSetup, attrstrTeardown),
+		cmocka_unit_test_setup_teardown(attrstrAppendSelf,
+			attrstrSetup, attrstrTeardown),
+		cmocka_unit_test_setup_teardown(attrstrAppendSelfFromInteriorPointer,
+			attrstrSetup, attrstrTeardown),
+		cmocka_unit_test_setup_teardown(attrstrInsertSelfFromInteriorPointer,
 			attrstrSetup, attrstrTeardown),
 	};
 

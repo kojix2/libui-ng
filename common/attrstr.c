@@ -155,14 +155,21 @@ void uiAttributedStringInsertAtUnattributed(uiAttributedString *s, const char *s
 	uint32_t rune;
 	char buf[4];
 	uint16_t buf16[2];
+	char *copy;
 	size_t n8, n16;		// TODO make loop-local? to avoid using them in the wrong place again
 	size_t old, old16;
 	size_t oldn8, oldn16;
 	size_t oldlen, old16len;
 	size_t at16;
 	size_t i;
+	size_t len;
 
 	validateInsertPosition(s, at);
+
+	len = strlen(str);
+	copy = (char *) uiprivAlloc((len + 1) * sizeof (char), "char[] (uiAttributedString)");
+	memcpy(copy, str, (len + 1) * sizeof (char));
+	str = copy;
 
 	at16 = 0;
 	if (s->u8tou16 != NULL)
@@ -248,6 +255,7 @@ void uiAttributedStringInsertAtUnattributed(uiAttributedString *s, const char *s
 
 	// and finally do the attributes
 	uiprivAttrListInsertCharactersUnattributed(s->attrs, at, n8);
+	uiprivFree(copy);
 }
 
 // TODO document that end is the first index that will be maintained
