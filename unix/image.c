@@ -36,6 +36,7 @@ void uiImageAppend(uiImage *i, void *pixels, int pixelWidth, int pixelHeight, in
 {
 	cairo_surface_t *cs;
 	uint8_t *data, *pix;
+	int64_t minStride;
 	int realStride;
 	int x, y;
 
@@ -49,7 +50,8 @@ void uiImageAppend(uiImage *i, void *pixels, int pixelWidth, int pixelHeight, in
 		uiprivUserBug("You cannot append a uiImage representation with pixel height %d.", pixelHeight);
 	if (pixelWidth > INT_MAX / 4)
 		uiprivUserBug("You cannot append a uiImage representation with pixel width %d.", pixelWidth);
-	if (byteStride < pixelWidth * 4)
+	minStride = (int64_t) pixelWidth * 4;
+	if (byteStride < minStride)
 		uiprivUserBug("You cannot append a uiImage representation with byte stride %d and pixel width %d.", byteStride, pixelWidth);
 
 	// note that this is native-endian
