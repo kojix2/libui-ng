@@ -186,35 +186,12 @@ static void gridPadding(uiGrid *g, int *xpadding, int *ypadding)
 	}
 }
 
-static void gridRelayout(uiGrid *g)
+static void measureTracks(uiGrid *g, gridLayoutData *ld)
 {
-	RECT r;
-	int width, height;
-	gridLayoutData *ld;
-	int xpadding, ypadding;
 	int ix, iy;
 	int iwidth, iheight;
 	int i;
 	struct gridChild *gc;
-	int nhexpand, nvexpand;
-
-	if (g->children->size() == 0)
-		return;		// nothing to do
-
-	uiWindowsEnsureGetClientRect(g->hwnd, &r);
-	width = r.right - r.left;
-	height = r.bottom - r.top;
-
-	gridPadding(g, &xpadding, &ypadding);
-	ld = new gridLayoutData(g);
-	if (ld->noVisible) {		// nothing to do
-		delete ld;
-		return;
-	}
-
-	// 0) discount padding from width/height
-	width -= (ld->nVisibleColumns - 1) * xpadding;
-	height -= (ld->nVisibleRows - 1) * ypadding;
 
 	// 1) compute colwidths and rowheights before handling expansion
 	// we only count non-spanning controls to avoid weirdness
@@ -235,6 +212,13 @@ static void gridRelayout(uiGrid *g)
 			gc->minwidth = iwidth;
 			gc->minheight = iheight;
 		}
+}
+
+static void findExpandingTracks(uiGrid *g, gridLayoutData *ld)
+{
+	int ix, iy;
+	int i;
+	struct gridChild *gc;
 
 	// 2) figure out which rows/columns expand but not span
 	// we need to know which expanding rows/columns don't span before we can handle the ones that do
@@ -279,6 +263,12 @@ static void gridRelayout(uiGrid *g)
 					ld->vexpand[toyindex(g, iy)] = true;
 		}
 	}
+}
+
+static void distributeExtraSpace(uiGrid *g, gridLayoutData *ld, int width, int height)
+{
+	int i;
+	int nhexpand, nvexpand;
 
 	// 4) compute and assign expanded widths/heights
 	nhexpand = 0;
@@ -299,6 +289,13 @@ static void gridRelayout(uiGrid *g)
 	for (i = 0; i < ycount(g); i++)
 		if (ld->vexpand[i])
 			ld->rowheights[i] = height / nvexpand;
+}
+
+static void computeCellRects(uiGrid *g, gridLayoutData *ld, int xpadding, int ypadding)
+{
+	int ix, iy;
+	int i;
+	struct gridChild *gc;
 
 	// 5) reset the final coordinates for the next step
 	for (i = 0; i < g->children->size(); i++) {
@@ -360,6 +357,12 @@ static void gridRelayout(uiGrid *g)
 			prev = i;
 		}
 	}
+}
+
+static void applyAlignment(uiGrid *g)
+{
+	int i;
+	struct gridChild *gc;
 
 	// 7) everything as it stands now is set for xalign == Fill yalign == Fill; set the correct alignments
 	// this is why we saved minwidth/minheight above
@@ -390,6 +393,13 @@ static void gridRelayout(uiGrid *g)
 			gc->finalheight = gc->minheight;		// for all three
 		}
 	}
+}
+
+static void moveChildren(uiGrid *g, gridLayoutData *ld)
+{
+	int ix, iy;
+	int i;
+	struct gridChild *gc;
 
 	// 8) and FINALLY we resize
 	for (iy = 0; iy < ycount(g); iy++)
@@ -405,6 +415,39 @@ static void gridRelayout(uiGrid *g)
 					gc->finalheight);
 			}
 		}
+}
+
+static void gridRelayout(uiGrid *g)
+{
+	RECT r;
+	int width, height;
+	gridLayoutData *ld;
+	int xpadding, ypadding;
+
+	if (g->children->size() == 0)
+		return;		// nothing to do
+
+	uiWindowsEnsureGetClientRect(g->hwnd, &r);
+	width = r.right - r.left;
+	height = r.bottom - r.top;
+
+	gridPadding(g, &xpadding, &ypadding);
+	ld = new gridLayoutData(g);
+	if (ld->noVisible) {		// nothing to do
+		delete ld;
+		return;
+	}
+
+	// 0) discount padding from width/height
+	width -= (ld->nVisibleColumns - 1) * xpadding;
+	height -= (ld->nVisibleRows - 1) * ypadding;
+
+	measureTracks(g, ld);
+	findExpandingTracks(g, ld);
+	distributeExtraSpace(g, ld, width, height);
+	computeCellRects(g, ld, xpadding, ypadding);
+	applyAlignment(g);
+	moveChildren(g, ld);
 
 	delete ld;
 }
