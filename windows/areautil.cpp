@@ -69,17 +69,3 @@ void pixelsToDIP(uiArea *a, double *x, double *y)
 	if (y != NULL)
 		*y = (*y * 96) / dpiy;
 }
-
-void dipToPixels(uiArea *a, double *x, double *y)
-{
-	FLOAT dpix, dpiy;
-
-	if (a->rt != NULL)
-		a->rt->GetDpi(&dpix, &dpiy);
-	else
-		hwndDPI(a->hwnd, &dpix, &dpiy);
-	if (x != NULL)
-		*x = (*x * dpix) / 96;
-	if (y != NULL)
-		*y = (*y * dpiy) / 96;
-}

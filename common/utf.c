@@ -239,34 +239,6 @@ const uint16_t *uiprivUTF16DecodeRune(const uint16_t *s, size_t nElem, uint32_t 
 	return s;
 }
 
-// TODO find a way to reduce the code in all of these somehow
-// TODO find a way to remove u as well
-size_t uiprivUTF8RuneCount(const char *s, size_t nElem)
-{
-	size_t len;
-	uint32_t rune;
-
-	if (nElem != 0) {
-		const char *t, *u;
-
-		len = 0;
-		t = s;
-		while (nElem != 0) {
-			u = uiprivUTF8DecodeRune(t, nElem, &rune);
-			len++;
-			nElem -= u - t;
-			t = u;
-		}
-		return len;
-	}
-	len = 0;
-	while (*s) {
-		s = uiprivUTF8DecodeRune(s, nElem, &rune);
-		len++;
-	}
-	return len;
-}
-
 size_t uiprivUTF8UTF16Count(const char *s, size_t nElem)
 {
 	size_t len;
@@ -290,32 +262,6 @@ size_t uiprivUTF8UTF16Count(const char *s, size_t nElem)
 	while (*s) {
 		s = uiprivUTF8DecodeRune(s, nElem, &rune);
 		len += uiprivUTF16EncodeRune(rune, encoded);
-	}
-	return len;
-}
-
-size_t uiprivUTF16RuneCount(const uint16_t *s, size_t nElem)
-{
-	size_t len;
-	uint32_t rune;
-
-	if (nElem != 0) {
-		const uint16_t *t, *u;
-
-		len = 0;
-		t = s;
-		while (nElem != 0) {
-			u = uiprivUTF16DecodeRune(t, nElem, &rune);
-			len++;
-			nElem -= u - t;
-			t = u;
-		}
-		return len;
-	}
-	len = 0;
-	while (*s) {
-		s = uiprivUTF16DecodeRune(s, nElem, &rune);
-		len++;
 	}
 	return len;
 }

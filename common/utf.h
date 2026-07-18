@@ -20,9 +20,7 @@ extern const char *uiprivUTF8DecodeRune(const char *s, size_t nElem, uint32_t *r
 extern size_t uiprivUTF16EncodeRune(uint32_t rune, uint16_t *encoded);
 extern const uint16_t *uiprivUTF16DecodeRune(const uint16_t *s, size_t nElem, uint32_t *rune);
 
-extern size_t uiprivUTF8RuneCount(const char *s, size_t nElem);
 extern size_t uiprivUTF8UTF16Count(const char *s, size_t nElem);
-extern size_t uiprivUTF16RuneCount(const uint16_t *s, size_t nElem);
 extern size_t uiprivUTF16UTF8Count(const uint16_t *s, size_t nElem);
 
 #ifdef __cplusplus
@@ -51,11 +49,6 @@ inline const wchar_t *uiprivUTF16DecodeRune(const wchar_t *s, size_t nElem, uint
 
 	ret = uiprivUTF16DecodeRune(reinterpret_cast<const uint16_t *>(s), nElem, rune);
 	return reinterpret_cast<const wchar_t *>(ret);
-}
-
-inline size_t uiprivUTF16RuneCount(const wchar_t *s, size_t nElem)
-{
-	return uiprivUTF16RuneCount(reinterpret_cast<const uint16_t *>(s), nElem);
 }
 
 inline size_t uiprivUTF16UTF8Count(const wchar_t *s, size_t nElem)
@@ -88,11 +81,6 @@ inline const __wchar_t *uiprivUTF16DecodeRune(const __wchar_t *s, size_t nElem, 
 
 	ret = uiprivUTF16DecodeRune(reinterpret_cast<const uint16_t *>(s), nElem, rune);
 	return reinterpret_cast<const __wchar_t *>(ret);
-}
-
-inline size_t uiprivUTF16RuneCount(const __wchar_t *s, size_t nElem)
-{
-	return uiprivUTF16RuneCount(reinterpret_cast<const uint16_t *>(s), nElem);
 }
 
 inline size_t uiprivUTF16UTF8Count(const __wchar_t *s, size_t nElem)

@@ -94,11 +94,6 @@ void uiprivChildDestroy(uiprivChild *c)
 	uiControlDestroy(child);
 }
 
-GtkWidget *uiprivChildWidget(uiprivChild *c)
-{
-	return c->widget;
-}
-
 int uiprivChildFlag(uiprivChild *c)
 {
 	return c->flag;

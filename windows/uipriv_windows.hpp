@@ -71,7 +71,6 @@ extern void mapWindowRect(HWND from, HWND to, RECT *r);
 extern DWORD getStyle(HWND hwnd);
 extern void setStyle(HWND hwnd, DWORD style);
 extern DWORD getExStyle(HWND hwnd);
-extern void setExStyle(HWND hwnd, DWORD exstyle);
 extern void clientSizeToWindowSize(HWND hwnd, int *width, int *height, BOOL hasMenubar);
 extern HWND parentOf(HWND child);
 extern HWND parentToplevel(HWND child);
@@ -175,4 +174,3 @@ extern IWICBitmap *uiprivImageAppropriateForDC(uiImage *i, HDC dc);
 extern HRESULT uiprivWICToGDI(IWICBitmap *b, HDC dc, int width, int height, HBITMAP *hb);
 
 #endif
-

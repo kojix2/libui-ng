@@ -3,7 +3,6 @@
 
 // menu.c
 extern HMENU makeMenubar(void);
-extern const uiMenuItem *menuIDToItem(UINT_PTR);
 extern void runMenuEvent(UINT, uiWindow *);
 extern void freeMenubar(HMENU);
 extern void uninitMenus(void);

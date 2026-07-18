@@ -71,11 +71,6 @@ DWORD getExStyle(HWND hwnd)
 	return (DWORD) GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
 }
 
-void setExStyle(HWND hwnd, DWORD exstyle)
-{
-	SetWindowLongPtrW(hwnd, GWL_EXSTYLE, (LONG_PTR) exstyle);
-}
-
 // see http://blogs.msdn.com/b/oldnewthing/archive/2003/09/11/54885.aspx and http://blogs.msdn.com/b/oldnewthing/archive/2003/09/13/54917.aspx
 void clientSizeToWindowSize(HWND hwnd, int *width, int *height, BOOL hasMenubar)
 {

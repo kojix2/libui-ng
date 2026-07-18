@@ -18,9 +18,6 @@ extern uiprivAttrList *uiprivNewAttrList(void);
 extern void uiprivFreeAttrList(uiprivAttrList *alist);
 extern void uiprivAttrListInsertAttribute(uiprivAttrList *alist, uiAttribute *val, size_t start, size_t end);
 extern void uiprivAttrListInsertCharactersUnattributed(uiprivAttrList *alist, size_t start, size_t count);
-extern void uiprivAttrListInsertCharactersExtendingAttributes(uiprivAttrList *alist, size_t start, size_t count);
-extern void uiprivAttrListRemoveAttribute(uiprivAttrList *alist, uiAttributeType type, size_t start, size_t end);
-extern void uiprivAttrListRemoveAttributes(uiprivAttrList *alist, size_t start, size_t end);
 extern void uiprivAttrListRemoveCharacters(uiprivAttrList *alist, size_t start, size_t end);
 extern void uiprivAttrListForEach(const uiprivAttrList *alist, const uiAttributedString *s, uiAttributedStringForEachAttributeFunc f, void *data);
 

@@ -37,7 +37,6 @@ extern uiprivChild *uiprivNewChild(uiControl *child, uiControl *parent, GtkConta
 extern uiprivChild *uiprivNewChildWithBox(uiControl *child, uiControl *parent, GtkContainer *parentContainer, int margined);
 extern void uiprivChildRemove(uiprivChild *c);
 extern void uiprivChildDestroy(uiprivChild *c);
-extern GtkWidget *uiprivChildWidget(uiprivChild *c);
 extern int uiprivChildFlag(uiprivChild *c);
 extern void uiprivChildSetFlag(uiprivChild *c, int flag);
 extern GtkWidget *uiprivChildBox(uiprivChild *c);
