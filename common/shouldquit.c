@@ -4,6 +4,8 @@
 
 static int defaultOnShouldQuit(void *data)
 {
+	(void) data;
+
 	return 0;
 }
 

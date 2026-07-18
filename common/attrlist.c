@@ -228,7 +228,7 @@ static struct attr *attrDropRange(uiprivAttrList *alist, struct attr *a, size_t 
 }
 
 // returns the right side of the split, which is unlinked, or NULL if no split was done
-static struct attr *attrSplitAt(uiprivAttrList *alist, struct attr *a, size_t at)
+static struct attr *attrSplitAt(struct attr *a, size_t at)
 {
 	struct attr *b;
 
@@ -412,7 +412,7 @@ void uiprivAttrListInsertCharactersUnattributed(uiprivAttrList *alist, size_t st
 		if (!attrHasPos(a, start))
 			continue;
 
-		tail = attrSplitAt(alist, a, start);
+		tail = attrSplitAt(a, start);
 		// adjust the new tail for the insertion
 		tail->start += count;
 		tail->end += count;
