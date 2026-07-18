@@ -878,7 +878,7 @@ INPUT                  = ./README.md \
                          ./doc/doxygen/doxygen-subpage-api.md \
                          ./CHANGELOG.md \
                          ./CONTRIBUTING.md \
-                         ./old/news.md \
+                         ./doc/old_news.md \
                          ./ui.h
 
 # This tag can be used to specify the character encoding of the source files

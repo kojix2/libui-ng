@@ -37,7 +37,7 @@ libui-ng is currently **mid-alpha** software.
 
 See [CHANGELOG.md](CHANGELOG.md)
 
-*Old announcements can be found in the [news.md](old/news.md) file.*
+*Old announcements can be found in the [old_news.md](doc/old_news.md) file.*
 
 ## Runtime Requirements
 
