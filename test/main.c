@@ -51,7 +51,7 @@ int main(int argc, char *argv[])
 	const char *err;
 	uiWindow *w;
 	uiBox *page2, *page3, *page4, *page5;
-	uiBox *page6, *page7;
+	uiBox *page6, *page7, *page10;
 	uiBox *page12, *page13;
 	uiTab *page14;
 	uiBox *page15;
@@ -135,15 +135,9 @@ int main(int argc, char *argv[])
 	page7 = makePage7();
 	uiTabAppend(innerTab, "Page 7", uiControl(page7));
 
-/*	page8 = makePage8();
-	uiTabAppend(innerTab, "Page 8", uiControl(page8));
-
-	page9 = makePage9();
-	uiTabAppend(innerTab, "Page 9", uiControl(page9));
-
 	page10 = makePage10();
 	uiTabAppend(innerTab, "Page 10", uiControl(page10));
-*/
+
 	innerTab = newTab();
 	uiTabAppend(outerTab, "Pages 11-15", uiControl(innerTab));
 

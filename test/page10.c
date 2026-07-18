@@ -23,73 +23,75 @@ static double entryDouble(uiEntry *e)
 
 static void handlerDraw(uiAreaHandler *a, uiArea *area, uiAreaDrawParams *dp)
 {
-	uiDrawTextFont *font;
+	uiFontDescriptor font;
 	uiDrawTextLayout *layout;
+	uiDrawTextLayoutParams params;
+	uiAttributedString *attrstr;
 	double r, g, b, al;
-	char surrogates[1 + 4 + 1 + 1];
-	char composed[2 + 2 + 2 + 3 + 2 + 1];
+	const char *surrogates;
+	const char *composed;
 	double width, height;
 
-	font = uiFontButtonFont(textFontButton);
+	uiFontButtonFont(textFontButton, &font);
+	width = entryDouble(textWidth);
 
-	layout = uiDrawNewTextLayout("One two three four", font, -1);
-	uiDrawTextLayoutSetColor(layout,
-		4, 7,
-		1, 0, 0, 1);
-	uiDrawTextLayoutSetColor(layout,
-		8, 14,
-		1, 0, 0.5, 0.5);
+	attrstr = uiNewAttributedString("One two three four");
+	uiAttributedStringSetAttribute(attrstr,
+		uiNewColorAttribute(1, 0, 0, 1),
+		4, 7);
+	uiAttributedStringSetAttribute(attrstr,
+		uiNewColorAttribute(1, 0, 0.5, 0.5),
+		8, 14);
 	uiColorButtonColor(textColorButton, &r, &g, &b, &al);
-	uiDrawTextLayoutSetColor(layout,
-		14, 18,
-		r, g, b, al);
-	uiDrawText(dp->Context, 10, 10, layout);
+	uiAttributedStringSetAttribute(attrstr,
+		uiNewColorAttribute(r, g, b, al),
+		14, 18);
+	params.String = attrstr;
+	params.DefaultFont = &font;
+	params.Width = width;
+	params.Align = uiDrawTextAlignLeft;
+	layout = uiDrawNewTextLayout(&params);
+	uiDrawText(dp->Context, layout, 10, 10);
 	uiDrawTextLayoutExtents(layout, &width, &height);
 	uiDrawFreeTextLayout(layout);
+	uiFreeAttributedString(attrstr);
 
-	surrogates[0] = 'x';
-	surrogates[1] = 0xF0;		// surrogates D800 DF08
-	surrogates[2] = 0x90;
-	surrogates[3] = 0x8C;
-	surrogates[4] = 0x88;
-	surrogates[5] = 'y';
-	surrogates[6] = '\0';
+	surrogates = "x\360\220\214\210y";		// U+10308
 
-	layout = uiDrawNewTextLayout(surrogates, font, -1);
-	uiDrawTextLayoutSetColor(layout,
-		1, 2,
-		1, 0, 0.5, 0.5);
-	uiDrawText(dp->Context, 10, 10 + height, layout);
+	attrstr = uiNewAttributedString(surrogates);
+	uiAttributedStringSetAttribute(attrstr,
+		uiNewColorAttribute(1, 0, 0.5, 0.5),
+		uiAttributedStringGraphemeToByteIndex(attrstr, 1),
+		uiAttributedStringGraphemeToByteIndex(attrstr, 2));
+	params.String = attrstr;
+	layout = uiDrawNewTextLayout(&params);
+	uiDrawText(dp->Context, layout, 10, 10 + height);
 	uiDrawFreeTextLayout(layout);
+	uiFreeAttributedString(attrstr);
 
-	composed[0] = 'z';
-	composed[1] = 'z';
-	composed[2] = 0xC3;		// 2
-	composed[3] = 0xA9;
-	composed[4] = 'z';
-	composed[5] = 'z';
-	composed[6] = 0x65;		// 5
-	composed[7] = 0xCC;
-	composed[8] = 0x81;
-	composed[9] = 'z';
-	composed[10] = 'z';
-	composed[11] = '\0';
+	composed = "zz\303\251zze\314\201zz";
 
-	layout = uiDrawNewTextLayout(composed, font, -1);
-	uiDrawTextLayoutSetColor(layout,
-		2, 3,
-		1, 0, 0.5, 0.5);
-	uiDrawTextLayoutSetColor(layout,
-		5, 6,
-		1, 0, 0.5, 0.5);
+	attrstr = uiNewAttributedString(composed);
+	uiAttributedStringSetAttribute(attrstr,
+		uiNewColorAttribute(1, 0, 0.5, 0.5),
+		uiAttributedStringGraphemeToByteIndex(attrstr, 2),
+		uiAttributedStringGraphemeToByteIndex(attrstr, 3));
+	uiAttributedStringSetAttribute(attrstr,
+		uiNewColorAttribute(1, 0, 0.5, 0.5),
+		uiAttributedStringGraphemeToByteIndex(attrstr, 5),
+		uiAttributedStringGraphemeToByteIndex(attrstr, 6));
 	if (!uiCheckboxChecked(noZ))
-		uiDrawTextLayoutSetColor(layout,
-			6, 7,
-			0.5, 0, 1, 0.5);
-	uiDrawText(dp->Context, 10, 10 + height + height, layout);
+		uiAttributedStringSetAttribute(attrstr,
+			uiNewColorAttribute(0.5, 0, 1, 0.5),
+			uiAttributedStringGraphemeToByteIndex(attrstr, 6),
+			uiAttributedStringGraphemeToByteIndex(attrstr, 7));
+	params.String = attrstr;
+	layout = uiDrawNewTextLayout(&params);
+	uiDrawText(dp->Context, layout, 10, 10 + height + height);
 	uiDrawFreeTextLayout(layout);
+	uiFreeAttributedString(attrstr);
 
-	uiDrawFreeTextFont(font);
+	uiFreeFontButtonFont(&font);
 }
 
 static void handlerMouseEvent(uiAreaHandler *a, uiArea *area, uiAreaMouseEvent *e)
@@ -128,6 +130,11 @@ static void onNoZ(uiCheckbox *b, void *data)
 	uiAreaQueueRedrawAll(textArea);
 }
 
+static void onTextApply(uiButton *b, void *data)
+{
+	uiAreaQueueRedrawAll(textArea);
+}
+
 uiBox *makePage10(void)
 {
 	uiBox *page10;
@@ -157,6 +164,7 @@ uiBox *makePage10(void)
 	uiBoxAppend(vbox, uiControl(hbox), 0);
 
 	textApply = uiNewButton("Apply");
+	uiButtonOnClicked(textApply, onTextApply, NULL);
 	uiBoxAppend(hbox, uiControl(textApply), 1);
 
 	textWidth = uiNewEntry();
