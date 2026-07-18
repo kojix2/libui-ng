@@ -74,6 +74,7 @@ static struct feature mkkey(char a, char b, char c, char d)
 	f.b = b;
 	f.c = c;
 	f.d = d;
+	f.value = 0;
 	return f;
 }
 
