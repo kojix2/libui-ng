@@ -147,6 +147,32 @@ static struct attr *attrDelete(uiprivAttrList *alist, struct attr *a)
 	return next;
 }
 
+static void attrMergeSameValueRuns(uiprivAttrList *alist)
+{
+	struct attr *a;
+
+	for (a = alist->first; a != NULL; a = a->next) {
+		struct attr *b;
+
+		b = a->next;
+		while (b != NULL) {
+			if (uiAttributeGetType(a->val) != uiAttributeGetType(b->val))
+				goto next;
+			if (!uiprivAttributeEqual(a->val, b->val))
+				goto next;
+			if (a->end < b->start)
+				goto next;
+			if (b->end > a->end)
+				a->end = b->end;
+			b = attrDelete(alist, b);
+			continue;
+
+		next:
+			b = b->next;
+		}
+	}
+}
+
 // attrDropRange() removes attributes without deleting characters.
 // 
 // If the attribute needs no change, then nothing is done.
@@ -587,6 +613,7 @@ void uiprivAttrListRemoveCharacters(uiprivAttrList *alist, size_t start, size_t 
 	a = alist->first;
 	while (a != NULL)
 		a = attrDeleteRange(alist, a, start, end);
+	attrMergeSameValueRuns(alist);
 }
 
 void uiprivAttrListForEach(const uiprivAttrList *alist, const uiAttributedString *s, uiAttributedStringForEachAttributeFunc f, void *data)

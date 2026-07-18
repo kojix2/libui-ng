@@ -172,6 +172,23 @@ static void attrstrInsertSelfFromInteriorPointer(void **state)
 	uiFreeAttributedString(s);
 }
 
+static void attrstrDeleteMergesAdjacentEqualValues(void **state)
+{
+	uiAttributedString *s;
+	const struct expectedAttribute expected[] = {
+		{ uiAttributeTypeColor, 0, 2, NULL, 1.0, 0.0, 0.0, 1.0 },
+	};
+
+	(void) state;
+	s = uiNewAttributedString("abc");
+	uiAttributedStringSetAttribute(s, uiNewColorAttribute(1.0, 0.0, 0.0, 1.0), 0, 1);
+	uiAttributedStringSetAttribute(s, uiNewColorAttribute(1.0, 0.0, 0.0, 1.0), 2, 3);
+	uiAttributedStringDelete(s, 1, 2);
+	assert_string_equal(uiAttributedStringString(s), "ac");
+	assertAttributes(s, expected, sizeof(expected) / sizeof(expected[0]));
+	uiFreeAttributedString(s);
+}
+
 int attrstrRunUnitTests(void)
 {
 	const struct CMUnitTest tests[] = {
@@ -188,6 +205,8 @@ int attrstrRunUnitTests(void)
 		cmocka_unit_test_setup_teardown(attrstrAppendSelfFromInteriorPointer,
 			attrstrSetup, attrstrTeardown),
 		cmocka_unit_test_setup_teardown(attrstrInsertSelfFromInteriorPointer,
+			attrstrSetup, attrstrTeardown),
+		cmocka_unit_test_setup_teardown(attrstrDeleteMergesAdjacentEqualValues,
 			attrstrSetup, attrstrTeardown),
 	};
 
