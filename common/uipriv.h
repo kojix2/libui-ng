@@ -43,10 +43,10 @@ typedef struct uiprivClickCounter uiprivClickCounter;
 // it doesn't matter that all the non-count fields are zero: the first click will fail the curButton test straightaway, so it'll return 1 and set the rest of the structure accordingly
 struct uiprivClickCounter {
 	int curButton;
-	int rectX0;
-	int rectY0;
-	int rectX1;
-	int rectY1;
+	int64_t rectX0;
+	int64_t rectY0;
+	int64_t rectX1;
+	int64_t rectY1;
 	uintptr_t prevTime;
 	int count;
 };

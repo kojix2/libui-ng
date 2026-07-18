@@ -42,10 +42,10 @@ int uiprivClickCounterClick(uiprivClickCounter *c, int button, int x, int y, uin
 	// now we need to update the internal structures for the next test
 	c->curButton = button;
 	c->prevTime = time;
-	c->rectX0 = x - xdist;
-	c->rectY0 = y - ydist;
-	c->rectX1 = x + xdist;
-	c->rectY1 = y + ydist;
+	c->rectX0 = (int64_t) x - xdist;
+	c->rectY0 = (int64_t) y - ydist;
+	c->rectX1 = (int64_t) x + xdist;
+	c->rectY1 = (int64_t) y + ydist;
 
 	return c->count;
 }
