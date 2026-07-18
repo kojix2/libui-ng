@@ -1107,40 +1107,54 @@ static void vChanged(struct colorDialog *c)
 	updateDialog(c, c->editV);
 }
 
-static void rDoubleChanged(struct colorDialog *c)
+enum {
+	rgbRed,
+	rgbGreen,
+	rgbBlue,
+};
+
+static void setRGBChannel(double *r, double *g, double *b, int channel, double value)
+{
+	switch (channel) {
+	case 0:
+		*r = value;
+		break;
+	case 1:
+		*g = value;
+		break;
+	case 2:
+		*b = value;
+		break;
+	}
+}
+
+static void rgbDoubleChanged(struct colorDialog *c, int channel, HWND edit)
 {
 	double r, g, b;
+	double value;
 
 	hsv2RGB(c->h, c->s, c->v, &r, &g, &b);
-	r = editDouble(c->editRDouble);
-	if (r < 0 || r > 1)
+	value = editDouble(edit);
+	if (value < 0 || value > 1)
 		return;
+	setRGBChannel(&r, &g, &b, channel, value);
 	rgb2HSV(r, g, b, &(c->h), &(c->s), &(c->v));
-	updateDialog(c, c->editRDouble);
+	updateDialog(c, edit);
+}
+
+static void rDoubleChanged(struct colorDialog *c)
+{
+	rgbDoubleChanged(c, rgbRed, c->editRDouble);
 }
 
 static void gDoubleChanged(struct colorDialog *c)
 {
-	double r, g, b;
-
-	hsv2RGB(c->h, c->s, c->v, &r, &g, &b);
-	g = editDouble(c->editGDouble);
-	if (g < 0 || g > 1)
-		return;
-	rgb2HSV(r, g, b, &(c->h), &(c->s), &(c->v));
-	updateDialog(c, c->editGDouble);
+	rgbDoubleChanged(c, rgbGreen, c->editGDouble);
 }
 
 static void bDoubleChanged(struct colorDialog *c)
 {
-	double r, g, b;
-
-	hsv2RGB(c->h, c->s, c->v, &r, &g, &b);
-	b = editDouble(c->editBDouble);
-	if (b < 0 || b > 1)
-		return;
-	rgb2HSV(r, g, b, &(c->h), &(c->s), &(c->v));
-	updateDialog(c, c->editBDouble);
+	rgbDoubleChanged(c, rgbBlue, c->editBDouble);
 }
 
 static void aDoubleChanged(struct colorDialog *c)
@@ -1165,46 +1179,33 @@ static int editInt(HWND hwnd)
 	return i;
 }
 
-static void rIntChanged(struct colorDialog *c)
+static void rgbIntChanged(struct colorDialog *c, int channel, HWND edit)
 {
 	double r, g, b;
 	int i;
 
 	hsv2RGB(c->h, c->s, c->v, &r, &g, &b);
-	i = editInt(c->editRInt);
+	i = editInt(edit);
 	if (i < 0 || i > 255)
 		return;
-	r = ((double) i) / 255.0;
+	setRGBChannel(&r, &g, &b, channel, ((double) i) / 255.0);
 	rgb2HSV(r, g, b, &(c->h), &(c->s), &(c->v));
-	updateDialog(c, c->editRInt);
+	updateDialog(c, edit);
+}
+
+static void rIntChanged(struct colorDialog *c)
+{
+	rgbIntChanged(c, rgbRed, c->editRInt);
 }
 
 static void gIntChanged(struct colorDialog *c)
 {
-	double r, g, b;
-	int i;
-
-	hsv2RGB(c->h, c->s, c->v, &r, &g, &b);
-	i = editInt(c->editGInt);
-	if (i < 0 || i > 255)
-		return;
-	g = ((double) i) / 255.0;
-	rgb2HSV(r, g, b, &(c->h), &(c->s), &(c->v));
-	updateDialog(c, c->editGInt);
+	rgbIntChanged(c, rgbGreen, c->editGInt);
 }
 
 static void bIntChanged(struct colorDialog *c)
 {
-	double r, g, b;
-	int i;
-
-	hsv2RGB(c->h, c->s, c->v, &r, &g, &b);
-	i = editInt(c->editBInt);
-	if (i < 0 || i > 255)
-		return;
-	b = ((double) i) / 255.0;
-	rgb2HSV(r, g, b, &(c->h), &(c->s), &(c->v));
-	updateDialog(c, c->editBInt);
+	rgbIntChanged(c, rgbBlue, c->editBInt);
 }
 
 static void aIntChanged(struct colorDialog *c)
