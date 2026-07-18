@@ -11,11 +11,7 @@
 // ui internal window messages
 // TODO make these either not messages or WM_USER-based, so we can be sane about reserving WM_APP
 enum {
-	// redirected WM_COMMAND and WM_NOTIFY
-	msgCOMMAND = WM_APP + 0x40,		// start offset just to be safe
-	msgNOTIFY,
-	msgHSCROLL,
-	msgQueued,
+	msgQueued = WM_APP + 0x43,
 	msgD2DScratchPaint,
 	msgD2DScratchLButtonDown,
 };

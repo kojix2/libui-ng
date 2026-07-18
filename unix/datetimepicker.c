@@ -6,10 +6,6 @@
 
 #define uiprivDateTimePickerWidgetType (uiprivDateTimePickerWidget_get_type())
 #define uiprivDateTimePickerWidget(obj) (G_TYPE_CHECK_INSTANCE_CAST((obj), uiprivDateTimePickerWidgetType, uiprivDateTimePickerWidget))
-#define isDateTimePickerWidget(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), uiprivDateTimePickerWidgetType))
-#define uiprivDateTimePickerWidgetClass(class) (G_TYPE_CHECK_CLASS_CAST((class), uiprivDateTimePickerWidgetType, uiprivDateTimePickerWidgetClass))
-#define isDateTimePickerWidgetClass(class) (G_TYPE_CHECK_CLASS_TYPE((class), uiprivDateTimePickerWidget))
-#define getDateTimePickerWidgetClass(obj) (G_TYPE_INSTANCE_GET_CLASS((obj), uiprivDateTimePickerWidgetType, uiprivDateTimePickerWidgetClass))
 
 typedef struct uiprivDateTimePickerWidget uiprivDateTimePickerWidget;
 typedef struct uiprivDateTimePickerWidgetClass uiprivDateTimePickerWidgetClass;

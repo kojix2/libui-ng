@@ -9,10 +9,6 @@
 
 #define cellRendererButtonType (cellRendererButton_get_type())
 #define cellRendererButton(obj) (G_TYPE_CHECK_INSTANCE_CAST((obj), cellRendererButtonType, cellRendererButton))
-#define isCellRendererButton(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), cellRendererButtonType))
-#define cellRendererButtonClass(class) (G_TYPE_CHECK_CLASS_CAST((class), cellRendererButtonType, cellRendererButtonClass))
-#define isCellRendererButtonClass(class) (G_TYPE_CHECK_CLASS_TYPE((class), cellRendererButton))
-#define getCellRendererButtonClass(obj) (G_TYPE_INSTANCE_GET_CLASS((obj), cellRendererButtonType, cellRendererButtonClass))
 
 typedef struct cellRendererButton cellRendererButton;
 typedef struct cellRendererButtonClass cellRendererButtonClass;

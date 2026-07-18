@@ -7,9 +7,7 @@
 #define textColumnTrailing 2
 #define imageColumnLeading 3
 #define imageTextColumnLeading 7
-#define checkboxTextColumnLeading 0
 // these aren't provided by IB; let's just choose one
-#define checkboxColumnLeading imageColumnLeading
 #define progressBarColumnLeading imageColumnLeading
 #define progressBarColumnTrailing progressBarColumnLeading
 #define buttonColumnLeading imageColumnLeading

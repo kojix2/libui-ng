@@ -4,7 +4,6 @@
 #include "../common/table.h"
 
 // table.cpp
-#define uiprivNumLVN_GETDISPINFOSkip 3
 struct uiTableModel {
 	uiTableModelHandler *mh;
 	std::vector<uiTable *> *tables;
@@ -99,4 +98,3 @@ struct uiprivTableMetrics {
 extern HRESULT uiprivTableGetMetrics(uiTable *t, int iItem, int iSubItem, uiprivTableMetrics **mout);
 
 #endif
-

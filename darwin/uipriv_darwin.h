@@ -16,7 +16,6 @@
 #endif
 
 #define uiprivToNSString(str) [NSString stringWithUTF8String:(str)]
-#define uiprivFromNSString(str) [(str) UTF8String]
 
 // TODO find a better place for this
 #ifndef NSAppKitVersionNumber10_9

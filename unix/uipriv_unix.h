@@ -15,7 +15,6 @@
 #include "../common/uipriv.h"
 
 #define uiprivGTKXMargin 12
-#define uiprivGTKYMargin 12
 #define uiprivGTKXPadding 12
 #define uiprivGTKYPadding 6
 
