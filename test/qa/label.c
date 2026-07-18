@@ -1,6 +1,6 @@
 #include "qa.h"
 
-const char *labelMultiLineGuide() {
+const char *labelMultiLineGuide(void) {
 	return
 	"1.\tThe first line should read `Single line test`.\n"
 	"\n"
@@ -14,7 +14,7 @@ const char *labelMultiLineGuide() {
 	;
 }
 
-uiControl* labelMultiLine()
+uiControl *labelMultiLine(void)
 {
 	uiBox *vbox;
 	uiBox *hbox;

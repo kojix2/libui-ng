@@ -73,6 +73,9 @@ WCHAR *uiprivFontCollectionCorrectString(fontCollection *fc, IDWriteLocalizedStr
 	if (names == NULL)
 		return emptyUTF16();
 
+	// If locale lookup fails, use the first localized name as the fallback.
+	index = 0;
+
 	// this is complex, but we ignore failure conditions to allow fallbacks
 	// 1) If the user locale name was successfully retrieved, try it
 	// 2) If the user locale name was not successfully retrieved, or that locale's string does not exist, or an error occurred, try L"en-us", the US English locale

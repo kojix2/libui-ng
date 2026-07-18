@@ -6,9 +6,9 @@
 #define QA_WINDOW_WIDTH 960
 #define QA_WINDOW_HEIGHT 720
 
-uiControl* qaMakeGuide(uiControl *c, const char *text);
+uiControl *qaMakeGuide(uiControl *c, const char *text);
 
-#define QA_DECLARE_TEST(name) uiControl* name(); const char *name##Guide()
+#define QA_DECLARE_TEST(name) uiControl *name(void); const char *name##Guide(void)
 
 QA_DECLARE_TEST(buttonOnClicked);
 
@@ -37,4 +37,3 @@ QA_DECLARE_TEST(windowFullscreenResizeable);
 QA_DECLARE_TEST(windowResizeableBorderless);
 
 #endif
-

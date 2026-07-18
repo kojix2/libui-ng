@@ -76,7 +76,7 @@ struct controlTestGroup controlTestGroups[] = {
 	{"uiWindow", windowTestCases},
 };
 
-uiControl* qaGuide()
+uiControl *qaGuide(void)
 {
 	uiBox *box;
 	uiMultilineEntry *guide;

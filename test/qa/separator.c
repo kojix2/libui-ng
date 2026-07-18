@@ -1,6 +1,6 @@
 #include "qa.h"
 
-const char *separatorVerticalGuide() {
+const char *separatorVerticalGuide(void) {
 	return
 	"1.\tYou should see two labels `1` and `2` placed next to each other\n"
 	"\thorizontally. Between the two labels should be a vertical line that\n"
@@ -8,7 +8,7 @@ const char *separatorVerticalGuide() {
 	;
 }
 
-uiControl* separatorVertical()
+uiControl *separatorVertical(void)
 {
 	uiBox *hbox;
 
@@ -22,7 +22,7 @@ uiControl* separatorVertical()
 	return uiControl(hbox);
 }
 
-const char *separatorHorizontalGuide() {
+const char *separatorHorizontalGuide(void) {
 	return
 	"1.\tYou should see two labels `1` and `2` placed on top of each other.\n"
 	"\tBetween the two labels should be a horizontal line that visually\n"
@@ -30,7 +30,7 @@ const char *separatorHorizontalGuide() {
 	;
 }
 
-uiControl* separatorHorizontal()
+uiControl *separatorHorizontal(void)
 {
 	uiBox *vbox;
 
@@ -43,4 +43,3 @@ uiControl* separatorHorizontal()
 
 	return uiControl(vbox);
 }
-

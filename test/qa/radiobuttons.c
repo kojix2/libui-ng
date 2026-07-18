@@ -12,7 +12,7 @@ static void radioButtonsOnSelectedCb(uiRadioButtons *r, void *data)
 	uiLabelSetText(label, str);
 }
 
-const char *radioButtonsOnSelectedGuide() {
+const char *radioButtonsOnSelectedGuide(void) {
 	return
 	"1.\tYou should see two radio buttons `Item 1` and `Item 2` as well as\n"
 	"\ta label displaying `Selected count: 0`. None of the radio buttons\n"
@@ -29,7 +29,7 @@ const char *radioButtonsOnSelectedGuide() {
 	;
 }
 
-uiControl* radioButtonsOnSelected()
+uiControl *radioButtonsOnSelected(void)
 {
 	uiBox *hbox;
 	uiRadioButtons *r;

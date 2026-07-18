@@ -35,7 +35,7 @@ endif
 unit = executable('unit', libui_unit_sources,
 	dependencies: [libui_binary_deps, cmocka_deps],
 	link_with: libui_libui,
-	gui_app: false,
+	win_subsystem: 'console',
 	install: false)
 
 test('Unit Tests', unit)

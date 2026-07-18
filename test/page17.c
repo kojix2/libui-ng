@@ -68,6 +68,7 @@ static uiTableValueType modelColumnType(uiTableModelHandler *mh, uiTableModel *m
 		default:
 			assert(0);
 	}
+	return uiTableValueTypeString;
 }
 
 static int modelNumRows(uiTableModelHandler *mh, uiTableModel *m)
@@ -107,6 +108,7 @@ static uiTableValue *modelCellValue(uiTableModelHandler *mh, uiTableModel *m, in
 		default:
 			assert(0);
 	}
+	return NULL;
 }
 
 static void modelSetCellValue(uiTableModelHandler *mh, uiTableModel *m, int row, int column, const uiTableValue *val)

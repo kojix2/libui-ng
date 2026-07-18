@@ -12,7 +12,7 @@ static void entryOnChangedCb(uiEntry *e, void *data)
 	uiLabelSetText(label, str);
 }
 
-const char *entryOnChangedGuide() {
+const char *entryOnChangedGuide(void) {
 	return
 	"1.\tYou should see an empty text entry box. Next to it should be a label\n"
 	"\tdisplaying `Changed count: 0`.\n"
@@ -26,7 +26,7 @@ const char *entryOnChangedGuide() {
 	;
 }
 
-uiControl* entryOnChanged()
+uiControl *entryOnChanged(void)
 {
 	uiBox *vbox;
 	uiBox *hbox;
@@ -62,7 +62,7 @@ static void passwordEntryOnChangedCb(uiEntry *e, void *data)
 	uiLabelSetText(label, str);
 }
 
-const char *passwordEntryOnChangedGuide() {
+const char *passwordEntryOnChangedGuide(void) {
 	return
 	"1.\tYou should see an empty password entry box. Next to it should be a\n"
 	"\tlabel displaying `Changed count: 0`.\n"
@@ -76,7 +76,7 @@ const char *passwordEntryOnChangedGuide() {
 	;
 }
 
-uiControl* passwordEntryOnChanged()
+uiControl *passwordEntryOnChanged(void)
 {
 	uiBox *vbox;
 	uiBox *hbox;
@@ -112,7 +112,7 @@ static void searchEntryOnChangedCb(uiEntry *e, void *data)
 	uiLabelSetText(label, str);
 }
 
-const char *searchEntryOnChangedGuide() {
+const char *searchEntryOnChangedGuide(void) {
 	return
 	"1.\tYou should see an empty search box. Next to it should be a label\n"
 	"\tdisplaying `Changed count: 0`.\n"
@@ -128,7 +128,7 @@ const char *searchEntryOnChangedGuide() {
 	;
 }
 
-uiControl* searchEntryOnChanged()
+uiControl *searchEntryOnChanged(void)
 {
 	uiBox *vbox;
 	uiBox *hbox;
@@ -154,7 +154,7 @@ uiControl* searchEntryOnChanged()
 	return uiControl(vbox);
 }
 
-const char *entryLongTextGuide() {
+const char *entryLongTextGuide(void) {
 	return
 	"1.\tYou should see a text entry box containing the text\n"
 	"\t`abcdefghijklmnopqrstuvwxyz`. No scrolling on your part should be\n"
@@ -162,7 +162,7 @@ const char *entryLongTextGuide() {
 	;
 }
 
-uiControl* entryLongText()
+uiControl *entryLongText(void)
 {
 	uiBox *vbox;
 	uiEntry *entry;
@@ -175,7 +175,7 @@ uiControl* entryLongText()
 	return uiControl(vbox);
 }
 
-const char *entryOverflowTextGuide() {
+const char *entryOverflowTextGuide(void) {
 	return
 	"1.\tYou should see a text entry box containing text that overflows.\n"
 	"\tThe left most side of the entry should read `aaaabbbbccccddd...`.\n"
@@ -184,7 +184,7 @@ const char *entryOverflowTextGuide() {
 	;
 }
 
-uiControl* entryOverflowText()
+uiControl *entryOverflowText(void)
 {
 	uiBox *vbox;
 	uiEntry *entry;

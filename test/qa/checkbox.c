@@ -12,7 +12,7 @@ static void checkboxOnToggledCb(uiCheckbox *c, void *data)
 	uiLabelSetText(label, str);
 }
 
-const char *checkboxOnToggledGuide() {
+const char *checkboxOnToggledGuide(void) {
 	return
 	"1.\tYou should see an unchecked checkbox with the text `Checkbox`.\n"
 	"\tNext to it should a  label displaying `Toggle count: 0`.\n"
@@ -33,7 +33,7 @@ const char *checkboxOnToggledGuide() {
 	;
 }
 
-uiControl* checkboxOnToggled()
+uiControl *checkboxOnToggled(void)
 {
 	uiBox *hbox;
 	uiCheckbox *checkbox;

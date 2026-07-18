@@ -12,7 +12,7 @@ static void spinboxOnChangedCb(uiSpinbox *c, void *data)
 	uiLabelSetText(label, str);
 }
 
-const char *spinboxOnChangedGuide() {
+const char *spinboxOnChangedGuide(void) {
 	return
 	"1.\tYou should see a spinbox consisting of a text entry and two buttons.\n"
 	"\tThe number within the text entry should read `0` and the label\n"
@@ -33,7 +33,7 @@ const char *spinboxOnChangedGuide() {
 	;
 }
 
-uiControl* spinboxOnChanged()
+uiControl *spinboxOnChanged(void)
 {
 	uiBox *hbox;
 	uiSpinbox *spinbox;

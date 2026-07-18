@@ -13,7 +13,6 @@
 size_t uiprivUTF8EncodeRune(uint32_t rune, char *encoded)
 {
 	uint8_t b, c, d, e;
-	size_t n;
 
 	// not in the valid range for Unicode
 	if (rune > 0x10FFFF)
@@ -24,8 +23,8 @@ size_t uiprivUTF8EncodeRune(uint32_t rune, char *encoded)
 
 	if (rune < 0x80) {		// ASCII bytes represent themselves
 		b = (uint8_t) (rune & 0xFF);
-		n = 1;
-		goto done;
+		encoded[0] = b;
+		return 1;
 	}
 	if (rune < 0x800) {		// two-byte encoding
 		c = (uint8_t) (rune & 0x3F);
@@ -33,8 +32,9 @@ size_t uiprivUTF8EncodeRune(uint32_t rune, char *encoded)
 		rune >>= 6;
 		b = (uint8_t) (rune & 0x1F);
 		b |= 0xC0;
-		n = 2;
-		goto done;
+		encoded[0] = b;
+		encoded[1] = c;
+		return 2;
 	}
 	if (rune < 0x10000) {	// three-byte encoding
 		d = (uint8_t) (rune & 0x3F);
@@ -45,8 +45,10 @@ size_t uiprivUTF8EncodeRune(uint32_t rune, char *encoded)
 		rune >>= 6;
 		b = (uint8_t) (rune & 0x0F);
 		b |= 0xE0;
-		n = 3;
-		goto done;
+		encoded[0] = b;
+		encoded[1] = c;
+		encoded[2] = d;
+		return 3;
 	}
 	// otherwise use a four-byte encoding
 	e = (uint8_t) (rune & 0x3F);
@@ -60,17 +62,11 @@ size_t uiprivUTF8EncodeRune(uint32_t rune, char *encoded)
 	rune >>= 6;
 	b = (uint8_t) (rune & 0x07);
 	b |= 0xF0;
-	n = 4;
-
-done:
 	encoded[0] = b;
-	if (n > 1)
-		encoded[1] = c;
-	if (n > 2)
-		encoded[2] = d;
-	if (n > 3)
-		encoded[3] = e;
-	return n;
+	encoded[1] = c;
+	encoded[2] = d;
+	encoded[3] = e;
+	return 4;
 }
 
 const char *uiprivUTF8DecodeRune(const char *s, size_t nElem, uint32_t *rune)

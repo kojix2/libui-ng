@@ -129,23 +129,8 @@ static void spinboxArrangeChildren(uiSpinbox *s)
 	uiWindowsEnsureAssignControlIDZOrder(s->updown, &controlID, &insertAfter);
 }
 
-// an up-down control will only properly position itself the first time
-// stupidly, there are no messages to force a size calculation, nor can I seem to reset the buddy window to force a new position
-// alas, we have to make a new up/down control each time :(
-static void recreateUpDown(uiSpinbox *s)
+static void createUpDown(uiSpinbox *s)
 {
-	BOOL preserve = FALSE;
-	int current;
-	// Microsoft's commctrl.h says to use this type
-	INT min, max;
-
-	if (s->updown != NULL) {
-		preserve = TRUE;
-		current = value(s);
-		SendMessageW(s->updown, UDM_GETRANGE32, (WPARAM) (&min), (LPARAM) (&max));
-		uiWindowsEnsureDestroyWindow(s->updown);
-	}
-	s->inhibitChanged = TRUE;
 	s->updown = CreateWindowExW(0,
 		UPDOWN_CLASSW, L"",
 		// no WS_VISIBLE; we set visibility ourselves
@@ -157,9 +142,28 @@ static void recreateUpDown(uiSpinbox *s)
 	if (s->updown == NULL)
 		logLastError(L"error creating updown");
 	SendMessageW(s->updown, UDM_SETBUDDY, (WPARAM) (s->edit), 0);
-	if (preserve) {
+}
+
+// an up-down control will only properly position itself the first time
+// stupidly, there are no messages to force a size calculation, nor can I seem to reset the buddy window to force a new position
+// alas, we have to make a new up/down control each time :(
+static void recreateUpDown(uiSpinbox *s)
+{
+	if (s->updown != NULL) {
+		int current;
+		// Microsoft's commctrl.h says to use this type
+		INT min, max;
+
+		current = value(s);
+		SendMessageW(s->updown, UDM_GETRANGE32, (WPARAM) (&min), (LPARAM) (&max));
+		uiWindowsEnsureDestroyWindow(s->updown);
+		s->inhibitChanged = TRUE;
+		createUpDown(s);
 		SendMessageW(s->updown, UDM_SETRANGE32, (WPARAM) min, (LPARAM) max);
 		SendMessageW(s->updown, UDM_SETPOS32, 0, (LPARAM) current);
+	} else {
+		s->inhibitChanged = TRUE;
+		createUpDown(s);
 	}
 	// preserve the Z-order
 	spinboxArrangeChildren(s);

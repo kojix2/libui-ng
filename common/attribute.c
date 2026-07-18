@@ -85,10 +85,12 @@ uiAttributeType uiAttributeGetType(const uiAttribute *a)
 uiAttribute *uiNewFamilyAttribute(const char *family)
 {
 	uiAttribute *a;
+	size_t len;
 
 	a = newAttribute(uiAttributeTypeFamily);
-	a->u.family = (char *) uiprivAlloc((strlen(family) + 1) * sizeof (char), "char[] (uiAttribute)");
-	strcpy(a->u.family, family);
+	len = strlen(family) + 1;
+	a->u.family = (char *) uiprivAlloc(len * sizeof (char), "char[] (uiAttribute)");
+	memcpy(a->u.family, family, len);
 	return a;
 }
 

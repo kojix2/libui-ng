@@ -43,7 +43,7 @@ endif
 executable('tester', libui_test_sources,
 	dependencies: libui_binary_deps,
 	link_with: libui_libui,
-	gui_app: false,
+	win_subsystem: 'console',
 	install: false)
 
 subdir('unit')

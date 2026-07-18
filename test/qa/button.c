@@ -12,7 +12,7 @@ static void buttonOnClickedCb(uiButton *b, void *data)
 	uiLabelSetText(label, str);
 }
 
-const char *buttonOnClickedGuide() {
+const char *buttonOnClickedGuide(void) {
 	return
 	"1.\tYou should see a button with the text `Button`.\n"
 	"\tNext to it should a  label displaying `Click count: 0`.\n"
@@ -23,7 +23,7 @@ const char *buttonOnClickedGuide() {
 	;
 }
 
-uiControl* buttonOnClicked()
+uiControl *buttonOnClicked(void)
 {
 	uiBox *hbox;
 	uiButton *button;

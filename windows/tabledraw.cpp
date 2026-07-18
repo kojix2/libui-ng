@@ -283,7 +283,6 @@ static HRESULT drawProgressBarPart(HRESULT hr, struct drawState *s)
 	RECT rBorder, rFill[2];
 	int i, nFill;
 	TEXTMETRICW tm;
-	int sysColor;
 
 	if (hr != S_OK)
 		return hr;
@@ -327,6 +326,7 @@ static HRESULT drawProgressBarPart(HRESULT hr, struct drawState *s)
 	} else {
 		HPEN pen, prevPen;
 		HBRUSH brush, prevBrush;
+		int sysColor;
 
 		sysColor = COLOR_HIGHLIGHT;
 		if (s->m->selected)
@@ -366,8 +366,8 @@ static HRESULT drawProgressBarPart(HRESULT hr, struct drawState *s)
 		} else
 			rFill[0].right = rFill[0].left + pieceWidth;
 	}
-	for (i = 0; i < nFill; i++)
-		if (theme != NULL) {
+	if (theme != NULL) {
+		for (i = 0; i < nFill; i++) {
 			hr = DrawThemeBackground(theme, s->dc,
 				PP_FILL, PBFS_NORMAL,
 				&rFill[i], NULL);
@@ -375,9 +375,17 @@ static HRESULT drawProgressBarPart(HRESULT hr, struct drawState *s)
 				logHRESULT(L"DrawThemeBackground() fill", hr);
 				goto fail;
 			}
-		} else
+		}
+	} else {
+		int sysColor;
+
+		sysColor = COLOR_HIGHLIGHT;
+		if (s->m->selected)
+			sysColor = COLOR_HIGHLIGHTTEXT;
+		for (i = 0; i < nFill; i++)
 			// TODO check errors
 			FillRect(s->dc, &rFill[i], GetSysColorBrush(sysColor));
+	}
 
 	hr = S_OK;
 fail:
@@ -645,6 +653,10 @@ HRESULT uiprivTableHandleNM_CUSTOMDRAW(uiTable *t, NMLVCUSTOMDRAW *nm, LRESULT *
 	n = t->columns->size();
 	b = *nm;
 	focusFirst = true;
+	if (n == 0) {
+		*lResult = CDRF_SKIPDEFAULT;
+		return S_OK;
+	}
 	for (i = 0; i < n; i++) {
 		b.iSubItem = i;
 		p = (*(t->columns))[i];

@@ -317,6 +317,7 @@ void runMenuEvent(UINT id, uiWindow *w)
 	}
 	// no match
 	uiprivImplBug("unknown menu ID %u in runMenuEvent()", id);
+	return;
 
 found:
 	// first toggle checkboxes, if any

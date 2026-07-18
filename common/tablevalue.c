@@ -45,10 +45,12 @@ uiTableValueType uiTableValueGetType(const uiTableValue *v)
 uiTableValue *uiNewTableValueString(const char *str)
 {
 	uiTableValue *v;
+	size_t len;
 
 	v = newTableValue(uiTableValueTypeString);
-	v->u.str = (char *) uiprivAlloc((strlen(str) + 1) * sizeof (char), "char[] (uiTableValue)");
-	strcpy(v->u.str, str);
+	len = strlen(str) + 1;
+	v->u.str = (char *) uiprivAlloc(len * sizeof (char), "char[] (uiTableValue)");
+	memcpy(v->u.str, str, len);
 	return v;
 }
 
