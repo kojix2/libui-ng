@@ -28,6 +28,7 @@ struct uiTab {
 	NSLayoutPriority vertHuggingPri;
 	void (*onSelected)(uiTab *, void *);
 	void *onSelectedData;
+	int suppressOnSelected;
 };
 
 @implementation tabPage
@@ -107,7 +108,8 @@ struct uiTab {
 - (void)tabView:(NSTabView *)tabView didSelectTabViewItem:(NSTabViewItem *)tabViewItem
 {
 	uiTab *t = self->tab;
-	(*(t->onSelected))(t, t->onSelectedData);
+	if (!t->suppressOnSelected)
+		(*(t->onSelected))(t, t->onSelectedData);
 }
 
 @end
@@ -322,7 +324,11 @@ void uiTabSetSelected(uiTab *t, int index)
 {
 	if (index < 0 || index >= uiTabNumPages(t))
 		return;
+	if (index == uiTabSelected(t))
+		return;
+	t->suppressOnSelected++;
 	[t->tabview selectTabViewItemAtIndex:index];
+	t->suppressOnSelected--;
 }
 
 void uiTabOnSelected(uiTab *t, void (*f)(uiTab *, void *), void *data)

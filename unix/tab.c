@@ -10,6 +10,7 @@ struct uiTab {
 
 	void (*onSelected)(uiTab *, void *);
 	void *onSelectedData;
+	gulong onSelectedSignal;
 	GArray *pages;				// []*uiprivChild
 };
 
@@ -102,7 +103,11 @@ void uiTabSetSelected(uiTab *t, int index)
 {
 	if (index < 0 || index >= uiTabNumPages(t))
 		return;
+	if (index == uiTabSelected(t))
+		return;
+	g_signal_handler_block(t->notebook, t->onSelectedSignal);
 	gtk_notebook_set_current_page(t->notebook, index);
+	g_signal_handler_unblock(t->notebook, t->onSelectedSignal);
 }
 
 void uiTabOnSelected(uiTab *t, void (*f)(uiTab *, void *), void *data)
@@ -125,7 +130,7 @@ uiTab *uiNewTab(void)
 
 	t->pages = g_array_new(FALSE, TRUE, sizeof (uiprivChild *));
 
-	g_signal_connect_after(t->notebook, "switch-page", G_CALLBACK(onSelected), t);
+	t->onSelectedSignal = g_signal_connect_after(t->notebook, "switch-page", G_CALLBACK(onSelected), t);
 	uiTabOnSelected(t, defaultOnSelected, NULL);
 
 	return t;

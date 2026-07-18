@@ -68,6 +68,7 @@ int main(void)
 		{ comboboxRunUnitTests },
 		{ checkboxRunUnitTests },
 		{ radioButtonsRunUnitTests },
+		{ tabRunUnitTests },
 		{ entryRunUnitTests },
 		{ progressBarRunUnitTests },
 		{ drawMatrixRunUnitTests },

@@ -12,6 +12,7 @@ struct uiTab {
 	HWND parent;
 	void (*onSelected)(uiTab *, void *);
 	void *onSelectedData;
+	int suppressOnSelected;
 };
 
 // utility functions
@@ -88,7 +89,8 @@ static void showHidePage(uiTab *t, LRESULT which, int hide)
 		ShowWindow(page->hwnd, SW_SHOW);
 		// we only resize the current page, so we have to resize it; before we can do that, we need to make sure we are of the right size
 		uiWindowsControlMinimumSizeChanged(uiWindowsControl(t));
-		(*t->onSelected)(t, t->onSelectedData);
+		if (!t->suppressOnSelected)
+			(*t->onSelected)(t, t->onSelectedData);
 	}
 }
 
@@ -360,11 +362,18 @@ int uiTabSelected(uiTab *t)
 
 void uiTabSetSelected(uiTab *t, int index)
 {
+	int old;
+
 	if (index < 0 || index >= uiTabNumPages(t))
 		return;
+	old = currentPageIndex(t);
+	if (old == index)
+		return;
+	t->suppressOnSelected++;
 	showHidePage(t, curpage(t), 1);
 	setCurrentPage(t, index);
 	showHidePage(t, index, 0);
+	t->suppressOnSelected--;
 }
 
 uiTab *uiNewTab(void)

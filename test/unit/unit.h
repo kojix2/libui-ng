@@ -22,6 +22,7 @@ int buttonRunUnitTests(void);
 int comboboxRunUnitTests(void);
 int checkboxRunUnitTests(void);
 int radioButtonsRunUnitTests(void);
+int tabRunUnitTests(void);
 int entryRunUnitTests(void);
 int menuRunUnitTests(void);
 int progressBarRunUnitTests(void);

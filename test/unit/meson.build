@@ -11,6 +11,7 @@ libui_unit_sources = [
         'combobox.c',
         'checkbox.c',
         'radiobuttons.c',
+        'tab.c',
         'entry.c',
         'menu.c',
         'progressbar.c',
