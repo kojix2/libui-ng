@@ -497,11 +497,6 @@ static void uiprivDateTimePickerWidget_init(uiprivDateTimePickerWidget *d)
 
 	// LONGTERM this should be the case, but that interferes with grabs
 	// switch to it when we can drop GTK+ 3.10 and use popovers
-#if 0
-	d->ampm = gtk_combo_box_text_new();
-	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(d->ampm), NULL, "AM");
-	gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(d->ampm), NULL, "PM");
-#endif
 	d->ampm = newSpinbox(d, 0, 1, ampmSpinboxInput, ampmSpinboxOutput, &(d->ampmBlock));
 	gtk_spin_button_set_numeric(GTK_SPIN_BUTTON(d->ampm), FALSE);
 	gtk_widget_set_valign(d->ampm, GTK_ALIGN_CENTER);

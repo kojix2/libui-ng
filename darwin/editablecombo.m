@@ -108,32 +108,6 @@ void uiEditableComboboxSetText(uiEditableCombobox *c, const char *text)
 	[c->cb setDelegate:delegate];
 }
 
-#if 0
-// LONGTERM
-void uiEditableComboboxSetSelected(uiEditableCombobox *c, int n)
-{
-	if (c->editable) {
-		// see https://developer.apple.com/library/mac/documentation/Cocoa/Conceptual/ComboBox/Tasks/SettingComboBoxValue.html#//apple_ref/doc/uid/20000256
-		id delegate;
-
-		// this triggers the delegate; turn it off for now
-		delegate = [c->cb delegate];
-		[c->cb setDelegate:nil];
-
-		// this seems to work fine for -1 too
-		[c->cb selectItemAtIndex:n];
-		if (n == -1)
-			[c->cb setObjectValue:@""];
-		else
-			[c->cb setObjectValue:[c->cb objectValueOfSelectedItem]];
-
-		[c->cb setDelegate:delegate];
-		return;
-	}
-	[c->pb selectItemAtIndex:n];
-}
-#endif
-
 void uiEditableComboboxOnChanged(uiEditableCombobox *c, void (*f)(uiEditableCombobox *c, void *data), void *data)
 {
 	c->onChanged = f;

@@ -414,7 +414,6 @@ static int applyFontAttributes(CFMutableAttributedStringRef mas, uiFontDescripto
 	n = CFAttributedStringGetLength(mas);
 
 	// first apply the default font to the entire string
-	// TODO is this necessary given the #if 0'd code in uiprivAttributedStringToCFAttributedString()?
 	cfa = [uiprivCombinedFontAttr new];
 	font = [cfa toCTFontWithDefaultFont:defaultFont];
 	[cfa release];
@@ -497,12 +496,6 @@ CFAttributedStringRef uiprivAttributedStringToCFAttributedString(uiDrawTextLayou
 		&kCFTypeDictionaryValueCallBacks);
 	if (defaultAttrs == NULL)
 		goto fail;
-#if 0 /* TODO */
-	ffp.desc = *(p->DefaultFont);
-	defaultCTFont = fontdescToCTFont(&ffp);
-	CFDictionaryAddValue(defaultAttrs, kCTFontAttributeName, defaultCTFont);
-	CFRelease(defaultCTFont);
-#endif
 	ps = mkParagraphStyle(p);
 	if (ps == NULL)
 		goto fail;
