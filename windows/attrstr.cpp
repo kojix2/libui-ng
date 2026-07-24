@@ -299,9 +299,7 @@ static uiForEach processAttribute(const uiAttributedString *s, const uiAttribute
 		break;
 	case uiAttributeTypeSize:
 		hr = p->layout->SetFontSize(
-// TODO unify with fontmatch.cpp and/or attrstr.hpp
-#define pointSizeToDWriteSize(size) (size * (96.0 / 72.0))
-			pointSizeToDWriteSize(uiAttributeSize(attr)),
+			uiprivDWriteSizeFromPointSize(uiAttributeSize(attr)),
 			range);
 		if (hr != S_OK)
 			logHRESULT(L"error applying size attribute", hr);

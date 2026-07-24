@@ -5,6 +5,14 @@
 
 // draw.cpp
 extern ID2D1Factory *d2dfactory;
+static inline void uiprivInitBrushProperties(D2D1_BRUSH_PROPERTIES *props, FLOAT opacity)
+{
+	ZeroMemory(props, sizeof (D2D1_BRUSH_PROPERTIES));
+	props->opacity = opacity;
+	props->transform._11 = 1;
+	props->transform._22 = 1;
+}
+
 struct uiDrawContext {
 	ID2D1RenderTarget *rt;
 	// TODO find out how this works

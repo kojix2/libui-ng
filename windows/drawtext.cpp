@@ -19,10 +19,6 @@ struct uiDrawTextLayout {
 
 // TODO copy notes about DirectWrite DIPs being equal to Direct2D DIPs here
 
-// typographic points are 1/72 inch; this parameter is 1/96 inch
-// fortunately Microsoft does this too, in https://msdn.microsoft.com/en-us/library/windows/desktop/dd371554%28v=vs.85%29.aspx
-#define pointSizeToDWriteSize(size) (size * (96.0 / 72.0))
-
 // TODO move this and the layout creation stuff to attrstr.cpp like the other ports, or move the other ports into their drawtext.* files
 // TODO should be const but then I can't operator[] on it; the real solution is to find a way to do designated array initializers in C++11 but I do not know enough C++ voodoo to make it work (it is possible but no one else has actually done it before)
 static std::map<uiDrawTextAlign, DWRITE_TEXT_ALIGNMENT> dwriteAligns = {
@@ -54,7 +50,7 @@ uiDrawTextLayout *uiDrawNewTextLayout(uiDrawTextLayoutParams *p)
 		uiprivWeightToDWriteWeight(p->DefaultFont->Weight),
 		uiprivItalicToDWriteStyle(p->DefaultFont->Italic),
 		uiprivStretchToDWriteStretch(p->DefaultFont->Stretch),
-		pointSizeToDWriteSize(p->DefaultFont->Size),
+		uiprivDWriteSizeFromPointSize(p->DefaultFont->Size),
 		// see http://stackoverflow.com/questions/28397971/idwritefactorycreatetextformat-failing and https://msdn.microsoft.com/en-us/library/windows/desktop/dd368203.aspx
 		// TODO use the current locale?
 		L"",
@@ -141,11 +137,7 @@ static HRESULT mkSolidBrush(ID2D1RenderTarget *rt, double r, double g, double b,
 	D2D1_BRUSH_PROPERTIES props;
 	D2D1_COLOR_F color;
 
-	ZeroMemory(&props, sizeof (D2D1_BRUSH_PROPERTIES));
-	props.opacity = 1.0;
-	// identity matrix
-	props.transform._11 = 1;
-	props.transform._22 = 1;
+	uiprivInitBrushProperties(&props, 1.0);
 	color.r = r;
 	color.g = g;
 	color.b = b;

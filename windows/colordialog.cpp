@@ -1,5 +1,6 @@
 // 16 may 2016
 #include "uipriv_windows.hpp"
+#include "draw.hpp"
 
 // TODO should the d2dscratch programs capture mouse?
 
@@ -341,10 +342,7 @@ static void drawGrid(ID2D1RenderTarget *rt, D2D1_RECT_F *fillRect)
 	brt->Clear(&color);
 
 	color = D2D1::ColorF(D2D1::ColorF::LightGray, 1.0);
-	ZeroMemory(&bprop, sizeof (D2D1_BRUSH_PROPERTIES));
-	bprop.opacity = 1.0;
-	bprop.transform._11 = 1;
-	bprop.transform._22 = 1;
+	uiprivInitBrushProperties(&bprop, 1.0);
 	hr = brt->CreateSolidColorBrush(&color, &bprop, &brush);
 	if (hr != S_OK) {
 		logHRESULT(L"error creating brush for grid", hr);
@@ -402,14 +400,6 @@ cleanup:
 		brush->Release();
 	if (brt != NULL)
 		brt->Release();
-}
-
-static void initBrushProperties(D2D1_BRUSH_PROPERTIES *props, double opacity)
-{
-	ZeroMemory(props, sizeof (D2D1_BRUSH_PROPERTIES));
-	props->opacity = opacity;
-	props->transform._11 = 1;
-	props->transform._22 = 1;
 }
 
 static BOOL createSolidBrush(ID2D1RenderTarget *rt, D2D1_COLOR_F *color, D2D1_BRUSH_PROPERTIES *props, ID2D1SolidColorBrush **out, const WCHAR *errmsg)
@@ -490,7 +480,7 @@ static void drawSVChooser(struct colorDialog *c, ID2D1RenderTarget *rt)
 	lprop.endPoint.x = size.width / 2;
 	lprop.endPoint.y = 0;
 	// TODO decide what to do about the duplication of this
-	initBrushProperties(&bprop, c->a);		// note this part; we also use it below for the layer
+	uiprivInitBrushProperties(&bprop, c->a);		// note this part; we also use it below for the layer
 	if (!createGradientBrush(rt, stops, 2,
 		D2D1_GAMMA_2_2, D2D1_EXTEND_MODE_CLAMP,
 		&lprop, &bprop, &brush,
@@ -517,7 +507,7 @@ static void drawSVChooser(struct colorDialog *c, ID2D1RenderTarget *rt)
 	lprop.startPoint.y = size.height / 2;
 	lprop.endPoint.x = size.width;
 	lprop.endPoint.y = size.height / 2;
-	initBrushProperties(&bprop, 1.0);
+	uiprivInitBrushProperties(&bprop, 1.0);
 	if (!createGradientBrush(rt, stops, 2,
 		D2D1_GAMMA_2_2, D2D1_EXTEND_MODE_CLAMP,
 		&lprop, &bprop, &opacity,
@@ -541,7 +531,7 @@ static void drawSVChooser(struct colorDialog *c, ID2D1RenderTarget *rt)
 	lprop.startPoint.y = 0;
 	lprop.endPoint.x = size.width / 2;
 	lprop.endPoint.y = size.height;
-	initBrushProperties(&bprop, 1.0);
+	uiprivInitBrushProperties(&bprop, 1.0);
 	if (!createGradientBrush(rt, stops, 2,
 		D2D1_GAMMA_2_2, D2D1_EXTEND_MODE_CLAMP,
 		&lprop, &bprop, &brush,
@@ -665,7 +655,7 @@ static void drawArrow(ID2D1RenderTarget *rt, D2D1_POINT_2F center, double hypot)
 	color.g = 0.0;
 	color.b = 0.0;
 	color.a = 1.0;
-	initBrushProperties(&bprop, 1.0);
+	uiprivInitBrushProperties(&bprop, 1.0);
 	if (!createSolidBrush(rt, &color, &bprop, &brush,
 		L"error creating brush for arrow"))
 		goto cleanup;
@@ -721,7 +711,7 @@ static void drawHSlider(struct colorDialog *c, ID2D1RenderTarget *rt)
 	lprop.startPoint.y = 0;
 	lprop.endPoint.x = (rect.right - rect.left) / 2;
 	lprop.endPoint.y = size.height;
-	initBrushProperties(&bprop, 1.0);
+	uiprivInitBrushProperties(&bprop, 1.0);
 	if (!createGradientBrush(rt, stops, nStops,
 		// note that in this case this gamma is explicitly specified by the original
 		D2D1_GAMMA_2_2, D2D1_EXTEND_MODE_CLAMP,
@@ -793,7 +783,7 @@ static void drawPreview(struct colorDialog *c, ID2D1RenderTarget *rt)
 	color.g = g;
 	color.b = b;
 	color.a = c->a;
-	initBrushProperties(&bprop, 1.0);
+	uiprivInitBrushProperties(&bprop, 1.0);
 	if (!createSolidBrush(rt, &color, &bprop, &brush,
 		L"error creating brush for preview"))
 		return;
@@ -855,7 +845,7 @@ static void drawOpacitySlider(struct colorDialog *c, ID2D1RenderTarget *rt)
 	lprop.startPoint.y = (rect.bottom - rect.top) / 2;
 	lprop.endPoint.x = size.width;
 	lprop.endPoint.y = (rect.bottom - rect.top) / 2;
-	initBrushProperties(&bprop, 1.0);
+	uiprivInitBrushProperties(&bprop, 1.0);
 	if (!createGradientBrush(rt, stops, 2,
 		// note that in this case this gamma is explicitly specified by the original
 		D2D1_GAMMA_2_2, D2D1_EXTEND_MODE_CLAMP,

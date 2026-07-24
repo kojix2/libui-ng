@@ -1,6 +1,7 @@
 // 14 april 2016
 #include "uipriv_windows.hpp"
 #include "attrstr.hpp"
+#include "draw.hpp"
 
 // TODOs
 // - quote the Choose Font sample here for reference
@@ -361,11 +362,7 @@ static void fontDialogDrawSampleText(struct fontDialog *f, ID2D1RenderTarget *rt
 	color.g = 0.0;
 	color.b = 0.0;
 	color.a = 1.0;
-	ZeroMemory(&props, sizeof (D2D1_BRUSH_PROPERTIES));
-	props.opacity = 1.0;
-	// identity matrix
-	props.transform._11 = 1;
-	props.transform._22 = 1;
+	uiprivInitBrushProperties(&props, 1.0);
 	hr = rt->CreateSolidColorBrush(
 		&color,
 		&props,
@@ -396,9 +393,7 @@ static void fontDialogDrawSampleText(struct fontDialog *f, ID2D1RenderTarget *rt
 		font->GetWeight(),
 		font->GetStyle(),
 		font->GetStretch(),
-		// typographic points are 1/72 inch; this parameter is 1/96 inch
-		// fortunately Microsoft does this too, in https://msdn.microsoft.com/en-us/library/windows/desktop/dd371554%28v=vs.85%29.aspx
-		f->curSize * (96.0 / 72.0),
+		uiprivDWriteSizeFromPointSize(f->curSize),
 		// see http://stackoverflow.com/questions/28397971/idwritefactorycreatetextformat-failing and https://msdn.microsoft.com/en-us/library/windows/desktop/dd368203.aspx
 		// TODO use the current locale again?
 		L"",

@@ -26,6 +26,12 @@ extern DWRITE_FONT_STYLE uiprivItalicToDWriteStyle(uiTextItalic i);
 extern DWRITE_FONT_STRETCH uiprivStretchToDWriteStretch(uiTextStretch s);
 extern void uiprivFontDescriptorFromIDWriteFont(IDWriteFont *font, uiFontDescriptor *uidesc);
 
+// typographic points are 1/72 inch; DirectWrite font sizes are in DIPs (1/96 inch)
+static inline double uiprivDWriteSizeFromPointSize(double size)
+{
+	return size * (96.0 / 72.0);
+}
+
 // attrstr.cpp
 // TODO
 struct drawTextBackgroundParams;

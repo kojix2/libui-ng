@@ -1,5 +1,6 @@
 // 16 may 2016
 #include "uipriv_windows.hpp"
+#include "draw.hpp"
 
 struct uiColorButton {
 	uiWindowsControl c;
@@ -90,10 +91,7 @@ static BOOL onWM_NOTIFY(uiControl *c, HWND hwnd, NMHDR *nmhdr, LRESULT *lResult)
 	color.g = b->g;
 	color.b = b->b;
 	color.a = b->a;
-	ZeroMemory(&bprop, sizeof (D2D1_BRUSH_PROPERTIES));
-	bprop.opacity = 1.0;
-	bprop.transform._11 = 1;
-	bprop.transform._22 = 1;
+	uiprivInitBrushProperties(&bprop, 1.0);
 	hr = rt->CreateSolidColorBrush(&color, &bprop, &brush);
 	if (hr != S_OK) {
 		logHRESULT(L"error creating brush for color button", hr);

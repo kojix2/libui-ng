@@ -259,11 +259,7 @@ static ID2D1Brush *makeBrush(uiDrawBrush *b, ID2D1RenderTarget *rt)
 {
 	D2D1_BRUSH_PROPERTIES props;
 
-	ZeroMemory(&props, sizeof (D2D1_BRUSH_PROPERTIES));
-	props.opacity = 1.0;
-	// identity matrix
-	props.transform._11 = 1;
-	props.transform._22 = 1;
+	uiprivInitBrushProperties(&props, 1.0);
 
 	switch (b->Type) {
 	case uiDrawBrushTypeSolid:
