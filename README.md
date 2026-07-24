@@ -1,182 +1,101 @@
-# libui-ng: a portable GUI library for C
+# libui-ng
 
----
+Portable GUI library for C.
 
-## Unofficial libui-ng Build by kojix2
+[![Build](https://github.com/kojix2/libui-ng/actions/workflows/build.yml/badge.svg)](https://github.com/kojix2/libui-ng/actions/workflows/build.yml)
+[![Docs](https://github.com/kojix2/libui-ng/actions/workflows/doxygen.yml/badge.svg)](https://github.com/kojix2/libui-ng/actions/workflows/doxygen.yml)
 
-- This repository uses [GitHub Actions](.github/workflows/pre-build.yml) to build and distribute libui-ng binaries.
-- Our primary focus is on building and distribution rather than development. 
-- As a result, pre-build branches may be frequently rebased and force-pushed.
-- For details about the changes included in each build, please refer to the tags associated with each release.
+This repository provides unofficial kojix2 builds of libui-ng.
+It builds and distributes patched binaries while maintaining API compatibility
+with upstream libui-ng.
 
-### See [Releases](https://github.com/kojix2/libui-ng/releases)
+Releases are available at https://github.com/kojix2/libui-ng/releases.
 
-- [pre-build branch](https://github.com/kojix2/libui-ng/tree/pre-build): `commit-xxxxxxx`
-  - Includes bug fixes for libui-ng
-- [dev branch](https://github.com/kojix2/libui-ng/tree/dev): `commit-xxxxxxx-experimental`
-  - Contains bug fixes for libui-ng as well as the new functions `uiImageView` and `uiDrawImage`.
+Upstream projects:
 
-This project aims to eventually integrate changes back into the successor project to libui. 
+- libui-ng: https://github.com/libui-ng/libui-ng
+- libui: https://github.com/andlabs/libui
 
-Please note that force pushes are often used to clean up the commit log.
+## Branches
 
----
+- `pre-build`: build branch for release binaries. Tags use `commit-xxxxxxx`.
+- `dev`: development branch with additional fixes and experimental image APIs
+  (`uiImageView`, `uiDrawImage`). Tags use `commit-xxxxxxx-experimental`.
 
-Fork of [andlabs/libui](https://github.com/andlabs/libui). This README is being written.<br>
-[![Build Status, GitHub Actions](https://github.com/libui-ng/libui-ng/actions/workflows/build.yml/badge.svg)](https://github.com/libui-ng/libui-ng/actions/workflows/build.yml)
-[![GitLab](https://img.shields.io/badge/gitlab-%23181717.svg?style=for-the-badge&logo=gitlab&logoColor=white)](https://gitlab.com/libui-ng/libui-ng)
-[![GitHub](https://img.shields.io/badge/github-%23121011.svg?style=for-the-badge&logo=github&logoColor=white)](https://github.com/libui-ng/libui-ng)
+Pre-build branches may be rebased or force-pushed. Use release tags when you
+need a stable reference. Build details and included changes are tracked by the
+tags attached to each release.
 
-## About
-
-Simple and portable (but not inflexible) GUI library in C that uses the native GUI technologies of each platform it supports.
-
-## Status
-
-libui-ng is currently **mid-alpha** software.
-
-See [CHANGELOG.md](CHANGELOG.md)
-
-*Old announcements can be found in the [old_news.md](doc/old_news.md) file.*
+Build automation is defined in `.github/workflows/build.yml`.
 
 ## Runtime Requirements
 
-* Windows: Windows Vista SP2 with Platform Update or newer
-* Unix: GTK+ 3.10 or newer
-* Mac OS X: OS X 10.8 or newer
+- Windows: Windows Vista SP2 with Platform Update or newer
+- Unix: GTK+ 3.10 or newer
+- macOS: OS X 10.8 or newer
 
 ## Build Requirements
 
-* All platforms:
-	* [Meson](https://mesonbuild.com/) 0.58.0 or newer
-	* Any of Meson's backends; this section assumes you are using [Ninja](https://ninja-build.org/), but there is no reason the other backends shouldn't work.
-* Windows: either
-	* Microsoft Visual Studio 2013 or newer (2013 is needed for `va_copy()`) — you can build either a static or a shared library
-	* MinGW-w64 (other flavors of MinGW may not work) — **you can only build a static library**; shared library support will be re-added once the following features come in:
-		* [Isolation awareness](https://msdn.microsoft.com/en-us/library/aa375197%28v=vs.85%29.aspx), which is how you get themed controls from a DLL without needing a manifest
-* Unix: nothing else specific
-* Mac OS X: nothing else specific, so long as you can build Cocoa programs
+- Meson 0.58.0 or newer
+- Ninja, or another Meson backend
+- Windows: Microsoft Visual Studio 2013 or newer, or MinGW-w64
+- Unix: GTK+ development packages
+- macOS: tools required to build Cocoa programs
 
-## Building
+MinGW-w64 builds currently support static libraries only.
 
-libui-ng mainly uses [the standard Meson build options](https://mesonbuild.com/Builtin-options.html).
+## Build
 
-```
-$ # in the top-level libui-ng directory run:
-$ meson setup build [options]
-$ ninja -C build
+```sh
+meson setup build
+ninja -C build
 ```
 
-Once this completes, everything will be under `build/meson-out/`.
+Build output is written to `build/meson-out/`.
 
-libui-ng specific options:
+Common options:
 
-- `-Dtests=(true|false)` controls whether tests are built; defaults to `true`
-- `-Dexamples=(true|false)` controls whether examples are built; defaults to `true`
+- `-Dtests=true|false`
+- `-Dexamples=true|false`
+- `--buildtype=debug|release|debugoptimized`
+- `--default-library=shared|static`
+- `--wrap-mode=forcefallback|nofallback|nodownload`
 
-Most important Meson options:
+Example:
 
-* `--buildtype=(debug|release|...)` controls the type of build made; the default is `debug`. For a full list of valid values, consult [the Meson documentation](https://mesonbuild.com/Running-Meson.html).
-* `--default-library=(shared|static)` controls whether libui is built as a shared library or a static library; the default is `shared`. You currently cannot specify `both`, as the build process changes depending on the target type (though I am willing to look into changing things if at all possible).
-* `-Db_sanitize=which` allows enabling the chosen [sanitizer](https://github.com/google/sanitizers) on a system that supports sanitizers. The list of supported values is in [the Meson documentation](https://mesonbuild.com/Builtin-options.html#base-options).
-* `--backend=backend` allows using the specified `backend` for builds instead of `ninja` (the default). A list of supported values is in [the Meson documentation](https://mesonbuild.com/Builtin-options.html#universal-options).
-* `--wrap-mode=(forcefallback|nofallback|nodownload|...)` controls which cmocka library version to use in test enabled builds. The default is `forcefallback` to pull and build a local copy. Package maintainers may wish to choose `nofallback` to use the system's library and declare `cmocka` a build time dependency or `nodownload`, see [the Meson documentation](https://mesonbuild.com/Subprojects.html#commandline-options) for more details.
-
-Most other built-in options will work, though keep in mind there are a handful of options that cannot be overridden because libui depends on them holding a specific value; if you do override these, though, libui will warn you when you run `meson`.
-
-The Meson website and documentation has more in-depth usage instructions.
-
-For the sake of completeness, I should note that the default value of `--layout` is `flat`, not the usual `mirror`. This is done both to make creating the release archives easier as well as to reduce the chance that shared library builds will fail to start on Windows because the DLL is in another directory. You can always specify this manually if you want.
-
-Backends other than `ninja` should work, but are untested by me.
-
-## Testing
-
-### Automated Unit Tests
-
-Run the included unit tests via `meson test -C build`. Alternatively you can also run the `unit` executable manually.
-
-### Manual Testing Suite
-
-Run the manual quality assurance test suite via `qa` and follow the instructions laid out within.
-
-## Installation
-
-Meson also supports installing from source; if you use Ninja, just do
-
-```
-$ ninja -C build install
+```sh
+meson setup build --buildtype=release --default-library=shared
+ninja -C build
 ```
 
-When running `meson`, the `--prefix` option will set the installation prefix. [The Meson documentation](https://mesonbuild.com/Builtin-options.html#universal-options) has more information, and even lists more fine-grained options that you can use to control the installation.
+## Test
 
-#### Arch Linux
+```sh
+meson test -C build
+```
 
-Can be built from AUR: https://aur.archlinux.org/packages/libui-ng-git/
+Manual QA tests are under `test/qa`.
 
-## Documentation [WIP]
+## Install
 
-[API](https://libui-ng.github.io/libui-ng/), check the [modules](https://libui-ng.github.io/libui-ng/modules.html) section for an overview of (nearly all) uiControls.
+```sh
+ninja -C build install
+```
 
-Consult the `ui.h` comments for the uiControls missing in the docs.
+Set the install prefix during setup:
 
-Check the `examples` directory for fully fledged examples. Check out the `tests` directory and subdirectories for more real world usage.
+```sh
+meson setup build --prefix=/usr/local
+```
 
-## Language Bindings
+## Documentation and Examples
 
-libui was originally written as part of my [package ui for Go](https://github.com/andlabs/ui). Now that libui is separate, package ui has become a binding to libui. As such, package ui is the only official binding.
-
-Other people have made bindings to other languages:
-
-Language | Bindings
---- | ---
-Beef | [libui-beef](https://github.com/guofeiyu2022/libui-beef)
-C++ | [libui-cpp](https://github.com/billyquith/libui-cpp), [cpp-libui-qtlike](https://github.com/aoloe/cpp-libui-qtlike)
-C# / .NET Framework | [LibUI.Binding](https://github.com/NattyNarwhal/LibUI.Binding)
-C# / .NET Core | [DevZH.UI](https://github.com/noliar/DevZH.UI), [SharpUI](https://github.com/benpye/sharpui/)
-CHICKEN Scheme | [wasamasa/libui](https://github.com/wasamasa/libui)
-Common Lisp | [jinwoo/cl-ui](https://github.com/jinwoo/cl-ui)
-Crystal | [libui.cr](https://github.com/Fusion/libui.cr), [hedron](https://github.com/Qwerp-Derp/hedron), [iu](https://github.com/grkek/iu)
-D | [DerelictLibui (flat API)](https://github.com/Extrawurst/DerelictLibui), [libuid (object-oriented)](https://github.com/mogud/libuid)
-Euphoria | [libui-euphoria](https://github.com/ghaberek/libui-euphoria)
-Harbour | [hbui](https://github.com/rjopek/hbui)
-Haskell | [haskell-libui](https://github.com/beijaflor-io/haskell-libui)
-Janet | [JanetUI](https://github.com/janet-lang/janetui)
-JavaScript/Node.js | [libui-node](https://github.com/parro-it/libui-node), [libui.js (merged into libui-node?)](https://github.com/mavenave/libui.js), [proton-native](https://github.com/kusti8/proton-native), [vuido](https://github.com/mimecorg/vuido)
-Julia | [Libui.jl](https://github.com/joa-quim/Libui.jl)
-Kotlin | [kotlin-libui](https://github.com/msink/kotlin-libui)
-Lua | [libuilua](https://github.com/zevv/libuilua), [libui-lua](https://github.com/mdombroski/libui-lua), [lui](http://tset.de/lui/index.html), [lui](https://github.com/zhaozg/lui)
-Nim | [ui](https://github.com/nim-lang/ui), [uing](https://github.com/neroist/uing)
-Perl6 | [perl6-libui](https://github.com/Garland-g/perl6-libui)
-PHP | [ui](https://github.com/krakjoe/ui), [Ardillo](https://github.com/ardillo-php/ext)
-Python | [pylibui](https://github.com/joaoventura/pylibui)
-Ring | [RingLibui](https://github.com/ring-lang/ring/tree/master/extensions/ringlibui)
-Ruby | [libui-ruby](https://github.com/jamescook/libui-ruby), [LibUI](https://github.com/kojix2/libui), [Glimmer DSL for LibUI](https://github.com/AndyObtiva/glimmer-dsl-libui)
-Rust | [libui-ng-sys](https://github.com/norepimorphism/libui-ng-sys), [boing](https://github.com/norepimorphism/boing), [libui-rs](https://github.com/rust-native-ui/libui-rs), [libui](https://github.com/libui-rs/libui)
-Scala | [scalaui](https://github.com/lolgab/scalaui)
-Swift | [libui-swift](https://github.com/sclukey/libui-swift)
-V | [v-uing](https://github.com/trufae/v-uing)
-Zig | [zig-libui-ng](https://github.com/desttinghim/zig-libui-ng)
-
-## Frequently Asked Questions
-
-### Why does my program start in the background on OS X if I run from the command line?
-OS X normally does not start program executables directly; instead, it uses [Launch Services](https://developer.apple.com/reference/coreservices/1658613-launch_services?language=objc) to coordinate the launching of the program between the various parts of the system and the loading of info from an .app bundle. One of these coordination tasks is responsible for bringing a newly launched app into the foreground. This is called "activation".
-
-When you run a binary directly from the Terminal, however, you are running it directly, not through Launch Services. Therefore, the program starts in the background, because no one told it to activate! Now, it turns out [there is an API](https://developer.apple.com/reference/appkit/nsapplication/1428468-activateignoringotherapps) that we can use to force our app to be activated. But if we use it, then we'd be trampling over Launch Services, which already knows whether it should activate or not. Therefore, libui does not step over Launch Services, at the cost of requiring an extra user step if running directly from the command line.
-
-See also [this](https://github.com/andlabs/libui/pull/20#issuecomment-211381971) and [this](http://stackoverflow.com/questions/25318524/what-exactly-should-i-pass-to-nsapp-activateignoringotherapps-to-get-my-appl).
+- API documentation: https://kojix2.github.io/libui-ng/
+- API comments are in `ui.h`.
+- Examples are under `examples`.
+- Tests are under `test`.
+- Old announcements are in [doc/old_news.md](doc/old_news.md).
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md)
-
-## Screenshots
-
-From examples/controlgallery:
-
-![Windows](examples/controlgallery/windows.png)
-
-![Unix](examples/controlgallery/unix.png)
-
-![OS X](examples/controlgallery/darwin.png)
+See [CONTRIBUTING.md](CONTRIBUTING.md).
