@@ -48,9 +48,6 @@ foreach name, value : libui_forced_options
 	endif
 endforeach
 
-libui_OS = host_machine.system()
-libui_MSVC = meson.get_compiler('c').get_id() == 'msvc'
-
 if libui_OS == 'darwin'
 	add_languages('objc',
 		required: true)
