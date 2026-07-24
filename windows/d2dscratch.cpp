@@ -1,5 +1,6 @@
 // 17 april 2016
 #include "uipriv_windows.hpp"
+#include "draw.hpp"
 
 // The Direct2D scratch window is a utility for libui internal use to do quick things with Direct2D.
 // To use, call newD2DScratch() passing in a subclass procedure. This subclass procedure should handle the msgD2DScratchPaint message, which has the following usage:
@@ -27,11 +28,11 @@ static HRESULT d2dScratchDoPaint(HWND hwnd, ID2D1RenderTarget *rt)
 	// TODO only clear the clip area
 	// TODO clear with actual background brush
 	bgcolorref = GetSysColor(COLOR_BTNFACE);
-	bgcolor.r = ((float) GetRValue(bgcolorref)) / 255.0;
+	bgcolor.r = uiprivD2DFloat(((double) GetRValue(bgcolorref)) / 255.0);
 	// due to utter apathy on Microsoft's part, GetGValue() does not work with MSVC's Run-Time Error Checks
 	// it has not worked since 2008 and they have *never* fixed it
-	bgcolor.g = ((float) ((BYTE) ((bgcolorref & 0xFF00) >> 8))) / 255.0;
-	bgcolor.b = ((float) GetBValue(bgcolorref)) / 255.0;
+	bgcolor.g = uiprivD2DFloat(((double) ((BYTE) ((bgcolorref & 0xFF00) >> 8))) / 255.0);
+	bgcolor.b = uiprivD2DFloat(((double) GetBValue(bgcolorref)) / 255.0);
 	bgcolor.a = 1.0;
 	rt->Clear(&bgcolor);
 
@@ -52,8 +53,8 @@ static void d2dScratchDoLButtonDown(HWND hwnd, ID2D1RenderTarget *rt, LPARAM lPa
 	// these are in pixels; we need points
 	// TODO separate the function from areautil.cpp?
 	rt->GetDpi(&dpix, &dpiy);
-	pos.x = (xpix * 96) / dpix;
-	pos.y = (ypix * 96) / dpiy;
+	pos.x = uiprivD2DFloat((xpix * 96) / dpix);
+	pos.y = uiprivD2DFloat((ypix * 96) / dpiy);
 
 	size = realGetSize(rt);
 

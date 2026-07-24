@@ -93,7 +93,7 @@ void uiMultilineEntryAppend(uiMultilineEntry *e, const char *text)
 	// Save current selection
 	SendMessageW(e->hwnd, EM_GETSEL, (WPARAM) &selStart, (LPARAM) &selEnd);
 	// Append by replacing an empty selection at the end of the input
-	Edit_SetSel(e->hwnd, -1, -1);
+	Edit_SetSel(e->hwnd, (WPARAM) -1, (LPARAM) -1);
 	crlf = LFtoCRLF(text);
 	wtext = toUTF16(crlf);
 	uiprivFree(crlf);

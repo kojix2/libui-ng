@@ -5,6 +5,11 @@
 
 // draw.cpp
 extern ID2D1Factory *d2dfactory;
+static inline FLOAT uiprivD2DFloat(double value)
+{
+	return (FLOAT) value;
+}
+
 static inline void uiprivInitBrushProperties(D2D1_BRUSH_PROPERTIES *props, FLOAT opacity)
 {
 	ZeroMemory(props, sizeof (D2D1_BRUSH_PROPERTIES));

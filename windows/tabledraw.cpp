@@ -607,7 +607,7 @@ static HRESULT fillDrawState(struct drawState *s, uiTable *t, NMLVCUSTOMDRAW *nm
 	s->p = p;
 
 	s->dc = nm->nmcd.hdc;
-	s->iItem = nm->nmcd.dwItemSpec;
+	s->iItem = (int) nm->nmcd.dwItemSpec;
 	s->iSubItem = nm->iSubItem;
 
 	hr = uiprivTableGetMetrics(t, s->iItem, s->iSubItem, &(s->m));
@@ -691,7 +691,7 @@ HRESULT uiprivTableHandleNM_CUSTOMDRAW(uiTable *t, NMLVCUSTOMDRAW *nm, LRESULT *
 	struct drawState s;
 	uiprivTableColumnParams *p;
 	NMLVCUSTOMDRAW b;
-	size_t i, n;
+	int i, n;
 	RECT focus;
 	LRESULT state;
 	bool drawFocus;
@@ -709,7 +709,7 @@ HRESULT uiprivTableHandleNM_CUSTOMDRAW(uiTable *t, NMLVCUSTOMDRAW *nm, LRESULT *
 		return S_OK;
 	}
 
-	n = t->columns->size();
+	n = (int) t->columns->size();
 	b = *nm;
 	drawFocus = false;
 	if (GetFocus() == t->hwnd) {

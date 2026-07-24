@@ -32,7 +32,7 @@ static HRESULT resizeEdit(uiTable *t, WCHAR *wstr, int iItem, int iSubItem)
 		ReleaseDC(t->hwnd, dc);
 		return logLastError(L"GetTextMetricsW()");
 	}
-	if (GetTextExtentPoint32W(dc, wstr, wcslen(wstr), &textSize) == 0) {
+	if (GetTextExtentPoint32W(dc, wstr, (int) wcslen(wstr), &textSize) == 0) {
 		SelectObject(dc, prevFont);
 		ReleaseDC(t->hwnd, dc);
 		return logLastError(L"GetTextExtentPoint32W()");

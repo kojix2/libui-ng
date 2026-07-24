@@ -68,7 +68,7 @@ static int comboboxSelected(uiCombobox *c)
 	n = SendMessage(c->hwnd, CB_GETCURSEL, 0, 0);
 	if (n == (LRESULT) CB_ERR)
 		return -1;
-	return n;
+	return (int) n;
 }
 
 void uiComboboxAppend(uiCombobox *c, const char *text)
@@ -146,7 +146,7 @@ int uiComboboxNumItems(uiCombobox *c)
 	n = SendMessage(c->hwnd, CB_GETCOUNT, 0, 0);
 	if (n == (LRESULT) CB_ERR)
 		return -1;
-	return n;
+	return (int) n;
 }
 
 int uiComboboxSelected(uiCombobox *c)

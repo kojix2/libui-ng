@@ -32,7 +32,7 @@ int uiProgressBarValue(uiProgressBar *p)
 {
 	if (indeterminate(p))
 		return -1;
-	return SendMessage(p->hwnd, PBM_GETPOS, 0, 0);
+	return (int) SendMessage(p->hwnd, PBM_GETPOS, 0, 0);
 }
 
 // unfortunately, as of Vista progress bars have a forced animation on increase

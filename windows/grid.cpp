@@ -104,7 +104,7 @@ public:
 				continue;
 			for (y = gc->top; y < gc->top + gc->yspan; y++)
 				for (x = gc->left; x < gc->left + gc->xspan; x++)
-					this->gg[toyindex(g, y)][toxindex(g, x)] = i;
+					this->gg[toyindex(g, y)][toxindex(g, x)] = (int) i;
 		}
 
 		this->colwidths = new int[xcount(g)];

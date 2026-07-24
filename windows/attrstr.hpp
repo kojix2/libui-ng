@@ -27,9 +27,9 @@ extern DWRITE_FONT_STRETCH uiprivStretchToDWriteStretch(uiTextStretch s);
 extern void uiprivFontDescriptorFromIDWriteFont(IDWriteFont *font, uiFontDescriptor *uidesc);
 
 // typographic points are 1/72 inch; DirectWrite font sizes are in DIPs (1/96 inch)
-static inline double uiprivDWriteSizeFromPointSize(double size)
+static inline FLOAT uiprivDWriteSizeFromPointSize(double size)
 {
-	return size * (96.0 / 72.0);
+	return (FLOAT) (size * (96.0 / 72.0));
 }
 
 // attrstr.cpp
@@ -63,12 +63,12 @@ public:
 	virtual ULONG STDMETHODCALLTYPE AddRef(void);
 	virtual ULONG STDMETHODCALLTYPE Release(void);
 
-	void setColor(double r, double g, double b, double a);
-	void setUnderline(uiUnderline u);
-	void setUnderlineColor(double r, double g, double b, double a);
-	HRESULT mkColorBrush(ID2D1RenderTarget *rt, ID2D1SolidColorBrush **b);
-	HRESULT underline(uiUnderline *u);
-	HRESULT mkUnderlineBrush(ID2D1RenderTarget *rt, ID2D1SolidColorBrush **b);
+	void setColor(double red, double green, double blue, double alpha);
+	void setUnderline(uiUnderline underlineType);
+	void setUnderlineColor(double red, double green, double blue, double alpha);
+	HRESULT mkColorBrush(ID2D1RenderTarget *rt, ID2D1SolidColorBrush **brush);
+	HRESULT underline(uiUnderline *underlineType);
+	HRESULT mkUnderlineBrush(ID2D1RenderTarget *rt, ID2D1SolidColorBrush **brush);
 };
 // TODO figure out where this type should *really* go in all the headers...
 struct drawTextBackgroundParams {

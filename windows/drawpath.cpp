@@ -64,8 +64,8 @@ void uiDrawPathNewFigure(uiDrawPath *p, double x, double y)
 
 	if (p->inFigure)
 		p->sink->EndFigure(D2D1_FIGURE_END_OPEN);
-	pt.x = x;
-	pt.y = y;
+	pt.x = uiprivD2DFloat(x);
+	pt.y = uiprivD2DFloat(y);
 	p->sink->BeginFigure(pt, D2D1_FIGURE_BEGIN_FILLED);
 	p->inFigure = TRUE;
 }
@@ -146,10 +146,10 @@ static void drawArc(uiDrawPath *p, struct arc *a, void (*startFunction)(uiDrawPa
 		(*startFunction)(p, startX, startY);
 
 	// now we can draw the arc
-	as.point.x = endX;
-	as.point.y = endY;
-	as.size.width = a->radius;
-	as.size.height = a->radius;
+	as.point.x = uiprivD2DFloat(endX);
+	as.point.y = uiprivD2DFloat(endY);
+	as.size.width = uiprivD2DFloat(a->radius);
+	as.size.height = uiprivD2DFloat(a->radius);
 	as.rotationAngle = 0;		// as above, not relevant for circles
 	if (a->negative)
 		as.sweepDirection = D2D1_SWEEP_DIRECTION_CLOCKWISE;
@@ -193,8 +193,8 @@ void uiDrawPathLineTo(uiDrawPath *p, double x, double y)
 	if (p->sink == NULL)
 		uiprivUserBug("You cannot modify a uiDrawPath that has been ended. (path: %p)", p);
 
-	pt.x = x;
-	pt.y = y;
+	pt.x = uiprivD2DFloat(x);
+	pt.y = uiprivD2DFloat(y);
 	p->sink->AddLine(pt);
 }
 
@@ -221,12 +221,12 @@ void uiDrawPathBezierTo(uiDrawPath *p, double c1x, double c1y, double c2x, doubl
 	if (p->sink == NULL)
 		uiprivUserBug("You cannot modify a uiDrawPath that has been ended. (path: %p)", p);
 
-	s.point1.x = c1x;
-	s.point1.y = c1y;
-	s.point2.x = c2x;
-	s.point2.y = c2y;
-	s.point3.x = endX;
-	s.point3.y = endY;
+	s.point1.x = uiprivD2DFloat(c1x);
+	s.point1.y = uiprivD2DFloat(c1y);
+	s.point2.x = uiprivD2DFloat(c2x);
+	s.point2.y = uiprivD2DFloat(c2y);
+	s.point3.x = uiprivD2DFloat(endX);
+	s.point3.y = uiprivD2DFloat(endY);
 	p->sink->AddBezier(&s);
 }
 

@@ -27,7 +27,7 @@ static int value(uiSpinbox *s)
 		SendMessageW(s->updown, UDM_SETPOS32, 0, (LPARAM) val);
 		s->inhibitChanged = FALSE;
 	}
-	return val;
+	return (int) val;
 }
 
 // control implementation

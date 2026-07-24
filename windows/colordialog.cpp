@@ -470,9 +470,9 @@ static void drawSVChooser(struct colorDialog *c, ID2D1RenderTarget *rt)
 	stops[0].color.b = 0.0;
 	stops[0].color.a = 1.0;
 	stops[1].position = 1;
-	stops[1].color.r = rTop;
-	stops[1].color.g = gTop;
-	stops[1].color.b = bTop;
+	stops[1].color.r = uiprivD2DFloat(rTop);
+	stops[1].color.g = uiprivD2DFloat(gTop);
+	stops[1].color.b = uiprivD2DFloat(bTop);
 	stops[1].color.a = 1.0;
 	ZeroMemory(&lprop, sizeof (D2D1_LINEAR_GRADIENT_BRUSH_PROPERTIES));
 	lprop.startPoint.x = size.width / 2;
@@ -480,7 +480,7 @@ static void drawSVChooser(struct colorDialog *c, ID2D1RenderTarget *rt)
 	lprop.endPoint.x = size.width / 2;
 	lprop.endPoint.y = 0;
 	// TODO decide what to do about the duplication of this
-	uiprivInitBrushProperties(&bprop, c->a);		// note this part; we also use it below for the layer
+	uiprivInitBrushProperties(&bprop, uiprivD2DFloat(c->a));		// note this part; we also use it below for the layer
 	if (!createGradientBrush(rt, stops, 2,
 		D2D1_GAMMA_2_2, D2D1_EXTEND_MODE_CLAMP,
 		&lprop, &bprop, &brush,
@@ -553,7 +553,7 @@ static void drawSVChooser(struct colorDialog *c, ID2D1RenderTarget *rt)
 	layerparams.maskAntialiasMode = D2D1_ANTIALIAS_MODE_PER_PRIMITIVE;
 	layerparams.maskTransform._11 = 1;
 	layerparams.maskTransform._22 = 1;
-	layerparams.opacity = c->a;			// here's the other use of c->a to note
+	layerparams.opacity = uiprivD2DFloat(c->a);			// here's the other use of c->a to note
 	layerparams.opacityBrush = opacity;
 	layerparams.layerOptions = D2D1_LAYER_OPTIONS_NONE;
 	rt->PushLayer(&layerparams, layer);
@@ -568,8 +568,8 @@ static void drawSVChooser(struct colorDialog *c, ID2D1RenderTarget *rt)
 
 	// and now we just draw the marker
 	ZeroMemory(&mparam, sizeof (D2D1_ELLIPSE));
-	mparam.point.x = c->s * size.width;
-	mparam.point.y = (1 - c->v) * size.height;
+	mparam.point.x = uiprivD2DFloat(c->s * size.width);
+	mparam.point.y = uiprivD2DFloat((1 - c->v) * size.height);
 	mparam.radiusX = 7;
 	mparam.radiusY = 7;
 	// TODO make the color contrast?
@@ -640,10 +640,10 @@ static void drawArrow(ID2D1RenderTarget *rt, D2D1_POINT_2F center, double hypot)
 	hypot *= hypot;
 	hypot /= 2;
 	leg = sqrt(hypot);
-	rect.left = center.x - leg;
-	rect.top = center.y - leg;
-	rect.right = center.x + leg;
-	rect.bottom = center.y + leg;
+	rect.left = uiprivD2DFloat(center.x - leg);
+	rect.top = uiprivD2DFloat(center.y - leg);
+	rect.right = uiprivD2DFloat(center.x + leg);
+	rect.bottom = uiprivD2DFloat(center.y + leg);
 
 	// now we need to rotate the render target 45° (either way works) about the center point
 	rt->GetTransform(&oldtf);
@@ -697,10 +697,10 @@ static void drawHSlider(struct colorDialog *c, ID2D1RenderTarget *rt)
 		if (i == (nStops - 1))
 			h = 0;
 		hsv2RGB(h, 1.0, 1.0, &r, &g, &b);
-		stops[i].position = ((double) i) * stopIncr;
-		stops[i].color.r = r;
-		stops[i].color.g = g;
-		stops[i].color.b = b;
+		stops[i].position = uiprivD2DFloat(((double) i) * stopIncr);
+		stops[i].color.r = uiprivD2DFloat(r);
+		stops[i].color.g = uiprivD2DFloat(g);
+		stops[i].color.b = uiprivD2DFloat(b);
 		stops[i].color.a = 1.0;
 	}
 	// and pin the last one
@@ -725,7 +725,7 @@ static void drawHSlider(struct colorDialog *c, ID2D1RenderTarget *rt)
 
 	// now draw a black arrow
 	center.x = 0;
-	center.y = c->h * size.height;
+	center.y = uiprivD2DFloat(c->h * size.height);
 	hypot = rect.left;
 	drawArrow(rt, center, hypot);
 
@@ -779,10 +779,10 @@ static void drawPreview(struct colorDialog *c, ID2D1RenderTarget *rt)
 	drawGrid(rt, &rect);
 
 	hsv2RGB(c->h, c->s, c->v, &r, &g, &b);
-	color.r = r;
-	color.g = g;
-	color.b = b;
-	color.a = c->a;
+	color.r = uiprivD2DFloat(r);
+	color.g = uiprivD2DFloat(g);
+	color.b = uiprivD2DFloat(b);
+	color.a = uiprivD2DFloat(c->a);
 	uiprivInitBrushProperties(&bprop, 1.0);
 	if (!createSolidBrush(rt, &color, &bprop, &brush,
 		L"error creating brush for preview"))
@@ -826,7 +826,7 @@ static void drawOpacitySlider(struct colorDialog *c, ID2D1RenderTarget *rt)
 	rect.left = 0;
 	rect.top = 0;
 	rect.right = size.width;
-	rect.bottom = size.height * (5.0 / 6.0);		// bottommost sixth for arrow
+	rect.bottom = uiprivD2DFloat(size.height * (5.0 / 6.0));		// bottommost sixth for arrow
 
 	drawGrid(rt, &rect);
 
@@ -858,7 +858,7 @@ static void drawOpacitySlider(struct colorDialog *c, ID2D1RenderTarget *rt)
 	brush = NULL;
 
 	// now draw a black arrow
-	center.x = (1 - c->a) * size.width;
+	center.x = uiprivD2DFloat((1 - c->a) * size.width);
 	center.y = size.height;
 	hypot = size.height - rect.bottom;
 	drawArrow(rt, center, hypot);
@@ -905,7 +905,7 @@ HWND replaceWithD2DScratch(HWND parent, int id, SUBCLASSPROC subproc, void *data
 	uiWindowsEnsureGetWindowRect(replace, &r);
 	mapWindowRect(NULL, parent, &r);
 	uiWindowsEnsureDestroyWindow(replace);
-	return newD2DScratch(parent, &r, (HMENU) id, subproc, (DWORD_PTR) data);
+	return newD2DScratch(parent, &r, (HMENU) (INT_PTR) id, subproc, (DWORD_PTR) data);
 	// TODO preserve Z-order
 }
 

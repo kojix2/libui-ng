@@ -4,12 +4,12 @@
 
 void m2d(uiDrawMatrix *m, D2D1_MATRIX_3X2_F *d)
 {
-	d->_11 = m->M11;
-	d->_12 = m->M12;
-	d->_21 = m->M21;
-	d->_22 = m->M22;
-	d->_31 = m->M31;
-	d->_32 = m->M32;
+	d->_11 = uiprivD2DFloat(m->M11);
+	d->_12 = uiprivD2DFloat(m->M12);
+	d->_21 = uiprivD2DFloat(m->M21);
+	d->_22 = uiprivD2DFloat(m->M22);
+	d->_31 = uiprivD2DFloat(m->M31);
+	d->_32 = uiprivD2DFloat(m->M32);
 }
 
 static void d2m(D2D1_MATRIX_3X2_F *d, uiDrawMatrix *m)
@@ -27,7 +27,7 @@ void uiDrawMatrixTranslate(uiDrawMatrix *m, double x, double y)
 	D2D1_MATRIX_3X2_F dm;
 
 	m2d(m, &dm);
-	dm = dm * D2D1::Matrix3x2F::Translation(x, y);
+	dm = dm * D2D1::Matrix3x2F::Translation(uiprivD2DFloat(x), uiprivD2DFloat(y));
 	d2m(&dm, m);
 }
 
@@ -37,9 +37,9 @@ void uiDrawMatrixScale(uiDrawMatrix *m, double xCenter, double yCenter, double x
 	D2D1_POINT_2F center;
 
 	m2d(m, &dm);
-	center.x = xCenter;
-	center.y = yCenter;
-	dm = dm * D2D1::Matrix3x2F::Scale(x, y, center);
+	center.x = uiprivD2DFloat(xCenter);
+	center.y = uiprivD2DFloat(yCenter);
+	dm = dm * D2D1::Matrix3x2F::Scale(uiprivD2DFloat(x), uiprivD2DFloat(y), center);
 	d2m(&dm, m);
 }
 
@@ -51,9 +51,9 @@ void uiDrawMatrixRotate(uiDrawMatrix *m, double x, double y, double amount)
 	D2D1_POINT_2F center;
 
 	m2d(m, &dm);
-	center.x = x;
-	center.y = y;
-	dm = dm * D2D1::Matrix3x2F::Rotation(r2d(amount), center);
+	center.x = uiprivD2DFloat(x);
+	center.y = uiprivD2DFloat(y);
+	dm = dm * D2D1::Matrix3x2F::Rotation(uiprivD2DFloat(r2d(amount)), center);
 	d2m(&dm, m);
 }
 
@@ -63,9 +63,9 @@ void uiDrawMatrixSkew(uiDrawMatrix *m, double x, double y, double xamount, doubl
 	D2D1_POINT_2F center;
 
 	m2d(m, &dm);
-	center.x = x;
-	center.y = y;
-	dm = dm * D2D1::Matrix3x2F::Skew(r2d(xamount), r2d(yamount), center);
+	center.x = uiprivD2DFloat(x);
+	center.y = uiprivD2DFloat(y);
+	dm = dm * D2D1::Matrix3x2F::Skew(uiprivD2DFloat(r2d(xamount)), uiprivD2DFloat(r2d(yamount)), center);
 	d2m(&dm, m);
 }
 
@@ -104,8 +104,8 @@ void uiDrawMatrixTransformPoint(uiDrawMatrix *m, double *x, double *y)
 	D2D1_POINT_2F pt;
 
 	m2d(m, &dm);
-	pt.x = *x;
-	pt.y = *y;
+	pt.x = uiprivD2DFloat(*x);
+	pt.y = uiprivD2DFloat(*y);
 	pt = dm.TransformPoint(pt);
 	*x = pt.x;
 	*y = pt.y;

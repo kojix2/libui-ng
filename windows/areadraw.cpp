@@ -1,6 +1,7 @@
 // 8 september 2015
 #include "uipriv_windows.hpp"
 #include "area.hpp"
+#include "draw.hpp"
 
 static HRESULT doPaint(uiArea *a, ID2D1RenderTarget *rt, RECT *clip)
 {
@@ -39,24 +40,24 @@ static HRESULT doPaint(uiArea *a, ID2D1RenderTarget *rt, RECT *clip)
 		scrollTransform._11 = 1;
 		scrollTransform._22 = 1;
 		// negative because we want nonzero scroll positions to move the drawing area up/left
-		scrollTransform._31 = -a->hscrollpos;
-		scrollTransform._32 = -a->vscrollpos;
+		scrollTransform._31 = uiprivD2DFloat(-a->hscrollpos);
+		scrollTransform._32 = uiprivD2DFloat(-a->vscrollpos);
 		rt->SetTransform(&scrollTransform);
 	}
 
 	// TODO clear with actual background brush
 	bgcolorref = GetSysColor(COLOR_BTNFACE);
-	bgcolor.r = ((float) GetRValue(bgcolorref)) / 255.0;
+	bgcolor.r = uiprivD2DFloat(((double) GetRValue(bgcolorref)) / 255.0);
 	// due to utter apathy on Microsoft's part, GetGValue() does not work with MSVC's Run-Time Error Checks
 	// it has not worked since 2008 and they have *never* fixed it
-	bgcolor.g = ((float) ((BYTE) ((bgcolorref & 0xFF00) >> 8))) / 255.0;
-	bgcolor.b = ((float) GetBValue(bgcolorref)) / 255.0;
+	bgcolor.g = uiprivD2DFloat(((double) ((BYTE) ((bgcolorref & 0xFF00) >> 8))) / 255.0);
+	bgcolor.b = uiprivD2DFloat(((double) GetBValue(bgcolorref)) / 255.0);
 	bgcolor.a = 1.0;
 
-	clipRect.left = dp.ClipX;
-	clipRect.top = dp.ClipY;
-	clipRect.right = dp.ClipX + dp.ClipWidth;
-	clipRect.bottom = dp.ClipY + dp.ClipHeight;
+	clipRect.left = uiprivD2DFloat(dp.ClipX);
+	clipRect.top = uiprivD2DFloat(dp.ClipY);
+	clipRect.right = uiprivD2DFloat(dp.ClipX + dp.ClipWidth);
+	clipRect.bottom = uiprivD2DFloat(dp.ClipY + dp.ClipHeight);
 	rt->PushAxisAlignedClip(&clipRect, D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
 
 	rt->Clear(&bgcolor);

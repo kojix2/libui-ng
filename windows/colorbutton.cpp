@@ -82,15 +82,15 @@ static BOOL onWM_NOTIFY(uiControl *c, HWND hwnd, NMHDR *nmhdr, LRESULT *lResult)
 	x = 3;		// should be enough
 	y = 3;
 	uiWindowsSizingDlgUnitsToPixels(&sizing, &x, &y);
-	r.left = client.left + x;
-	r.top = client.top + y;
-	r.right = client.right - x;
-	r.bottom = client.bottom - y;
+	r.left = (FLOAT) (client.left + x);
+	r.top = (FLOAT) (client.top + y);
+	r.right = (FLOAT) (client.right - x);
+	r.bottom = (FLOAT) (client.bottom - y);
 
-	color.r = b->r;
-	color.g = b->g;
-	color.b = b->b;
-	color.a = b->a;
+	color.r = uiprivD2DFloat(b->r);
+	color.g = uiprivD2DFloat(b->g);
+	color.b = uiprivD2DFloat(b->b);
+	color.a = uiprivD2DFloat(b->a);
 	uiprivInitBrushProperties(&bprop, 1.0);
 	hr = rt->CreateSolidColorBrush(&color, &bprop, &brush);
 	if (hr != S_OK) {

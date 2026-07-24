@@ -114,7 +114,7 @@ static void uiRadioButtonsMinimumSize(uiWindowsControl *c, int *width, int *heig
 	uiWindowsSizingDlgUnitsToPixels(&sizing, &x, &y);
 
 	*width = x + maxwid;
-	*height = y * r->hwnds->size();
+	*height = y * (int) r->hwnds->size();
 }
 
 static void radiobuttonsRelayout(uiRadioButtons *r)
@@ -184,7 +184,7 @@ int uiRadioButtonsSelected(uiRadioButtons *r)
 
 	for (i = 0; i < r->hwnds->size(); i++)
 		if (SendMessage((*(r->hwnds))[i], BM_GETCHECK, 0, 0) == BST_CHECKED)
-			return i;
+			return (int) i;
 	return -1;
 }
 

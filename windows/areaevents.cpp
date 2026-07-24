@@ -124,9 +124,9 @@ static void areaMouseEvent(uiArea *a, int down, int  up, WPARAM wParam, LPARAM l
 		// GetMessageTime() returns LONG and GetDoubleClckTime() returns UINT, which are int32 and uint32, respectively, but we don't need to worry about the signedness because for the same bit widths and two's complement arithmetic, s1-s2 == u1-u2 if bits(s1)==bits(s2) and bits(u1)==bits(u2) (and Windows requires two's complement: http://blogs.msdn.com/b/oldnewthing/archive/2005/05/27/422551.aspx)
 		// signedness isn't much of an issue for these calls anyway because http://stackoverflow.com/questions/24022225/what-are-the-sign-extension-rules-for-calling-windows-api-functions-stdcall-t and that we're only using unsigned values (think back to how you (didn't) handle signedness in assembly language) AND because of the above AND because the statistics below (time interval and width/height) really don't make sense if negative
 		me.Count = uiprivClickCounterClick(&(a->cc), me.Down,
-			me.X, me.Y,
+			(int) me.X, (int) me.Y,
 			GetMessageTime(), GetDoubleClickTime(),
-			ceil(xdist), ceil(ydist));
+			(int32_t) ceil(xdist), (int32_t) ceil(ydist));
 	}
 
 	// though wparam will contain control and shift state, let's just one function to get modifiers for both keyboard and mouse events; it'll work the same anyway since we have to do this for alt and windows key (super)

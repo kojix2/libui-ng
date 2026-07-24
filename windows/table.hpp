@@ -88,7 +88,7 @@ struct uiprivTableMetrics {
 	RECT subitemIcon;
 	RECT subitemLabel;
 
-	LRESULT bitmapMargin;
+	int bitmapMargin;
 	int cxIcon;
 	int cyIcon;
 

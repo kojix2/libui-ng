@@ -82,7 +82,7 @@ static void showHidePage(uiTab *t, LRESULT which, int hide)
 
 	if (which < 0 || ((size_t) which) >= t->pages->size())
 		return;
-	page = tabPage(t, which);
+	page = tabPage(t, (int) which);
 	if (hide)
 		ShowWindow(page->hwnd, SW_HIDE);
 	else {
@@ -216,7 +216,7 @@ static void tabArrangePages(uiTab *t)
 
 void uiTabAppend(uiTab *t, const char *name, uiControl *child)
 {
-	uiTabInsertAt(t, name, t->pages->size(), child);
+	uiTabInsertAt(t, name, (int) t->pages->size(), child);
 }
 
 void uiTabInsertAt(uiTab *t, const char *name, int n, uiControl *child)
@@ -322,7 +322,7 @@ void uiTabDelete(uiTab *t, int n)
 
 int uiTabNumPages(uiTab *t)
 {
-	return t->pages->size();
+	return (int) t->pages->size();
 }
 
 int uiTabMargined(uiTab *t, int n)
@@ -353,7 +353,7 @@ void uiTabOnSelected(uiTab *t, void (*f)(uiTab *, void *), void *data)
 
 int uiTabSelected(uiTab *t)
 {
-	return curpage(t);
+	return (int) curpage(t);
 }
 
 void uiTabSetSelected(uiTab *t, int index)

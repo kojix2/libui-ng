@@ -38,8 +38,8 @@ static void hwndDPI(HWND hwnd, FLOAT *dpix, FLOAT *dpiy)
 		logLastError(L"error getting DC to find DPI");
 		return;
 	}
-	*dpix = GetDeviceCaps(dc, LOGPIXELSX);
-	*dpiy = GetDeviceCaps(dc, LOGPIXELSY);
+	*dpix = (FLOAT) GetDeviceCaps(dc, LOGPIXELSX);
+	*dpiy = (FLOAT) GetDeviceCaps(dc, LOGPIXELSY);
 	if (ReleaseDC(hwnd, dc) == 0)
 		logLastError(L"error releasing DC for finding DPI");
 }

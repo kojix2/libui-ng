@@ -3,13 +3,13 @@
 
 WCHAR *windowTextAndLen(HWND hwnd, LRESULT *len)
 {
-	LRESULT n;
+	int n;
 	int copied;
 	WCHAR *text;
 
-	n = SendMessageW(hwnd, WM_GETTEXTLENGTH, 0, 0);
+	n = (int) SendMessageW(hwnd, WM_GETTEXTLENGTH, 0, 0);
 	if (len != NULL)
-		*len = n;
+			*len = n;
 	// WM_GETTEXTLENGTH does not include the null terminator
 	text = (WCHAR *) uiprivAlloc((n + 1) * sizeof (WCHAR), "WCHAR[]");
 	SetLastError(ERROR_SUCCESS);
@@ -99,7 +99,7 @@ int uiWindowsWindowTextWidth(HWND hwnd)
 		end = start + 1;
 		while (*end != L'\n' && end != text + len)
 			end++;
-		if (GetTextExtentPoint32W(dc, start, end - start, &size) == 0)
+		if (GetTextExtentPoint32W(dc, start, (int) (end - start), &size) == 0)
 			logLastError(L"error getting text extent point");
 		else if (size.cx > maxWidth)
 			maxWidth = size.cx;

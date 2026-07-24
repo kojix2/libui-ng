@@ -70,7 +70,7 @@ HRESULT uiprivTableGetMetrics(uiTable *t, int iItem, int iSubItem, uiprivTableMe
 		hr = E_FAIL;
 		goto fail;
 	}
-	m->bitmapMargin = SendMessageW(header, HDM_GETBITMAPMARGIN, 0, 0);
+	m->bitmapMargin = (int) SendMessageW(header, HDM_GETBITMAPMARGIN, 0, 0);
 	if (ImageList_GetIconSize(t->imagelist, &(m->cxIcon), &(m->cyIcon)) == 0) {
 		logLastError(L"ImageList_GetIconSize()");
 		hr = E_FAIL;

@@ -138,10 +138,10 @@ static HRESULT mkSolidBrush(ID2D1RenderTarget *rt, double r, double g, double b,
 	D2D1_COLOR_F color;
 
 	uiprivInitBrushProperties(&props, 1.0);
-	color.r = r;
-	color.g = g;
-	color.b = b;
-	color.a = a;
+	color.r = uiprivD2DFloat(r);
+	color.g = uiprivD2DFloat(g);
+	color.b = uiprivD2DFloat(b);
+	color.a = uiprivD2DFloat(a);
 	return rt->CreateSolidColorBrush(
 		&color,
 		&props,
@@ -198,56 +198,56 @@ ULONG STDMETHODCALLTYPE drawingEffectsAttr::Release(void)
 	return this->refcount;
 }
 
-void drawingEffectsAttr::setColor(double r, double g, double b, double a)
+void drawingEffectsAttr::setColor(double red, double green, double blue, double alpha)
 {
 	this->hasColor = true;
-	this->r = r;
-	this->g = g;
-	this->b = b;
-	this->a = a;
+	this->r = red;
+	this->g = green;
+	this->b = blue;
+	this->a = alpha;
 }
 
-void drawingEffectsAttr::setUnderline(uiUnderline u)
+void drawingEffectsAttr::setUnderline(uiUnderline underlineType)
 {
 	this->hasUnderline = true;
-	this->u = u;
+	this->u = underlineType;
 }
 
-void drawingEffectsAttr::setUnderlineColor(double r, double g, double b, double a)
+void drawingEffectsAttr::setUnderlineColor(double red, double green, double blue, double alpha)
 {
 	this->hasUnderlineColor = true;
-	this->ur = r;
-	this->ug = g;
-	this->ub = b;
-	this->ua = a;
+	this->ur = red;
+	this->ug = green;
+	this->ub = blue;
+	this->ua = alpha;
 }
 
-HRESULT drawingEffectsAttr::mkColorBrush(ID2D1RenderTarget *rt, ID2D1SolidColorBrush **b)
+HRESULT drawingEffectsAttr::mkColorBrush(ID2D1RenderTarget *rt, ID2D1SolidColorBrush **brush)
 {
 	if (!this->hasColor) {
-		*b = NULL;
+		*brush = NULL;
 		return S_OK;
 	}
-	return mkSolidBrush(rt, this->r, this->g, this->b, this->a, b);
+	return mkSolidBrush(rt, this->r, this->g, this->b, this->a, brush);
 }
 
-HRESULT drawingEffectsAttr::underline(uiUnderline *u)
+HRESULT drawingEffectsAttr::underline(uiUnderline *underlineType)
 {
-	if (u == NULL)
+	if (underlineType == NULL)
 		return E_POINTER;
 	if (!this->hasUnderline)
 		return E_UNEXPECTED;
-	*u = this->u;
+	*underlineType = this->u;
 	return S_OK;
 }
 
-HRESULT drawingEffectsAttr::mkUnderlineBrush(ID2D1RenderTarget *rt, ID2D1SolidColorBrush **b)
+HRESULT drawingEffectsAttr::mkUnderlineBrush(ID2D1RenderTarget *rt, ID2D1SolidColorBrush **brush)
 {
 	if (!this->hasUnderlineColor) {
-		*b = NULL;
+		*brush = NULL;
 		return S_OK;
 	}
-	return mkSolidBrush(rt, this->ur, this->ug, this->ub, this->ua, b);
+	return mkSolidBrush(rt, this->ur, this->ug, this->ub, this->ua, brush);
 }
 
 // this is based on http://www.charlespetzold.com/blog/2014/01/Character-Formatting-Extensions-with-DirectWrite.html
@@ -534,15 +534,15 @@ public:
 				double amplitude, period, xOffset, yOffset;
 				double t;
 				bool first = true;
-				HRESULT hr;
+				HRESULT geometryHR;
 
-				hr = d2dfactory->CreatePathGeometry(&path);
-				if (hr != S_OK)
-					return hr;
-				hr = path->Open(&sink);
-				if (hr != S_OK) {
+				geometryHR = d2dfactory->CreatePathGeometry(&path);
+				if (geometryHR != S_OK)
+					return geometryHR;
+				geometryHR = path->Open(&sink);
+				if (geometryHR != S_OK) {
 					path->Release();
-					return hr;
+					return geometryHR;
 				}
 				amplitude = underline->thickness;
 				period = 5 * underline->thickness;
@@ -550,25 +550,25 @@ public:
 				yOffset = baselineOriginY + underline->offset;
 				for (t = 0; t < underline->width; t++) {
 					double x, angle, y;
-					D2D1_POINT_2F pt;
+					D2D1_POINT_2F wavePoint;
 
 					x = t + xOffset;
 					angle = 2 * uiPi * fmod(x, period) / period;
 					y = amplitude * sin(angle) + yOffset;
-					pt.x = x;
-					pt.y = y;
+					wavePoint.x = uiprivD2DFloat(x);
+					wavePoint.y = uiprivD2DFloat(y);
 					if (first) {
-						sink->BeginFigure(pt, D2D1_FIGURE_BEGIN_HOLLOW);
+						sink->BeginFigure(wavePoint, D2D1_FIGURE_BEGIN_HOLLOW);
 						first = false;
 					} else
-						sink->AddLine(pt);
+						sink->AddLine(wavePoint);
 				}
 				sink->EndFigure(D2D1_FIGURE_END_OPEN);
-				hr = sink->Close();
+				geometryHR = sink->Close();
 				sink->Release();
-				if (hr != S_OK) {
+				if (geometryHR != S_OK) {
 					path->Release();
-					return hr;
+					return geometryHR;
 				}
 				this->rt->DrawGeometry(path, brush, underline->thickness);
 				path->Release();
@@ -624,7 +624,7 @@ void uiDrawText(uiDrawContext *c, uiDrawTextLayout *tl, double x, double y)
 		black);
 	hr = tl->layout->Draw(NULL,
 		renderer,
-		x, y);
+		uiprivD2DFloat(x), uiprivD2DFloat(y));
 	if (hr != S_OK)
 		logHRESULT(L"error drawing IDWriteTextLayout", hr);
 	renderer->Release();

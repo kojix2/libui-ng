@@ -161,13 +161,13 @@ static void fromSystemTime(SYSTEMTIME *systime, struct tm *time)
 static void toSystemTime(const struct tm *time, SYSTEMTIME *systime)
 {
 	ZeroMemory(systime, sizeof (SYSTEMTIME));
-	systime->wYear = time->tm_year + 1900;
-	systime->wMonth = time->tm_mon + 1;
-	systime->wDayOfWeek = time->tm_wday;
-	systime->wDay = time->tm_mday;
-	systime->wHour = time->tm_hour;
-	systime->wMinute = time->tm_min;
-	systime->wSecond = time->tm_sec;
+	systime->wYear = (WORD) (time->tm_year + 1900);
+	systime->wMonth = (WORD) (time->tm_mon + 1);
+	systime->wDayOfWeek = (WORD) time->tm_wday;
+	systime->wDay = (WORD) time->tm_mday;
+	systime->wHour = (WORD) time->tm_hour;
+	systime->wMinute = (WORD) time->tm_min;
+	systime->wSecond = (WORD) time->tm_sec;
 }
 
 static void defaultOnChanged(uiDateTimePicker *d, void *data)

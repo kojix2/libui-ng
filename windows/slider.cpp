@@ -82,7 +82,7 @@ static void defaultOnReleased(uiSlider *s, void *data)
 
 int uiSliderValue(uiSlider *s)
 {
-	return SendMessageW(s->hwnd, TBM_GETPOS, 0, 0);
+	return (int) SendMessageW(s->hwnd, TBM_GETPOS, 0, 0);
 }
 
 void uiSliderSetValue(uiSlider *s, int value)

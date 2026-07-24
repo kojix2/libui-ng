@@ -37,7 +37,7 @@ void uiWindowsControlChildVisibilityChanged(uiWindowsControl *c)
 	(*(c->ChildVisibilityChanged))(c);
 }
 
-HWND uiWindowsEnsureCreateControlHWND(DWORD dwExStyle, LPCWSTR lpClassName, LPCWSTR lpWindowName, DWORD dwStyle, HINSTANCE hInstance, LPVOID lpParam, BOOL useStandardControlFont)
+HWND uiWindowsEnsureCreateControlHWND(DWORD dwExStyle, LPCWSTR lpClassName, LPCWSTR lpWindowName, DWORD dwStyle, HINSTANCE instance, LPVOID lpParam, BOOL useStandardControlFont)
 {
 	HWND hwnd;
 
@@ -50,7 +50,7 @@ HWND uiWindowsEnsureCreateControlHWND(DWORD dwExStyle, LPCWSTR lpClassName, LPCW
 		0, 0,
 		// use a nonzero initial size just in case some control breaks with a zero initial size
 		100, 100,
-		utilWindow, NULL, hInstance, lpParam);
+		utilWindow, NULL, instance, lpParam);
 	if (hwnd == NULL) {
 		logLastError(L"error creating window");
 		// TODO return a decoy window

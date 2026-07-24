@@ -43,8 +43,8 @@ ID2D1HwndRenderTarget *makeHWNDRenderTarget(HWND hwnd)
 	props.type = D2D1_RENDER_TARGET_TYPE_DEFAULT;
 	props.pixelFormat.format = DXGI_FORMAT_UNKNOWN;
 	props.pixelFormat.alphaMode = D2D1_ALPHA_MODE_UNKNOWN;
-	props.dpiX = GetDeviceCaps(dc, LOGPIXELSX);
-	props.dpiY = GetDeviceCaps(dc, LOGPIXELSY);
+	props.dpiX = (FLOAT) GetDeviceCaps(dc, LOGPIXELSX);
+	props.dpiY = (FLOAT) GetDeviceCaps(dc, LOGPIXELSY);
 	props.usage = D2D1_RENDER_TARGET_USAGE_NONE;
 	props.minLevel = D2D1_FEATURE_LEVEL_DEFAULT;
 
@@ -81,8 +81,8 @@ ID2D1DCRenderTarget *makeHDCRenderTarget(HDC dc, RECT *r)
 	props.type = D2D1_RENDER_TARGET_TYPE_DEFAULT;
 	props.pixelFormat.format = DXGI_FORMAT_B8G8R8A8_UNORM;
 	props.pixelFormat.alphaMode = D2D1_ALPHA_MODE_PREMULTIPLIED;
-	props.dpiX = GetDeviceCaps(dc, LOGPIXELSX);
-	props.dpiY = GetDeviceCaps(dc, LOGPIXELSY);
+	props.dpiX = (FLOAT) GetDeviceCaps(dc, LOGPIXELSX);
+	props.dpiY = (FLOAT) GetDeviceCaps(dc, LOGPIXELSY);
 	props.usage = D2D1_RENDER_TARGET_USAGE_GDI_COMPATIBLE;
 	props.minLevel = D2D1_FEATURE_LEVEL_DEFAULT;
 
@@ -140,10 +140,10 @@ static ID2D1Brush *makeSolidBrush(uiDrawBrush *b, ID2D1RenderTarget *rt, D2D1_BR
 	ID2D1SolidColorBrush *brush = NULL;
 	HRESULT hr;
 
-	color.r = b->R;
-	color.g = b->G;
-	color.b = b->B;
-	color.a = b->A;
+	color.r = uiprivD2DFloat(b->R);
+	color.g = uiprivD2DFloat(b->G);
+	color.b = uiprivD2DFloat(b->B);
+	color.a = uiprivD2DFloat(b->A);
 
 	hr = rt->CreateSolidColorBrush(
 		&color,
@@ -165,11 +165,11 @@ static ID2D1GradientStopCollection *mkstops(uiDrawBrush *b, ID2D1RenderTarget *r
 
 	stops = (D2D1_GRADIENT_STOP *) uiprivAlloc(b->NumStops * sizeof (D2D1_GRADIENT_STOP), "D2D1_GRADIENT_STOP[]");
 	for (i = 0; i < b->NumStops; i++) {
-		stops[i].position = b->Stops[i].Pos;
-		stops[i].color.r = b->Stops[i].R;
-		stops[i].color.g = b->Stops[i].G;
-		stops[i].color.b = b->Stops[i].B;
-		stops[i].color.a = b->Stops[i].A;
+		stops[i].position = uiprivD2DFloat(b->Stops[i].Pos);
+		stops[i].color.r = uiprivD2DFloat(b->Stops[i].R);
+		stops[i].color.g = uiprivD2DFloat(b->Stops[i].G);
+		stops[i].color.b = uiprivD2DFloat(b->Stops[i].B);
+		stops[i].color.a = uiprivD2DFloat(b->Stops[i].A);
 	}
 
 	hr = rt->CreateGradientStopCollection(
@@ -196,10 +196,10 @@ static ID2D1Brush *makeLinearBrush(uiDrawBrush *b, ID2D1RenderTarget *rt, D2D1_B
 	HRESULT hr;
 
 	ZeroMemory(&gprops, sizeof (D2D1_LINEAR_GRADIENT_BRUSH_PROPERTIES));
-	gprops.startPoint.x = b->X0;
-	gprops.startPoint.y = b->Y0;
-	gprops.endPoint.x = b->X1;
-	gprops.endPoint.y = b->Y1;
+	gprops.startPoint.x = uiprivD2DFloat(b->X0);
+	gprops.startPoint.y = uiprivD2DFloat(b->Y0);
+	gprops.endPoint.x = uiprivD2DFloat(b->X1);
+	gprops.endPoint.y = uiprivD2DFloat(b->Y1);
 
 	stops = mkstops(b, rt);
 	if (stops == NULL)
@@ -229,12 +229,12 @@ static ID2D1Brush *makeRadialBrush(uiDrawBrush *b, ID2D1RenderTarget *rt, D2D1_B
 	HRESULT hr;
 
 	ZeroMemory(&gprops, sizeof (D2D1_RADIAL_GRADIENT_BRUSH_PROPERTIES));
-	gprops.gradientOriginOffset.x = b->X0 - b->X1;
-	gprops.gradientOriginOffset.y = b->Y0 - b->Y1;
-	gprops.center.x = b->X1;
-	gprops.center.y = b->Y1;
-	gprops.radiusX = b->OuterRadius;
-	gprops.radiusY = b->OuterRadius;
+	gprops.gradientOriginOffset.x = uiprivD2DFloat(b->X0 - b->X1);
+	gprops.gradientOriginOffset.y = uiprivD2DFloat(b->Y0 - b->Y1);
+	gprops.center.x = uiprivD2DFloat(b->X1);
+	gprops.center.y = uiprivD2DFloat(b->Y1);
+	gprops.radiusX = uiprivD2DFloat(b->OuterRadius);
+	gprops.radiusY = uiprivD2DFloat(b->OuterRadius);
 
 	stops = mkstops(b, rt);
 	if (stops == NULL)
@@ -373,7 +373,7 @@ void uiDrawStroke(uiDrawContext *c, uiDrawPath *p, uiDrawBrush *b, uiDrawStrokeP
 	switch (sp->Join) {
 	case uiDrawLineJoinMiter:
 		dsp.lineJoin = D2D1_LINE_JOIN_MITER_OR_BEVEL;
-		dsp.miterLimit = sp->MiterLimit;
+		dsp.miterLimit = uiprivD2DFloat(sp->MiterLimit);
 		break;
 	case uiDrawLineJoinRound:
 		dsp.lineJoin = D2D1_LINE_JOIN_ROUND;
@@ -390,9 +390,9 @@ void uiDrawStroke(uiDrawContext *c, uiDrawPath *p, uiDrawBrush *b, uiDrawStrokeP
 		dsp.dashStyle = D2D1_DASH_STYLE_CUSTOM;
 		dashes = (FLOAT *) uiprivAlloc(sp->NumDashes * sizeof (FLOAT), "FLOAT[]");
 		for (i = 0; i < sp->NumDashes; i++)
-			dashes[i] = sp->Dashes[i] / sp->Thickness;
+			dashes[i] = uiprivD2DFloat(sp->Dashes[i] / sp->Thickness);
 	}
-	dsp.dashOffset = sp->DashPhase / sp->Thickness;
+	dsp.dashOffset = uiprivD2DFloat(sp->DashPhase / sp->Thickness);
 	hr = d2dfactory->CreateStrokeStyle(
 		&dsp,
 		dashes,
@@ -412,7 +412,7 @@ void uiDrawStroke(uiDrawContext *c, uiDrawPath *p, uiDrawBrush *b, uiDrawStrokeP
 	c->rt->DrawGeometry(
 		pathGeometry(p),
 		brush,
-		sp->Thickness,
+		uiprivD2DFloat(sp->Thickness),
 		style);
 	unapplyClip(c, cliplayer);
 

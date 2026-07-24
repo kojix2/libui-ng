@@ -948,7 +948,7 @@ uiTable *uiNewTable(uiTableParams *p)
 
 int uiTableColumnWidth(uiTable *t, int column)
 {
-	return SendMessageW(t->hwnd, LVM_GETCOLUMNWIDTH, (WPARAM) column, 0);
+	return (int) SendMessageW(t->hwnd, LVM_GETCOLUMNWIDTH, (WPARAM) column, 0);
 }
 
 void uiTableColumnSetWidth(uiTable *t, int column, int width)
