@@ -55,7 +55,6 @@ void *uiprivRealloc(void *_p, size_t size, const char *type)
 		return NULL;
 	}
 	arr = it->second;
-	// TODO does this fill in?
 	arr->resize(size, 0);
 	heap.erase(p);
 	heap[rawBytes(arr)] = arr;
