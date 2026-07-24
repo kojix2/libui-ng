@@ -178,7 +178,8 @@ endif
 
 # Export symbols for use of libui as a meson subproject
 libui_dep = declare_dependency(include_directories: include_directories('.'),
-	link_with : libui_libui)
+	link_with : libui_libui,
+	dependencies: libui_deps)
 
 if get_option('tests')
 	subdir('test')
