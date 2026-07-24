@@ -58,7 +58,7 @@ GTK+ versions are harder to drop because we are limited by Linux distribution pa
 
 As for language compatibility, libui-ng is written in C99. We have no intention of changing this.
 
-As for build system compatibility, libui-ng uses CMake 3.1.0. If you wish to bump the version, file an issue pleading your case (but see below).
+As for build system compatibility, libui-ng requires Meson 0.58.0 or newer. If you wish to bump the version, file an issue pleading your case (but see below).
 
 **If you do plead your case**, keep in mind that "it's old" is not a sufficient reason to drop things. If you can prove that **virtually no one** uses the minimum version anymore, then that is stronger evidence. The best evidence, however, is that not upgrading will hold libui-ng back in some significant way — but beware that there are some things we won't add to libui-ng itself.
 

@@ -126,13 +126,12 @@ add_project_link_arguments(libui_project_link_args,
 	language: ['c', 'cpp', 'objc'])
 
 # TODO:
-# meson determins whether -Wl,--no-undefined is provided via
+# Meson determines whether -Wl,--no-undefined is provided via
 # built-in option b_lundef, and it's true by default, which is what
 # we want (so I don't make mistakes like asking for unknown
-# functions in my dependencies). However, meson also is smart
+# functions in my dependencies). However, Meson also is smart
 # about specifying this properly on systems that don't support it, like
-# FreeBSD (where I had the comment "figure out why FreeBSD
-# follows linked libraries here" when I was on cmake) and OpenBSD
+# FreeBSD and OpenBSD
 # (according to someone on freenode #mesonbuild), but it isn't clear
 # whether it's just ignored or if the value is forced to false.
 # Therefore, once this is determined, we can uncomment the
