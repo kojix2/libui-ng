@@ -32,7 +32,6 @@ static int value(uiSpinbox *s)
 
 // control implementation
 
-// TODO assign lResult
 static BOOL onWM_COMMAND(uiControl *c, HWND hwnd, WORD code, LRESULT *lResult)
 {
 	uiSpinbox *s = (uiSpinbox *) c;
@@ -42,6 +41,7 @@ static BOOL onWM_COMMAND(uiControl *c, HWND hwnd, WORD code, LRESULT *lResult)
 		return FALSE;
 	if (s->inhibitChanged)
 		return FALSE;
+	*lResult = 0;
 	// We want to allow typing negative numbers; the natural way to do so is to start with a -.
 	// However, if we just have the code below, the up-down will catch the bare - and reject it.
 	// Let's fix that.
