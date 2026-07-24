@@ -547,11 +547,7 @@ static void uiGridMinimumSizeChanged(uiWindowsControl *c)
 uiWindowsControlDefaultLayoutRect(uiGrid)
 uiWindowsControlDefaultAssignControlIDZOrder(uiGrid)
 
-static void uiGridChildVisibilityChanged(uiWindowsControl *c)
-{
-	// TODO eliminate the redundancy
-	uiWindowsControlMinimumSizeChanged(c);
-}
+uiWindowsControlRelayoutOnChildVisibilityChanged(uiGrid)
 
 // must have called gridRecomputeMinMax() first
 static void gridArrangeChildren(uiGrid *g)

@@ -140,6 +140,11 @@ _UI_EXTERN void uiWindowsControlChildVisibilityChanged(uiWindowsControl *);
 	{ \
 		/* do nothing */ \
 	}
+#define uiWindowsControlRelayoutOnChildVisibilityChanged(type) \
+	static void type ## ChildVisibilityChanged(uiWindowsControl *c) \
+	{ \
+		uiWindowsControlMinimumSizeChanged(c); \
+	}
 
 #define uiWindowsControlAllDefaultsExceptDestroy(type) \
 	uiWindowsControlDefaultHandle(type) \

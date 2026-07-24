@@ -201,11 +201,7 @@ static void uiTabMinimumSizeChanged(uiWindowsControl *c)
 uiWindowsControlDefaultLayoutRect(uiTab)
 uiWindowsControlDefaultAssignControlIDZOrder(uiTab)
 
-static void uiTabChildVisibilityChanged(uiWindowsControl *c)
-{
-	// TODO eliminate the redundancy
-	uiWindowsControlMinimumSizeChanged(c);
-}
+uiWindowsControlRelayoutOnChildVisibilityChanged(uiTab)
 
 static void tabArrangePages(uiTab *t)
 {
