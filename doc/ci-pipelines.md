@@ -1,47 +1,82 @@
-# Continuous Integration Arch
+# Continuous Integration
 
-## docs
-+ Build matrix: [Workflow syntax for GitHub Actions - GitHub Docs](https://docs.github.com/en/actions/learn-github-actions/workflow-syntax-for-github-actions#jobsjob_idstrategymatrix)
-+ Supported runners: [About GitHub-hosted runners - GitHub Docs](https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners#supported-runners-and-hardware-resources)
-+ Meson: [meson/Continuous-Integration.md at master · mesonbuild/meson](https://github.com/mesonbuild/meson/blob/master/docs/markdown/Continuous-Integration.md#github-actions)
+Build automation is defined in `.github/workflows/build.yml`.
 
+## References
 
-## Build matrix
+- GitHub Actions matrix syntax: https://docs.github.com/en/actions/using-jobs/using-a-matrix-for-your-jobs
+- GitHub-hosted runners: https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners
+- Meson CI notes: https://mesonbuild.com/Continuous-Integration.html
 
-9 build =
-+ Ubuntu=2
-+ Windows-MSVC=4
-+ Windows-Mingw=1
-+ macOS=2
+## Triggers
+
+The build workflow runs on:
+
+- Pushes to `main`, `pre-build`, and `dev`
+- Tags matching `commit-*`
+- Pull requests targeting `main`
+- Manual `workflow_dispatch`
+
+## Build Matrix
+
+The workflow currently runs 28 build configurations before any tag-only release
+packaging:
+
+- Ubuntu: 8 builds
+- Windows MSVC: 8 builds
+- Windows MinGW: 2 builds
+- Windows UCRT: 2 builds
+- macOS: 8 builds
 
 ### Ubuntu
-2 build =
-- `[ubuntu-latest]`
-- `[x64]`
-- `[static, shared]`
-- `[debug]`
 
-### Windows
+- Runners: `ubuntu-latest`, `ubuntu-24.04-arm`
+- Reported architectures: `x64`, `arm64`
+- Library types: `static`, `shared`
+- Build types: `release`, `debug`
+- Extra packages: `libgtk-3-dev`, `xvfb`
+- Tests: `xvfb-run meson test -C builddir --verbose`
 
-**MSVC**
+### Windows MSVC
 
-4 build =
-- `[windows-latest]`
-- `[x86, x64]`
-- `[static, shared]`
-- `[debug]`
+- Runner: `windows-latest`
+- Architectures: `x86`, `x64`
+- Library types: `static`, `shared`
+- Build types: `release`, `debug`
+- Toolchain setup: `TheMrMilchmann/setup-msvc-dev`
+- Meson setup also passes `-Db_vscrt=mt`
+- Tests: `meson test -C builddir --verbose`
 
-**Mingw**
+### Windows MinGW
 
-1 build =
-- `[windows-latest]`
-- `[x64]`
-- `[static]`
-- `[release]`
+- Runner: `windows-latest`
+- MSYS2 environment: `MINGW64`
+- Architecture: `x64`
+- Library type: `static`
+- Build types: `release`, `debug`
+- Tests: `meson test -C builddir --verbose`
+
+### Windows UCRT
+
+- Runner: `windows-latest`
+- MSYS2 environment: `UCRT64`
+- Architecture: `x64`
+- Library type: `static`
+- Build types: `release`, `debug`
+- Tests: `meson test -C builddir --verbose`
 
 ### macOS
-2 build =
-- `[macos-11]`
-- `[x64]`
-- `[static, shared]`
-- `[debug]`
+
+- Runners: `macos-15-intel`, `macos-latest`
+- Reported architectures: `x64`, `arm64`
+- Library types: `static`, `shared`
+- Build types: `release`, `debug`
+- Tests: `meson test -C builddir --verbose`
+
+## Release Packaging
+
+When the workflow runs for a tag, the `release` job waits for all build jobs,
+downloads their artifacts, zips each platform artifact directory, and publishes
+a GitHub Release with `softprops/action-gh-release`.
+
+Tags whose names contain `experimental` are published as prereleases.
