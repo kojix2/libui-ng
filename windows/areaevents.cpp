@@ -402,7 +402,6 @@ BOOL areaDoEvents(uiArea *a, UINT uMsg, WPARAM wParam, LPARAM lParam, LRESULT *l
 }
 
 // TODO affect visibility properly
-// TODO what did this mean
 BOOL areaFilter(MSG *msg)
 {
 	LRESULT handled;
