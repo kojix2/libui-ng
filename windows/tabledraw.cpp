@@ -655,18 +655,11 @@ fail:
 	return hr;
 }
 
-static HRESULT updateAndDrawFocusRects(HRESULT hr, uiTable *t, HDC dc, int iItem, RECT *realTextBackground, RECT *focus, bool *first)
+static HRESULT updateAndDrawFocusRects(HRESULT hr, HDC dc, bool drawFocus, RECT *realTextBackground, RECT *focus, bool *first)
 {
-	LRESULT state;
-
 	if (hr != S_OK)
 		return hr;
-	if (GetFocus() != t->hwnd)
-		return S_OK;
-	// uItemState CDIS_FOCUS doesn't quite work right because of bugs in the Windows list view that causes spurious redraws without the flag while we hover over the focused item
-	// TODO only call this once
-	state = SendMessageW(t->hwnd, LVM_GETITEMSTATE, (WPARAM) iItem, (LRESULT) (LVIS_FOCUSED));
-	if ((state & LVIS_FOCUSED) == 0)
+	if (!drawFocus)
 		return S_OK;
 
 	if (realTextBackground != NULL) {
@@ -700,6 +693,8 @@ HRESULT uiprivTableHandleNM_CUSTOMDRAW(uiTable *t, NMLVCUSTOMDRAW *nm, LRESULT *
 	NMLVCUSTOMDRAW b;
 	size_t i, n;
 	RECT focus;
+	LRESULT state;
+	bool drawFocus;
 	bool focusFirst;
 	HRESULT hr;
 
@@ -716,6 +711,12 @@ HRESULT uiprivTableHandleNM_CUSTOMDRAW(uiTable *t, NMLVCUSTOMDRAW *nm, LRESULT *
 
 	n = t->columns->size();
 	b = *nm;
+	drawFocus = false;
+	if (GetFocus() == t->hwnd) {
+		// uItemState CDIS_FOCUS doesn't quite work right because of bugs in the Windows list view that causes spurious redraws without the flag while we hover over the focused item
+		state = SendMessageW(t->hwnd, LVM_GETITEMSTATE, nm->nmcd.dwItemSpec, LVIS_FOCUSED);
+		drawFocus = (state & LVIS_FOCUSED) != 0;
+	}
 	focusFirst = true;
 	if (n == 0) {
 		*lResult = CDRF_SKIPDEFAULT;
@@ -733,7 +734,7 @@ HRESULT uiprivTableHandleNM_CUSTOMDRAW(uiTable *t, NMLVCUSTOMDRAW *nm, LRESULT *
 		hr = drawTextPart(hr, &s);
 		hr = drawProgressBarPart(hr, &s);
 		hr = drawButtonPart(hr, &s);
-		hr = updateAndDrawFocusRects(hr, s.t, s.dc, nm->nmcd.dwItemSpec, &(s.m->realTextBackground), &focus, &focusFirst);
+		hr = updateAndDrawFocusRects(hr, s.dc, drawFocus, &(s.m->realTextBackground), &focus, &focusFirst);
 		if (hr != S_OK)
 			goto fail;
 		hr = freeDrawState(&s);
@@ -741,7 +742,7 @@ HRESULT uiprivTableHandleNM_CUSTOMDRAW(uiTable *t, NMLVCUSTOMDRAW *nm, LRESULT *
 			return hr;
 	}
 	// and draw the last focus rect
-	hr = updateAndDrawFocusRects(hr, t, nm->nmcd.hdc, nm->nmcd.dwItemSpec, NULL, &focus, &focusFirst);
+	hr = updateAndDrawFocusRects(hr, nm->nmcd.hdc, drawFocus, NULL, &focus, &focusFirst);
 	if (hr != S_OK)
 		return hr;
 	*lResult = CDRF_SKIPDEFAULT;
