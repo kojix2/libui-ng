@@ -1,5 +1,4 @@
 // 9 april 2015
-#include <strings.h>
 #include "uipriv_unix.h"
 
 char *uiUnixStrdupText(const char *t)
@@ -12,8 +11,15 @@ void uiFreeText(char *t)
 	g_free(t);
 }
 
-// TODO Not UTF-8 aware, ASCII only!
 int uiprivStricmp(const char *a, const char *b)
 {
-	return strcasecmp(a, b);
+	char *afold, *bfold;
+	int result;
+
+	afold = g_utf8_casefold(a, -1);
+	bfold = g_utf8_casefold(b, -1);
+	result = g_strcmp0(afold, bfold);
+	g_free(bfold);
+	g_free(afold);
+	return result;
 }
