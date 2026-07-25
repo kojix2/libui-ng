@@ -189,6 +189,23 @@ static void attrstrDeleteMergesAdjacentEqualValues(void **state)
 	uiFreeAttributedString(s);
 }
 
+static void attrstrGraphemeIndexes(void **state)
+{
+	uiAttributedString *s;
+	const char *text = "Ae\314\201\360\237\230\200Z";
+	const size_t indexes[] = { 0, 1, 4, 8, 9 };
+	size_t i;
+
+	(void) state;
+	s = uiNewAttributedString(text);
+	assert_int_equal(uiAttributedStringNumGraphemes(s), 4);
+	for (i = 0; i < sizeof(indexes) / sizeof(indexes[0]); i++) {
+		assert_int_equal(uiAttributedStringGraphemeToByteIndex(s, i), indexes[i]);
+		assert_int_equal(uiAttributedStringByteIndexToGrapheme(s, indexes[i]), i);
+	}
+	uiFreeAttributedString(s);
+}
+
 int attrstrRunUnitTests(void)
 {
 	const struct CMUnitTest tests[] = {
@@ -207,6 +224,8 @@ int attrstrRunUnitTests(void)
 		cmocka_unit_test_setup_teardown(attrstrInsertSelfFromInteriorPointer,
 			attrstrSetup, attrstrTeardown),
 		cmocka_unit_test_setup_teardown(attrstrDeleteMergesAdjacentEqualValues,
+			attrstrSetup, attrstrTeardown),
+		cmocka_unit_test_setup_teardown(attrstrGraphemeIndexes,
 			attrstrSetup, attrstrTeardown),
 	};
 

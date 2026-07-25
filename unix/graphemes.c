@@ -15,6 +15,7 @@ uiprivGraphemes *uiprivNewGraphemes(void *s, size_t len)
 	PangoLogAttr *logattrs;
 	size_t i;
 	size_t *op;
+	char *p;
 
 	g = uiprivNew(uiprivGraphemes);
 
@@ -37,10 +38,12 @@ uiprivGraphemes *uiprivNewGraphemes(void *s, size_t len)
 	// compute the graphemesToPoints array
 	// TODO merge with the next for loop somehow?
 	op = g->graphemesToPoints;
-	for (i = 0; i < lenchars; i++)
+	p = text;
+	for (i = 0; i < lenchars; i++) {
 		if (logattrs[i].is_cursor_position != 0)
-			// TODO optimize this
-			*op++ = g_utf8_offset_to_pointer(text, i) - text;
+			*op++ = p - text;
+		p = g_utf8_next_char(p);
+	}
 	// and do the last one
 	*op++ = len;
 
