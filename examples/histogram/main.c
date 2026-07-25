@@ -164,7 +164,7 @@ static void handlerDraw(uiAreaHandler *a, uiArea *area, uiAreaDrawParams *p)
 		uiDrawPathNewFigureWithArc(path,
 			xs[currentPoint], ys[currentPoint],
 			pointRadius,
-			0, 6.23,		// TODO pi
+			0, uiPi * 2,
 			0);
 		uiDrawPathEnd(path);
 		// use the same brush as for the histogram lines
