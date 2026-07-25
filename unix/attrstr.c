@@ -2,12 +2,21 @@
 #include "uipriv_unix.h"
 #include "attrstr.h"
 
-// TODO pango alpha attributes turn 0 into 65535 :|
-
 // TODO make this name less generic?
 struct foreachParams {
 	PangoAttrList *attrs;
 };
+
+static guint16 pangoAlpha(double alpha)
+{
+	guint16 value;
+
+	value = (guint16) (alpha * G_MAXUINT16);
+	// Pango uses 0 to represent 65536, so use its smallest alpha instead.
+	if (value == 0)
+		return 1;
+	return value;
+}
 
 static void addattr(struct foreachParams *p, size_t start, size_t end, PangoAttribute *attr)
 {
@@ -53,24 +62,24 @@ static uiForEach processAttribute(const uiAttributedString *s, const uiAttribute
 		uiAttributeColor(attr, &r, &g, &b, &a);
 		addattr(p, start, end,
 			pango_attr_foreground_new(
-				(guint16) (r * 65535.0),
-				(guint16) (g * 65535.0),
-				(guint16) (b * 65535.0)));
+				(guint16) (r * G_MAXUINT16),
+				(guint16) (g * G_MAXUINT16),
+				(guint16) (b * G_MAXUINT16)));
 		addattr(p, start, end,
 			uiprivFUTURE_pango_attr_foreground_alpha_new(
-				(guint16) (a * 65535.0)));
+				pangoAlpha(a)));
 		break;
 	case uiAttributeTypeBackground:
 		// TODO make sure this works properly with line paragraph spacings (after figuring out what that means, of course)
 		uiAttributeColor(attr, &r, &g, &b, &a);
 		addattr(p, start, end,
 			pango_attr_background_new(
-				(guint16) (r * 65535.0),
-				(guint16) (g * 65535.0),
-				(guint16) (b * 65535.0)));
+				(guint16) (r * G_MAXUINT16),
+				(guint16) (g * G_MAXUINT16),
+				(guint16) (b * G_MAXUINT16)));
 		addattr(p, start, end,
 			uiprivFUTURE_pango_attr_background_alpha_new(
-				(guint16) (a * 65535.0)));
+				pangoAlpha(a)));
 		break;
 	case uiAttributeTypeUnderline:
 		switch (uiAttributeUnderline(attr)) {
@@ -96,24 +105,24 @@ static uiForEach processAttribute(const uiAttributedString *s, const uiAttribute
 		case uiUnderlineColorCustom:
 			addattr(p, start, end,
 				pango_attr_underline_color_new(
-					(guint16) (r * 65535.0),
-					(guint16) (g * 65535.0),
-					(guint16) (b * 65535.0)));
+					(guint16) (r * G_MAXUINT16),
+					(guint16) (g * G_MAXUINT16),
+					(guint16) (b * G_MAXUINT16)));
 			break;
 		case uiUnderlineColorSpelling:
 			// TODO GtkTextView style property error-underline-color
 			addattr(p, start, end,
-				pango_attr_underline_color_new(65535, 0, 0));
+				pango_attr_underline_color_new(G_MAXUINT16, 0, 0));
 			break;
 		case uiUnderlineColorGrammar:
 			// TODO find a more appropriate color
 			addattr(p, start, end,
-				pango_attr_underline_color_new(0, 65535, 0));
+				pango_attr_underline_color_new(0, G_MAXUINT16, 0));
 			break;
 		case uiUnderlineColorAuxiliary:
 			// TODO find a more appropriate color
 			addattr(p, start, end,
-				pango_attr_underline_color_new(0, 0, 65535));
+				pango_attr_underline_color_new(0, 0, G_MAXUINT16));
 			break;
 		}
 		break;
