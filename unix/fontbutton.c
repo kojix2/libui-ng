@@ -14,7 +14,6 @@ struct uiFontButton {
 
 uiUnixControlAllDefaults(uiFontButton)
 
-// TODO NOTE no need to inhibit the signal; font-set is documented as only being sent when the user changes the font
 static void onFontSet(GtkFontButton *button, gpointer data)
 {
 	uiFontButton *b = uiFontButton(data);
