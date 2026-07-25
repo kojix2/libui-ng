@@ -303,9 +303,12 @@ static HRESULT drawProgressBarPart(HRESULT hr, struct drawState *s)
 	r.top += (r.bottom - tm.tmHeight - r.top) / 2;
 	r.bottom = r.top + tm.tmHeight;
 
-	// TODO check errors
 	rBorder = r;
-	InflateRect(&rBorder, -1, -1);
+	if (InflateRect(&rBorder, -1, -1) == 0) {
+		logLastError(L"InflateRect()");
+		hr = E_FAIL;
+		goto fail;
+	}
 	if (theme != NULL) {
 		RECT crect;
 
@@ -332,21 +335,51 @@ static HRESULT drawProgressBarPart(HRESULT hr, struct drawState *s)
 		if (s->m->selected)
 			sysColor = COLOR_HIGHLIGHTTEXT;
 
-		// TODO check errors everywhere
 		pen = CreatePen(PS_SOLID, 1, GetSysColor(sysColor));
+		if (pen == NULL) {
+			logLastError(L"CreatePen()");
+			hr = E_FAIL;
+			goto fail;
+		}
 		prevPen = (HPEN) SelectObject(s->dc, pen);
+		if (prevPen == NULL) {
+			logLastError(L"SelectObject() pen");
+			DeleteObject(pen);
+			hr = E_FAIL;
+			goto fail;
+		}
 		brush = (HBRUSH) GetStockObject(NULL_BRUSH);
 		prevBrush = (HBRUSH) SelectObject(s->dc, brush);
-		Rectangle(s->dc, rBorder.left, rBorder.top, rBorder.right, rBorder.bottom);
-		SelectObject(s->dc, prevBrush);
-		SelectObject(s->dc, prevPen);
-		DeleteObject(pen);
+		if (prevBrush == NULL) {
+			logLastError(L"SelectObject() brush");
+			SelectObject(s->dc, prevPen);
+			DeleteObject(pen);
+			hr = E_FAIL;
+			goto fail;
+		}
+		if (Rectangle(s->dc, rBorder.left, rBorder.top, rBorder.right, rBorder.bottom) == 0) {
+			logLastError(L"Rectangle()");
+			SelectObject(s->dc, prevBrush);
+			SelectObject(s->dc, prevPen);
+			DeleteObject(pen);
+			hr = E_FAIL;
+			goto fail;
+		}
+		if (SelectObject(s->dc, prevBrush) == NULL)
+			logLastError(L"SelectObject() prev brush");
+		if (SelectObject(s->dc, prevPen) == NULL)
+			logLastError(L"SelectObject() prev pen");
+		if (DeleteObject(pen) == 0)
+			logLastError(L"DeleteObject() pen");
 	}
 
 	nFill = 1;
 	rFill[0] = r;
-	// TODO check error
-	InflateRect(&rFill[0], -1, -1);
+	if (InflateRect(&rFill[0], -1, -1) == 0) {
+		logLastError(L"InflateRect()");
+		hr = E_FAIL;
+		goto fail;
+	}
 	if (progress != -1)
 		rFill[0].right -= (rFill[0].right - rFill[0].left) * (100 - progress) / 100;
 	else {
@@ -383,15 +416,25 @@ static HRESULT drawProgressBarPart(HRESULT hr, struct drawState *s)
 		if (s->m->selected)
 			sysColor = COLOR_HIGHLIGHTTEXT;
 		for (i = 0; i < nFill; i++)
-			// TODO check errors
-			FillRect(s->dc, &rFill[i], GetSysColorBrush(sysColor));
+			if (FillRect(s->dc, &rFill[i], GetSysColorBrush(sysColor)) == 0) {
+				logLastError(L"FillRect() progress fill");
+				hr = E_FAIL;
+				goto fail;
+			}
 	}
 
 	hr = S_OK;
 fail:
-	// TODO check errors
-	if (theme != NULL)
-		CloseThemeData(theme);
+	if (theme != NULL) {
+		HRESULT hrClose;
+
+		hrClose = CloseThemeData(theme);
+		if (hrClose != S_OK) {
+			logHRESULT(L"CloseThemeData()", hrClose);
+			if (hr == S_OK)
+				hr = hrClose;
+		}
+	}
 	return hr;
 }
 
@@ -453,9 +496,12 @@ static HRESULT drawButtonPart(HRESULT hr, struct drawState *s)
 		HBRUSH color, prevColor;
 		int prevBkMode;
 
-		// TODO check errors
 		// TODO explain why we're not doing this in the themed case (it has to do with extra transparent pixels)
-		InflateRect(&r, -1, -1);
+		if (InflateRect(&r, -1, -1) == 0) {
+			logLastError(L"InflateRect()");
+			hr = E_FAIL;
+			goto fail;
+		}
 		state = DFCS_BUTTONPUSH;
 		if (!enabled)
 			state |= DFCS_INACTIVE;
@@ -465,9 +511,19 @@ static HRESULT drawButtonPart(HRESULT hr, struct drawState *s)
 			goto fail;
 		}
 		color = GetSysColorBrush(COLOR_BTNTEXT);
-		// TODO check errors for these two
 		prevColor = (HBRUSH) SelectObject(s->dc, color);
+		if (prevColor == NULL) {
+			logLastError(L"SelectObject() button text brush");
+			hr = E_FAIL;
+			goto fail;
+		}
 		prevBkMode = SetBkMode(s->dc, TRANSPARENT);
+		if (prevBkMode == 0) {
+			logLastError(L"SetBkMode()");
+			SelectObject(s->dc, prevColor);
+			hr = E_FAIL;
+			goto fail;
+		}
 		// TODO DT_EDITCONTROL?
 		// TODO DT_PATH_ELLIPSIS DT_WORD_ELLIPSIS instead of DT_END_ELLIPSIS? a middle-ellipsis option would be ideal here
 		if (DrawTextW(s->dc, wstr, -1, &r, DT_CENTER | DT_VCENTER | DT_END_ELLIPSIS | DT_SINGLELINE | DT_NOPREFIX) == 0) {
@@ -475,16 +531,24 @@ static HRESULT drawButtonPart(HRESULT hr, struct drawState *s)
 			hr = E_FAIL;
 			goto fail;
 		}
-		// TODO check errors for these two
-		SetBkMode(s->dc, prevBkMode);
-		SelectObject(s->dc, prevColor);
+		if (SetBkMode(s->dc, prevBkMode) == 0)
+			logLastError(L"SetBkMode() prev");
+		if (SelectObject(s->dc, prevColor) == NULL)
+			logLastError(L"SelectObject() prev button text brush");
 	}
 
 	hr = S_OK;
 fail:
-	// TODO check errors
-	if (theme != NULL)
-		CloseThemeData(theme);
+	if (theme != NULL) {
+		HRESULT hrClose;
+
+		hrClose = CloseThemeData(theme);
+		if (hrClose != S_OK) {
+			logHRESULT(L"CloseThemeData()", hrClose);
+			if (hr == S_OK)
+				hr = hrClose;
+		}
+	}
 	uiprivFree(wstr);
 	return hr;
 }

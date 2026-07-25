@@ -141,8 +141,8 @@ static LRESULT CALLBACK tableSubProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
 	case WM_TIMER:
 		if (wParam == (WPARAM) (&(t->inDoubleClickTimer))) {
 			t->inDoubleClickTimer = FALSE;
-			// TODO check errors
-			KillTimer(hwnd, wParam);
+			if (KillTimer(hwnd, wParam) == 0)
+				logLastError(L"KillTimer()");
 			return 0;
 		}
 		if (wParam != (WPARAM) t)
@@ -555,9 +555,11 @@ static BOOL handleItemChanged(uiTable *t, NMHDR *nmhdr, LRESULT *lResult)
 
 	if (t->inLButtonDown && !oldFocused && newFocused) {
 		t->inDoubleClickTimer = TRUE;
-		// TODO check error
-		SetTimer(t->hwnd, (UINT_PTR) (&(t->inDoubleClickTimer)),
-			GetDoubleClickTime(), NULL);
+		if (SetTimer(t->hwnd, (UINT_PTR) (&(t->inDoubleClickTimer)),
+			GetDoubleClickTime(), NULL) == 0) {
+			logLastError(L"SetTimer()");
+			t->inDoubleClickTimer = FALSE;
+		}
 		*lResult = 0;
 		return TRUE;
 	}
