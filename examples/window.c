@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <ui.h>
 
-int onClosing(uiWindow *w, void *data)
+static int onClosing(uiWindow *w, void *data)
 {
 	uiQuit();
 	return 1;
@@ -12,7 +12,7 @@ int main(void)
 	uiInitOptions o = {0};
 	const char *err;
 	uiWindow *w;
-	uiLabel *l;
+	uiLabel *label;
 
 	err = uiInit(&o);
 	if (err != NULL) {
@@ -21,16 +21,15 @@ int main(void)
 		return 1;
 	}
 
-	// Create a new window
-	w = uiNewWindow("Hello World!", 300, 30, 0);
+	w = uiNewWindow("Window", 320, 160, 0);
+	uiWindowSetMargined(w, 1);
 	uiWindowOnClosing(w, onClosing, NULL);
 
-	l = uiNewLabel("Hello, World!");
-	uiWindowSetChild(w, uiControl(l));
+	label = uiNewLabel("A uiWindow contains one child control.");
+	uiWindowSetChild(w, uiControl(label));
 
 	uiControlShow(uiControl(w));
 	uiMain();
 	uiUninit();
 	return 0;
 }
-

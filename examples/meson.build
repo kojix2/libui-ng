@@ -24,6 +24,108 @@ elif libui_OS == 'darwin'
 endif
 
 libui_examples = {
+	'hello-world': {
+		'sources':		['hello-world.c'],
+	},
+	'window': {
+		'sources':		['window.c'],
+	},
+	'button': {
+		'sources':		['button.c'],
+	},
+	'label': {
+		'sources':		['label.c'],
+	},
+	'checkbox': {
+		'sources':		['checkbox.c'],
+	},
+	'entry': {
+		'sources':		['entry.c'],
+	},
+	'multiline-entry': {
+		'sources':		['multiline-entry.c'],
+	},
+	'box-layout': {
+		'sources':		['box-layout.c'],
+	},
+	'form-layout': {
+		'sources':		['form-layout.c'],
+	},
+	'grid-layout': {
+		'sources':		['grid-layout.c'],
+	},
+	'tabs': {
+		'sources':		['tabs.c'],
+	},
+	'group': {
+		'sources':		['group.c'],
+	},
+	'control-destroy': {
+		'sources':		['control-destroy.c'],
+	},
+	'combobox': {
+		'sources':		['combobox.c'],
+	},
+	'editable-combobox': {
+		'sources':		['editable-combobox.c'],
+	},
+	'radio-buttons': {
+		'sources':		['radio-buttons.c'],
+	},
+	'spinbox': {
+		'sources':		['spinbox.c'],
+	},
+	'slider': {
+		'sources':		['slider.c'],
+	},
+	'progressbar': {
+		'sources':		['progressbar.c'],
+	},
+	'separator': {
+		'sources':		['separator.c'],
+	},
+	'date-picker': {
+		'sources':		['date-picker.c'],
+	},
+	'time-picker': {
+		'sources':		['time-picker.c'],
+	},
+	'color-button': {
+		'sources':		['color-button.c'],
+	},
+	'font-button': {
+		'sources':		['font-button.c'],
+	},
+	'menu': {
+		'sources':		['menu.c'],
+	},
+	'menu-checkbox': {
+		'sources':		['menu-checkbox.c'],
+	},
+	'open-file': {
+		'sources':		['open-file.c'],
+	},
+	'open-folder': {
+		'sources':		['open-folder.c'],
+	},
+	'save-file': {
+		'sources':		['save-file.c'],
+	},
+	'message-box': {
+		'sources':		['message-box.c'],
+	},
+	'error-message-box': {
+		'sources':		['error-message-box.c'],
+	},
+	'timer': {
+		'sources':		['timer.c'],
+	},
+	'queue-main': {
+		'sources':		['queue-main.c'],
+	},
+	'should-quit': {
+		'sources':		['should-quit.c'],
+	},
 	'controlgallery': {
 		'sources':		['controlgallery/main.c'],
 	},
@@ -42,17 +144,8 @@ libui_examples = {
 	'drawtext': {
 		'sources':		['drawtext/main.c'],
 	},
-	'timer': {
-		'sources':		['timer/main.c'],
-	},
 	'datetime': {
 		'sources':		['datetime/main.c'],
-	},
-	'hello-world': {
-		'sources':		['hello-world/main.c'],
-	},
-	'window': {
-		'sources':		['window/main.c'],
 	},
 }
 foreach name, args : libui_examples
