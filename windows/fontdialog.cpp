@@ -520,7 +520,7 @@ static struct fontDialog *beginFontDialog(HWND hwnd, LPARAM lParam)
 	uiWindowsEnsureGetWindowRect(samplePlacement, &(f->sampleRect));
 	mapWindowRect(NULL, f->hwnd, &(f->sampleRect));
 	uiWindowsEnsureDestroyWindow(samplePlacement);
-	f->sampleBox = newD2DScratch(f->hwnd, &(f->sampleRect), (HMENU) rcFontSamplePlacement, fontDialogSampleSubProc, (DWORD_PTR) f);
+	f->sampleBox = newD2DScratch(f->hwnd, &(f->sampleRect), (HMENU) (INT_PTR) rcFontSamplePlacement, fontDialogSampleSubProc, (DWORD_PTR) f);
 
 	setupInitialFontDialogState(f);
 	return f;

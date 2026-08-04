@@ -698,6 +698,7 @@ HRESULT uiprivTableHandleNM_CUSTOMDRAW(uiTable *t, NMLVCUSTOMDRAW *nm, LRESULT *
 	bool focusFirst;
 	HRESULT hr;
 
+	hr = S_OK;
 	switch (nm->nmcd.dwDrawStage) {
 	case CDDS_PREPAINT:
 		*lResult = CDRF_NOTIFYITEMDRAW;

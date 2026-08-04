@@ -205,7 +205,7 @@ static void measureTracks(uiGrid *g, gridLayoutData *ld)
 static void findExpandingTracks(uiGrid *g, gridLayoutData *ld)
 {
 	int ix, iy;
-	int i;
+	size_t i;
 	struct gridChild *gc;
 
 	// 2) figure out which rows/columns expand but not span
@@ -283,11 +283,12 @@ static void computeCellRects(uiGrid *g, gridLayoutData *ld, int xpadding, int yp
 {
 	int ix, iy;
 	int i;
+	size_t childIndex;
 	struct gridChild *gc;
 
 	// 5) reset the final coordinates for the next step
-	for (i = 0; i < g->children->size(); i++) {
-		gc = (*(g->children))[i];
+	for (childIndex = 0; childIndex < g->children->size(); childIndex++) {
+		gc = (*(g->children))[childIndex];
 		if (!uiControlVisible(gc->c))
 			continue;
 		gc->finalx = 0;
@@ -349,7 +350,7 @@ static void computeCellRects(uiGrid *g, gridLayoutData *ld, int xpadding, int yp
 
 static void applyAlignment(uiGrid *g)
 {
-	int i;
+	size_t i;
 	struct gridChild *gc;
 
 	// 7) everything as it stands now is set for xalign == Fill yalign == Fill; set the correct alignments
