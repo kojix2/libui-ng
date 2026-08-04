@@ -15,15 +15,14 @@
 #define ISOLATION_AWARE_ENABLED 1
 #endif
 
-// get Windows version right; right now Windows Vista
+// get Windows version right; right now Windows 7
 // unless otherwise stated, all values from Microsoft's sdkddkver.h
 // TODO is all of this necessary? how is NTDDI_VERSION used?
-// TODO platform update sp2
-#define WINVER			0x0600	/* from Microsoft's winnls.h */
-#define _WIN32_WINNT		0x0600
-#define _WIN32_WINDOWS	0x0600	/* from Microsoft's pdh.h */
-#define _WIN32_IE			0x0700
-#define NTDDI_VERSION		0x06000000
+#define WINVER			0x0601	/* from Microsoft's winnls.h */
+#define _WIN32_WINNT		0x0601
+#define _WIN32_WINDOWS	0x0601	/* from Microsoft's pdh.h */
+#define _WIN32_IE			0x0800
+#define NTDDI_VERSION		0x06010000
 
 // The MinGW-w64 header has an unverified IDWriteTypography definition.
 // TODO I can confirm this myself, but I don't know how long it will take for them to note my adjustments... Either way, I have to confirm this myself.
