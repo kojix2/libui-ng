@@ -15,66 +15,9 @@ static NSPoint makeIndependent(NSPoint p, NSWindow *w)
 	return [w convertRectToScreen:r].origin;
 }
 
-struct onMoveDragParams {
-	NSWindow *w;
-	// using the previous point causes weird issues like the mouse seeming to fall behind the window edge... so do this instead
-	// TODO will this make things like the menubar and dock easier too?
-	NSRect initialFrame;
-	NSPoint initialPoint;
-};
-
-void onMoveDrag(struct onMoveDragParams *p, NSEvent *e)
-{
-	NSPoint new;
-	NSRect frame;
-	CGFloat offx, offy;
-
-	new = makeIndependent([e locationInWindow], p->w);
-	frame = p->initialFrame;
-
-	offx = new.x - p->initialPoint.x;
-	offy = new.y - p->initialPoint.y;
-	frame.origin.x += offx;
-	frame.origin.y += offy;
-
-	// TODO handle the menubar
-	// TODO wait the system does this for us already?!
-
-	[p->w setFrameOrigin:frame.origin];
-}
-
 void uiprivDoManualMove(NSWindow *w, NSEvent *initialEvent)
 {
-	__block struct onMoveDragParams mdp;
-	uiprivNextEventArgs nea;
-	BOOL (^handleEvent)(NSEvent *e);
-	__block BOOL done;
-
-	// 10.11 gives us a method to handle this for us
-	// use it if available; this lets us use the real OS dragging code, which means we can take advantage of OS features like Spaces
-	if (uiprivFUTURE_NSWindow_performWindowDragWithEvent(w, initialEvent))
-		return;
-
-	mdp.w = w;
-	mdp.initialFrame = [mdp.w frame];
-	mdp.initialPoint = makeIndependent([initialEvent locationInWindow], mdp.w);
-
-	nea.mask = NSLeftMouseDraggedMask | NSLeftMouseUpMask;
-	nea.duration = [NSDate distantFuture];
-	nea.mode = NSEventTrackingRunLoopMode;		// nextEventMatchingMask: docs suggest using this for manual mouse tracking
-	nea.dequeue = YES;
-	handleEvent = ^(NSEvent *e) {
-		if ([e type] == NSLeftMouseUp) {
-			done = YES;
-			return YES;	// do not send
-		}
-		onMoveDrag(&mdp, e);
-		return YES;		// do not send
-	};
-	done = NO;
-	while (uiprivMainStep(&nea, handleEvent))
-		if (done)
-			break;
+	[w performWindowDragWithEvent:initialEvent];
 }
 
 // see http://stackoverflow.com/a/40352996/3408572
@@ -84,8 +27,6 @@ static void minMaxAutoLayoutSizes(NSWindow *w, NSSize *min, NSSize *max)
 	NSView *contentView;
 	NSRect prevFrame;
 
-	// if adding these constraints causes the window to change size somehow, don't show it to the user and change it back afterwards
-	NSDisableScreenUpdates();
 	prevFrame = [w frame];
 
 	// minimum: encourage the window to be as small as possible
@@ -129,7 +70,6 @@ static void minMaxAutoLayoutSizes(NSWindow *w, NSSize *min, NSSize *max)
 	[contentView removeConstraint:ch];
 
 	[w setFrame:prevFrame display:YES];		// TODO really YES?
-	NSEnableScreenUpdates();
 }
 
 static void handleResizeLeft(NSRect *frame, NSPoint old, NSPoint new)

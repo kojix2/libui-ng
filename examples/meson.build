@@ -18,7 +18,7 @@ if libui_OS == 'windows'
 		libui_example_link_args += ['/ENTRY:mainCRTStartup']
 	endif
 elif libui_OS == 'darwin'
-	# since we use a deployment target of 10.8, the non-C++11-compliant libstdc++ is chosen by default; we need C++11
+	# explicitly use the C++11-compatible standard library
 	# see issue #302 for more details
 	libui_example_cpp_extra_args += ['--stdlib=libc++']
 endif

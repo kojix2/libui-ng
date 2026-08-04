@@ -76,14 +76,12 @@ char *uiSaveFile(uiWindow *parent)
 	return runSavePanel(windowWindow(parent), s);
 }
 
-// I would use a completion handler for NSAlert as well, but alas NSAlert's are 10.9 and higher only
 @interface libuiCodeModalAlertPanel : NSObject {
 	NSAlert *panel;
 	NSWindow *parent;
 }
 - (id)initWithPanel:(NSAlert *)p parent:(NSWindow *)w;
 - (NSInteger)run;
-- (void)panelEnded:(NSAlert *)panel result:(NSInteger)result data:(void *)data;
 @end
 
 @implementation libuiCodeModalAlertPanel
@@ -103,16 +101,10 @@ char *uiSaveFile(uiWindow *parent)
 	if (self->parent == nil)
 		return [self->panel runModal];
 
-	[self->panel beginSheetModalForWindow:self->parent
-		modalDelegate:self
-		didEndSelector:@selector(panelEnded:result:data:)
-		contextInfo:NULL];
+	[self->panel beginSheetModalForWindow:self->parent completionHandler:^(NSModalResponse result) {
+		[uiprivNSApp() stopModalWithCode:result];
+	}];
 	return [uiprivNSApp() runModalForWindow:[self->panel window]];
-}
-
-- (void)panelEnded:(NSAlert *)panel result:(NSInteger)result data:(void *)data
-{
-	[uiprivNSApp() stopModalWithCode:result];
 }
 
 @end

@@ -66,7 +66,7 @@ libui_project_link_args = []
 if libui_OS == 'darwin'
 	libui_darwin_langs = ['c', 'objc']
 
-	libui_macosx_version_min = '-mmacosx-version-min=10.8'
+	libui_macosx_version_min = '-mmacosx-version-min=10.11'
 	add_global_arguments(libui_macosx_version_min, language: libui_darwin_langs)
 	add_global_link_arguments(libui_macosx_version_min, language: libui_darwin_langs)
 

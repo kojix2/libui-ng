@@ -163,8 +163,6 @@ extern CFStringRef *uiprivFUTURE_kCTFontOpenTypeFeatureTag;
 extern CFStringRef *uiprivFUTURE_kCTFontOpenTypeFeatureValue;
 extern CFStringRef *uiprivFUTURE_kCTBackgroundColorAttributeName;
 extern void uiprivLoadFutures(void);
-extern void uiprivFUTURE_NSLayoutConstraint_setIdentifier(NSLayoutConstraint *constraint, NSString *identifier);
-extern BOOL uiprivFUTURE_NSWindow_performWindowDragWithEvent(NSWindow *w, NSEvent *initialEvent);
 
 // undocumented.m
 extern CFStringRef uiprivUNDOC_kCTFontPreferredSubFamilyNameKey;
