@@ -49,7 +49,7 @@ libui_sources += [
 
 libui_deps += [
 	dependency('gtk+-3.0',
-		version: '>=3.10.0',
+		version: '>=3.18.0',
 		method: 'pkg-config',
 		required: true),
 	# We specify these as not required because some Unix systems include them with libc instead of providing them as separate files (thanks textshell and jpakkane in freenode #mesonbuild)

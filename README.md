@@ -31,7 +31,7 @@ Build automation is defined in `.github/workflows/build.yml`.
 ## Runtime Requirements
 
 - Windows: Windows 7 SP1 or newer
-- Unix: GTK+ 3.10 or newer
+- Unix: GTK+ 3.18 or newer
 - macOS: OS X 10.11 or newer
 
 ## Build Requirements

@@ -52,7 +52,7 @@ libui-ng takes backward compatibility seriously. Your code should not break the 
 
 Choosing to drop older versions of Windows, GTK+, and OS X that we could have easily continued to support was not done lightly. If you want to discuss dropping support for an older version of any of these for the benefit of libui-ng, file an issue pleading your case (see below).
 
-GTK+ versions are harder to drop because we are limited by Linux distribution packaging. In general, we will consider bumping GTK+ versions on a new Ubuntu LTS release, choosing the earliest version available on the major distributions at the time of the *previous* Ubuntu LTS release. As of writing, the next milestone will be *after* April 2018, and the target GTK+ version appears to be 3.18, judging by Ubuntu 16.04 LTS alone. This may be bumped back depending on other distros (or it may not be bumped at all), but you may wish to keep this in mind as you write.
+GTK+ versions are harder to drop because we are limited by Linux distribution packaging. The current minimum is GTK+ 3.18, matching Ubuntu 16.04 LTS. In general, we consider bumping GTK+ versions alongside new Ubuntu LTS releases, choosing a version that remains available across the major supported distributions.
 
 (TODO talk about future.c/.cpp/.m files)
 

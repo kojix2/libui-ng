@@ -464,7 +464,6 @@ static void uiprivDateTimePickerWidget_init(uiprivDateTimePickerWidget *d)
 	gtk_window_set_type_hint(GTK_WINDOW(d->window), GDK_WINDOW_TYPE_HINT_COMBO);
 	gtk_window_set_skip_taskbar_hint(GTK_WINDOW(d->window), TRUE);
 	gtk_window_set_skip_pager_hint(GTK_WINDOW(d->window), TRUE);
-	gtk_window_set_has_resize_grip(GTK_WINDOW(d->window), FALSE);
 	gtk_container_set_border_width(GTK_CONTAINER(d->window), 12);
 	// and make it stand out a bit
 	gtk_style_context_add_class(gtk_widget_get_style_context(d->window), "frame");
@@ -495,8 +494,7 @@ static void uiprivDateTimePickerWidget_init(uiprivDateTimePickerWidget *d)
 	d->seconds = newSpinbox(d, 0, 59, NULL, zeroPadSpinbox, &(d->secondsBlock));
 	gtk_container_add(GTK_CONTAINER(d->timebox), d->seconds);
 
-	// LONGTERM this should be the case, but that interferes with grabs
-	// switch to it when we can drop GTK+ 3.10 and use popovers
+	// TODO replace the custom popup and grabs with GtkPopover
 	d->ampm = newSpinbox(d, 0, 1, ampmSpinboxInput, ampmSpinboxOutput, &(d->ampmBlock));
 	gtk_spin_button_set_numeric(GTK_SPIN_BUTTON(d->ampm), FALSE);
 	gtk_widget_set_valign(d->ampm, GTK_ALIGN_CENTER);

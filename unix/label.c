@@ -4,7 +4,6 @@
 struct uiLabel {
 	uiUnixControl c;
 	GtkWidget *widget;
-	GtkMisc *misc;
 	GtkLabel *label;
 };
 
@@ -27,10 +26,10 @@ uiLabel *uiNewLabel(const char *text)
 	uiUnixNewControl(uiLabel, l);
 
 	l->widget = gtk_label_new(text);
-	l->misc = GTK_MISC(l->widget);
 	l->label = GTK_LABEL(l->widget);
 
-	gtk_misc_set_alignment(l->misc, 0, 0);
+	gtk_label_set_xalign(l->label, 0);
+	gtk_label_set_yalign(l->label, 0);
 
 	return l;
 }

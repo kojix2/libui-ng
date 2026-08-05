@@ -10,7 +10,7 @@ static PangoAttribute *(*newFeaturesAttr)(const gchar *features) = NULL;
 static PangoAttribute *(*newFGAlphaAttr)(guint16 alpha) = NULL;
 static PangoAttribute *(*newBGAlphaAttr)(guint16 alpha) = NULL;
 
-// added in GTK+ 3.20; we need 3.10
+// added in GTK+ 3.20; we need 3.18
 static void (*gwpIterSetObjectName)(GtkWidgetPath *path, gint pos, const char *name) = NULL;
 
 // note that we treat any error as "the symbols aren't there" (and don't care if dlclose() failed)
