@@ -1,7 +1,5 @@
 # 17 march 2019
 
-# TODO I'm not sure how to allow building 32-bit instead of 64-bit with meson
-
 # TODO remove cpp from this list once https://github.com/mesonbuild/meson/issues/5181 is settled; move it to the OS checks and under cpp-multithread
 project('libui', ['c', 'cpp'],
 	meson_version: '>=0.58.0',
@@ -27,7 +25,6 @@ project('libui', ['c', 'cpp'],
 libui_OS = host_machine.system()
 libui_MSVC = meson.get_compiler('c').get_id() == 'msvc'
 
-# TODO switch to tabs; the spaces are just so I can share this file while I'm writing it
 libui_forced_options = {
 	'warning_level': '3',     # always max warnings
 	'b_pch':         'false', # we don't want precompiled headers
@@ -122,23 +119,6 @@ add_project_arguments(libui_project_compile_args,
 add_project_link_arguments(libui_project_link_args,
 	language: ['c', 'cpp', 'objc'])
 
-# TODO:
-# Meson determines whether -Wl,--no-undefined is provided via
-# built-in option b_lundef, and it's true by default, which is what
-# we want (so I don't make mistakes like asking for unknown
-# functions in my dependencies). However, Meson also is smart
-# about specifying this properly on systems that don't support it, like
-# FreeBSD and OpenBSD
-# (according to someone on freenode #mesonbuild), but it isn't clear
-# whether it's just ignored or if the value is forced to false.
-# Therefore, once this is determined, we can uncomment the
-# following.
-libui_libui_link_args = []
-#if not libui_MSVC and get_option("b_lundef")
-	# TODO what should this be on MSVC?
-#	libui_libui_link_args += ['-Wl,--no-allow-shlib-undefined']
-#endif
-
 libui_sources = []
 libui_deps = []
 libui_rpath = ''
@@ -162,8 +142,7 @@ libui_libui = library('ui', libui_sources,
 	gnu_symbol_visibility: 'hidden',
 	c_args: ['-Dlibui_EXPORTS'],
 	cpp_args: ['-Dlibui_EXPORTS'],
-	objc_args: ['-Dlibui_EXPORTS'],
-	link_args: libui_libui_link_args)
+	objc_args: ['-Dlibui_EXPORTS'])
 install_headers('ui.h')
 
 # TODO when the API is stable enough to be versioned, create a pkg-config file (https://mesonbuild.com/Pkgconfig-module.html) and a declare_dependency() section too
