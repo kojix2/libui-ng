@@ -17,7 +17,6 @@ project('libui', ['c', 'cpp'],
 		'cpp_std=c++11',				# strict C++11
 		'cpp_eh=sc',					# shut the compiler up in some cases
 		'cpp_winlibs=',					# likewise as with c_winlibs
-		'wrap_mode=forcefallback'			# build cmocka locally
 	],
 	license: 'MIT')
 
