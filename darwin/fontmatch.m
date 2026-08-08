@@ -445,7 +445,6 @@ CTFontDescriptorRef uiprivFontDescriptorToCTFontDescriptor(uiFontDescriptor *fd)
 	basedesc = NULL;
 
 	attrs = CFDictionaryCreateMutable(NULL, 2,
-		// TODO are these correct?
 		&kCFCopyStringDictionaryKeyCallBacks,
 		&kCFTypeDictionaryValueCallBacks);
 	if (attrs == NULL)
@@ -466,7 +465,7 @@ CTFontDescriptorRef uiprivFontDescriptorToCTFontDescriptor(uiFontDescriptor *fd)
 	basedesc = CTFontDescriptorCreateWithAttributes(attrs);
 	if (basedesc == NULL)
 		goto fail;
-	CFRelease(attrs);			// TODO correct?
+	CFRelease(attrs);
 	return matchStyle(basedesc, fd);
 
 fail:
@@ -498,7 +497,6 @@ CTFontDescriptorRef uiprivCTFontDescriptorAppendFeatures(CTFontDescriptorRef des
 	values[0] = featuresArray;
 	attrs = CFDictionaryCreate(NULL,
 		keys, values, 1,
-		// TODO are these correct?
 		&kCFCopyStringDictionaryKeyCallBacks,
 		&kCFTypeDictionaryValueCallBacks);
 	CFRelease(featuresArray);

@@ -230,7 +230,6 @@ void uiDrawFreeTextLayout(uiDrawTextLayout *tl)
 	uiprivFree(tl);
 }
 
-// TODO document that (x,y) is the top-left corner of the *entire frame*
 void uiDrawText(uiDrawContext *c, uiDrawTextLayout *tl, double x, double y)
 {
 	if (tl == NULL)
@@ -268,6 +267,5 @@ void uiLoadControlFont(uiFontDescriptor *f)
 
 void uiFreeFontDescriptor(uiFontDescriptor *desc)
 {
-	// TODO ensure this is synchronized with fontmatch.m
 	uiFreeText((char *) (desc->Family));
 }

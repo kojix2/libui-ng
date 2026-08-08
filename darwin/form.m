@@ -309,12 +309,11 @@ struct uiForm {
 			@"uiForm trailing constraint");
 		[self addConstraint:c];
 		[self->trailings addObject:c];
-		// TODO
 		c = uiprivMkConstraint(fc, NSLayoutAttributeBottom,
 			NSLayoutRelationLessThanOrEqual,
 			self, NSLayoutAttributeBottom,
 			1, 0,
-			@"TODO");
+			@"uiForm bottom constraint");
 		[self addConstraint:c];
 		[self->trailings addObject:c];
 	}

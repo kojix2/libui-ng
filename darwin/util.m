@@ -2,7 +2,8 @@
 #import "uipriv_darwin.h"
 
 // LONGTERM do we really want to do this? make it an option?
-// TODO figure out why we removed this from window.m
+// Prevent automatic substitutions from changing entry contents behind the
+// application's back.
 void uiprivDisableAutocorrect(NSTextView *tv)
 {
 	[tv setEnabledTextCheckingTypes:0];

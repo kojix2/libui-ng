@@ -17,11 +17,6 @@
 
 #define uiprivToNSString(str) [NSString stringWithUTF8String:(str)]
 
-// TODO find a better place for this
-#ifndef NSAppKitVersionNumber10_9
-#define NSAppKitVersionNumber10_9 1265
-#endif
-
 // nstextfield.m
 void uiprivNSTextFieldSetStyleLabel(NSTextField *t);
 void uiprivNSTextFieldSetStyleEntry(NSTextField *t);
@@ -40,7 +35,6 @@ void uiprivNSTextFieldSetStyleSearchEntry(NSTextField *t);
 	BOOL hasAbout;
 	BOOL finalized;
 }
-// TODO: replace with weak references in ARC
 @property (unsafe_unretained) uiprivMenuItem *quitItem;
 @property (unsafe_unretained) uiprivMenuItem *preferencesItem;
 @property (unsafe_unretained) uiprivMenuItem *aboutItem;

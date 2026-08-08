@@ -210,7 +210,7 @@ static void uiWindowSyncEnableState(uiDarwinControl *c, int enabled)
 
 static void uiWindowSetSuperview(uiDarwinControl *c, NSView *superview)
 {
-	// TODO
+	// uiWindow is a top-level control and never has a superview.
 }
 
 static void windowRelayout(uiWindow *w)
@@ -241,10 +241,8 @@ static void uiWindowChildEdgeHuggingChanged(uiDarwinControl *c)
 	windowRelayout(w);
 }
 
-// TODO
 uiDarwinControlDefaultHuggingPriority(uiWindow, window)
 uiDarwinControlDefaultSetHuggingPriority(uiWindow, window)
-// end TODO
 
 static void uiWindowChildVisibilityChanged(uiDarwinControl *c)
 {

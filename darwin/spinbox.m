@@ -32,17 +32,6 @@ struct uiSpinbox {
 	void *onChangedData;
 };
 
-// yes folks, this varies by operating system! woo!
-// 10.10 started drawing the NSStepper one point too low, so we have to fix it up conditionally
-// TODO test this; we'll probably have to substitute 10_9
-static CGFloat stepperYDelta(void)
-{
-	// via https://developer.apple.com/library/mac/releasenotes/AppKit/RN-AppKit/
-	if (floor(NSAppKitVersionNumber) <= NSAppKitVersionNumber10_9)
-		return 0;
-	return -1;
-}
-
 @implementation libui_spinbox
 
 - (id)initWithFrame:(NSRect)r spinbox:(uiSpinbox *)sb
@@ -96,12 +85,12 @@ static CGFloat stepperYDelta(void)
 		[self addConstraint:uiprivMkConstraint(self->stepper, NSLayoutAttributeTop,
 			NSLayoutRelationEqual,
 			self, NSLayoutAttributeTop,
-			1, stepperYDelta(),
+			1, -1,
 			@"uiSpinbox top edge stepper")];
 		[self addConstraint:uiprivMkConstraint(self->stepper, NSLayoutAttributeBottom,
 			NSLayoutRelationEqual,
 			self, NSLayoutAttributeBottom,
-			1, stepperYDelta(),
+			1, -1,
 			@"uiSpinbox bottom edge stepper")];
 		[self addConstraint:uiprivMkConstraint(self->tf, NSLayoutAttributeTrailing,
 			NSLayoutRelationEqual,

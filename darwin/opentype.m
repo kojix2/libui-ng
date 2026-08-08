@@ -33,7 +33,6 @@ static void addCTFeatureEntry(struct addCTFeatureEntryParams *p)
 
 	featureDict = CFDictionaryCreate(NULL,
 		keys, values, 2,
-		// TODO are these correct?
 		&kCFCopyStringDictionaryKeyCallBacks,
 		&kCFTypeDictionaryValueCallBacks);
 	if (featureDict == NULL) {

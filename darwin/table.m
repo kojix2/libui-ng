@@ -387,7 +387,6 @@ uiTable *uiNewTable(uiTableParams *p)
 	[t->tv setSelectionHighlightStyle:NSTableViewSelectionHighlightStyleRegular];
 	[t->tv setGridStyleMask:NSTableViewGridNone];
 	[t->tv setAllowsTypeSelect:YES];
-	// TODO floatsGroupRows — do we even allow group rows?
 
 	uiTableOnRowClicked(t, defaultOnRowClicked, NULL);
 	uiTableOnRowDoubleClicked(t, defaultOnRowDoubleClicked, NULL);

@@ -208,9 +208,6 @@ uiEntry *uiNewSearchEntry(void)
 
 	e = finishNewEntry([uiprivNSSearchField class]);
 	s = (NSSearchField *) (e->textfield);
-	// TODO these are only on 10.10
-//	[s setSendsSearchStringImmediately:NO];
-//	[s setSendsWholeSearchString:NO];
 	uiprivNSTextFieldSetStyleSearchEntry(s);
 	return e;
 }

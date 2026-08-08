@@ -2,7 +2,8 @@
 #import "uipriv_darwin.h"
 #import "attrstr.h"
 
-// TODO explain the purpose of this file
+// Maps OpenType feature tags to legacy AAT feature type/selector pairs for
+// Core Text versions that do not expose OpenType feature dictionary keys.
 
 static void boolspec(uint32_t value, uint16_t type, uint16_t ifTrue, uint16_t ifFalse, uiprivAATBlock f)
 {
