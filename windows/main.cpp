@@ -161,11 +161,10 @@ void uiprivFreeTimer(uiprivTimer *t)
 // since timers use uiprivAlloc(), we have to clean them up in uiUninit(), or else we'll get dangling allocation errors
 void uiprivUninitTimers(void)
 {
-	// TODO why doesn't auto t : timers work?
-	for (auto t = timers.begin(); t != timers.end(); t++) {
-		if (KillTimer(utilWindow, (UINT_PTR) t->first) == 0)
+	for (const auto &t : timers) {
+		if (KillTimer(utilWindow, (UINT_PTR) t.first) == 0)
 			logLastError(L"error calling KillTimer() to clean up uiTimer() procedure");
-		uiprivFree(t->first);
+		uiprivFree(t.first);
 	}
 	timers.clear();
 }

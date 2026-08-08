@@ -8,7 +8,8 @@
 // - It handles WM_QUERYENDSESSION requests.
 // - It handles WM_WININICHANGE and forwards the message to any child windows that request it.
 // - It handles executing functions queued to run by uiQueueMain().
-// TODO explain why it isn't message-only
+// This cannot be a message-only window because it is also the initial parent
+// of ordinary child controls before they are attached elsewhere.
 
 #define utilWindowClass L"libui_utilWindowClass"
 

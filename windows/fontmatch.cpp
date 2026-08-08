@@ -2,15 +2,13 @@
 #include "uipriv_windows.hpp"
 #include "attrstr.hpp"
 
-// TODO should be const but then I can't operator[] on it; the real solution is to find a way to do designated array initializers in C++11 but I do not know enough C++ voodoo to make it work (it is possible but no one else has actually done it before)
-static std::map<uiTextItalic, DWRITE_FONT_STYLE> dwriteItalics = {
+static const std::map<uiTextItalic, DWRITE_FONT_STYLE> dwriteItalics = {
 	{ uiTextItalicNormal, DWRITE_FONT_STYLE_NORMAL },
 	{ uiTextItalicOblique, DWRITE_FONT_STYLE_OBLIQUE },
 	{ uiTextItalicItalic, DWRITE_FONT_STYLE_ITALIC },
 };
 
-// TODO should be const but then I can't operator[] on it; the real solution is to find a way to do designated array initializers in C++11 but I do not know enough C++ voodoo to make it work (it is possible but no one else has actually done it before)
-static std::map<uiTextStretch, DWRITE_FONT_STRETCH> dwriteStretches = {
+static const std::map<uiTextStretch, DWRITE_FONT_STRETCH> dwriteStretches = {
 	{ uiTextStretchUltraCondensed, DWRITE_FONT_STRETCH_ULTRA_CONDENSED },
 	{ uiTextStretchExtraCondensed, DWRITE_FONT_STRETCH_EXTRA_CONDENSED },
 	{ uiTextStretchCondensed, DWRITE_FONT_STRETCH_CONDENSED },
@@ -34,12 +32,12 @@ DWRITE_FONT_WEIGHT uiprivWeightToDWriteWeight(uiTextWeight w)
 
 DWRITE_FONT_STYLE uiprivItalicToDWriteStyle(uiTextItalic i)
 {
-	return dwriteItalics[i];
+	return dwriteItalics.at(i);
 }
 
 DWRITE_FONT_STRETCH uiprivStretchToDWriteStretch(uiTextStretch s)
 {
-	return dwriteStretches[s];
+	return dwriteStretches.at(s);
 }
 
 void uiprivFontDescriptorFromIDWriteFont(IDWriteFont *font, uiFontDescriptor *uidesc)
@@ -60,9 +58,9 @@ void uiprivFontDescriptorFromIDWriteFont(IDWriteFont *font, uiFontDescriptor *ui
 	dwstretch = font->GetStretch();
 
 	for (uidesc->Italic = uiTextItalicNormal; uidesc->Italic < uiTextItalicItalic; uidesc->Italic++)
-		if (dwriteItalics[uidesc->Italic] == dwitalic)
+		if (dwriteItalics.at(uidesc->Italic) == dwitalic)
 			break;
 	for (uidesc->Stretch = uiTextStretchUltraCondensed; uidesc->Stretch < uiTextStretchUltraExpanded; uidesc->Stretch++)
-		if (dwriteStretches[uidesc->Stretch] == dwstretch)
+		if (dwriteStretches.at(uidesc->Stretch) == dwstretch)
 			break;
 }

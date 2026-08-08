@@ -352,7 +352,8 @@ static void fontDialogDrawSampleText(struct fontDialog *f, ID2D1RenderTarget *rt
 	IDWriteFont *font = NULL;
 	IDWriteLocalizedStrings *sampleStrings = NULL;
 	BOOL exists;
-	WCHAR *sample;
+	WCHAR *allocatedSample = NULL;
+	const WCHAR *sample;
 	WCHAR *family;
 	IDWriteTextFormat *format = NULL;
 	D2D1_RECT_F rect;
@@ -381,10 +382,11 @@ static void fontDialogDrawSampleText(struct fontDialog *f, ID2D1RenderTarget *rt
 	if (hr != S_OK)
 		exists = FALSE;
 	if (exists) {
-		sample = uiprivFontCollectionCorrectString(f->fc, sampleStrings);
+		allocatedSample = uiprivFontCollectionCorrectString(f->fc, sampleStrings);
+		sample = allocatedSample;
 		sampleStrings->Release();
 	} else
-		sample = (WCHAR *) L"The quick brown fox jumps over the lazy dog.";			// TODO
+		sample = L"The quick brown fox jumps over the lazy dog.";
 
 	// DirectWrite doesn't allow creating a text format from a font; we need to get this ourselves
 	family = cbGetItemText(f->familyCombobox, f->curFamily);
@@ -401,8 +403,7 @@ static void fontDialogDrawSampleText(struct fontDialog *f, ID2D1RenderTarget *rt
 	if (hr != S_OK) {
 		logHRESULT(L"error creating IDWriteTextFormat", hr);
 		uiprivFree(family);
-		if (exists)
-			uiprivFree(sample);
+		uiprivFree(allocatedSample);
 		black->Release();
 		return;
 	}
@@ -421,8 +422,7 @@ static void fontDialogDrawSampleText(struct fontDialog *f, ID2D1RenderTarget *rt
 		DWRITE_MEASURING_MODE_NATURAL);
 
 	format->Release();
-	if (exists)
-		uiprivFree(sample);
+	uiprivFree(allocatedSample);
 	black->Release();
 }
 
@@ -455,9 +455,8 @@ static void setupInitialFontDialogState(struct fontDialog *f)
 	// - if the chosen font size is in the list, it selects that item AND makes it topmost
 	// - if the chosen font size is not in the list, don't bother
 	// we'll simulate it by setting the text to a %f representation, then pretending as if it was entered
-	// TODO is 512 the correct number to pass to _snwprintf()?
 	// TODO will this revert to scientific notation?
-	_snwprintf(wsize, 512, L"%g", f->params->size);
+	_snwprintf(wsize, _countof(wsize), L"%g", f->params->size);
 	// TODO make this a setWindowText()
 	if (SendMessageW(f->sizeCombobox, WM_SETTEXT, 0, (LPARAM) wsize) != (LRESULT) TRUE)
 		logLastError(L"error setting size combobox to initial font size");

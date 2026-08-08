@@ -229,7 +229,6 @@ static int uiWindowToplevel(uiControl *c)
 	return 1;
 }
 
-// TODO initial state of windows is hidden; ensure this here and make it so on other platforms
 static int uiWindowVisible(uiControl *c)
 {
 	uiWindow *w = uiWindow(c);
@@ -270,7 +269,6 @@ uiWindowsControlDefaultEnable(uiWindow)
 uiWindowsControlDefaultDisable(uiWindow)
 // TODO we need to do something about undocumented fields in the OS control types
 uiWindowsControlDefaultSyncEnableState(uiWindow)
-// TODO
 uiWindowsControlDefaultSetParentHWND(uiWindow)
 
 static void uiWindowMinimumSize(uiWindowsControl *c, int *width, int *height)

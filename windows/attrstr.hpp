@@ -33,7 +33,6 @@ static inline FLOAT uiprivDWriteSizeFromPointSize(double size)
 }
 
 // attrstr.cpp
-// TODO
 struct drawTextBackgroundParams;
 extern void uiprivAttributedStringApplyAttributesToDWriteTextLayout(uiDrawTextLayoutParams *p, IDWriteTextLayout *layout, std::vector<struct drawTextBackgroundParams *> **backgroundFuncs);
 
@@ -93,4 +92,3 @@ extern void uiprivDestroyFontDialogParams(struct fontDialogParams *params);
 extern WCHAR *uiprivFontDialogParamsToString(struct fontDialogParams *params);
 
 #endif
-

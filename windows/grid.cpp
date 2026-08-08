@@ -398,8 +398,8 @@ static void moveChildren(uiGrid *g, gridLayoutData *ld)
 				gc = (*(g->children))[i];
 				uiWindowsEnsureMoveWindowDuringResize(
 					(HWND) uiControlHandle(gc->c),
- 					gc->finalx,//TODO + x,
-					gc->finaly,//TODO + y,
+					gc->finalx,
+					gc->finaly,
 					gc->finalwidth,
 					gc->finalheight);
 			}

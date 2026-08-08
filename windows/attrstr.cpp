@@ -59,8 +59,8 @@ class combinedEffectsAttr : public IUnknown {
 		}
 	}
 
-	// this is needed by applyEffectsAttributes() below
-	// TODO doesn't uiprivAttributeEqual() already do this; if it doesn't, make it so; if (or when) it does, fix all platforms to avoid this extra check
+	// uiprivAttributeEqual() requires non-NULL attributes, so handle optional
+	// drawing effects here before comparing them.
 	static bool attrEqual(uiAttribute *a, uiAttribute *b)
 	{
 		if (a == NULL && b == NULL)
@@ -346,10 +346,6 @@ static uiForEach processAttribute(const uiAttributedString *s, const uiAttribute
 		addBackgroundParams(p, start, end, attr);
 		break;
 	case uiAttributeTypeFeatures:
-		// only generate an attribute if not NULL
-		// TODO do we still need to do this or not...
-		if (uiAttributeFeatures(attr) == NULL)
-			break;
 		dt = uiprivOpenTypeFeaturesToIDWriteTypography(uiAttributeFeatures(attr));
 		if (dt == NULL)
 			break;

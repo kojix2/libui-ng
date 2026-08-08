@@ -187,7 +187,8 @@ uiColorButton *uiNewColorButton(void)
 	b->a = 1.0;
 
 	b->hwnd = uiWindowsEnsureCreateControlHWND(0,
-		L"button", L" ",		// TODO; can't use "" TODO
+		// A space is required for BCM_GETIDEALSIZE to return a useful width.
+		L"button", L" ",
 		BS_PUSHBUTTON | WS_TABSTOP,
 		hInstance, NULL,
 		TRUE);

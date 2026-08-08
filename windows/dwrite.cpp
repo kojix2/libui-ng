@@ -4,10 +4,10 @@
 
 IDWriteFactory *dwfactory = NULL;
 
-// TOOD rename to something else, maybe
+// TODO rename to something else, maybe
 HRESULT uiprivInitDrawText(void)
 {
-	// TOOD use DWRITE_FACTORY_TYPE_ISOLATED instead?
+	// TODO use DWRITE_FACTORY_TYPE_ISOLATED instead?
 	return DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED,
 		__uuidof (IDWriteFactory),
 		(IUnknown **) (&dwfactory));

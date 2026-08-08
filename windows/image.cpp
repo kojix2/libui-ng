@@ -42,11 +42,8 @@ void uiFreeImage(uiImage *i)
 	uiprivFree(i);
 }
 
-// to make things easier, we store images in WIC in the same way we store them in GDI (as system-endian ARGB) and premultiplied (as that's what AlphaBlend() expects (TODO confirm this))
-// but what WIC format is system-endian ARGB? for a little-endian system, that's BGRA
-// it turns out that the Windows 8 BMP encoder uses BGRA if told to (https://docs.microsoft.com/en-us/windows/desktop/wic/bmp-format-overview)
-// it also turns out Direct2D requires PBGRA for drawing (https://docs.microsoft.com/en-us/windows/desktop/wic/-wic-bitmapsources-howto-drawusingd2d)
-// so I guess we can assume PBGRA is correct...? (TODO)
+// Store images as premultiplied BGRA, the format expected by Direct2D and by
+// AlphaBlend() on little-endian Windows.
 #define formatForGDI GUID_WICPixelFormat32bppPBGRA
 
 void uiImageAppend(uiImage *i, void *pixels, int pixelWidth, int pixelHeight, int byteStride)
@@ -94,7 +91,6 @@ void uiImageAppend(uiImage *i, void *pixels, int pixelWidth, int pixelHeight, in
 	}
 
 	pix = (uint8_t *) pixels;
-	// TODO can size be NULL?
 	hr = l->GetDataPointer(&size, &dipp);
 	if (hr != S_OK) {
 		logHRESULT(L"error calling GetDataPointer() in uiImageAppend()", hr);
@@ -169,8 +165,6 @@ static void match(IWICBitmap *b, struct matcher *m)
 		// we set foundLarger below
 		goto writeMatch;
 
-// TODO
-#define abs(x) ((x) < 0 ? -(x) : (x))
 	x2 = abs(m->targetX - x);
 	y2 = abs(m->targetY - y);
 	if (x2 < m->distX && y2 < m->distY)

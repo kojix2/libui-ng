@@ -808,7 +808,6 @@ HRESULT uiprivUpdateImageListSize(uiTable *t)
 		hr = E_FAIL;
 		goto cleanup;
 	}
-	// TODO will this return NULL here because it's an initial state?
 	oldImagelist = t->imagelist;
 	SendMessageW(t->hwnd, LVM_SETIMAGELIST, LVSIL_SMALL, (LPARAM) imagelist);
 	t->imagelist = imagelist;

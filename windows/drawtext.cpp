@@ -20,8 +20,7 @@ struct uiDrawTextLayout {
 // TODO copy notes about DirectWrite DIPs being equal to Direct2D DIPs here
 
 // TODO move this and the layout creation stuff to attrstr.cpp like the other ports, or move the other ports into their drawtext.* files
-// TODO should be const but then I can't operator[] on it; the real solution is to find a way to do designated array initializers in C++11 but I do not know enough C++ voodoo to make it work (it is possible but no one else has actually done it before)
-static std::map<uiDrawTextAlign, DWRITE_TEXT_ALIGNMENT> dwriteAligns = {
+static const std::map<uiDrawTextAlign, DWRITE_TEXT_ALIGNMENT> dwriteAligns = {
 	{ uiDrawTextAlignLeft, DWRITE_TEXT_ALIGNMENT_LEADING },
 	{ uiDrawTextAlignCenter, DWRITE_TEXT_ALIGNMENT_CENTER },
 	{ uiDrawTextAlignRight, DWRITE_TEXT_ALIGNMENT_TRAILING },
@@ -60,7 +59,7 @@ uiDrawTextLayout *uiDrawNewTextLayout(uiDrawTextLayoutParams *p)
 		logHRESULT(L"error creating IDWriteTextFormat", hr);
 		goto fail;
 	}
-	hr = tl->format->SetTextAlignment(dwriteAligns[p->Align]);
+	hr = tl->format->SetTextAlignment(dwriteAligns.at(p->Align));
 	if (hr != S_OK) {
 		logHRESULT(L"error applying text layout alignment", hr);
 		goto fail;
@@ -69,7 +68,6 @@ uiDrawTextLayout *uiDrawNewTextLayout(uiDrawTextLayoutParams *p)
 	hr = dwfactory->CreateTextLayout(
 		(const WCHAR *) uiprivAttributedStringUTF16String(p->String), uiprivAttributedStringUTF16Len(p->String),
 		tl->format,
-		// FLOAT is float, not double, so this should work... TODO
 		FLT_MAX, FLT_MAX,
 		&(tl->layout));
 	if (hr != S_OK) {
@@ -78,14 +76,14 @@ uiDrawTextLayout *uiDrawNewTextLayout(uiDrawTextLayoutParams *p)
 	}
 
 	// and set the width
-	// this is the only wrapping mode (apart from "no wrap") available prior to Windows 8.1 (TODO verify this fact) (TODO this should be the default anyway)
+	// WRAP and NO_WRAP are the modes available on the minimum supported Windows 7.
 	wrap = DWRITE_WORD_WRAPPING_WRAP;
 	maxWidth = (FLOAT) (p->Width);
 	if (p->Width < 0) {
 		// TODO is this wrapping juggling even necessary?
 		wrap = DWRITE_WORD_WRAPPING_NO_WRAP;
 		// setting the max width in this case technically isn't needed since the wrap mode will simply ignore the max width, but let's do it just to be safe
-		maxWidth = FLT_MAX;		// see TODO above
+		maxWidth = FLT_MAX;
 	}
 	hr = tl->layout->SetWordWrapping(wrap);
 	if (hr != S_OK) {
@@ -502,7 +500,6 @@ public:
 			this->rt->FillRectangle(&rect, brush);
 			break;
 		case uiUnderlineDouble:
-			// TODO do any of the matrix methods return errors?
 			// TODO standardize double-underline shape across platforms? wavy underline shape?
 			this->rt->GetTransform(&pixeltf);
 			this->rt->GetDpi(&dpix, &dpiy);
