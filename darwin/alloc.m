@@ -3,12 +3,10 @@
 #import "uipriv_darwin.h"
 
 static NSMutableArray *allocations;
-NSMutableArray *uiprivDelegates;
 
 void uiprivInitAlloc(void)
 {
 	allocations = [NSMutableArray new];
-	uiprivDelegates = [NSMutableArray new];
 }
 
 #define UINT8(p) ((uint8_t *) (p))
@@ -24,15 +22,7 @@ void uiprivUninitAlloc(void)
 {
 	NSMutableString *str;
 	NSValue *v;
-	NSObject **delegate;
 
-	// Reset singleton delegates for possible reuse
-	// FIXME: remove singletons by making objects their own delegates
-	for (v in uiprivDelegates) {
-		delegate = [v pointerValue];
-		*delegate = nil;
-	}
-	[uiprivDelegates release];
 	if ([allocations count] == 0) {
 		[allocations release];
 		return;

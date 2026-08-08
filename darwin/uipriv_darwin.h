@@ -93,7 +93,6 @@ extern NSTextField *uiprivNewEditableTextField(void);
 extern uiWindow *uiprivWindowFromNSWindow(NSWindow *);
 
 // alloc.m
-extern NSMutableArray *uiprivDelegates;
 extern void uiprivInitAlloc(void);
 extern void uiprivUninitAlloc(void);
 
