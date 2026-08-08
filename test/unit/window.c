@@ -140,7 +140,7 @@ static void windowSetPositionNoCallback(void **state)
 {
 	uiWindow *w = uiWindowFromState(state);
 
-	uiWindowOnContentSizeChanged(w, onPositionChangedCallback, NULL);
+	uiWindowOnPositionChanged(w, onPositionChangedCallback, NULL);
 	uiWindowSetPosition(w, 0, 0);
 	uiWindowSetPosition(w, 1, 1);
 }
