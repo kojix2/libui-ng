@@ -187,7 +187,6 @@ uiUnixControlDefaultHide(uiWindow)
 uiUnixControlDefaultEnabled(uiWindow)
 uiUnixControlDefaultEnable(uiWindow)
 uiUnixControlDefaultDisable(uiWindow)
-// TODO?
 uiUnixControlDefaultSetContainer(uiWindow)
 
 char *uiWindowTitle(uiWindow *w)

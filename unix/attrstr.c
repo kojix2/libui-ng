@@ -2,7 +2,6 @@
 #include "uipriv_unix.h"
 #include "attrstr.h"
 
-// TODO make this name less generic?
 struct foreachParams {
 	PangoAttrList *attrs;
 };
@@ -128,7 +127,6 @@ static uiForEach processAttribute(const uiAttributedString *s, const uiAttribute
 		break;
 	case uiAttributeTypeFeatures:
 		// only generate an attribute if the features object is not NULL
-		// TODO state that this is allowed
 		features = uiAttributeFeatures(attr);
 		if (features == NULL)
 			break;

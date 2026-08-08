@@ -536,20 +536,15 @@ void uiAreaBeginUserWindowMove(uiArea *a)
 
 	if (a->dragevent == NULL)
 		uiprivUserBug("cannot call uiAreaBeginUserWindowMove() outside of a Mouse() with Down != 0");
-	// TODO don't we have a libui function for this? did I scrap it?
-	// TODO widget or areaWidget?
 	toplevel = gtk_widget_get_toplevel(a->widget);
 	if (toplevel == NULL) {
-		// TODO
 		return;
 	}
 	// the docs say to do this
 	if (!gtk_widget_is_toplevel(toplevel)) {
-		// TODO
 		return;
 	}
 	if (!GTK_IS_WINDOW(toplevel)) {
-		// TODO
 		return;
 	}
 	gtk_window_begin_move_drag(GTK_WINDOW(toplevel),
@@ -576,20 +571,15 @@ void uiAreaBeginUserWindowResize(uiArea *a, uiWindowResizeEdge edge)
 
 	if (a->dragevent == NULL)
 		uiprivUserBug("cannot call uiAreaBeginUserWindowResize() outside of a Mouse() with Down != 0");
-	// TODO don't we have a libui function for this? did I scrap it?
-	// TODO widget or areaWidget?
 	toplevel = gtk_widget_get_toplevel(a->widget);
 	if (toplevel == NULL) {
-		// TODO
 		return;
 	}
 	// the docs say to do this
 	if (!gtk_widget_is_toplevel(toplevel)) {
-		// TODO
 		return;
 	}
 	if (!GTK_IS_WINDOW(toplevel)) {
-		// TODO
 		return;
 	}
 	gtk_window_begin_resize_drag(GTK_WINDOW(toplevel),

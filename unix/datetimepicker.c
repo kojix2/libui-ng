@@ -107,7 +107,6 @@ static void dateTimeChanged(uiprivDateTimePickerWidget *d)
 {
 	g_signal_emit(d, changedSignal, 0);
 	setLabel(d);
-	// TODO fire event here instead?
 }
 
 static gint hoursSpinboxInput(GtkSpinButton *sb, gpointer ptr, gpointer data)

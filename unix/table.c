@@ -14,8 +14,7 @@ struct uiTable {
 	uiTableModel *model;
 	GPtrArray *columnParams;
 	int backgroundColumn;
-	// keys are struct rowcol, values are gint
-	// TODO document this properly
+	// Maps a model row and column to its indeterminate progress pulse.
 	GHashTable *indeterminatePositions;
 	guint indeterminateTimer;
 	// Cache last selected row for GTK_SELECTION_BROWSE
@@ -120,7 +119,7 @@ static void textColumnEdited(GtkCellRendererText *r, gchar *path, gchar *newText
 	tvalue = uiNewTableValueString(newText);
 	onEdited(p->m, p->modelColumn, path, tvalue, &iter);
 	uiFreeTableValue(tvalue);
-	// and update the column TODO copy comment here
+	// Refresh the renderer because the model callback may not emit a change.
 	textColumnDataFunc(NULL, GTK_CELL_RENDERER(r), GTK_TREE_MODEL(p->m), &iter, data);
 }
 
@@ -186,7 +185,7 @@ static void checkboxColumnToggled(GtkCellRendererToggle *r, gchar *pathstr, gpoi
 	tvalue = uiNewTableValueInt(!v);
 	onEdited(p->m, p->modelColumn, pathstr, tvalue, NULL);
 	uiFreeTableValue(tvalue);
-	// and update the column TODO copy comment here
+	// Refresh the renderer because the model callback may not emit a change.
 	// TODO avoid fetching the model data twice
 	checkboxColumnDataFunc(NULL, GTK_CELL_RENDERER(r), GTK_TREE_MODEL(p->m), &iter, data);
 }
@@ -827,7 +826,6 @@ uiTable *uiNewTable(uiTableParams *p)
 	t->treeWidget = gtk_tree_view_new_with_model(GTK_TREE_MODEL(t->model));
 	t->tv = GTK_TREE_VIEW(t->treeWidget);
 
-	// TODO set up t->tv
 	uiTableOnRowClicked(t, defaultOnRowClicked, NULL);
 	uiTableOnRowDoubleClicked(t, defaultOnRowDoubleClicked, NULL);
 
@@ -899,15 +897,15 @@ void uiTableSetSelectionMode(uiTable *t, uiTableSelectionMode mode)
 			type = GTK_SELECTION_NONE;
 			break;
 		case uiTableSelectionModeZeroOrOne:
-			// gtk_tree_selection_unselect_all() is broken when followed
-			// by a mode change. TODO report upstream
+			// gtk_tree_selection_unselect_all() does not reliably clear a
+			// multiple selection immediately before a mode change.
 			if (gtk_tree_selection_count_selected_rows(selection) > 1)
 				gtk_tree_selection_set_mode(selection, GTK_SELECTION_NONE);
 			type = GTK_SELECTION_SINGLE;
 			break;
 		case uiTableSelectionModeOne:
-			// gtk_tree_selection_unselect_all() is broken when followed
-			// by a mode change. TODO report upstream
+			// gtk_tree_selection_unselect_all() does not reliably clear a
+			// multiple selection immediately before a mode change.
 			if (gtk_tree_selection_count_selected_rows(selection) > 1)
 				gtk_tree_selection_set_mode(selection, GTK_SELECTION_NONE);
 			type = GTK_SELECTION_BROWSE;
