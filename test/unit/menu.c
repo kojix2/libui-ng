@@ -168,8 +168,6 @@ static void menuItemOnClicked(void **_state)
 
 	m = uiNewMenu("Menu");
 	i = uiMenuAppendItem(m, "Item");
-	// FIXME: https://gitlab.com/cmocka/cmocka/-/issues/18
-	//expect_function_calls(onClickedNoCall, 0);
 	uiMenuItemOnClicked(i, onClickedNoCall, NULL);
 }
 
@@ -223,4 +221,3 @@ int menuRunUnitTests(void)
 
 	return cmocka_run_group_tests_name("uiMenu", tests, unitTestsSetup, unitTestsTeardown);
 }
-

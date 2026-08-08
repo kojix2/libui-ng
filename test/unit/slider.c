@@ -104,8 +104,6 @@ static void sliderSetValueNoCallback(void **state)
 
 	*s = uiNewSlider(0, 1);
 	uiSliderOnChanged(*s, onChangedNoCall, NULL);
-	// FIXME: https://gitlab.com/cmocka/cmocka/-/issues/18
-	//expect_function_calls(onChangedNoCall, 0);
 	uiSliderSetValue(*s, 1);
 	uiSliderSetValue(*s, 0);
 }
@@ -131,4 +129,3 @@ int sliderRunUnitTests(void)
 
 	return cmocka_run_group_tests_name("uiSlider", tests, unitTestsSetup, unitTestsTeardown);
 }
-

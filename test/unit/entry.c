@@ -45,8 +45,6 @@ static void entrySetTextNoCallback(void **state)
 	uiEntry **e = uiEntryPtrFromState(state);
 
 	uiEntryOnChanged(*e, onChangedNoCall, NULL);
-	// FIXME: https://gitlab.com/cmocka/cmocka/-/issues/18
-	//expect_function_calls(onChangedNoCall, 0);
 	uiEntrySetText(*e, "Text 1");
 	uiEntrySetText(*e, "Text 2");
 }
@@ -129,4 +127,3 @@ int entryRunUnitTests(void)
 
 	return cmocka_run_group_tests_name("uiEntry", tests, unitTestsSetup, unitTestsTeardown);
 }
-

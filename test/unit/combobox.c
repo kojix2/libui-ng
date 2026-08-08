@@ -220,8 +220,6 @@ static void comboboxSetSelectedNoCallback(void **state)
 	uiComboboxOnSelected(*c, onChangedNoCall, NULL);
 	uiComboboxAppend(*c, "Item 0");
 	uiComboboxAppend(*c, "Item 1");
-	// FIXME: https://gitlab.com/cmocka/cmocka/-/issues/18
-	//expect_function_calls(onChangedNoCall, 0);
 
 	uiComboboxSetSelected(*c, 1);
 	uiComboboxSetSelected(*c, 0);
@@ -234,8 +232,6 @@ static void comboboxInsertAtNoCallback(void **state)
 
 	*c = uiNewCombobox();
 	uiComboboxOnSelected(*c, onChangedNoCall, NULL);
-	// FIXME: https://gitlab.com/cmocka/cmocka/-/issues/18
-	//expect_function_calls(onChangedNoCall, 0);
 
 	uiComboboxInsertAt(*c, 0, "Item 0");
 	uiComboboxSetSelected(*c, 0);
@@ -249,8 +245,6 @@ static void comboboxClearEmptyNoCallback(void **state)
 
 	*c = uiNewCombobox();
 	uiComboboxOnSelected(*c, onChangedNoCall, NULL);
-	// FIXME: https://gitlab.com/cmocka/cmocka/-/issues/18
-	//expect_function_calls(onChangedNoCall, 0);
 
 	uiComboboxClear(*c);
 }
@@ -261,8 +255,6 @@ static void comboboxClearNoCallback(void **state)
 
 	*c = uiNewCombobox();
 	uiComboboxOnSelected(*c, onChangedNoCall, NULL);
-	// FIXME: https://gitlab.com/cmocka/cmocka/-/issues/18
-	//expect_function_calls(onChangedNoCall, 0);
 	uiComboboxAppend(*c, "Item 0");
 	uiComboboxAppend(*c, "Item 1");
 
@@ -278,8 +270,6 @@ static void comboboxDeleteNoCallback(void **state)
 
 	*c = uiNewCombobox();
 	uiComboboxOnSelected(*c, onChangedNoCall, NULL);
-	// FIXME: https://gitlab.com/cmocka/cmocka/-/issues/18
-	//expect_function_calls(onChangedNoCall, 0);
 	uiComboboxAppend(*c, "Item 0");
 	uiComboboxAppend(*c, "Item 1");
 	uiComboboxAppend(*c, "Item 2");
@@ -317,4 +307,3 @@ int comboboxRunUnitTests(void)
 
 	return cmocka_run_group_tests_name("uiCombobox", tests, unitTestsSetup, unitTestsTeardown);
 }
-

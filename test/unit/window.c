@@ -127,8 +127,6 @@ static void windowSetContentSizeNoCallback(void **state)
 	uiWindow *w = uiWindowFromState(state);
 
 	uiWindowOnContentSizeChanged(w, onContentSizeChangedNoCall, NULL);
-	// FIXME: https://gitlab.com/cmocka/cmocka/-/issues/18
-	//expect_function_calls(onContentSizeChangedNoCall, 0);
 	uiWindowSetContentSize(w, UNIT_TEST_WINDOW_WIDTH + 10, UNIT_TEST_WINDOW_HEIGHT + 10);
 	uiWindowSetContentSize(w, UNIT_TEST_WINDOW_WIDTH + 20, UNIT_TEST_WINDOW_HEIGHT + 20);
 }
@@ -143,8 +141,6 @@ static void windowSetPositionNoCallback(void **state)
 	uiWindow *w = uiWindowFromState(state);
 
 	uiWindowOnContentSizeChanged(w, onPositionChangedCallback, NULL);
-	// FIXME: https://gitlab.com/cmocka/cmocka/-/issues/18
-	//expect_function_calls(onPositionChangedCallback, 0);
 	uiWindowSetPosition(w, 0, 0);
 	uiWindowSetPosition(w, 1, 1);
 }
@@ -170,4 +166,3 @@ int windowRunUnitTests(void)
 
 	return cmocka_run_group_tests_name("uiWindow", tests, unitTestsSetup, unitTestsTeardown);
 }
-

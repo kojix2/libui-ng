@@ -67,8 +67,6 @@ static void spinboxSetValueNoCallback(void **state)
 
 	*s = uiNewSpinbox(0, 1);
 	uiSpinboxOnChanged(*s, onChangedNoCall, NULL);
-	// FIXME: https://gitlab.com/cmocka/cmocka/-/issues/18
-	//expect_function_calls(onChangedNoCall, 0);
 	uiSpinboxSetValue(*s, 1);
 	uiSpinboxSetValue(*s, 0);
 }
@@ -103,4 +101,3 @@ int spinboxRunUnitTests(void)
 
 	return cmocka_run_group_tests_name("uiSpinbox", tests, unitTestsSetup, unitTestsTeardown);
 }
-

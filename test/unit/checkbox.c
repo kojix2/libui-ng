@@ -64,8 +64,6 @@ static void checkboxSetCheckedNoCallback(void **state)
 
 	*c = uiNewCheckbox("Text");
 	uiCheckboxOnToggled(*c, onToggledNoCall, NULL);
-	// FIXME: https://gitlab.com/cmocka/cmocka/-/issues/18
-	//expect_function_calls(onToggledNoCall, 0);
 	uiCheckboxSetChecked(*c, 1);
 	uiCheckboxSetChecked(*c, 0);
 }
@@ -86,4 +84,3 @@ int checkboxRunUnitTests(void)
 
 	return cmocka_run_group_tests_name("uiCheckbox", tests, unitTestsSetup, unitTestsTeardown);
 }
-

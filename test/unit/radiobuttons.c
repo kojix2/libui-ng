@@ -72,8 +72,6 @@ static void radioButtonsSetSelectedNoCallback(void **state)
 
 	*r = uiNewRadioButtons();
 	uiRadioButtonsOnSelected(*r, onSelectedNoCall, NULL);
-	// FIXME: https://gitlab.com/cmocka/cmocka/-/issues/18
-	//expect_function_calls(onSelectedNoCall, 0);
 	uiRadioButtonsAppend(*r, "Item 0");
 	uiRadioButtonsAppend(*r, "Item 1");
 
@@ -111,4 +109,3 @@ int radioButtonsRunUnitTests(void)
 
 	return cmocka_run_group_tests_name("uiRadioButtons", tests, unitTestsSetup, unitTestsTeardown);
 }
-
