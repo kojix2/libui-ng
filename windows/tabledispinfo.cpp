@@ -1,6 +1,7 @@
 // 13 june 2018
 #include "uipriv_windows.hpp"
 #include "table.hpp"
+#include <strsafe.h>
 
 // further reading:
 // - https://msdn.microsoft.com/en-us/library/ye4z8x58.aspx
@@ -9,8 +10,7 @@ static void copyDispInfoText(NMLVDISPINFOW *nm, const WCHAR *text)
 {
 	if (nm->item.cchTextMax <= 0)
 		return;
-	wcsncpy(nm->item.pszText, text, nm->item.cchTextMax);
-	nm->item.pszText[nm->item.cchTextMax - 1] = L'\0';
+	StringCchCopyW(nm->item.pszText, nm->item.cchTextMax, text);
 }
 
 static HRESULT handleLVIF_TEXT(uiTable *t, NMLVDISPINFOW *nm, uiprivTableColumnParams *p)
@@ -54,10 +54,8 @@ static HRESULT handleLVIF_TEXT(uiTable *t, NMLVDISPINFOW *nm, uiprivTableColumnP
 			copyDispInfoText(nm, L"Indeterminate");
 			return S_OK;
 		}
-		if (nm->item.cchTextMax > 0) {
-			_snwprintf(nm->item.pszText, nm->item.cchTextMax, L"%d%%", progress);
-			nm->item.pszText[nm->item.cchTextMax - 1] = L'\0';
-		}
+		if (nm->item.cchTextMax > 0)
+			StringCchPrintfW(nm->item.pszText, nm->item.cchTextMax, L"%d%%", progress);
 		return S_OK;
 	}
 
