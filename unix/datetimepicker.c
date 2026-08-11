@@ -351,9 +351,7 @@ void uiDateTimePickerTime(uiDateTimePicker *d, struct tm *time)
 	t = g_date_time_to_unix(dt);
 	g_date_time_unref(dt);
 
-	// Copy time to minimize a race condition
-	// time.h functions use global non-thread-safe data
-	tmbuf = *localtime(&t);
+	localtime_r(&t, &tmbuf);
 	memcpy(time, &tmbuf, sizeof (struct tm));
 }
 

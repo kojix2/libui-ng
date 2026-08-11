@@ -41,7 +41,11 @@ void onClicked(uiButton *b, void *data)
 	t = 0;
 	if (now)
 		t = time(NULL);
-	tmbuf = *localtime(&t);
+#ifdef _WIN32
+	localtime_s(&tmbuf, &t);
+#else
+	localtime_r(&t, &tmbuf);
+#endif
 
 	if (now) {
 		uiDateTimePickerSetTime(dtdate, &tmbuf);

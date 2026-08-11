@@ -51,7 +51,11 @@ int main(void)
 
 	picker = uiNewDatePicker();
 	now = time(NULL);
-	timebuf = *localtime(&now);
+#ifdef _WIN32
+	localtime_s(&timebuf, &now);
+#else
+	localtime_r(&now, &timebuf);
+#endif
 	uiDateTimePickerSetTime(picker, &timebuf);
 	uiBoxAppend(box, uiControl(picker), 0);
 
