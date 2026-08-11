@@ -149,7 +149,6 @@ void uiOpenTypeFeaturesForEach(const uiOpenTypeFeatures *otf, uiOpenTypeFeatures
 	p = otf->data;
 	for (n = 0; n < otf->len; n++) {
 		ret = (*f)(otf, p->a, p->b, p->c, p->d, p->value, data);
-		// TODO for all: require exact match?
 		if (ret == uiForEachStop)
 			return;
 		p++;

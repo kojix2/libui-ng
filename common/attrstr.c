@@ -94,8 +94,6 @@ static void u8u16len(const char *str, size_t *n8, size_t *n16)
 	*n16 = 0;
 	while (*str) {
 		str = uiprivUTF8DecodeRune(str, 0, &rune);
-		// TODO document the use of the function vs a pointer subtract here
-		// TODO also we need to consider namespace collision with utf.h...
 		*n8 += uiprivUTF8EncodeRune(rune, buf);
 		*n16 += uiprivUTF16EncodeRune(rune, buf16);
 	}
@@ -241,10 +239,6 @@ static void copyInsertedString(uiAttributedString *s, const char *str, size_t at
 		old += n;
 		old16 += n16;
 	}
-	// and have an index for the end of the string
-	// TODO is this done by the below?
-//TODO	s->u8tou16[old] = old16;
-//TODO	s->u16tou8[old16] = old;
 }
 
 static void shiftExistingIndexes(uiAttributedString *s, size_t at, size_t at16,
@@ -294,7 +288,6 @@ void uiAttributedStringInsertAtUnattributed(uiAttributedString *s, const char *s
 	uiprivFree(copy);
 }
 
-// TODO document that end is the first index that will be maintained
 void uiAttributedStringDelete(uiAttributedString *s, size_t start, size_t end)
 {
 	size_t start16, end16;
@@ -363,7 +356,6 @@ void uiAttributedStringForEachAttribute(const uiAttributedString *s, uiAttribute
 	uiprivAttrListForEach(s->attrs, s, f, data);
 }
 
-// TODO figure out if we should count the grapheme past the end
 size_t uiAttributedStringNumGraphemes(uiAttributedString *s)
 {
 	recomputeGraphemes(s);

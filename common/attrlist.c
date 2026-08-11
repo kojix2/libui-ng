@@ -8,9 +8,8 @@ An attribute list is a doubly linked list of attributes.
 Attribute start positions are inclusive and attribute end positions are exclusive (or in other words, [start, end)).
 The list is kept sorted in increasing order by start position. Whether or not the sort is stable is undefined, so no temporal information should be expected to stay.
 Overlapping attributes are not allowed; if an attribute is added that conflicts with an existing one, the existing one is removed.
-In addition, the linked list tries to reduce fragmentation: if an attribute is added that just expands another, then there will only be one entry in alist, not two. (TODO does it really?)
+In addition, the linked list tries to reduce fragmentation: if an attribute is added that just expands another, then there will only be one entry in alist, not two.
 The linked list is not a ring; alist->fist->prev == NULL and alist->last->next == NULL.
-TODO verify that this disallows attributes of length zero
 */
 
 struct attr {
@@ -462,7 +461,6 @@ void uiprivAttrListForEach(const uiprivAttrList *alist, const uiAttributedString
 	for (a = alist->first; a != NULL; a = a->next) {
 		ret = (*f)(s, a->val, a->start, a->end, data);
 		if (ret == uiForEachStop)
-			// TODO for all: break or return?
 			break;
 	}
 }

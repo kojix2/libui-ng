@@ -64,10 +64,6 @@ inline size_t uiprivUTF16UTF8Count(const wchar_t *s, size_t nElem)
 // irc.freenode.net/#gcc.) We use __wchar_t to be independent of
 // the option; see https://blogs.msdn.microsoft.com/oldnewthing/20161201-00/?p=94836
 // (ironically posted one day after I initially wrote this code!).
-// TODO should defined(_WIN32) be used too?
-// TODO check this under /Wall
-// TODO are C-style casts enough? or will that fail in /Wall?
-// TODO same for UniChar/unichar on Mac? if both are unsigned then we have nothing to worry about
 #if defined(_MSC_VER)
 
 inline size_t uiprivUTF16EncodeRune(uint32_t rune, __wchar_t *encoded)

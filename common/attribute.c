@@ -38,7 +38,6 @@ static uiAttribute *newAttribute(uiAttributeType type)
 }
 
 // returns a to allow expressions like b = uiprivAttributeRetain(a)
-// TODO would this allow us to copy attributes between strings in a foreach func, and if so, should that be allowed?
 uiAttribute *uiprivAttributeRetain(uiAttribute *a)
 {
 	a->ownedByUser = 0;
@@ -241,7 +240,6 @@ int uiprivAttributeEqual(const uiAttribute *a, const uiAttribute *b)
 	case uiAttributeTypeFamily:
 		return uiprivStricmp(a->u.family, b->u.family) == 0;
 	case uiAttributeTypeSize:
-		// TODO is the use of == correct?
 		return a->u.size == b->u.size;
 	case uiAttributeTypeWeight:
 		return a->u.weight == b->u.weight;
@@ -257,7 +255,6 @@ int uiprivAttributeEqual(const uiAttribute *a, const uiAttribute *b)
 		// fall through
 	case uiAttributeTypeColor:
 	case uiAttributeTypeBackground:
-		// TODO is the use of == correct?
 		return (a->u.color.r == b->u.color.r) &&
 			(a->u.color.g == b->u.color.g) &&
 			(a->u.color.b == b->u.color.b) &&
