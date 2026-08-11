@@ -447,7 +447,7 @@ static LRESULT CALLBACK fontDialogSampleSubProc(HWND hwnd, UINT uMsg, WPARAM wPa
 
 static void setupInitialFontDialogState(struct fontDialog *f)
 {
-	WCHAR wsize[512];		// this should be way more than enough
+	WCHAR *wsize;
 	LRESULT pos;
 
 	// first let's load the size
@@ -455,11 +455,11 @@ static void setupInitialFontDialogState(struct fontDialog *f)
 	// - if the chosen font size is in the list, it selects that item AND makes it topmost
 	// - if the chosen font size is not in the list, don't bother
 	// we'll simulate it by setting the text to a %f representation, then pretending as if it was entered
-	// TODO will this revert to scientific notation?
-	_snwprintf(wsize, _countof(wsize), L"%g", f->params->size);
+	wsize = strf(L"%g", f->params->size);
 	// TODO make this a setWindowText()
 	if (SendMessageW(f->sizeCombobox, WM_SETTEXT, 0, (LPARAM) wsize) != (LRESULT) TRUE)
 		logLastError(L"error setting size combobox to initial font size");
+	uiprivFree(wsize);
 	sizeEdited(f);
 	if (cbGetCurSel(f->sizeCombobox, &pos))
 		if (SendMessageW(f->sizeCombobox, CB_SETTOPINDEX, (WPARAM) pos, 0) != 0)
@@ -833,13 +833,8 @@ void uiprivDestroyFontDialogParams(struct fontDialogParams *params)
 
 WCHAR *uiprivFontDialogParamsToString(struct fontDialogParams *params)
 {
-	WCHAR *text;
-
-	// TODO dynamically allocate
-	text = (WCHAR *) uiprivAlloc(512 * sizeof (WCHAR), "WCHAR[]");
-	_snwprintf(text, 512, L"%s %s %g",
+	return strf(L"%s %s %g",
 		params->familyName,
 		params->styleName,
 		params->size);
-	return text;
 }
