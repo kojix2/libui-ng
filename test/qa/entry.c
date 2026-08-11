@@ -8,7 +8,7 @@ static void entryOnChangedCb(uiEntry *e, void *data)
 	uiLabel *label = data;
 	static int count = 0;
 
-	sprintf(str, "%d", ++count);
+	snprintf(str, sizeof str, "%d", ++count);
 	uiLabelSetText(label, str);
 }
 
@@ -58,7 +58,7 @@ static void passwordEntryOnChangedCb(uiEntry *e, void *data)
 	uiLabel *label = data;
 	static int count = 0;
 
-	sprintf(str, "%d", ++count);
+	snprintf(str, sizeof str, "%d", ++count);
 	uiLabelSetText(label, str);
 }
 
@@ -108,7 +108,7 @@ static void searchEntryOnChangedCb(uiEntry *e, void *data)
 	uiLabel *label = data;
 	static int count = 0;
 
-	sprintf(str, "%d", ++count);
+	snprintf(str, sizeof str, "%d", ++count);
 	uiLabelSetText(label, str);
 }
 

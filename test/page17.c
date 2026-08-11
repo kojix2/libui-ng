@@ -120,9 +120,8 @@ static void modelSetCellValue(uiTableModelHandler *mh, uiTableModel *m, int row,
 			data.rows[row].checkbox = uiTableValueInt(val);
 			return;
 		case MCOL_PART_EDITABLE:
-			if (strlen(uiTableValueString(val)) >= PART_EDITABLE_SIZE)
-				return;
-			strcpy(data.rows[row].partEditable, uiTableValueString(val));
+			snprintf(data.rows[row].partEditable, PART_EDITABLE_SIZE, "%s",
+				uiTableValueString(val));
 			return;
 		case MCOL_BUTTON_TEXT:
 			data.rows[row].bgColor = yellow;
@@ -140,7 +139,7 @@ static void populateRow(int row, const char *text)
 
 	data.rows[row].rowxx = malloc(ROWXX_SIZE * sizeof(*data.rows[row].rowxx));
 	assert(data.rows[row].rowxx != NULL);
-	strcpy(data.rows[row].rowxx, text);
+	snprintf(data.rows[row].rowxx, ROWXX_SIZE, "%s", text);
 	data.rows[row].partEditable = malloc(PART_EDITABLE_SIZE * sizeof(*data.rows[row].partEditable));
 	assert(data.rows[row].partEditable != NULL);
 	strcpy(data.rows[row].partEditable, "Editable");
@@ -161,7 +160,7 @@ static void populateData(void)
 	assert(data.rows != NULL);
 
 	for (row = 0; row < data.numRows; ++row) {
-		sprintf(text, "Row %d", row);
+		snprintf(text, sizeof text, "Row %d", row);
 		populateRow(row, text);
 	}
 }

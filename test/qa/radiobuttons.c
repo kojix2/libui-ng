@@ -8,7 +8,7 @@ static void radioButtonsOnSelectedCb(uiRadioButtons *r, void *data)
 	static int count = 0;
 	uiLabel *label = data;
 
-	sprintf(str, "%d", ++count);
+	snprintf(str, sizeof str, "%d", ++count);
 	uiLabelSetText(label, str);
 }
 

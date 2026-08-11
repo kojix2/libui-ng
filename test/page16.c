@@ -65,7 +65,7 @@ static uiTableValue *modelCellValue(uiTableModelHandler *mh, uiTableModel *m, in
 	}
 	switch (col) {
 	case 0:
-		sprintf(buf, "Row %d", row);
+		snprintf(buf, sizeof buf, "Row %d", row);
 		break;
 	case 2:
 		if (row == 9)
@@ -84,7 +84,7 @@ static uiTableValue *modelCellValue(uiTableModelHandler *mh, uiTableModel *m, in
 static void modelSetCellValue(uiTableModelHandler *mh, uiTableModel *m, int row, int col, const uiTableValue *val)
 {
 	if (row == 9 && col == 2)
-		strcpy(row9text, uiTableValueString(val));
+		snprintf(row9text, sizeof row9text, "%s", uiTableValueString(val));
 	if (col == 6) {
 		int prevYellowRow;
 
@@ -139,7 +139,7 @@ static void onRowClicked(uiTable *table, int row, void *data)
 	char str[128];
 
 	printf("Clicked row %d\n", row);
-	sprintf(str, "Clicked row %d", row);
+	snprintf(str, sizeof str, "Clicked row %d", row);
 	uiLabelSetText(lblRowClicked, str);
 }
 
@@ -149,7 +149,7 @@ static void onRowDoubleClicked(uiTable *table, int row, void *data)
 	char str[128];
 
 	printf("Double clicked row %d\n", row);
-	sprintf(str, "Double clicked row %d", row);
+	snprintf(str, sizeof str, "Double clicked row %d", row);
 	uiLabelSetText(lblRowDoubleClicked, str);
 }
 
@@ -181,16 +181,16 @@ static void onSelectionChanged(uiTable *t, void *data)
 	char str[128];
 	uiTableSelection *s = uiTableGetSelection(t);
 
-	sprintf(str, "# Selection Changed Count: %d", ++countSelectionChanged);
+	snprintf(str, sizeof str, "# Selection Changed Count: %d", ++countSelectionChanged);
 	uiLabelSetText(lblCountSelectionChanged, str);
 
-	sprintf(str, "# Selected Rows: %d", s->NumRows);
+	snprintf(str, sizeof str, "# Selected Rows: %d", s->NumRows);
 	uiLabelSetText(lblNumSelectedRows, str);
 
 	for (i = 0; i < s->NumRows; ++i)
 		sum += s->Rows[i];
 
-	sprintf(str, "Sum Selected Rows: %d", sum);
+	snprintf(str, sizeof str, "Sum Selected Rows: %d", sum);
 	uiLabelSetText(lblSumSelectedRows, str);
 
 	uiFreeTableSelection(s);

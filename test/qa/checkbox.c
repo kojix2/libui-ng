@@ -8,7 +8,7 @@ static void checkboxOnToggledCb(uiCheckbox *c, void *data)
 	uiLabel *label = data;
 	static int count = 0;
 
-	sprintf(str, "%d", ++count);
+	snprintf(str, sizeof str, "%d", ++count);
 	uiLabelSetText(label, str);
 }
 

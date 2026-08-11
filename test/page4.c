@@ -42,10 +42,7 @@ static void updateCB()
 {
 	char str[128];
 
-	// snprintf() is not supported by visual studio 2013:
-	// http://blogs.msdn.com/b/vcblog/archive/2013/07/19/c99-library-support-in-visual-studio-2013.aspx
-	// we can't use _snprintf() in the test suite because that's msvc-only, so sprintf() it is.
-	sprintf(str, "%d", uiComboboxNumItems(cbox));
+	snprintf(str, sizeof str, "%d", uiComboboxNumItems(cbox));
 	uiLabelSetText(cboxLbl, str);
 }
 
@@ -135,10 +132,7 @@ static void onRangeSliderChanged(uiSlider *s, void *data)
 	char str[128];
 	uiLabel *lbl = data;
 
-	// snprintf() is not supported by visual studio 2013:
-	// http://blogs.msdn.com/b/vcblog/archive/2013/07/19/c99-library-support-in-visual-studio-2013.aspx
-	// we can't use _snprintf() in the test suite because that's msvc-only, so sprintf() it is.
-	sprintf(str, "%d", uiSliderValue(s));
+	snprintf(str, sizeof str, "%d", uiSliderValue(s));
 	uiLabelSetText(lbl, str);
 }
 

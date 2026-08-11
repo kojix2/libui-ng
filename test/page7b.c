@@ -19,9 +19,7 @@ static void handlerMouseEvent(uiAreaHandler *a, uiArea *area, uiAreaMouseEvent *
 {
 	char pos[128];
 
-	// wonderful, vanilla snprintf() isn't in visual studio 2013 - http://blogs.msdn.com/b/vcblog/archive/2013/07/19/c99-library-support-in-visual-studio-2013.aspx
-	// we can't use _snprintf() in the test suite because that's msvc-only, so oops. sprintf() it is.
-	sprintf(pos, "X %g Y %g", e->X, e->Y);
+	snprintf(pos, sizeof pos, "X %g Y %g", e->X, e->Y);
 	uiCheckboxSetText(label, pos);
 }
 
