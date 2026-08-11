@@ -4,6 +4,8 @@ Portable GUI library for C.
 
 [![Build](https://github.com/kojix2/libui-ng/actions/workflows/build.yml/badge.svg)](https://github.com/kojix2/libui-ng/actions/workflows/build.yml)
 [![Docs](https://github.com/kojix2/libui-ng/actions/workflows/doxygen.yml/badge.svg)](https://github.com/kojix2/libui-ng/actions/workflows/doxygen.yml)
+[![Top Language](https://img.shields.io/endpoint?url=https%3A%2F%2Ftokei.kojix2.net%2Fbadge%2Fgithub%2Fkojix2%2Flibui-ng%2Flanguage)](https://tokei.kojix2.net/github/kojix2/libui-ng)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/kojix2/libui-ng)
 
 This repository provides unofficial kojix2 builds of libui-ng.
 It builds and distributes patched binaries while maintaining API compatibility
