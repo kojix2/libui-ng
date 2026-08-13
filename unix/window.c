@@ -54,19 +54,20 @@ static gboolean onClosing(GtkWidget *win, GdkEvent *e, gpointer data)
 static void onSizeAllocate(GtkWidget *widget, GdkRectangle *allocation, gpointer data)
 {
 	int width, height;
+	gboolean changingSize;
 	uiWindow *w = uiWindow(data);
+
+	changingSize = w->changingSize;
+	w->changingSize = FALSE;
 
 	// Ignore spurious size-allocate events
 	uiWindowContentSize(w, &width, &height);
 	if (width != w->cachedWidth || height != w->cachedHeight) {
 		w->cachedWidth = width;
 		w->cachedHeight = height;
-		if (!w->changingSize)
+		if (!changingSize)
 			(*(w->onContentSizeChanged))(w, w->onContentSizeChangedData);
 	}
-
-	if (w->changingSize)
-		w->changingSize = FALSE;
 }
 
 static gboolean onGetFocus(GtkWidget *win, GdkEvent *e, gpointer data)
@@ -99,19 +100,20 @@ static gboolean onConfigure(GtkWidget *win, GdkEvent *e, gpointer data)
 {
 	uiWindow *w = uiWindow(data);
 
+	gboolean changingPosition;
 	int x, y;
+
+	changingPosition = w->changingPosition;
+	w->changingPosition = FALSE;
 
 	// Ignore resize events
 	uiWindowPosition(w, &x, &y);
 	if (x != w->cachedPosX || y != w->cachedPosY) {
 		w->cachedPosX = x;
 		w->cachedPosY = y;
-		if (!w->changingPosition)
+		if (!changingPosition)
 			(*(w->onPositionChanged))(w, w->onPositionChangedData);
 	}
-
-	if (w->changingPosition)
-		w->changingPosition = FALSE;
 
 	return FALSE;
 }
@@ -208,14 +210,6 @@ void uiWindowSetPosition(uiWindow *w, int x, int y)
 {
 	w->changingPosition = TRUE;
 	gtk_window_move(w->window, x, y);
-	// gtk_window_move() is asynchronous. Run the event loop manually.
-	while (gtk_events_pending())
-		if (!uiMainStep(1))
-			break;
-
-	// Hidden windows do not trigger the "configure-event".
-	// TODO log failure for visible windows.
-	w->changingPosition = FALSE;
 }
 
 void uiWindowOnPositionChanged(uiWindow *w, void (*f)(uiWindow *, void *), void *data)
@@ -233,14 +227,6 @@ void uiWindowSetContentSize(uiWindow *w, int width, int height)
 {
 	w->changingSize = TRUE;
 	gtk_window_resize(w->window, width, height);
-	// gtk_window_resize() is asynchronous. Run the event loop manually.
-	while (gtk_events_pending())
-		if (!uiMainStep(1))
-			break;
-
-	// Hidden windows do not trigger the "size-allocate.
-	// TODO log failure for visible windows.
-	w->changingSize = FALSE;
 }
 
 int uiWindowFullscreen(uiWindow *w)

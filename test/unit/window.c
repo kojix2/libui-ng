@@ -145,6 +145,24 @@ static void windowSetPositionNoCallback(void **state)
 	uiWindowSetPosition(w, 1, 1);
 }
 
+static int queuedCallbackCalled;
+
+static void queuedCallback(void *data)
+{
+	queuedCallbackCalled = 1;
+}
+
+static void windowSettersDoNotRunEventLoop(void **state)
+{
+	uiWindow *w = uiWindowFromState(state);
+
+	queuedCallbackCalled = 0;
+	uiQueueMain(queuedCallback, NULL);
+	uiWindowSetPosition(w, 1, 1);
+	uiWindowSetContentSize(w, UNIT_TEST_WINDOW_WIDTH + 10, UNIT_TEST_WINDOW_HEIGHT + 10);
+	assert_int_equal(queuedCallbackCalled, 0);
+}
+
 #define windowUnitTest(f) cmocka_unit_test_setup_teardown((f), \
 		unitTestSetup, unitTestTeardown)
 
@@ -162,6 +180,7 @@ int windowRunUnitTests(void)
 		windowUnitTest(windowMarginedSetContentSize),
 		windowUnitTest(windowSetContentSizeNoCallback),
 		windowUnitTest(windowSetPositionNoCallback),
+		windowUnitTest(windowSettersDoNotRunEventLoop),
 	};
 
 	return cmocka_run_group_tests_name("uiWindow", tests, unitTestsSetup, unitTestsTeardown);
