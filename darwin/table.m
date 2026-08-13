@@ -147,7 +147,8 @@ static void setBackgroundColor(uiprivTableView *t, NSTableRowView *rv, NSInteger
 - (void)tableViewSelectionDidChange:(NSNotification *)notification
 {
 	uiTable *t = [(uiprivTableView*)[notification object] uiTable];
-	t->onSelectionChanged(t, t->onSelectionChangedData);
+	if (t->suppressSelectionChanged == 0)
+		t->onSelectionChanged(t, t->onSelectionChangedData);
 }
 
 @end
@@ -268,6 +269,7 @@ uiTableSelectionMode uiTableGetSelectionMode(uiTable *t)
 
 void uiTableSetSelectionMode(uiTable *t, uiTableSelectionMode mode)
 {
+	t->suppressSelectionChanged++;
 	switch (mode) {
 		case uiTableSelectionModeNone:
 			if ([t->tv numberOfSelectedRows] > 0)
@@ -290,10 +292,12 @@ void uiTableSetSelectionMode(uiTable *t, uiTableSelectionMode mode)
 			[t->tv setAllowsEmptySelection: YES];
 			break;
 		default:
+			t->suppressSelectionChanged--;
 			uiprivUserBug("Invalid table selection mode %d", mode);
 			return;
 	}
 	[(uiprivTableView*)t->tv setSelectionMode: mode];
+	t->suppressSelectionChanged--;
 }
 
 void uiTableOnSelectionChanged(uiTable *t, void (*f)(uiTable *, void *), void *data)
@@ -359,7 +363,9 @@ void uiTableSetSelection(uiTable *t, uiTableSelection *sel)
 	set = [NSMutableIndexSet new];
 	for (i = 0; i < sel->NumRows; ++i)
 		[set addIndex: sel->Rows[i]];
+	t->suppressSelectionChanged++;
 	[t->tv selectRowIndexes: set byExtendingSelection: FALSE];
+	t->suppressSelectionChanged--;
 	[set release];
 }
 

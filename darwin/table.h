@@ -22,6 +22,7 @@ struct uiTable {
 	void *onRowClickedData;
 	void (*onRowDoubleClicked)(uiTable *, int, void *);
 	void *onRowDoubleClickedData;
+	int suppressSelectionChanged;
 	void (*onSelectionChanged)(uiTable *, void *);
 	void *onSelectionChangedData;
 };

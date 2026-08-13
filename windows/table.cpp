@@ -364,16 +364,18 @@ void uiTableSetSelection(uiTable *t, uiTableSelection *sel)
 	    return;
 	}
 
+	t->suppressSelectionChanged++;
 	/* clear selection */
 	ListView_SetItemState(t->hwnd, -1, 0, LVIS_SELECTED);
 
 	for (i = 0; i < sel->NumRows; ++i)
 		ListView_SetItemState(t->hwnd, sel->Rows[i], LVIS_SELECTED, LVIS_SELECTED);
+	t->suppressSelectionChanged--;
 }
 
 void _uiTableSignalOnSelectionChanged(uiTable *t)
 {
-	if (!t->maskOnSelectionChanged)
+	if (t->suppressSelectionChanged == 0)
 		t->onSelectionChanged(t, t->onSelectionChangedData);
 }
 
@@ -420,9 +422,9 @@ static void handleSelectionOne(uiTable *t, NMLISTVIEW *nm, UINT oldSelected, UIN
 		return;
 	// Prevent deselection via CTRL+SPACE (win32 bug)
 	if (oldSelected && !newSelected) {
-		t->maskOnSelectionChanged = TRUE;
+		t->suppressSelectionChanged++;
 		ListView_SetItemState(t->hwnd, nm->iItem, LVIS_SELECTED, LVIS_SELECTED);
-		t->maskOnSelectionChanged = FALSE;
+		t->suppressSelectionChanged--;
 	}
 	// Signal selection change on selection of a new item
 	if (nm->iItem != t->lastFocusedItem && !oldSelected && newSelected)
@@ -855,6 +857,7 @@ void uiTableSetSelectionMode(uiTable *t, uiTableSelectionMode mode)
 	LONG style = GetWindowLong(t->hwnd, GWL_STYLE);
 
 	t->selectionMode = mode;
+	t->suppressSelectionChanged++;
 
 	switch (t->selectionMode) {
 	case uiTableSelectionModeOne:
@@ -864,9 +867,7 @@ void uiTableSetSelectionMode(uiTable *t, uiTableSelectionMode mode)
 			t->lastFocusedItem = ListView_GetNextItem(t->hwnd, -1, LVNI_SELECTED);
 			t->lastFocusedItemIsSelected = TRUE;
 			t->lastNumSelected = 1;
-			t->maskOnSelectionChanged = TRUE;
 			ListView_SetItemState(t->hwnd, t->lastFocusedItem, LVIS_FOCUSED, LVIS_FOCUSED);
-			t->maskOnSelectionChanged = FALSE;
 			break;
 		}
 		// Fall through
@@ -882,6 +883,7 @@ void uiTableSetSelectionMode(uiTable *t, uiTableSelectionMode mode)
 		t->lastNumSelected = ListView_GetSelectedCount(t->hwnd);
 		break;
 	default:
+		t->suppressSelectionChanged--;
 		uiprivUserBug("Invalid table selection mode %d", mode);
 		return;
 	}
@@ -896,6 +898,7 @@ void uiTableSetSelectionMode(uiTable *t, uiTableSelectionMode mode)
 		SetWindowLong(t->hwnd, GWL_STYLE, style & ~LVS_SINGLESEL);
 		break;
 	}
+	t->suppressSelectionChanged--;
 }
 
 uiTable *uiNewTable(uiTableParams *p)

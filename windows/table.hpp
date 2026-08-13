@@ -42,7 +42,7 @@ struct uiTable {
 	int editedItem;
 	int editedSubitem;
 	uiTableSelectionMode selectionMode;
-	BOOL maskOnSelectionChanged;
+	int suppressSelectionChanged;
 	// Cache last focused item to signal selection changes
 	int lastFocusedItem;
 	// Cache if last focused item is selected to signal selection changes
