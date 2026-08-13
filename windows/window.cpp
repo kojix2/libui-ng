@@ -30,6 +30,18 @@ struct uiWindow {
 	BOOL changingPosition;
 };
 
+static std::map<uiWindow *, uint64_t> windows;
+static uint64_t nextWindowLifetime = 1;
+
+static uint64_t windowLifetime(uiWindow *w)
+{
+	auto i = windows.find(w);
+
+	if (i == windows.end())
+		return 0;
+	return i->second;
+}
+
 static BOOL isMenuCommand(WPARAM wParam, LPARAM lParam)
 {
 	if (lParam != 0)
@@ -110,6 +122,7 @@ static LRESULT CALLBACK windowWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARA
 {
 	LONG_PTR ww;
 	uiWindow *w;
+	uint64_t lifetime;
 	CREATESTRUCTW *cs = (CREATESTRUCTW *) lParam;
 	WINDOWPOS *wp = (WINDOWPOS *) lParam;
 	MINMAXINFO *mmi = (MINMAXINFO *) lParam;
@@ -133,15 +146,22 @@ static LRESULT CALLBACK windowWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARA
 		runMenuEvent(LOWORD(wParam), uiWindow(w));
 		return 0;
 	case WM_WINDOWPOSCHANGED:
+		lifetime = windowLifetime(w);
 		if ((wp->flags & SWP_NOMOVE) == 0)
 			if (w->onPositionChanged != NULL)
-				if (!w->changingPosition)
+				if (!w->changingPosition) {
 					(*(w->onPositionChanged))(w, w->onPositionChangedData);
+					if (lifetime != 0 && windowLifetime(w) != lifetime)
+						return 0;
+				}
 		if ((wp->flags & SWP_NOSIZE) != 0)
 			break;
 		if (w->onContentSizeChanged != NULL)		// TODO figure out why this is happening too early
-			if (!w->changingSize)
+			if (!w->changingSize) {
 				(*(w->onContentSizeChanged))(w, w->onContentSizeChangedData);
+				if (lifetime != 0 && windowLifetime(w) != lifetime)
+					return 0;
+			}
 		windowRelayout(w);
 		return 0;
 	case WM_GETMINMAXINFO:
@@ -202,8 +222,6 @@ static void defaultOnFocusChanged(uiWindow *w, void *data)
 {
 	// do nothing
 }
-
-static std::map<uiWindow *, bool> windows;
 
 static void uiWindowDestroy(uiControl *c)
 {
@@ -581,7 +599,7 @@ uiWindow *uiNewWindow(const char *title, int width, int height, int hasMenubar)
 	uiWindowOnFocusChanged(w, defaultOnFocusChanged, NULL);
 	uiWindowOnPositionChanged(w, defaultOnPositionContentSizeChanged, NULL);
 
-	windows[w] = true;
+	windows[w] = nextWindowLifetime++;
 	return w;
 }
 

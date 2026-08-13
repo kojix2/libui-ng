@@ -8,6 +8,18 @@
 // - implement accessibility in general (Dynamic Annotations maybe?)
 // - if I didn't handle these already: "drawing focus rects here, subitem navigation and activation with the keyboard"
 
+static std::map<uiTable *, uint64_t> tables;
+static uint64_t nextTableLifetime = 1;
+
+static uint64_t tableLifetime(uiTable *t)
+{
+	auto i = tables.find(t);
+
+	if (i == tables.end())
+		return 0;
+	return i->second;
+}
+
 uiTableModel *uiNewTableModel(uiTableModelHandler *mh)
 {
 	uiTableModel *m;
@@ -383,11 +395,15 @@ static BOOL handleClick(uiTable *t, NMHDR *nmhdr, LRESULT *lResult)
 {
 	LVHITTESTINFO ht = {};
 	HRESULT hr;
+	uint64_t lifetime;
 
 	ht.pt = ((NMITEMACTIVATE *) nmhdr)->ptAction;
 	if (SendMessageW(t->hwnd, LVM_SUBITEMHITTEST, 0, (LPARAM) &ht) == -1)
 		return FALSE;
+	lifetime = tableLifetime(t);
 	(*(t->onRowClicked))(t, ht.iItem, t->onRowClickedData);
+	if (lifetime != 0 && tableLifetime(t) != lifetime)
+		return TRUE;
 
 	// Handle editing
 	hr = uiprivTableHandleNM_CLICK(t, (NMITEMACTIVATE *) nmhdr, lResult);
@@ -679,6 +695,7 @@ static void uiTableDestroy(uiControl *c)
 	std::vector<uiTable *>::iterator it;
 	HRESULT hr;
 
+	tables.erase(t);
 	hr = uiprivTableAbortEditingText(t);
 	if (hr != S_OK) {
 		// TODO
@@ -945,6 +962,7 @@ uiTable *uiNewTable(uiTableParams *p)
 	uiTableOnRowClicked(t, defaultOnRowClicked, NULL);
 	uiTableOnRowDoubleClicked(t, defaultOnRowDoubleClicked, NULL);
 	uiTableSetSelectionMode(t, uiTableSelectionModeZeroOrOne);
+	tables[t] = nextTableLifetime++;
 
 	return t;
 }
