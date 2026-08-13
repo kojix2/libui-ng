@@ -268,7 +268,7 @@ static CGFloat primaryScreenTop(void)
 	screens = [NSScreen screens];
 	if ([screens count] == 0)
 		return 0;
-	return NSMaxY([[screens objectAtIndex:0] frame]);
+	return NSMaxY([[screens objectAtIndex:0] visibleFrame]);
 }
 
 void uiWindowPosition(uiWindow *w, int *x, int *y)
