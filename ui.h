@@ -4007,8 +4007,8 @@ _UI_EXTERN void uiTableOnSelectionChanged(uiTable *t, void (*f)(uiTable *t, void
 typedef struct uiTableSelection uiTableSelection;
 struct uiTableSelection
 {
-	int NumRows; //!< Number of selected rows.
-	int *Rows;   //!< Array containing selected row indices, NULL on empty selection.
+	int NumRows; //!< Non-negative number of selected rows.
+	int *Rows;   //!< Array containing valid row indices, NULL on empty selection.
 };
 
 /**
@@ -4032,6 +4032,7 @@ _UI_EXTERN uiTableSelection* uiTableGetSelection(uiTable *t);
  *
  * @note Selecting more rows than the selection mode allows for results in nothing happening.
  * @note For empty selections the Rows pointer is never accessed.
+ * @warning Each row index must be within the current table model bounds.
  * @memberof uiTable
  */
 _UI_EXTERN void uiTableSetSelection(uiTable *t, uiTableSelection *sel);

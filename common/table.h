@@ -15,6 +15,9 @@ extern const uiTableTextColumnOptionalParams uiprivDefaultTextColumnOptionalPara
 extern int uiprivTableModelCellEditable(uiTableModel *m, int row, int column);
 extern int uiprivTableModelColorIfProvided(uiTableModel *m, int row, int column, double *r, double *g, double *b, double *a);
 
+// table.c
+extern void uiprivValidateTableSelection(uiTableModel *m, const uiTableSelection *s);
+
 #ifdef __cplusplus
 }
 #endif

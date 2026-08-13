@@ -353,6 +353,7 @@ void uiTableSetSelection(uiTable *t, uiTableSelection *sel)
 	NSMutableIndexSet *set;
 	uiTableSelectionMode mode = [(uiprivTableView*)t->tv selectionMode];
 
+	uiprivValidateTableSelection(t->m, sel);
 	if ((mode == uiTableSelectionModeNone && sel->NumRows > 0) ||
 	    (mode == uiTableSelectionModeZeroOrOne && sel->NumRows > 1) ||
 	    (mode == uiTableSelectionModeOne && sel->NumRows > 1)) {

@@ -563,6 +563,7 @@ void uiTableSetSelection(uiTable *t, uiTableSelection *sel)
 	GtkTreeSelection *ts;
 	uiTableSelectionMode mode = uiTableGetSelectionMode(t);
 
+	uiprivValidateTableSelection(t->model, sel);
 	if ((mode == uiTableSelectionModeNone && sel->NumRows > 0) ||
 	    (mode == uiTableSelectionModeZeroOrOne && sel->NumRows > 1) ||
 	    (mode == uiTableSelectionModeOne && sel->NumRows > 1)) {

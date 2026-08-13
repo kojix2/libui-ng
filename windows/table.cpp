@@ -369,6 +369,7 @@ void uiTableSetSelection(uiTable *t, uiTableSelection *sel)
 {
 	int i;
 
+	uiprivValidateTableSelection(t->model, sel);
 	if ((t->selectionMode == uiTableSelectionModeNone && sel->NumRows > 0) ||
 	    (t->selectionMode == uiTableSelectionModeZeroOrOne && sel->NumRows > 1) ||
 	    (t->selectionMode == uiTableSelectionModeOne && sel->NumRows > 1)) {
