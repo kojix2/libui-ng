@@ -433,8 +433,10 @@ static void headerOnClicked(GtkTreeViewColumn *c, gpointer data)
 	uiTable *t = uiTable(data);
 
 	for (i = 0; i < gtk_tree_view_get_n_columns(t->tv); ++i)
-		if (gtk_tree_view_get_column(t->tv, i) == c)
+		if (gtk_tree_view_get_column(t->tv, i) == c) {
 			t->headerOnClicked(t, i, t->headerOnClickedData);
+			return;
+		}
 }
 
 void uiTableOnSelectionChanged(uiTable *t, void (*f)(uiTable *t, void *data), void *data)

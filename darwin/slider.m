@@ -48,14 +48,14 @@ static void _uiSliderUpdateToolTip(uiSlider *s);
 	uiSlider *s = self->slider;
 
 	NSEvent *currentEvent = [[sender window] currentEvent];
+	if (s->hasToolTip)
+		_uiSliderUpdateToolTip(s);
+
 	if([currentEvent type] == NSLeftMouseUp) {
 		(*(s->onReleased))(s, s->onReleasedData);
 	} else {
 		(*(s->onChanged))(s, s->onChangedData);
 	}
-
-	if (s->hasToolTip)
-		_uiSliderUpdateToolTip(s);
 }
 
 - (NSSize)intrinsicContentSize

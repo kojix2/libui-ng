@@ -32,10 +32,10 @@ static void onChanged(GtkRange *range, gpointer data)
 {
 	uiSlider *s = uiSlider(data);
 
-	(*(s->onChanged))(s, s->onChangedData);
-
 	if (uiSliderHasToolTip(s))
 		_uiSliderUpdateToolTip(s);
+
+	(*(s->onChanged))(s, s->onChangedData);
 }
 
 static void defaultOnChanged(uiSlider *s, void *data)
