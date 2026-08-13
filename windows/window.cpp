@@ -93,6 +93,19 @@ static void updateFrame(uiWindow *w)
 		logLastError(L"error updating window frame");
 }
 
+static void updateWindowStyle(uiWindow *w)
+{
+	DWORD style;
+
+	style = getStyle(w->hwnd) & ~WS_OVERLAPPEDWINDOW;
+	if (!w->fullscreen && !w->borderless) {
+		style |= WS_OVERLAPPEDWINDOW;
+		if (!w->resizeable)
+			style &= ~(WS_THICKFRAME | WS_MAXIMIZEBOX);
+	}
+	setStyle(w->hwnd, style);
+}
+
 static LRESULT CALLBACK windowWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	LONG_PTR ww;
@@ -407,15 +420,14 @@ void uiWindowSetFullscreen(uiWindow *w, int fullscreen)
 		if (GetWindowPlacement(w->hwnd, &(w->fsPrevPlacement)) == 0)
 			logLastError(L"error getting old window placement");
 		windowMonitorRect(w->hwnd, &r);
-		setStyle(w->hwnd, getStyle(w->hwnd) & ~WS_OVERLAPPEDWINDOW);
+		updateWindowStyle(w);
 		if (SetWindowPos(w->hwnd, HWND_TOP,
 			r.left, r.top,
 			r.right - r.left, r.bottom - r.top,
 			SWP_FRAMECHANGED | SWP_NOOWNERZORDER) == 0)
 			logLastError(L"error making window fullscreen");
 	} else {
-		if (!w->borderless)		// keep borderless until that is turned off
-			setStyle(w->hwnd, getStyle(w->hwnd) | WS_OVERLAPPEDWINDOW);
+		updateWindowStyle(w);
 		if (SetWindowPlacement(w->hwnd, &(w->fsPrevPlacement)) == 0)
 			logLastError(L"error leaving fullscreen");
 		if (SetWindowPos(w->hwnd, NULL,
@@ -455,19 +467,11 @@ int uiWindowBorderless(uiWindow *w)
 }
 
 // TODO window should move to the old client position and should not have the extra space the borders left behind
-// TODO extract the relevant styles from WS_OVERLAPPEDWINDOW?
 void uiWindowSetBorderless(uiWindow *w, int borderless)
 {
 	w->borderless = borderless;
-	if (w->borderless) {
-		setStyle(w->hwnd, getStyle(w->hwnd) & ~WS_OVERLAPPEDWINDOW);
-		updateFrame(w);
-	} else {
-		if (!w->fullscreen) {		// keep borderless until leaving fullscreen
-			setStyle(w->hwnd, getStyle(w->hwnd) | WS_OVERLAPPEDWINDOW);
-			updateFrame(w);
-		}
-	}
+	updateWindowStyle(w);
+	updateFrame(w);
 }
 
 void uiWindowSetChild(uiWindow *w, uiControl *child)
@@ -504,11 +508,7 @@ int uiWindowResizeable(uiWindow *w)
 void uiWindowSetResizeable(uiWindow *w, int resizeable)
 {
 	w->resizeable = resizeable;
-	if (w->resizeable) {
-		setStyle(w->hwnd, getStyle(w->hwnd) | WS_THICKFRAME | WS_MAXIMIZEBOX);
-	} else {
-		setStyle(w->hwnd, getStyle(w->hwnd) & ~WS_THICKFRAME & ~WS_MAXIMIZEBOX);
-	}
+	updateWindowStyle(w);
 	updateFrame(w);
 }
 
