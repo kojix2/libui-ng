@@ -1,6 +1,18 @@
 // 11 june 2015
 #include "uipriv_unix.h"
 
+struct pendingWindowPosition {
+	gboolean active;
+	gint x;
+	gint y;
+};
+
+struct pendingWindowSize {
+	gboolean active;
+	gint width;
+	gint height;
+};
+
 struct uiWindow {
 	uiUnixControl c;
 
@@ -31,8 +43,8 @@ struct uiWindow {
 	gboolean fullscreen;
 	void (*onPositionChanged)(uiWindow *, void *);
 	void *onPositionChangedData;
-	gboolean changingPosition;
-	gboolean changingSize;
+	struct pendingWindowPosition pendingPosition;
+	struct pendingWindowSize pendingSize;
 
 	gint cachedPosX;
 	gint cachedPosY;
@@ -54,18 +66,19 @@ static gboolean onClosing(GtkWidget *win, GdkEvent *e, gpointer data)
 static void onSizeAllocate(GtkWidget *widget, GdkRectangle *allocation, gpointer data)
 {
 	int width, height;
-	gboolean changingSize;
+	gboolean suppress;
 	uiWindow *w = uiWindow(data);
-
-	changingSize = w->changingSize;
-	w->changingSize = FALSE;
 
 	// Ignore spurious size-allocate events
 	uiWindowContentSize(w, &width, &height);
+	suppress = w->pendingSize.active &&
+		width == w->pendingSize.width && height == w->pendingSize.height;
+	if (suppress)
+		w->pendingSize.active = FALSE;
 	if (width != w->cachedWidth || height != w->cachedHeight) {
 		w->cachedWidth = width;
 		w->cachedHeight = height;
-		if (!changingSize)
+		if (!suppress)
 			(*(w->onContentSizeChanged))(w, w->onContentSizeChangedData);
 	}
 }
@@ -100,18 +113,19 @@ static gboolean onConfigure(GtkWidget *win, GdkEvent *e, gpointer data)
 {
 	uiWindow *w = uiWindow(data);
 
-	gboolean changingPosition;
+	gboolean suppress;
 	int x, y;
-
-	changingPosition = w->changingPosition;
-	w->changingPosition = FALSE;
 
 	// Ignore resize events
 	uiWindowPosition(w, &x, &y);
+	suppress = w->pendingPosition.active &&
+		x == w->pendingPosition.x && y == w->pendingPosition.y;
+	if (suppress)
+		w->pendingPosition.active = FALSE;
 	if (x != w->cachedPosX || y != w->cachedPosY) {
 		w->cachedPosX = x;
 		w->cachedPosY = y;
-		if (!changingPosition)
+		if (!suppress)
 			(*(w->onPositionChanged))(w, w->onPositionChangedData);
 	}
 
@@ -208,7 +222,9 @@ void uiWindowPosition(uiWindow *w, int *x, int *y)
 
 void uiWindowSetPosition(uiWindow *w, int x, int y)
 {
-	w->changingPosition = TRUE;
+	w->pendingPosition.active = TRUE;
+	w->pendingPosition.x = x;
+	w->pendingPosition.y = y;
 	gtk_window_move(w->window, x, y);
 }
 
@@ -225,7 +241,9 @@ void uiWindowContentSize(uiWindow *w, int *width, int *height)
 
 void uiWindowSetContentSize(uiWindow *w, int width, int height)
 {
-	w->changingSize = TRUE;
+	w->pendingSize.active = TRUE;
+	w->pendingSize.width = width;
+	w->pendingSize.height = height;
 	gtk_window_resize(w->window, width, height);
 }
 
