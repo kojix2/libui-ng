@@ -261,31 +261,28 @@ void uiWindowSetTitle(uiWindow *w, const char *title)
 	[w->window setTitle:uiprivToNSString(title)];
 }
 
+static CGFloat primaryScreenTop(void)
+{
+	NSArray *screens;
+
+	screens = [NSScreen screens];
+	if ([screens count] == 0)
+		return 0;
+	return NSMaxY([[screens objectAtIndex:0] frame]);
+}
+
 void uiWindowPosition(uiWindow *w, int *x, int *y)
 {
-	NSRect screen;
 	NSRect window;
-	int screenHeightSansMenu;
-
-	screen = [[w->window screen] visibleFrame];
-	// Visible screen (no menu, no dock) + dock height
-	screenHeightSansMenu = screen.size.height + screen.origin.y;
 
 	window = [w->window frame];
 	*x = window.origin.x;
-	*y = screenHeightSansMenu - window.origin.y - window.size.height;
+	*y = primaryScreenTop() - NSMaxY(window);
 }
 
 void uiWindowSetPosition(uiWindow *w, int x, int y)
 {
-	NSRect screen;
-	int screenHeightSansMenu;
-
-	screen = [[w->window screen] visibleFrame];
-	// Visible screen (no menu, no dock) + dock height
-	screenHeightSansMenu = screen.size.height + screen.origin.y;
-
-	y = screenHeightSansMenu - y;
+	y = primaryScreenTop() - y;
 
 	w->suppressPositionChanged = YES;
 	[w->window setFrameTopLeftPoint:NSMakePoint(x, y)];
