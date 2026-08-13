@@ -59,6 +59,11 @@ void uiDrawStroke(uiDrawContext *c, uiDrawPath *path, uiDrawBrush *b, uiDrawStro
 {
 	cairo_pattern_t *pat;
 
+	if (!(p->Thickness > 0))
+		uiprivUserBug("uiDrawStroke() thickness must be > 0");
+	if (p->NumDashes != 0 && p->Dashes == NULL)
+		uiprivUserBug("uiDrawStroke() dashes must not be NULL when NumDashes is > 0");
+
 	uiprivRunPath(path, c->cr);
 	pat = mkbrush(b);
 	cairo_set_source(c->cr, pat);

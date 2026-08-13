@@ -349,6 +349,11 @@ void uiDrawStroke(uiDrawContext *c, uiDrawPath *p, uiDrawBrush *b, uiDrawStrokeP
 	ID2D1Layer *cliplayer = NULL;
 	HRESULT hr;
 
+	if (!(sp->Thickness > 0))
+		uiprivUserBug("uiDrawStroke() thickness must be > 0");
+	if (sp->NumDashes != 0 && sp->Dashes == NULL)
+		uiprivUserBug("uiDrawStroke() dashes must not be NULL when NumDashes is > 0");
+
 	brush = makeBrush(b, c->rt);
 	if (brush == NULL)
 		return;

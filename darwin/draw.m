@@ -136,6 +136,11 @@ void uiDrawStroke(uiDrawContext *c, uiDrawPath *path, uiDrawBrush *b, uiDrawStro
 	size_t i;
 	uiDrawPath p2;
 
+	if (!(p->Thickness > 0))
+		uiprivUserBug("uiDrawStroke() thickness must be > 0");
+	if (p->NumDashes != 0 && p->Dashes == NULL)
+		uiprivUserBug("uiDrawStroke() dashes must not be NULL when NumDashes is > 0");
+
 	if (!path->ended)
 		uiprivUserBug("You cannot call uiDrawStroke() on a uiDrawPath that has not been ended. (path: %p)", path);
 

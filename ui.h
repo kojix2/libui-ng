@@ -2186,9 +2186,10 @@ struct uiDrawBrushGradientStop {
 struct uiDrawStrokeParams {
 	uiDrawLineCap Cap;
 	uiDrawLineJoin Join;
-	// TODO what if this is 0? on windows there will be a crash with dashing
+	// must be greater than 0
 	double Thickness;
 	double MiterLimit;
+	// must not be NULL if NumDashes is greater than 0
 	double *Dashes;
 	// TOOD what if this is 1 on Direct2D?
 	// TODO what if a dash is 0 on Cairo or Quartz?
