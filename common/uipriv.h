@@ -64,6 +64,9 @@ extern void uiprivImageViewComputeRect(double viewWidth, double viewHeight,
 	double *x, double *y, double *width, double *height);
 
 // imagerep.c
+extern int uiprivImageFinite(double value);
+extern int uiprivImagePositiveFinite(double value);
+extern int uiprivImageTargetPixelSize(double size);
 typedef struct uiprivImageRepMatcher uiprivImageRepMatcher;
 struct uiprivImageRepMatcher {
 	int targetWidth;

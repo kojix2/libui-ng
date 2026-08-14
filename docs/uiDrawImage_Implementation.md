@@ -10,8 +10,8 @@ void uiDrawImage(uiDrawContext *c, uiImage *img,
 - `x`, `y`, `width`, and `height` are drawing-context logical units.
 - The image is scaled to the destination rectangle.
 - `img` is borrowed for this call. The function neither copies nor retains it.
-- `width` and `height` must be positive. Invalid or `NULL` arguments produce no
-  drawing.
+- `x` and `y` must be finite. `width` and `height` must be finite and positive.
+  Invalid or `NULL` arguments produce no drawing.
 - As with the existing `uiImage` API, representations appended with
   `uiImageAppend()` contain premultiplied RGBA pixels.
 
