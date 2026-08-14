@@ -17,6 +17,7 @@ libui_unit_sources = [
         'progressbar.c',
         'drawmatrix.c',
         'attrstr.c',
+        'imagerep.c',
         'imageview.c',
         'window.c',
 ]

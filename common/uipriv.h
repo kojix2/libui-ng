@@ -63,6 +63,22 @@ extern void uiprivImageViewComputeRect(double viewWidth, double viewHeight,
 	double imageWidth, double imageHeight, uiImageViewContentMode mode,
 	double *x, double *y, double *width, double *height);
 
+// imagerep.c
+typedef struct uiprivImageRepMatcher uiprivImageRepMatcher;
+struct uiprivImageRepMatcher {
+	int targetWidth;
+	int targetHeight;
+	int bestWidth;
+	int bestHeight;
+	int64_t bestDistance;
+	int bestIsLargeEnough;
+	int hasBest;
+};
+extern void uiprivImageRepMatcherInit(uiprivImageRepMatcher *m,
+	int targetWidth, int targetHeight);
+extern int uiprivImageRepMatcherAdd(uiprivImageRepMatcher *m,
+	int width, int height);
+
 // OS-specific text.* files
 extern int uiprivStricmp(const char *a, const char *b);
 
