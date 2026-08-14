@@ -14,6 +14,23 @@ static LRESULT CALLBACK imageViewWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LP
 
 static ATOM imageViewClass = 0;
 
+static HBRUSH imageViewBackgroundBrush(uiImageView *iv, HDC hdc,
+	COLORREF *color)
+{
+	HBRUSH brush;
+
+	brush = (HBRUSH) SendMessageW(GetParent(iv->hwnd), WM_CTLCOLORSTATIC,
+		(WPARAM) hdc, (LPARAM) iv->hwnd);
+	if (brush == NULL) {
+		*color = GetSysColor(COLOR_WINDOW);
+		return GetSysColorBrush(COLOR_WINDOW);
+	}
+	*color = GetBkColor(hdc);
+	if (*color == CLR_INVALID)
+		*color = GetSysColor(COLOR_WINDOW);
+	return brush;
+}
+
 static void initImageViewClass(void)
 {
 	WNDCLASSW wc;
@@ -42,65 +59,63 @@ static void paintImageView(uiImageView *iv, HDC hdc, RECT *rcPaint)
 	ID2D1DCRenderTarget *rt;
 	IWICBitmap *bitmap;
 	ID2D1Bitmap *d2dBitmap;
+	HBRUSH backgroundBrush;
+	COLORREF backgroundColor;
 	float dpiX, dpiY;
 	double viewW, viewH, imgW, imgH;
 	double dx, dy, dw, dh;
 	HRESULT hr;
 
 	GetClientRect(iv->hwnd, &clientRect);
-
-	// Always fill background with proper theme color
-	HBRUSH bk = (HBRUSH)SendMessageW(GetParent(iv->hwnd), WM_CTLCOLORSTATIC,
-	                                 (WPARAM)hdc, (LPARAM)iv->hwnd);
-	if (!bk) bk = (HBRUSH)(COLOR_WINDOW + 1);
-	FillRect(hdc, &clientRect, bk);
+	backgroundBrush = imageViewBackgroundBrush(iv, hdc, &backgroundColor);
 	
 	if (iv->image == NULL) {
-		// No image to draw, background already filled
+		FillRect(hdc, &clientRect, backgroundBrush);
 		return;
 	}
 
-	// Create Direct2D render target
 	rt = makeHDCRenderTarget(hdc, &clientRect);
-	if (rt == NULL)
+	if (rt == NULL) {
+		FillRect(hdc, &clientRect, backgroundBrush);
 		return;
+	}
 
 	rt->BeginDraw();
-
-	// Clear background
-	rt->Clear(D2D1::ColorF(D2D1::ColorF::White, 0.0f)); // Transparent background
+	rt->Clear(D2D1::ColorF(
+		((FLOAT) GetRValue(backgroundColor)) / 255.0f,
+		((FLOAT) GetGValue(backgroundColor)) / 255.0f,
+		((FLOAT) GetBValue(backgroundColor)) / 255.0f,
+		1.0f));
 
 	rt->GetDpi(&dpiX, &dpiY);
 	bitmap = uiprivImageAppropriateForDPI(iv->image, dpiX, dpiY);
-	if (bitmap == NULL) {
-		rt->EndDraw();
-		rt->Release();
-		return;
+	if (bitmap != NULL) {
+		// Layout uses uiImage's logical size; bitmap pixels only provide samples.
+		viewW = ((double) (clientRect.right - clientRect.left)) * 96.0 / dpiX;
+		viewH = ((double) (clientRect.bottom - clientRect.top)) * 96.0 / dpiY;
+		uiprivImageSize(iv->image, &imgW, &imgH);
+		uiprivImageViewComputeRect(viewW, viewH, imgW, imgH, iv->mode,
+			&dx, &dy, &dw, &dh);
+
+		hr = rt->CreateBitmapFromWicBitmap(bitmap, NULL, &d2dBitmap);
+		if (hr == S_OK) {
+			D2D1_RECT_F destRect;
+
+			destRect = D2D1::RectF((FLOAT) dx, (FLOAT) dy,
+				(FLOAT) (dx + dw), (FLOAT) (dy + dh));
+			rt->DrawBitmap(d2dBitmap, destRect, 1.0f,
+				D2D1_BITMAP_INTERPOLATION_MODE_LINEAR);
+			d2dBitmap->Release();
+		} else
+			logHRESULT(L"error creating Direct2D bitmap for uiImageView", hr);
 	}
 
-	// Layout uses uiImage's logical size; bitmap pixels only provide samples.
-	viewW = ((double) (clientRect.right - clientRect.left)) * 96.0 / dpiX;
-	viewH = ((double) (clientRect.bottom - clientRect.top)) * 96.0 / dpiY;
-	uiprivImageSize(iv->image, &imgW, &imgH);
-	uiprivImageViewComputeRect(viewW, viewH, imgW, imgH, iv->mode,
-		&dx, &dy, &dw, &dh);
-
-	// Create D2D bitmap from WIC bitmap
-	hr = rt->CreateBitmapFromWicBitmap(bitmap, NULL, &d2dBitmap);
-	if (hr != S_OK) {
-		rt->EndDraw();
-		rt->Release();
-		return;
-	}
-
-	// Draw the bitmap with high-quality linear interpolation
-	D2D1_RECT_F destRect = D2D1::RectF((FLOAT) dx, (FLOAT) dy,
-		(FLOAT) (dx + dw), (FLOAT) (dy + dh));
-	rt->DrawBitmap(d2dBitmap, destRect, 1.0f, D2D1_BITMAP_INTERPOLATION_MODE_LINEAR);
-
-	d2dBitmap->Release();
-	rt->EndDraw();
+	hr = rt->EndDraw();
 	rt->Release();
+	if (hr != S_OK) {
+		logHRESULT(L"error ending uiImageView draw", hr);
+		FillRect(hdc, &clientRect, backgroundBrush);
+	}
 }
 
 static LRESULT CALLBACK imageViewWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
