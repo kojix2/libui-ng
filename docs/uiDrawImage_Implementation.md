@@ -36,9 +36,9 @@ pixels. The shared private matcher then:
 4. uses deterministic dimension-based tie-breaking, independent of append
    order.
 
-This destination-aware selector is used only by `uiDrawImage()`. Existing
-consumers such as table image cells keep their legacy logical-size/DPI
-selection behavior.
+This destination-aware selector is used by `uiDrawImage()` and `uiImageView`.
+Existing consumers such as table image cells keep their legacy
+logical-size/DPI selection behavior.
 
 On macOS, `CGImageForProposedRect:context:hints:` receives the destination
 rectangle, current graphics context, and current transform so AppKit can choose
