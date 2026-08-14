@@ -1,3 +1,4 @@
+#include <math.h>
 #include "unit.h"
 #include "../../common/uipriv.h"
 
@@ -71,6 +72,19 @@ static void imageViewInvalidSizeProducesEmptyRect(void **state)
 	assertRect(x, y, width, height, 0, 0, 0, 0);
 }
 
+static void imageViewNonFiniteSizeProducesEmptyRect(void **state)
+{
+	double x, y, width, height;
+
+	(void) state;
+	uiprivImageViewComputeRect(300, 200, NAN, 50,
+		uiImageViewContentFit, &x, &y, &width, &height);
+	assertRect(x, y, width, height, 0, 0, 0, 0);
+	uiprivImageViewComputeRect(INFINITY, 200, 100, 50,
+		uiImageViewContentFit, &x, &y, &width, &height);
+	assertRect(x, y, width, height, 0, 0, 0, 0);
+}
+
 static void imageViewNew(void **state)
 {
 	uiImageView **view = uiImageViewPtrFromState(state);
@@ -127,6 +141,7 @@ int imageViewRunUnitTests(void)
 		cmocka_unit_test(imageViewCenterAllowsClipping),
 		cmocka_unit_test(imageViewFitPreservesAspectRatio),
 		cmocka_unit_test(imageViewInvalidSizeProducesEmptyRect),
+		cmocka_unit_test(imageViewNonFiniteSizeProducesEmptyRect),
 		imageViewUnitTest(imageViewNew),
 		imageViewUnitTest(imageViewOwnsSetImage),
 		imageViewUnitTest(imageViewReplacesOwnedImage),

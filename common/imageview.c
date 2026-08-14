@@ -11,8 +11,10 @@ void uiprivImageViewComputeRect(double viewWidth, double viewHeight,
 	*y = 0;
 	*width = 0;
 	*height = 0;
-	if (viewWidth <= 0 || viewHeight <= 0 ||
-		imageWidth <= 0 || imageHeight <= 0)
+	if (!uiprivImagePositiveFinite(viewWidth) ||
+		!uiprivImagePositiveFinite(viewHeight) ||
+		!uiprivImagePositiveFinite(imageWidth) ||
+		!uiprivImagePositiveFinite(imageHeight))
 		return;
 
 	if (mode == uiImageViewContentCenter) {
@@ -24,6 +26,12 @@ void uiprivImageViewComputeRect(double viewWidth, double viewHeight,
 		scale = scaleX < scaleY ? scaleX : scaleY;
 		*width = imageWidth * scale;
 		*height = imageHeight * scale;
+	}
+	if (!uiprivImagePositiveFinite(*width) ||
+		!uiprivImagePositiveFinite(*height)) {
+		*width = 0;
+		*height = 0;
+		return;
 	}
 	*x = (viewWidth - *width) / 2;
 	*y = (viewHeight - *height) / 2;
