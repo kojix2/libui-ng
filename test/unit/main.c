@@ -74,6 +74,7 @@ int main(void)
 		{ dateTimePickerRunUnitTests },
 		{ gridRunUnitTests },
 		{ drawMatrixRunUnitTests },
+		{ drawImageRunUnitTests },
 		{ attrstrRunUnitTests },
 		{ imageRepRunUnitTests },
 		{ imageViewRunUnitTests },

@@ -18,6 +18,7 @@ libui_unit_sources = [
         'datetimepicker.c',
 	    'grid.c',
         'drawmatrix.c',
+        'drawimage.c',
         'attrstr.c',
         'imagerep.c',
         'imageview.c',
