@@ -15,7 +15,7 @@
 
 ## Memory and Ownership (Important)
 - This control uses "copy-owned" semantics.
-  - When SetImage is called, the content of the `uiImage` is converted to native OS image format and stored internally.
+  - When SetImage is called, the control retains or copies all native image representations needed for later drawing and DPI changes.
   - After the call, the original `uiImage` can be safely freed.
   - When replacing an image, the old internal copy is automatically freed.
 - Difference from uiTable
@@ -29,8 +29,8 @@
   - macOS: Uses NSImageView's built-in scaling for Center/Fit modes
   - Linux/GTK: Uses Cairo's CAIRO_FILTER_GOOD for high-quality scaling
   - Windows: Uses D2D1 linear interpolation for high-quality scaling
-- Background is transparent or system default color.
-- Color space assumes sRGB and converts to native OS format.
+- Transparent image pixels reveal the control's resolved parent or system background.
+- Pixel input follows the existing `uiImageAppend()` contract: premultiplied RGBA.
 - HiDPI handling is delegated to the OS (drawing based on logical points).
 
 ## Sizing

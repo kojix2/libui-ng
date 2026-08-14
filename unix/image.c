@@ -16,11 +16,6 @@ static void freeImageRep(gpointer item)
 	cairo_surface_destroy(cs);
 }
 
-static uint8_t premultiply(uint8_t c, uint8_t a)
-{
-	return (uint8_t) ((((uint32_t) c) * ((uint32_t) a) + 127) / 255);
-}
-
 uiImage *uiNewImage(double width, double height)
 {
 	uiImage *i;
@@ -110,16 +105,11 @@ void uiImageAppend(uiImage *i, void *pixels, int pixelWidth, int pixelHeight, in
 				uint32_t v32;
 				uint8_t v8[4];
 			} v;
-			uint8_t a, r, g, b;
 
-			a = pix[x + 3];
-			r = premultiply(pix[x], a);
-			g = premultiply(pix[x + 1], a);
-			b = premultiply(pix[x + 2], a);
-			v.v32 = ((uint32_t) a) << 24;
-			v.v32 |= ((uint32_t) r) << 16;
-			v.v32 |= ((uint32_t) g) << 8;
-			v.v32 |= ((uint32_t) b);
+			v.v32 = ((uint32_t) (pix[x + 3])) << 24;
+			v.v32 |= ((uint32_t) (pix[x])) << 16;
+			v.v32 |= ((uint32_t) (pix[x + 1])) << 8;
+			v.v32 |= ((uint32_t) (pix[x + 2]));
 			data[x] = v.v8[0];
 			data[x + 1] = v.v8[1];
 			data[x + 2] = v.v8[2];
@@ -224,54 +214,4 @@ cairo_surface_t *uiprivImageAppropriateSurfaceForSize(uiImage *i,
 			best = surface;
 	}
 	return best;
-}
-
-cairo_surface_t *uiprivImageCopyAppropriateSurface(uiImage *i, GtkWidget *w)
-{
-	struct matcher m;
-	cairo_surface_t *copy;
-	cairo_t *cr;
-	int width, height;
-	int scale;
-	cairo_format_t format;
-
-	m.best = NULL;
-	m.distX = G_MAXINT;
-	m.distY = G_MAXINT;
-	
-	scale = 1;
-	if (w != NULL)
-		scale = gtk_widget_get_scale_factor(w);
-
-	m.targetX = i->width * scale;
-	m.targetY = i->height * scale;
-	m.foundLarger = FALSE;
-	g_ptr_array_foreach(i->images, match, &m);
-	
-	if (m.best == NULL)
-		return NULL;
-
-	// Create a copy of the surface to ensure copy-owned semantics
-	width = cairo_image_surface_get_width(m.best);
-	height = cairo_image_surface_get_height(m.best);
-	format = cairo_image_surface_get_format(m.best);
-	
-	copy = cairo_image_surface_create(format, width, height);
-	if (cairo_surface_status(copy) != CAIRO_STATUS_SUCCESS) {
-		cairo_surface_destroy(copy);
-		return NULL;
-	}
-	
-	cr = cairo_create(copy);
-	if (cairo_status(cr) != CAIRO_STATUS_SUCCESS) {
-		cairo_destroy(cr);
-		cairo_surface_destroy(copy);
-		return NULL;
-	}
-	
-	cairo_set_source_surface(cr, m.best, 0, 0);
-	cairo_paint(cr);
-	cairo_destroy(cr);
-	
-	return copy;
 }
