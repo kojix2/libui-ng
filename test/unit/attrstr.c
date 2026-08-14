@@ -133,6 +133,21 @@ static void attrstrSetFamilyAttributeMergesAdjacentEqualValues(void **state)
 	uiFreeAttributedString(s);
 }
 
+static void attrstrSetFamilyAttributeMergesAdjacentUnicodeCase(void **state)
+{
+	uiAttributedString *s;
+	const struct expectedAttribute expected[] = {
+		{ uiAttributeTypeFamily, 0, 4, "\303\204lpha", 0.0, 0.0, 0.0, 0.0 },
+	};
+
+	(void) state;
+	s = uiNewAttributedString("abcd");
+	uiAttributedStringSetAttribute(s, uiNewFamilyAttribute("\303\204lpha"), 0, 2);
+	uiAttributedStringSetAttribute(s, uiNewFamilyAttribute("\303\244lpha"), 2, 4);
+	assertAttributes(s, expected, sizeof(expected) / sizeof(expected[0]));
+	uiFreeAttributedString(s);
+}
+
 static void attrstrAppendSelf(void **state)
 {
 	uiAttributedString *s;
@@ -216,6 +231,8 @@ int attrstrRunUnitTests(void)
 		cmocka_unit_test_setup_teardown(attrstrSetAttributeMergesAdjacentEqualValues,
 			attrstrSetup, attrstrTeardown),
 		cmocka_unit_test_setup_teardown(attrstrSetFamilyAttributeMergesAdjacentEqualValues,
+			attrstrSetup, attrstrTeardown),
+		cmocka_unit_test_setup_teardown(attrstrSetFamilyAttributeMergesAdjacentUnicodeCase,
 			attrstrSetup, attrstrTeardown),
 		cmocka_unit_test_setup_teardown(attrstrAppendSelf,
 			attrstrSetup, attrstrTeardown),

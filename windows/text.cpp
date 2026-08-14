@@ -147,7 +147,12 @@ int uiprivStricmp(const char *a, const char *b)
 
 	wa = toUTF16(a);
 	wb = toUTF16(b);
-	ret = _wcsicmp(wa, wb);
+	ret = CompareStringOrdinal(wa, -1, wb, -1, TRUE);
+	if (ret == 0) {
+		logLastError(L"error comparing Unicode strings");
+		ret = _wcsicmp(wa, wb);
+	} else
+		ret -= CSTR_EQUAL;
 	uiprivFree(wb);
 	uiprivFree(wa);
 	return ret;
