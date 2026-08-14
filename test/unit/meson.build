@@ -19,6 +19,7 @@ libui_unit_sources = [
 	    'grid.c',
         'drawmatrix.c',
         'attrstr.c',
+        'imageview.c',
         'window.c',
 ]
 libui_unit_sources += libui_test_internal_sources

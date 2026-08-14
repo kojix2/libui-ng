@@ -75,6 +75,7 @@ int main(void)
 		{ gridRunUnitTests },
 		{ drawMatrixRunUnitTests },
 		{ attrstrRunUnitTests },
+		{ imageViewRunUnitTests },
 	};
 
 	for (i = 0; i < sizeof(unitTests)/sizeof(*unitTests); ++i) {
