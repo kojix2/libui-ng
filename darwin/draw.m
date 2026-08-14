@@ -501,7 +501,10 @@ void uiDrawImage(uiDrawContext *c, uiImage *img, double x, double y, double widt
 	NSAffineTransform *ctmTransform;
 
 	// Enhanced parameter validation
-	if (c == NULL || img == NULL || width <= 0 || height <= 0)
+	if (c == NULL || img == NULL ||
+		!uiprivImageFinite(x) || !uiprivImageFinite(y) ||
+		!uiprivImagePositiveFinite(width) ||
+		!uiprivImagePositiveFinite(height))
 		return;
 
 	// Get NSImage from uiImage
