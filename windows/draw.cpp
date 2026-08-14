@@ -119,7 +119,6 @@ uiDrawContext *newContext(ID2D1RenderTarget *rt)
 
 	c = uiprivNew(uiDrawContext);
 	c->rt = rt;
-	c->currentClip = NULL;  // Initialize to prevent crash in freeContext()
 	c->states = new std::vector<struct drawState>;
 	resetTarget(c->rt);
 	return c;
