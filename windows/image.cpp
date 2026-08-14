@@ -362,8 +362,11 @@ HRESULT uiprivWICToGDI(IWICBitmap *b, HDC dc, int width, int height, HBITMAP *hb
 	// now we need to figure out the stride of the image data GDI gave us
 	// TODO find out if CreateDIBSection() fills that in bmi for us
 	// TODO fill in the error returns here too
-	if (GetObject(*hb, sizeof (BITMAP), &bmp) == 0)
+	if (GetObject(*hb, sizeof (BITMAP), &bmp) == 0) {
 		logLastError(L"error calling GetObject() in uiprivWICToGDI()");
+		hr = E_FAIL;
+		goto fail;
+	}
 	hr = src->CopyPixels(NULL, bmp.bmWidthBytes,
 		bmp.bmWidthBytes * bmp.bmHeight, (BYTE *) bits);
 
