@@ -63,6 +63,14 @@ uiImage *uiprivImageCopy(uiImage *i)
 	return copy;
 }
 
+void uiprivImageSize(uiImage *i, double *width, double *height)
+{
+	if (width != NULL)
+		*width = i->width;
+	if (height != NULL)
+		*height = i->height;
+}
+
 static uint8_t premultiply(uint8_t c, uint8_t a)
 {
 	return (uint8_t) ((((uint32_t) c) * ((uint32_t) a) + 127) / 255);

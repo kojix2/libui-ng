@@ -36,39 +36,6 @@ static void initImageViewClass(void)
 		logLastError(L"error registering uiImageView window class");
 }
 
-static void compute_target_rect(float viewW, float viewH, float imgW, float imgH,
-	uiImageViewContentMode mode, float *dx, float *dy, float *dw, float *dh)
-{
-	float vw = viewW, vh = viewH, iw = imgW, ih = imgH;
-	
-	// Initialize output parameters
-	*dx = *dy = *dw = *dh = 0;
-	
-	if (iw <= 0 || ih <= 0 || vw <= 0 || vh <= 0) {
-		return;
-	}
-	
-	float sx = vw / iw, sy = vh / ih;
-	switch (mode) {
-	case uiImageViewContentCenter:
-		*dw = iw; *dh = ih;
-		break;
-	case uiImageViewContentFit: {
-		float s = sx < sy ? sx : sy;
-		*dw = iw * s; *dh = ih * s;
-		break;
-	}
-	default: {
-		// Future-proofing: default to Fit behavior for unknown modes
-		float s = sx < sy ? sx : sy;
-		*dw = iw * s; *dh = ih * s;
-		break;
-	}
-	}
-	*dx = (vw - *dw) * 0.5f;
-	*dy = (vh - *dh) * 0.5f;
-}
-
 static void paintImageView(uiImageView *iv, HDC hdc, RECT *rcPaint)
 {
 	RECT clientRect;
@@ -76,7 +43,8 @@ static void paintImageView(uiImageView *iv, HDC hdc, RECT *rcPaint)
 	IWICBitmap *bitmap;
 	ID2D1Bitmap *d2dBitmap;
 	float dpiX, dpiY;
-	float viewW, viewH, imgWDIP, imgHDIP;
+	double viewW, viewH, imgW, imgH;
+	double dx, dy, dw, dh;
 	HRESULT hr;
 
 	GetClientRect(iv->hwnd, &clientRect);
@@ -110,22 +78,12 @@ static void paintImageView(uiImageView *iv, HDC hdc, RECT *rcPaint)
 		return;
 	}
 
-	// Get image dimensions
-	UINT imgW, imgH;
-	hr = bitmap->GetSize(&imgW, &imgH);
-	if (hr != S_OK) {
-		rt->EndDraw();
-		rt->Release();
-		return;
-	}
-
-	// Calculate target rectangle
-	viewW = ((float) (clientRect.right - clientRect.left)) * 96.0f / dpiX;
-	viewH = ((float) (clientRect.bottom - clientRect.top)) * 96.0f / dpiY;
-	imgWDIP = ((float) imgW) * 96.0f / dpiX;
-	imgHDIP = ((float) imgH) * 96.0f / dpiY;
-	float dx, dy, dw, dh;
-	compute_target_rect(viewW, viewH, imgWDIP, imgHDIP, iv->mode, &dx, &dy, &dw, &dh);
+	// Layout uses uiImage's logical size; bitmap pixels only provide samples.
+	viewW = ((double) (clientRect.right - clientRect.left)) * 96.0 / dpiX;
+	viewH = ((double) (clientRect.bottom - clientRect.top)) * 96.0 / dpiY;
+	uiprivImageSize(iv->image, &imgW, &imgH);
+	uiprivImageViewComputeRect(viewW, viewH, imgW, imgH, iv->mode,
+		&dx, &dy, &dw, &dh);
 
 	// Create D2D bitmap from WIC bitmap
 	hr = rt->CreateBitmapFromWicBitmap(bitmap, NULL, &d2dBitmap);
@@ -136,7 +94,8 @@ static void paintImageView(uiImageView *iv, HDC hdc, RECT *rcPaint)
 	}
 
 	// Draw the bitmap with high-quality linear interpolation
-	D2D1_RECT_F destRect = D2D1::RectF(dx, dy, dx + dw, dy + dh);
+	D2D1_RECT_F destRect = D2D1::RectF((FLOAT) dx, (FLOAT) dy,
+		(FLOAT) (dx + dw), (FLOAT) (dy + dh));
 	rt->DrawBitmap(d2dBitmap, destRect, 1.0f, D2D1_BITMAP_INTERPOLATION_MODE_LINEAR);
 
 	d2dBitmap->Release();

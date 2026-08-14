@@ -73,6 +73,7 @@ int main(void)
 		{ progressBarRunUnitTests },
 		{ drawMatrixRunUnitTests },
 		{ attrstrRunUnitTests },
+		{ imageViewRunUnitTests },
 	};
 
 	for (i = 0; i < sizeof(unitTests)/sizeof(*unitTests); ++i) {

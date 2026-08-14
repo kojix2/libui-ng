@@ -25,33 +25,6 @@ static void uiImageViewDestroy(uiControl *c)
 	uiFreeControl(uiControl(v));
 }
 
-static void compute_target_rect(int viewW, int viewH, double imgW, double imgH,
-	uiImageViewContentMode mode, double *dx, double *dy, double *dw, double *dh)
-{
-	double vw = viewW, vh = viewH, iw = imgW, ih = imgH;
-	
-	// Initialize output parameters to avoid uninitialized warnings
-	*dx = *dy = *dw = *dh = 0;
-	
-	if (iw <= 0 || ih <= 0 || vw <= 0 || vh <= 0) {
-		return;
-	}
-	
-	double sx = vw / iw, sy = vh / ih;
-	switch (mode) {
-	case uiImageViewContentCenter:
-		*dw = iw; *dh = ih;
-		break;
-	case uiImageViewContentFit: {
-		double s = sx < sy ? sx : sy;
-		*dw = iw * s; *dh = ih * s;
-		break;
-	}
-	}
-	*dx = (vw - *dw) * 0.5;
-	*dy = (vh - *dh) * 0.5;
-}
-
 static gboolean on_draw(GtkWidget *w, cairo_t *cr, gpointer data)
 {
 	uiImageView *v = uiImageView(data);
@@ -75,7 +48,8 @@ static gboolean on_draw(GtkWidget *w, cairo_t *cr, gpointer data)
 		return FALSE;
 
 	double dx, dy, dw, dh;
-	compute_target_rect(a.width, a.height, imgW, imgH, v->mode, &dx, &dy, &dw, &dh);
+	uiprivImageViewComputeRect(a.width, a.height, imgW, imgH, v->mode,
+		&dx, &dy, &dw, &dh);
 
 	cairo_save(cr);
 	cairo_translate(cr, dx, dy);

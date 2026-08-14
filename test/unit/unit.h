@@ -28,6 +28,7 @@ int menuRunUnitTests(void);
 int progressBarRunUnitTests(void);
 int drawMatrixRunUnitTests(void);
 int attrstrRunUnitTests(void);
+int imageViewRunUnitTests(void);
 
 /**
  * Helper for general setup/teardown of controls embedded in a window.
