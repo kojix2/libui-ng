@@ -89,6 +89,16 @@ static void imageRepFallsBackToClosestSmallerRepresentation(void **state)
 	assertImageSize(chooseRep(256, 256, reps, 3), 128, 128);
 }
 
+static void imageRepSelectsForEnlargedDestination(void **state)
+{
+	const struct imageSize reps[] = {
+		{ 16, 16 }, { 32, 32 }, { 512, 512 },
+	};
+
+	(void) state;
+	assertImageSize(chooseRep(500, 500, reps, 3), 512, 512);
+}
+
 static void imageRepHandlesNonUniformDestination(void **state)
 {
 	const struct imageSize reps[] = {
@@ -121,6 +131,7 @@ int imageRepRunUnitTests(void)
 		cmocka_unit_test(imageRepSelectsExactDestinationSize),
 		cmocka_unit_test(imageRepSelectsClosestLargerRepresentation),
 		cmocka_unit_test(imageRepFallsBackToClosestSmallerRepresentation),
+		cmocka_unit_test(imageRepSelectsForEnlargedDestination),
 		cmocka_unit_test(imageRepHandlesNonUniformDestination),
 		cmocka_unit_test(imageRepSelectionDoesNotDependOnAppendOrder),
 	};
