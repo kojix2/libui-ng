@@ -2,6 +2,14 @@
 
 static uiImage *drawImage;
 static int didDrawImage;
+static int drawImageTimedOut;
+
+static int drawImageTimeout(void *data)
+{
+	(void) data;
+	drawImageTimedOut = 1;
+	return 0;
+}
 
 static void drawImageDraw(uiAreaHandler *handler, uiArea *area,
 	uiAreaDrawParams *params)
@@ -74,22 +82,22 @@ static void drawImageFromArea(void **state)
 	uiInitOptions options = { 0 };
 	uiWindow *window;
 	uiArea *area;
-	int i;
 	int drawn;
 
 	(void) state;
 	assert_null(uiInit(&options));
 	drawImage = newDrawImage();
 	didDrawImage = 0;
+	drawImageTimedOut = 0;
 	area = uiNewArea(&drawImageHandler);
 	window = uiNewWindow("uiDrawImage Unit Test", 100, 100, 0);
 	uiWindowSetChild(window, uiControl(area));
 	uiControlShow(uiControl(window));
 
 	uiMainSteps();
-	uiMainStep(1);
-	for (i = 0; i < 100 && !didDrawImage; i++)
-		uiMainStep(0);
+	uiTimer(1000, drawImageTimeout, NULL);
+	while (!didDrawImage && !drawImageTimedOut)
+		uiMainStep(1);
 	drawn = didDrawImage;
 
 	uiControlDestroy(uiControl(window));
