@@ -30,6 +30,7 @@ int dateTimePickerRunUnitTests(void);
 int gridRunUnitTests(void);
 int drawMatrixRunUnitTests(void);
 int attrstrRunUnitTests(void);
+int imageRepRunUnitTests(void);
 int imageViewRunUnitTests(void);
 
 /**
