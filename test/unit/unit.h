@@ -27,6 +27,7 @@ int entryRunUnitTests(void);
 int menuRunUnitTests(void);
 int progressBarRunUnitTests(void);
 int drawMatrixRunUnitTests(void);
+int drawImageRunUnitTests(void);
 int attrstrRunUnitTests(void);
 int imageRepRunUnitTests(void);
 int imageViewRunUnitTests(void);
