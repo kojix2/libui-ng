@@ -149,15 +149,6 @@ void uiDrawRestore(uiDrawContext *c)
 	cairo_restore(c->cr);
 }
 
-static int imageTargetPixelSize(double size)
-{
-	if (size >= INT_MAX)
-		return INT_MAX;
-	if (size <= 1)
-		return 1;
-	return (int) ceil(size);
-}
-
 static void imageTargetPixelSizeForContext(uiDrawContext *c,
 	double width, double height, int *pixelWidth, int *pixelHeight)
 {
@@ -173,8 +164,10 @@ static void imageTargetPixelSizeForContext(uiDrawContext *c,
 	scale = 1;
 	if (c->widget != NULL)
 		scale = gtk_widget_get_scale_factor(c->widget);
-	*pixelWidth = imageTargetPixelSize((fabs(widthX) + fabs(heightX)) * scale);
-	*pixelHeight = imageTargetPixelSize((fabs(widthY) + fabs(heightY)) * scale);
+	*pixelWidth = uiprivImageTargetPixelSize(
+		(fabs(widthX) + fabs(heightX)) * scale);
+	*pixelHeight = uiprivImageTargetPixelSize(
+		(fabs(widthY) + fabs(heightY)) * scale);
 }
 
 void uiDrawImage(uiDrawContext *c, uiImage *img, double x, double y, double width, double height)
@@ -186,10 +179,15 @@ void uiDrawImage(uiDrawContext *c, uiImage *img, double x, double y, double widt
 	int targetWidth, targetHeight;
 
 	// Enhanced parameter validation
-	if (c == NULL || img == NULL || width <= 0 || height <= 0)
+	if (c == NULL || img == NULL ||
+		!uiprivImageFinite(x) || !uiprivImageFinite(y) ||
+		!uiprivImagePositiveFinite(width) ||
+		!uiprivImagePositiveFinite(height))
 		return;
 
 	imageTargetPixelSizeForContext(c, width, height, &targetWidth, &targetHeight);
+	if (targetWidth == 0 || targetHeight == 0)
+		return;
 	surface = uiprivImageAppropriateSurfaceForSize(img, targetWidth, targetHeight);
 	if (surface == NULL)
 		return;

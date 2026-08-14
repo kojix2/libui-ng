@@ -561,15 +561,6 @@ void uiDrawRestore(uiDrawContext *c)
 	c->currentClip = state.clip;
 }
 
-static int imageTargetPixelSize(double size)
-{
-	if (size >= INT_MAX)
-		return INT_MAX;
-	if (size <= 1)
-		return 1;
-	return (int) ceil(size);
-}
-
 static void imageTargetPixelSizeForContext(uiDrawContext *c,
 	double width, double height, FLOAT dpiX, FLOAT dpiY,
 	int *pixelWidth, int *pixelHeight)
@@ -582,8 +573,8 @@ static void imageTargetPixelSizeForContext(uiDrawContext *c,
 	widthY = width * transform._12 * dpiY / 96.0;
 	heightX = height * transform._21 * dpiX / 96.0;
 	heightY = height * transform._22 * dpiY / 96.0;
-	*pixelWidth = imageTargetPixelSize(fabs(widthX) + fabs(heightX));
-	*pixelHeight = imageTargetPixelSize(fabs(widthY) + fabs(heightY));
+	*pixelWidth = uiprivImageTargetPixelSize(fabs(widthX) + fabs(heightX));
+	*pixelHeight = uiprivImageTargetPixelSize(fabs(widthY) + fabs(heightY));
 }
 
 
@@ -597,7 +588,10 @@ void uiDrawImage(uiDrawContext *c, uiImage *img, double x, double y, double widt
 	int targetWidth, targetHeight;
 	HRESULT hr;
 
-	if (c == NULL || img == NULL || width <= 0 || height <= 0)
+	if (c == NULL || img == NULL ||
+		!uiprivImageFinite(x) || !uiprivImageFinite(y) ||
+		!uiprivImagePositiveFinite(width) ||
+		!uiprivImagePositiveFinite(height))
 		return;
 
 	// Get DPI directly from render target - much simpler and more reliable
@@ -606,6 +600,8 @@ void uiDrawImage(uiDrawContext *c, uiImage *img, double x, double y, double widt
 
 	imageTargetPixelSizeForContext(c, width, height, dpiX, dpiY,
 		&targetWidth, &targetHeight);
+	if (targetWidth == 0 || targetHeight == 0)
+		return;
 	bitmap = uiprivImageAppropriateForSize(img, targetWidth, targetHeight);
 
 	if (bitmap == NULL)
