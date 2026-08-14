@@ -81,8 +81,7 @@ uiImageView *uiNewImageView(void)
 	v->mode = uiImageViewContentFit;
 	v->image = NULL;
 
-	// Default preferred size when no image (MVP)
-	gtk_widget_set_size_request(v->widget, 64, 64);
+	gtk_widget_set_size_request(v->widget, 16, 16);
 
 	g_signal_connect(v->area, "draw", G_CALLBACK(on_draw), v);
 
@@ -103,17 +102,11 @@ void uiImageViewSetImage(uiImageView *v, const uiImage *image)
 	}
 
 	if (image == NULL) {
-		// Reset to default size when no image
-		gtk_widget_set_size_request(v->widget, 64, 64);
 		gtk_widget_queue_draw(v->area);
 		return;
 	}
 
 	v->image = uiprivImageCopy((uiImage *)image);
-
-	// Set small minimum size to allow icon-sized usage (16x16)
-	// This allows the image to be displayed smaller than its original size
-	gtk_widget_set_size_request(v->widget, 16, 16);
 
 	gtk_widget_queue_draw(v->area);
 }
