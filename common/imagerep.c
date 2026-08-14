@@ -1,6 +1,5 @@
 #include <float.h>
 #include <limits.h>
-#include <math.h>
 #include "../ui.h"
 #include "uipriv.h"
 
@@ -16,13 +15,18 @@ int uiprivImagePositiveFinite(double value)
 
 int uiprivImageTargetPixelSize(double size)
 {
+	int pixels;
+
 	if (!uiprivImagePositiveFinite(size))
 		return 0;
 	if (size >= INT_MAX)
 		return INT_MAX;
 	if (size <= 1)
 		return 1;
-	return (int) ceil(size);
+	pixels = (int) size;
+	if ((double) pixels < size)
+		pixels++;
+	return pixels;
 }
 
 void uiprivImageRepMatcherInit(uiprivImageRepMatcher *m,
