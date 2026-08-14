@@ -18,3 +18,8 @@ libui_sources += [
 	'common/userbugs.c',
 	'common/utf.c',
 ]
+
+libui_test_internal_sources += files(
+	'imagerep.c',
+	'imageview.c',
+)
