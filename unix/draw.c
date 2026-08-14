@@ -195,73 +195,9 @@ void uiDrawImage(uiDrawContext *c, uiImage *img, double x, double y, double widt
 	// Validate surface status
 	if (cairo_surface_status(surface) != CAIRO_STATUS_SUCCESS)
 		return;
-
-	// Handle different surface types appropriately
-	if (cairo_surface_get_type(surface) == CAIRO_SURFACE_TYPE_RECORDING) {
-		// For recording surfaces, we can get ink extents and scale properly
-		double inkX, inkY, inkWidth, inkHeight;
-		
-		cairo_recording_surface_ink_extents(surface, &inkX, &inkY, &inkWidth, &inkHeight);
-		
-		// Only proceed if we have valid ink extents
-		if (inkWidth > 0 && inkHeight > 0) {
-			cairo_save(c->cr);
-
-			pattern = cairo_pattern_create_for_surface(surface);
-			if (cairo_pattern_status(pattern) != CAIRO_STATUS_SUCCESS) {
-				cairo_restore(c->cr);
-				return;
-			}
-			cairo_pattern_set_filter(pattern, CAIRO_FILTER_BILINEAR);
-			cairo_pattern_set_extend(pattern, CAIRO_EXTEND_NONE);
-
-			// Calculate scaling factors based on ink extents
-			scaleX = width / inkWidth;
-			scaleY = height / inkHeight;
-
-			// Apply transformation: translate to position, then scale
-			cairo_translate(c->cr, x, y);
-			cairo_scale(c->cr, scaleX, scaleY);
-			cairo_translate(c->cr, -inkX, -inkY);
-
-			cairo_set_source(c->cr, pattern);
-			cairo_paint(c->cr);
-
-			cairo_pattern_destroy(pattern);
-			cairo_restore(c->cr);
-			return;
-		}
-		// Fall through to generic handling if ink extents are invalid
-	}
-	
-	if (cairo_surface_get_type(surface) != CAIRO_SURFACE_TYPE_IMAGE) {
-		// For other non-image surfaces, paint at native scale with clipping
-		cairo_save(c->cr);
-
-		pattern = cairo_pattern_create_for_surface(surface);
-		if (cairo_pattern_status(pattern) != CAIRO_STATUS_SUCCESS) {
-			cairo_restore(c->cr);
-			return;
-		}
-		cairo_pattern_set_filter(pattern, CAIRO_FILTER_BILINEAR);
-		cairo_pattern_set_extend(pattern, CAIRO_EXTEND_NONE);
-
-		// Clip to destination rect
-		cairo_rectangle(c->cr, x, y, width, height);
-		cairo_clip(c->cr);
-
-		// Translate to (x, y) so the surface is anchored correctly
-		cairo_translate(c->cr, x, y);
-
-		cairo_set_source(c->cr, pattern);
-		cairo_paint(c->cr);
-
-		cairo_pattern_destroy(pattern);
-		cairo_restore(c->cr);
+	if (cairo_surface_get_type(surface) != CAIRO_SURFACE_TYPE_IMAGE)
 		return;
-	}
 
-	// Get surface dimensions (safe for image surfaces)
 	surfaceWidth = cairo_image_surface_get_width(surface);
 	surfaceHeight = cairo_image_surface_get_height(surface);
 	if (surfaceWidth <= 0 || surfaceHeight <= 0)
