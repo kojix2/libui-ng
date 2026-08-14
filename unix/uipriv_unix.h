@@ -49,6 +49,8 @@ extern void uiprivFreeContext(uiDrawContext *);
 extern uiImage *uiprivImageCopy(uiImage *i);
 extern void uiprivImageSize(uiImage *i, double *width, double *height);
 extern cairo_surface_t *uiprivImageAppropriateSurface(uiImage *i, GtkWidget *w);
+extern cairo_surface_t *uiprivImageAppropriateSurfaceForSize(uiImage *i,
+	int pixelWidth, int pixelHeight);
 extern cairo_surface_t *uiprivImageCopyAppropriateSurface(uiImage *i, GtkWidget *w);
 
 // cellrendererbutton.c

@@ -2743,7 +2743,9 @@ _UI_EXTERN void uiDrawTextLayoutExtents(uiDrawTextLayout *tl, double *width, dou
  *
  * The image will be scaled to fit the specified width and height.
  * The function automatically selects the most appropriate image
- * representation based on the display's pixel density.
+ * representation based on the transformed destination size and the display's
+ * pixel density. This can select a higher-resolution representation when the
+ * image is drawn larger than its logical size.
  *
  * `img` is borrowed only for the duration of this call. Image data is not
  * copied or retained by uiDrawImage().

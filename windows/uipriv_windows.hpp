@@ -170,6 +170,8 @@ extern uiImage *uiprivImageCopy(uiImage *i);
 extern void uiprivImageSize(uiImage *i, double *width, double *height);
 extern IWICBitmap *uiprivImageAppropriateForDC(uiImage *i, HDC dc);
 extern IWICBitmap *uiprivImageAppropriateForDPI(uiImage *i, float dpiX, float dpiY);
+extern IWICBitmap *uiprivImageAppropriateForSize(uiImage *i,
+	int pixelWidth, int pixelHeight);
 extern HRESULT uiprivWICToGDI(IWICBitmap *b, HDC dc, int width, int height, HBITMAP *hb);
 
 #endif
