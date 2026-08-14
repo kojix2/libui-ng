@@ -1,4 +1,5 @@
 // 6 september 2015
+#include <limits.h>
 #include "uipriv_unix.h"
 #include "draw.h"
 
@@ -148,19 +149,48 @@ void uiDrawRestore(uiDrawContext *c)
 	cairo_restore(c->cr);
 }
 
+static int imageTargetPixelSize(double size)
+{
+	if (size >= INT_MAX)
+		return INT_MAX;
+	if (size <= 1)
+		return 1;
+	return (int) ceil(size);
+}
+
+static void imageTargetPixelSizeForContext(uiDrawContext *c,
+	double width, double height, int *pixelWidth, int *pixelHeight)
+{
+	double widthX, widthY, heightX, heightY;
+	int scale;
+
+	widthX = width;
+	widthY = 0;
+	heightX = 0;
+	heightY = height;
+	cairo_user_to_device_distance(c->cr, &widthX, &widthY);
+	cairo_user_to_device_distance(c->cr, &heightX, &heightY);
+	scale = 1;
+	if (c->widget != NULL)
+		scale = gtk_widget_get_scale_factor(c->widget);
+	*pixelWidth = imageTargetPixelSize((fabs(widthX) + fabs(heightX)) * scale);
+	*pixelHeight = imageTargetPixelSize((fabs(widthY) + fabs(heightY)) * scale);
+}
+
 void uiDrawImage(uiDrawContext *c, uiImage *img, double x, double y, double width, double height)
 {
 	cairo_surface_t *surface;
 	cairo_pattern_t *pattern;
 	double scaleX, scaleY;
 	int surfaceWidth, surfaceHeight;
+	int targetWidth, targetHeight;
 
 	// Enhanced parameter validation
 	if (c == NULL || img == NULL || width <= 0 || height <= 0)
 		return;
 
-	// Select appropriate resolution image with widget context
-	surface = uiprivImageAppropriateSurface(img, c->widget);
+	imageTargetPixelSizeForContext(c, width, height, &targetWidth, &targetHeight);
+	surface = uiprivImageAppropriateSurfaceForSize(img, targetWidth, targetHeight);
 	if (surface == NULL)
 		return;
 

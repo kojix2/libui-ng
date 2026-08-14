@@ -260,6 +260,31 @@ IWICBitmap *uiprivImageAppropriateForDPI(uiImage *i, float dpiX, float dpiY)
 	return m.best;
 }
 
+IWICBitmap *uiprivImageAppropriateForSize(uiImage *i,
+	int pixelWidth, int pixelHeight)
+{
+	uiprivImageRepMatcher matcher;
+	IWICBitmap *best;
+
+	if (i == NULL)
+		return NULL;
+	uiprivImageRepMatcherInit(&matcher, pixelWidth, pixelHeight);
+	best = NULL;
+	for (IWICBitmap *bitmap : *(i->bitmaps)) {
+		UINT width, height;
+		HRESULT hr;
+
+		hr = bitmap->GetSize(&width, &height);
+		if (hr != S_OK) {
+			logHRESULT(L"error calling GetSize() in uiprivImageAppropriateForSize()", hr);
+			continue;
+		}
+		if (uiprivImageRepMatcherAdd(&matcher, (int) width, (int) height))
+			best = bitmap;
+	}
+	return best;
+}
+
 // TODO this needs to center images if the given size is not the same aspect ratio
 HRESULT uiprivWICToGDI(IWICBitmap *b, HDC dc, int width, int height, HBITMAP *hb)
 {

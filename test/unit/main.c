@@ -75,6 +75,7 @@ int main(void)
 		{ gridRunUnitTests },
 		{ drawMatrixRunUnitTests },
 		{ attrstrRunUnitTests },
+		{ imageRepRunUnitTests },
 		{ imageViewRunUnitTests },
 	};
 
