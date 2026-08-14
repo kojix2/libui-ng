@@ -1,4 +1,5 @@
 #include "uipriv_windows.hpp"
+#include <float.h>
 
 // TODO:
 // - is the alpha channel ignored when drawing images in tables?
@@ -27,6 +28,11 @@ uiImage *uiNewImage(double width, double height)
 {
 	uiImage *i;
 
+	if (!(width > 0) || width > DBL_MAX ||
+		!(height > 0) || height > DBL_MAX) {
+		uiprivUserBug("uiNewImage() dimensions must be finite and positive.");
+		return NULL;
+	}
 	i = uiprivNew(uiImage);
 	i->width = width;
 	i->height = height;

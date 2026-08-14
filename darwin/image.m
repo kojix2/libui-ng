@@ -1,5 +1,6 @@
 // 25 june 2016
 #import "uipriv_darwin.h"
+#include <float.h>
 #include <limits.h>
 
 struct uiImage {
@@ -11,6 +12,11 @@ uiImage *uiNewImage(double width, double height)
 {
 	uiImage *i;
 
+	if (!(width > 0) || width > DBL_MAX ||
+		!(height > 0) || height > DBL_MAX) {
+		uiprivUserBug("uiNewImage() dimensions must be finite and positive.");
+		return NULL;
+	}
 	i = uiprivNew(uiImage);
 	i->size = NSMakeSize(width, height);
 	i->i = [[NSImage alloc] initWithSize:i->size];

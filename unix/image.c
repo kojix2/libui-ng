@@ -1,5 +1,6 @@
 // 27 june 2016
 #include "uipriv_unix.h"
+#include <float.h>
 #include <limits.h>
 
 struct uiImage {
@@ -19,6 +20,11 @@ uiImage *uiNewImage(double width, double height)
 {
 	uiImage *i;
 
+	if (!(width > 0) || width > DBL_MAX ||
+		!(height > 0) || height > DBL_MAX) {
+		uiprivUserBug("uiNewImage() dimensions must be finite and positive.");
+		return NULL;
+	}
 	i = uiprivNew(uiImage);
 	i->width = width;
 	i->height = height;
