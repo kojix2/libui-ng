@@ -137,7 +137,7 @@ static void attrstrSetFamilyAttributeMergesAdjacentUnicodeCase(void **state)
 {
 	uiAttributedString *s;
 	const struct expectedAttribute expected[] = {
-		{ uiAttributeTypeFamily, 0, 4, "\303\204lpha", 0.0, 0.0, 0.0, 0.0 },
+		{ uiAttributeTypeFamily, 0, 4, "\303\244lpha", 0.0, 0.0, 0.0, 0.0 },
 	};
 
 	(void) state;
