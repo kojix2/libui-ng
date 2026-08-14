@@ -1,5 +1,6 @@
 // 7 september 2015
 #include "uipriv_windows.hpp"
+#include <limits.h>
 #include "draw.hpp"
 
 ID2D1Factory *d2dfactory = NULL;
@@ -561,6 +562,31 @@ void uiDrawRestore(uiDrawContext *c)
 	c->currentClip = state.clip;
 }
 
+static int imageTargetPixelSize(double size)
+{
+	if (size >= INT_MAX)
+		return INT_MAX;
+	if (size <= 1)
+		return 1;
+	return (int) ceil(size);
+}
+
+static void imageTargetPixelSizeForContext(uiDrawContext *c,
+	double width, double height, FLOAT dpiX, FLOAT dpiY,
+	int *pixelWidth, int *pixelHeight)
+{
+	D2D1_MATRIX_3X2_F transform;
+	double widthX, widthY, heightX, heightY;
+
+	c->rt->GetTransform(&transform);
+	widthX = width * transform._11 * dpiX / 96.0;
+	widthY = width * transform._12 * dpiY / 96.0;
+	heightX = height * transform._21 * dpiX / 96.0;
+	heightY = height * transform._22 * dpiY / 96.0;
+	*pixelWidth = imageTargetPixelSize(fabs(widthX) + fabs(heightX));
+	*pixelHeight = imageTargetPixelSize(fabs(widthY) + fabs(heightY));
+}
+
 
 void uiDrawImage(uiDrawContext *c, uiImage *img, double x, double y, double width, double height)
 {
@@ -569,6 +595,7 @@ void uiDrawImage(uiDrawContext *c, uiImage *img, double x, double y, double widt
 	D2D1_RECT_F destRect;
 	ID2D1Layer *cliplayer;
 	FLOAT dpiX = 96.0f, dpiY = 96.0f;
+	int targetWidth, targetHeight;
 	HRESULT hr;
 
 	if (c == NULL || img == NULL || width <= 0 || height <= 0)
@@ -578,8 +605,9 @@ void uiDrawImage(uiDrawContext *c, uiImage *img, double x, double y, double widt
 	// than trying to use GDI Interop which fails on non-GDI-compatible targets
 	c->rt->GetDpi(&dpiX, &dpiY);
 
-	// Use the new DPI-based function instead of the problematic HDC-based one
-	bitmap = uiprivImageAppropriateForDPI(img, dpiX, dpiY);
+	imageTargetPixelSizeForContext(c, width, height, dpiX, dpiY,
+		&targetWidth, &targetHeight);
+	bitmap = uiprivImageAppropriateForSize(img, targetWidth, targetHeight);
 
 	if (bitmap == NULL)
 		return;
