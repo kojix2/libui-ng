@@ -119,6 +119,7 @@ add_project_link_arguments(libui_project_link_args,
 	language: ['c', 'cpp', 'objc'])
 
 libui_sources = []
+libui_test_internal_sources = []
 libui_deps = []
 libui_rpath = ''
 subdir('common')

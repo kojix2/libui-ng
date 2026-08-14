@@ -19,6 +19,7 @@ libui_unit_sources = [
         'attrstr.c',
         'window.c',
 ]
+libui_unit_sources += libui_test_internal_sources
 
 if libui_OS == 'windows'
 	libui_unit_manifest = 'unit.manifest'
