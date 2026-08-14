@@ -31,25 +31,32 @@ static gboolean on_draw(GtkWidget *w, cairo_t *cr, gpointer data)
 	GtkAllocation a;
 	cairo_surface_t *surface;
 	double imgW, imgH;
+	double dx, dy, dw, dh;
+	int scale;
 	int surfaceW, surfaceH;
+	int targetW, targetH;
 	gtk_widget_get_allocation(w, &a);
 
 	if (v->image == NULL)
 		return FALSE;
 
-	surface = uiprivImageAppropriateSurface(v->image, w);
+	uiprivImageSize(v->image, &imgW, &imgH);
+	uiprivImageViewComputeRect(a.width, a.height, imgW, imgH, v->mode,
+		&dx, &dy, &dw, &dh);
+	scale = gtk_widget_get_scale_factor(w);
+	targetW = uiprivImageTargetPixelSize(dw * scale);
+	targetH = uiprivImageTargetPixelSize(dh * scale);
+	if (targetW == 0 || targetH == 0)
+		return FALSE;
+	surface = uiprivImageAppropriateSurfaceForSize(v->image,
+		targetW, targetH);
 	if (surface == NULL)
 		return FALSE;
 
-	uiprivImageSize(v->image, &imgW, &imgH);
 	surfaceW = cairo_image_surface_get_width(surface);
 	surfaceH = cairo_image_surface_get_height(surface);
 	if (surfaceW <= 0 || surfaceH <= 0)
 		return FALSE;
-
-	double dx, dy, dw, dh;
-	uiprivImageViewComputeRect(a.width, a.height, imgW, imgH, v->mode,
-		&dx, &dy, &dw, &dh);
 
 	cairo_save(cr);
 	cairo_translate(cr, dx, dy);
