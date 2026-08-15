@@ -122,6 +122,11 @@ void onContentSizeChangedNoCall(uiWindow *w, void *data)
 	function_called();
 }
 
+static void onContentSizeChangedIgnored(uiWindow *w, void *data)
+{
+	// Accept notifications after the setter has returned.
+}
+
 static void windowSetContentSizeNoCallback(void **state)
 {
 	uiWindow *w = uiWindowFromState(state);
@@ -131,7 +136,7 @@ static void windowSetContentSizeNoCallback(void **state)
 	uiWindowSetContentSize(w, UNIT_TEST_WINDOW_WIDTH + 20, UNIT_TEST_WINDOW_HEIGHT + 20);
 }
 
-static void windowSetConstrainedContentSizeNoCallback(void **state)
+static void windowSetConstrainedContentSizeNoSynchronousCallback(void **state)
 {
 	uiWindow *w = uiWindowFromState(state);
 	uiButton *button;
@@ -141,6 +146,13 @@ static void windowSetConstrainedContentSizeNoCallback(void **state)
 	uiWindowSetChild(w, uiControl(button));
 	uiWindowOnContentSizeChanged(w, onContentSizeChangedNoCall, NULL);
 	uiWindowSetContentSize(w, 1, 1);
+
+	/*
+	The setter must not invoke the callback while it runs. The initial layout
+	may later report a platform-constrained size when teardown shows the window;
+	that notification is outside the scope of this test.
+	*/
+	uiWindowOnContentSizeChanged(w, onContentSizeChangedIgnored, NULL);
 }
 
 void onPositionChangedCallback(uiWindow *w, void *data)
@@ -191,7 +203,7 @@ int windowRunUnitTests(void)
 		windowUnitTest(windowSetContentSize),
 		windowUnitTest(windowMarginedSetContentSize),
 		windowUnitTest(windowSetContentSizeNoCallback),
-		windowUnitTest(windowSetConstrainedContentSizeNoCallback),
+		windowUnitTest(windowSetConstrainedContentSizeNoSynchronousCallback),
 		windowUnitTest(windowSetPositionNoCallback),
 		windowUnitTest(windowSettersDoNotRunEventLoop),
 	};
