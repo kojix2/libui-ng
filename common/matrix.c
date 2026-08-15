@@ -17,17 +17,20 @@ void uiDrawMatrixSetIdentity(uiDrawMatrix *m)
 // Keep these as minimal as possible. They should generally not call other fallbacks.
 
 // see https://msdn.microsoft.com/en-us/library/windows/desktop/ff684171%28v=vs.85%29.aspx#skew_transform
-// TODO see if there's a way we can avoid the multiplication
 void uiprivFallbackSkew(uiDrawMatrix *m, double x, double y, double xamount, double yamount)
 {
 	uiDrawMatrix n;
+	double xtan, ytan;
 
+	xtan = tan(xamount);
+	ytan = tan(yamount);
 	uiDrawMatrixSetIdentity(&n);
-	// TODO explain this
-	n.M12 = tan(yamount);
-	n.M21 = tan(xamount);
-	n.M31 = -y * tan(xamount);
-	n.M32 = -x * tan(yamount);
+	// In row-vector form, a skew about (x, y) is
+	// T(-x, -y) * S * T(x, y).
+	n.M12 = ytan;
+	n.M21 = xtan;
+	n.M31 = -y * xtan;
+	n.M32 = -x * ytan;
 	uiDrawMatrixMultiply(m, &n);
 }
 

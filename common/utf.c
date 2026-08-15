@@ -8,11 +8,10 @@
 // it is also an imitation so we can license it under looser terms than the Go source
 #define badrune 0xFFFD
 
-// encoded must be at most 4 bytes
-// TODO clean this code up somehow
+// encoded must have room for at least 4 bytes
 size_t uiprivUTF8EncodeRune(uint32_t rune, char *encoded)
 {
-	uint8_t b, c, d, e;
+	unsigned char *out;
 
 	// not in the valid range for Unicode
 	if (rune > 0x10FFFF)
@@ -21,51 +20,27 @@ size_t uiprivUTF8EncodeRune(uint32_t rune, char *encoded)
 	if (rune >= 0xD800 && rune < 0xE000)
 		rune = badrune;
 
+	out = (unsigned char *) encoded;
 	if (rune < 0x80) {		// ASCII bytes represent themselves
-		b = (uint8_t) (rune & 0xFF);
-		encoded[0] = b;
+		out[0] = (unsigned char) rune;
 		return 1;
 	}
 	if (rune < 0x800) {		// two-byte encoding
-		c = (uint8_t) (rune & 0x3F);
-		c |= 0x80;
-		rune >>= 6;
-		b = (uint8_t) (rune & 0x1F);
-		b |= 0xC0;
-		encoded[0] = b;
-		encoded[1] = c;
+		out[0] = (unsigned char) (0xC0 | (rune >> 6));
+		out[1] = (unsigned char) (0x80 | (rune & 0x3F));
 		return 2;
 	}
 	if (rune < 0x10000) {	// three-byte encoding
-		d = (uint8_t) (rune & 0x3F);
-		d |= 0x80;
-		rune >>= 6;
-		c = (uint8_t) (rune & 0x3F);
-		c |= 0x80;
-		rune >>= 6;
-		b = (uint8_t) (rune & 0x0F);
-		b |= 0xE0;
-		encoded[0] = b;
-		encoded[1] = c;
-		encoded[2] = d;
+		out[0] = (unsigned char) (0xE0 | (rune >> 12));
+		out[1] = (unsigned char) (0x80 | ((rune >> 6) & 0x3F));
+		out[2] = (unsigned char) (0x80 | (rune & 0x3F));
 		return 3;
 	}
 	// otherwise use a four-byte encoding
-	e = (uint8_t) (rune & 0x3F);
-	e |= 0x80;
-	rune >>= 6;
-	d = (uint8_t) (rune & 0x3F);
-	d |= 0x80;
-	rune >>= 6;
-	c = (uint8_t) (rune & 0x3F);
-	c |= 0x80;
-	rune >>= 6;
-	b = (uint8_t) (rune & 0x07);
-	b |= 0xF0;
-	encoded[0] = b;
-	encoded[1] = c;
-	encoded[2] = d;
-	encoded[3] = e;
+	out[0] = (unsigned char) (0xF0 | (rune >> 18));
+	out[1] = (unsigned char) (0x80 | ((rune >> 12) & 0x3F));
+	out[2] = (unsigned char) (0x80 | ((rune >> 6) & 0x3F));
+	out[3] = (unsigned char) (0x80 | (rune & 0x3F));
 	return 4;
 }
 
@@ -168,7 +143,7 @@ const char *uiprivUTF8DecodeRune(const char *s, size_t nElem, uint32_t *rune)
 	return s;
 }
 
-// encoded must have at most 2 elements
+// encoded must have room for at least 2 elements
 size_t uiprivUTF16EncodeRune(uint32_t rune, uint16_t *encoded)
 {
 	uint16_t low, high;
@@ -194,45 +169,35 @@ size_t uiprivUTF16EncodeRune(uint32_t rune, uint16_t *encoded)
 	return 2;
 }
 
-// TODO see if this can be cleaned up somehow
 const uint16_t *uiprivUTF16DecodeRune(const uint16_t *s, size_t nElem, uint32_t *rune)
 {
-	uint16_t high, low;
+	uint16_t first, second;
 
-	if (*s < 0xD800 || *s >= 0xE000) {
+	first = s[0];
+	if (first < 0xD800 || first >= 0xE000) {
 		// self-representing character
-		*rune = *s;
-		s++;
-		return s;
+		*rune = first;
+		return s + 1;
 	}
-	if (*s >= 0xDC00) {
+	if (first >= 0xDC00) {
 		// out-of-order surrogates
 		*rune = badrune;
-		s++;
-		return s;
+		return s + 1;
 	}
 	if (nElem == 1) {		// not enough elements
 		*rune = badrune;
-		s++;
-		return s;
+		return s + 1;
 	}
-	high = *s;
-	high &= 0x3FF;
-	if (s[1] < 0xDC00 || s[1] >= 0xE000) {
+	second = s[1];
+	if (second < 0xDC00 || second >= 0xE000) {
 		// bad surrogate pair
 		*rune = badrune;
-		s++;
-		return s;
+		return s + 1;
 	}
-	s++;
-	low = *s;
-	s++;
-	low &= 0x3FF;
-	*rune = high;
-	*rune <<= 10;
-	*rune |= low;
-	*rune += 0x10000;
-	return s;
+	*rune = 0x10000 +
+		(((uint32_t) first - 0xD800) << 10) +
+		((uint32_t) second - 0xDC00);
+	return s + 2;
 }
 
 size_t uiprivUTF8UTF16Count(const char *s, size_t nElem)

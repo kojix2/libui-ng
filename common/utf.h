@@ -4,13 +4,12 @@
 // note the overridden names with uipriv at the beginning; this avoids potential symbol clashes when building libui as a static library
 // LONGTERM find a way to encode the name overrides directly into the utf library
 
+#include <stddef.h>
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-// TODO (for utf itself as well) should this go outside the extern "C" block or not
-#include <stddef.h>
-#include <stdint.h>
 
 // if nElem == 0, assume the buffer has no upper limit and is '\0' terminated
 // otherwise, assume buffer is NOT '\0' terminated but is bounded by nElem *elements*
@@ -25,8 +24,6 @@ extern size_t uiprivUTF16UTF8Count(const uint16_t *s, size_t nElem);
 
 #ifdef __cplusplus
 }
-
-// TODO sync this back to upstream (need copyright clearance first)
 
 // On Windows, wchar_t is equivalent to uint16_t, but C++ requires
 // wchar_t to be a completely distinct type. These overloads allow

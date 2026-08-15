@@ -221,6 +221,18 @@ static void attrstrGraphemeIndexes(void **state)
 	uiFreeAttributedString(s);
 }
 
+static void attrstrEmptyGraphemeIndexes(void **state)
+{
+	uiAttributedString *s;
+
+	(void) state;
+	s = uiNewAttributedString("");
+	assert_int_equal(uiAttributedStringNumGraphemes(s), 0);
+	assert_int_equal(uiAttributedStringGraphemeToByteIndex(s, 0), 0);
+	assert_int_equal(uiAttributedStringByteIndexToGrapheme(s, 0), 0);
+	uiFreeAttributedString(s);
+}
+
 int attrstrRunUnitTests(void)
 {
 	const struct CMUnitTest tests[] = {
@@ -243,6 +255,8 @@ int attrstrRunUnitTests(void)
 		cmocka_unit_test_setup_teardown(attrstrDeleteMergesAdjacentEqualValues,
 			attrstrSetup, attrstrTeardown),
 		cmocka_unit_test_setup_teardown(attrstrGraphemeIndexes,
+			attrstrSetup, attrstrTeardown),
+		cmocka_unit_test_setup_teardown(attrstrEmptyGraphemeIndexes,
 			attrstrSetup, attrstrTeardown),
 	};
 

@@ -41,7 +41,6 @@ uiAttributedString *uiNewAttributedString(const char *initialString)
 	return s;
 }
 
-// TODO make sure that all implementations of uiprivNewGraphemes() work fine with empty strings; in particular, the Windows one might not
 static void recomputeGraphemes(uiAttributedString *s)
 {
 	if (s->graphemes != NULL)
@@ -395,7 +394,6 @@ size_t uiprivAttributedStringUTF16Len(const uiAttributedString *s)
 	return s->u16len;
 }
 
-// TODO is this still needed given the below?
 size_t uiprivAttributedStringUTF8ToUTF16(const uiAttributedString *s, size_t n)
 {
 	return s->u8tou16[n];

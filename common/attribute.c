@@ -262,6 +262,7 @@ int uiprivAttributeEqual(const uiAttribute *a, const uiAttribute *b)
 	case uiAttributeTypeFeatures:
 		return uiprivOpenTypeFeaturesEqual(a->u.features, b->u.features);
 	}
-	// TODO should not be reached
+	uiprivImplBug("Invalid uiAttributeType %d in uiprivAttributeEqual()",
+		(int) a->type);
 	return 0;
 }

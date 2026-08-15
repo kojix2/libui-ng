@@ -248,16 +248,8 @@ static struct attr *attrSplitAt(struct attr *a, size_t at)
 	return b;
 }
 
-// attrDeleteRange() removes attributes while deleting characters.
-// 
-// If the attribute does not include the deleted range, then nothing is done (though the start and end are adjusted as necessary).
-// 
-// If the attribute needs to be deleted, it is deleted.
-// 
-// Otherwise, the attribute only needs the start or end deleted, and it is adjusted.
-// 
-// In all cases, the return value is the next attribute to look at in a forward sequential loop.
-// TODO rewrite this comment
+// Applies deletion of [start, end) to a, shifting, truncating, or
+// deleting it as needed. Returns the next attribute for iteration.
 static struct attr *attrDeleteRange(uiprivAttrList *alist, struct attr *a, size_t start, size_t end)
 {
 	size_t ostart, oend;
@@ -417,7 +409,6 @@ void uiprivAttrListInsertCharactersUnattributed(uiprivAttrList *alist, size_t st
 		tail->end += count;
 		// and queue it for re-adding later
 		// we can safely use tails as if it was singly-linked since it's just a temporary list; we properly merge them back in below and they'll be doubly-linked again then
-		// TODO actually we could probably save some time by making then doubly-linked now and adding them in one fell swoop, but that would make things a bit more complicated...
 		tail->next = tails;
 		tails = tail;
 	}

@@ -40,3 +40,12 @@ unit = executable('unit', libui_unit_sources,
 	install: false)
 
 test('Unit Tests', unit)
+
+utf_unit = executable('utf-unit', [
+	'utf.c',
+	'../../common/utf.c',
+],
+	dependencies: cmocka_deps,
+	install: false)
+
+test('UTF Unit Tests', utf_unit)

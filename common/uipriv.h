@@ -19,8 +19,8 @@ extern void *uiprivRealloc(void *, size_t, const char *);
 extern void uiprivFree(void *);
 
 // debug.c and OS-specific debug.* files
-// TODO get rid of this mess...
-// ugh, __func__ was only introduced in MSVC 2015...
+// MSVC 2013 does not provide C99's __func__; use its
+// __FUNCTION__ extension instead.
 #ifdef _MSC_VER
 #define uiprivMacro__func__ __FUNCTION__
 #else
@@ -39,8 +39,7 @@ extern int uiprivShouldQuit(void);
 
 // areaevents.c
 typedef struct uiprivClickCounter uiprivClickCounter;
-// you should call Reset() to zero-initialize a new instance
-// it doesn't matter that all the non-count fields are zero: the first click will fail the curButton test straightaway, so it'll return 1 and set the rest of the structure accordingly
+// Call uiprivClickCounterReset() to initialize a new instance.
 struct uiprivClickCounter {
 	int curButton;
 	int64_t rectX0;

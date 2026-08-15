@@ -119,6 +119,21 @@ static void drawMatrixRotate(void **state)
 	assertMatrixEqual(&expected, m);
 }
 
+static void drawMatrixSkew(void **state)
+{
+	uiDrawMatrix *m = *state;
+	double cx = 0.25;
+	double cy = 0.125;
+	uiDrawMatrix expected = {
+		1.0, -1.0,
+		1.0, 1.0,
+		-cy, cx
+	};
+
+	uiDrawMatrixSkew(m, cx, cy, uiPi / 4, -uiPi / 4);
+	assertMatrixEqual(&expected, m);
+}
+
 static void drawMatrixTRS(void **state)
 {
 	uiDrawMatrix *m = *state;
@@ -253,6 +268,7 @@ int drawMatrixRunUnitTests(void)
 		drawMatrixUnitTest(drawMatrixTranslate),
 		drawMatrixUnitTest(drawMatrixScale),
 		drawMatrixUnitTest(drawMatrixRotate),
+		drawMatrixUnitTest(drawMatrixSkew),
 		drawMatrixUnitTest(drawMatrixTRS),
 		drawMatrixUnitTest(drawMatrixMultiply),
 		drawMatrixUnitTest(drawMatrixInvertIdentity),

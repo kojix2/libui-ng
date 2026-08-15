@@ -11,7 +11,9 @@ On GTK+ this will also allow us to discard the GDK_BUTTON_2PRESS and GDK_BUTTON_
 
 Thanks to mclasen, garnacho_, halfline, and tristan in irc.gimp.net/#gtk+.
 
-TODO note the bits about asymmetry and g_rcClick initial value not mattering in the oldnewthing article
+The click rectangle is half-open: its left and top edges are included, while its right and bottom edges are excluded. This matches Windows RECT semantics but makes the bounds asymmetric by one coordinate.
+
+When count is zero, the previous button, rectangle, and timestamp do not affect the result: the next click increments the count from zero to one regardless of whether those values match.
 */
 
 // x, y, xdist, ydist, and c.rect must have the same units
