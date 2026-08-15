@@ -1,28 +1,70 @@
-// uiImageView — Windows implementation (MVP, copy-owned, Direct2D)
+// uiImageView — Windows implementation (copy-owned, Direct2D)
 #include "uipriv_windows.hpp"
 #include "draw.hpp"
 
 #define uiImageViewSignature 0x49566965
+#ifndef WM_DPICHANGED_AFTERPARENT
+#define WM_DPICHANGED_AFTERPARENT 0x02E3
+#endif
 
 struct uiImageView {
 	uiWindowsControl c;
 	HWND hwnd;
 	uiImageViewContentMode mode;
 	uiImage *image;  // owned copy for drawing (may be NULL)
+	ID2D1HwndRenderTarget *rt;
+	ID2D1Bitmap *d2dBitmap;
+	IWICBitmap *d2dBitmapSource;  // borrowed from image
 };
 
 static LRESULT CALLBACK imageViewWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 static ATOM imageViewClass = 0;
 
-static HBRUSH imageViewBackgroundBrush(uiImageView *iv, HDC hdc)
+static void releaseImageViewBitmap(uiImageView *iv)
+{
+	if (iv->d2dBitmap != NULL)
+		iv->d2dBitmap->Release();
+	iv->d2dBitmap = NULL;
+	iv->d2dBitmapSource = NULL;
+}
+
+static void releaseImageViewDeviceResources(uiImageView *iv)
+{
+	releaseImageViewBitmap(iv);
+	if (iv->rt != NULL)
+		iv->rt->Release();
+	iv->rt = NULL;
+}
+
+static HBRUSH imageViewBackground(uiImageView *iv, HDC hdc,
+	D2D1_COLOR_F *d2dColor)
 {
 	HBRUSH brush;
+	LOGBRUSH logicalBrush;
+	COLORREF color;
 
 	brush = (HBRUSH) SendMessageW(GetParent(iv->hwnd), WM_CTLCOLORSTATIC,
 		(WPARAM) hdc, (LPARAM) iv->hwnd);
-	if (brush == NULL)
-		return GetSysColorBrush(COLOR_WINDOW);
+	if (brush == NULL) {
+		brush = GetSysColorBrush(COLOR_WINDOW);
+		color = GetSysColor(COLOR_WINDOW);
+	} else if (brush == GetStockObject(DC_BRUSH)) {
+		color = GetDCBrushColor(hdc);
+	} else if (GetObject(brush, sizeof (LOGBRUSH), &logicalBrush) != 0 &&
+		logicalBrush.lbStyle == BS_SOLID) {
+		color = logicalBrush.lbColor;
+	} else {
+		// libui containers only support solid backgrounds. Keep a sensible
+		// fallback for custom parents that return another brush style.
+		color = GetBkColor(hdc);
+	}
+	if (color == CLR_INVALID)
+		color = GetSysColor(COLOR_WINDOW);
+	d2dColor->r = ((FLOAT) GetRValue(color)) / 255.0f;
+	d2dColor->g = ((FLOAT) GetGValue(color)) / 255.0f;
+	d2dColor->b = ((FLOAT) GetBValue(color)) / 255.0f;
+	d2dColor->a = 1.0f;
 	return brush;
 }
 
@@ -48,40 +90,27 @@ static void initImageViewClass(void)
 		logLastError(L"error registering uiImageView window class");
 }
 
-static void paintImageView(uiImageView *iv, HDC hdc)
+static HRESULT drawImageView(uiImageView *iv, ID2D1RenderTarget *rt,
+	D2D1_COLOR_F *backgroundColor, ID2D1Bitmap **cachedBitmap,
+	IWICBitmap **cachedSource)
 {
 	RECT clientRect;
-	D2D1_RENDER_TARGET_PROPERTIES props;
-	ID2D1RenderTarget *rt;
 	IWICBitmap *bitmap;
-	IWICBitmap *target;
 	ID2D1Bitmap *d2dBitmap;
-	HBRUSH backgroundBrush;
-	HBITMAP targetBitmap;
-	HDC sourceDC;
-	HGDIOBJ previousBitmap;
-	BLENDFUNCTION blend;
 	float dpiX, dpiY;
 	double viewW, viewH, imgW, imgH;
 	double dx, dy, dw, dh;
 	int clientW, clientH;
 	int targetW, targetH;
-	HRESULT drawHR, hr;
+	HRESULT bitmapHR, hr;
 
 	GetClientRect(iv->hwnd, &clientRect);
-	backgroundBrush = imageViewBackgroundBrush(iv, hdc);
-	FillRect(hdc, &clientRect, backgroundBrush);
-	if (iv->image == NULL)
-		return;
 	clientW = clientRect.right - clientRect.left;
 	clientH = clientRect.bottom - clientRect.top;
-	if (clientW <= 0 || clientH <= 0)
-		return;
-
-	dpiX = (float) GetDeviceCaps(hdc, LOGPIXELSX);
-	dpiY = (float) GetDeviceCaps(hdc, LOGPIXELSY);
+	rt->GetDpi(&dpiX, &dpiY);
 	bitmap = NULL;
-	if (uiprivImagePositiveFinite(dpiX) &&
+	if (iv->image != NULL && clientW > 0 && clientH > 0 &&
+		uiprivImagePositiveFinite(dpiX) &&
 		uiprivImagePositiveFinite(dpiY)) {
 		viewW = ((double) clientW) * 96.0 / dpiX;
 		viewH = ((double) clientH) * 96.0 / dpiY;
@@ -94,89 +123,113 @@ static void paintImageView(uiImageView *iv, HDC hdc)
 			bitmap = uiprivImageAppropriateForSize(iv->image,
 				targetW, targetH);
 	}
-	if (bitmap == NULL)
-		return;
-
-	target = NULL;
-	hr = uiprivWICFactory->CreateBitmap(clientW, clientH,
-		GUID_WICPixelFormat32bppPBGRA, WICBitmapCacheOnLoad, &target);
-	if (hr != S_OK) {
-		logHRESULT(L"error creating WIC target bitmap for uiImageView", hr);
-		return;
+	d2dBitmap = NULL;
+	bitmapHR = S_OK;
+	if (bitmap != NULL && cachedBitmap != NULL && cachedSource != NULL) {
+		if (*cachedSource != bitmap) {
+			if (*cachedBitmap != NULL)
+				(*cachedBitmap)->Release();
+			*cachedBitmap = NULL;
+			*cachedSource = NULL;
+		}
+		if (*cachedBitmap == NULL) {
+			bitmapHR = rt->CreateBitmapFromWicBitmap(bitmap, NULL,
+				cachedBitmap);
+			if (bitmapHR == S_OK)
+				*cachedSource = bitmap;
+		}
+		d2dBitmap = *cachedBitmap;
+	} else if (bitmap != NULL) {
+		bitmapHR = rt->CreateBitmapFromWicBitmap(bitmap, NULL, &d2dBitmap);
 	}
-	ZeroMemory(&props, sizeof (D2D1_RENDER_TARGET_PROPERTIES));
-	props.type = D2D1_RENDER_TARGET_TYPE_DEFAULT;
-	props.pixelFormat.format = DXGI_FORMAT_B8G8R8A8_UNORM;
-	props.pixelFormat.alphaMode = D2D1_ALPHA_MODE_PREMULTIPLIED;
-	props.dpiX = dpiX;
-	props.dpiY = dpiY;
-	props.usage = D2D1_RENDER_TARGET_USAGE_NONE;
-	props.minLevel = D2D1_FEATURE_LEVEL_DEFAULT;
-	rt = NULL;
-	hr = d2dfactory->CreateWicBitmapRenderTarget(target, &props, &rt);
-	if (hr != S_OK) {
-		logHRESULT(L"error creating WIC render target for uiImageView", hr);
-		target->Release();
-		return;
+	if (bitmap == NULL && cachedBitmap != NULL && cachedSource != NULL) {
+		if (*cachedBitmap != NULL)
+			(*cachedBitmap)->Release();
+		*cachedBitmap = NULL;
+		*cachedSource = NULL;
 	}
 
 	rt->BeginDraw();
-	rt->Clear(D2D1::ColorF(0.0f, 0.0f, 0.0f, 0.0f));
-	d2dBitmap = NULL;
-	drawHR = rt->CreateBitmapFromWicBitmap(bitmap, NULL, &d2dBitmap);
-	if (drawHR == S_OK) {
+	rt->Clear(backgroundColor);
+	if (d2dBitmap != NULL) {
 		D2D1_RECT_F destRect;
 
 		destRect = D2D1::RectF((FLOAT) dx, (FLOAT) dy,
 			(FLOAT) (dx + dw), (FLOAT) (dy + dh));
 		rt->DrawBitmap(d2dBitmap, destRect, 1.0f,
 			D2D1_BITMAP_INTERPOLATION_MODE_LINEAR);
-		d2dBitmap->Release();
-	} else
-		logHRESULT(L"error creating Direct2D bitmap for uiImageView", drawHR);
+	}
 	hr = rt->EndDraw();
-	rt->Release();
-	if (hr != S_OK) {
-		logHRESULT(L"error ending uiImageView draw", hr);
-		target->Release();
+	if (cachedBitmap == NULL && d2dBitmap != NULL)
+		d2dBitmap->Release();
+	if (hr == S_OK && bitmapHR != S_OK)
+		return bitmapHR;
+	return hr;
+}
+
+static void paintImageView(uiImageView *iv, HDC hdc)
+{
+	RECT clientRect;
+	D2D1_COLOR_F backgroundColor;
+	HBRUSH backgroundBrush;
+	float dpiX, dpiY;
+	float rtDPIX, rtDPIY;
+	HRESULT hr;
+
+	GetClientRect(iv->hwnd, &clientRect);
+	if (clientRect.right <= clientRect.left ||
+		clientRect.bottom <= clientRect.top)
+		return;
+	backgroundBrush = imageViewBackground(iv, hdc, &backgroundColor);
+	if (iv->rt == NULL)
+		iv->rt = makeHWNDRenderTarget(iv->hwnd);
+	if (iv->rt == NULL) {
+		FillRect(hdc, &clientRect, backgroundBrush);
 		return;
 	}
-	if (drawHR != S_OK) {
-		target->Release();
-		return;
+	dpiX = (float) GetDeviceCaps(hdc, LOGPIXELSX);
+	dpiY = (float) GetDeviceCaps(hdc, LOGPIXELSY);
+	iv->rt->GetDpi(&rtDPIX, &rtDPIY);
+	if (uiprivImagePositiveFinite(dpiX) &&
+		uiprivImagePositiveFinite(dpiY) &&
+		(dpiX != rtDPIX || dpiY != rtDPIY)) {
+		iv->rt->SetDpi(dpiX, dpiY);
+		releaseImageViewBitmap(iv);
 	}
 
-	targetBitmap = NULL;
-	hr = uiprivWICToGDI(target, hdc, 0, 0, &targetBitmap);
-	target->Release();
-	if (hr != S_OK || targetBitmap == NULL) {
-		if (hr != S_OK)
-			logHRESULT(L"error converting uiImageView target to GDI", hr);
+	hr = drawImageView(iv, iv->rt, &backgroundColor,
+		&iv->d2dBitmap, &iv->d2dBitmapSource);
+	if (hr == S_OK)
+		return;
+	if (hr != (HRESULT) D2DERR_RECREATE_TARGET)
+		logHRESULT(L"error drawing uiImageView", hr);
+	releaseImageViewDeviceResources(iv);
+	FillRect(hdc, &clientRect, backgroundBrush);
+	if (hr == (HRESULT) D2DERR_RECREATE_TARGET)
+		InvalidateRect(iv->hwnd, NULL, FALSE);
+}
+
+static void printImageView(uiImageView *iv, HDC hdc)
+{
+	RECT clientRect;
+	D2D1_COLOR_F backgroundColor;
+	HBRUSH backgroundBrush;
+	ID2D1DCRenderTarget *rt;
+	HRESULT hr;
+
+	GetClientRect(iv->hwnd, &clientRect);
+	backgroundBrush = imageViewBackground(iv, hdc, &backgroundColor);
+	rt = makeHDCRenderTarget(hdc, &clientRect);
+	if (rt == NULL) {
+		FillRect(hdc, &clientRect, backgroundBrush);
 		return;
 	}
-	sourceDC = CreateCompatibleDC(hdc);
-	if (sourceDC == NULL) {
-		logLastError(L"error creating source DC for uiImageView");
-		DeleteObject(targetBitmap);
-		return;
+	hr = drawImageView(iv, rt, &backgroundColor, NULL, NULL);
+	if (hr != S_OK) {
+		logHRESULT(L"error printing uiImageView", hr);
+		FillRect(hdc, &clientRect, backgroundBrush);
 	}
-	previousBitmap = SelectObject(sourceDC, targetBitmap);
-	if (previousBitmap == NULL || previousBitmap == HGDI_ERROR) {
-		logLastError(L"error selecting uiImageView target bitmap");
-		DeleteDC(sourceDC);
-		DeleteObject(targetBitmap);
-		return;
-	}
-	blend.BlendOp = AC_SRC_OVER;
-	blend.BlendFlags = 0;
-	blend.SourceConstantAlpha = 255;
-	blend.AlphaFormat = AC_SRC_ALPHA;
-	if (AlphaBlend(hdc, 0, 0, clientW, clientH,
-		sourceDC, 0, 0, clientW, clientH, blend) == FALSE)
-		logLastError(L"error alpha blending uiImageView");
-	SelectObject(sourceDC, previousBitmap);
-	DeleteDC(sourceDC);
-	DeleteObject(targetBitmap);
+	rt->Release();
 }
 
 static LRESULT CALLBACK imageViewWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -202,11 +255,35 @@ static LRESULT CALLBACK imageViewWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LP
 		paintImageView(iv, hdc);
 		EndPaint(hwnd, &ps);
 		return 0;
+	case WM_SIZE:
+		if (iv->rt != NULL) {
+			RECT clientRect;
+			D2D1_SIZE_U size;
+
+			GetClientRect(hwnd, &clientRect);
+			size.width = clientRect.right - clientRect.left;
+			size.height = clientRect.bottom - clientRect.top;
+			if (iv->rt->Resize(&size) != S_OK)
+				releaseImageViewDeviceResources(iv);
+		}
+		InvalidateRect(hwnd, NULL, FALSE);
+		break;
+	case WM_DPICHANGED:
+	case WM_DPICHANGED_AFTERPARENT:
+	case WM_THEMECHANGED:
+	case WM_SYSCOLORCHANGE:
+	case WM_SETTINGCHANGE:
+		InvalidateRect(hwnd, NULL, FALSE);
+		break;
+	case WM_DISPLAYCHANGE:
+		releaseImageViewDeviceResources(iv);
+		InvalidateRect(hwnd, NULL, FALSE);
+		break;
 	case WM_ERASEBKGND:
 		// we handle background drawing in WM_PAINT
 		return 1;
 	case WM_PRINTCLIENT:
-		paintImageView(iv, (HDC) wParam);
+		printImageView(iv, (HDC) wParam);
 		return 0;
 	}
 	return DefWindowProcW(hwnd, uMsg, wParam, lParam);
@@ -218,6 +295,7 @@ static void uiImageViewDestroy(uiControl *c)
 {
 	uiImageView *iv = uiImageView(c);
 
+	releaseImageViewDeviceResources(iv);
 	if (iv->image != NULL) {
 		uiFreeImage(iv->image);
 		iv->image = NULL;
@@ -240,6 +318,11 @@ uiImageView *uiNewImageView(void)
 	initImageViewClass();
 
 	uiWindowsNewControl(uiImageView, iv);
+	iv->mode = uiImageViewContentFit;  // default mode
+	iv->image = NULL;
+	iv->rt = NULL;
+	iv->d2dBitmap = NULL;
+	iv->d2dBitmapSource = NULL;
 
 	iv->hwnd = uiWindowsEnsureCreateControlHWND(WS_EX_CONTROLPARENT,
 		L"libui_uiImageViewClass", L"",
@@ -247,20 +330,18 @@ uiImageView *uiNewImageView(void)
 		hInstance, iv,
 		FALSE);
 
-	iv->mode = uiImageViewContentFit;  // default mode
-	iv->image = NULL;
-
 	return iv;
 }
 
 void uiImageViewSetContentMode(uiImageView *iv, uiImageViewContentMode mode)
 {
 	iv->mode = mode;
-	InvalidateRect(iv->hwnd, NULL, TRUE);
+	InvalidateRect(iv->hwnd, NULL, FALSE);
 }
 
 void uiImageViewSetImage(uiImageView *iv, const uiImage *image)
 {
+	releaseImageViewBitmap(iv);
 	// Release old image if exists
 	if (iv->image != NULL) {
 		uiFreeImage(iv->image);
@@ -269,11 +350,11 @@ void uiImageViewSetImage(uiImageView *iv, const uiImage *image)
 
 	if (image == NULL) {
 		// No image, just invalidate to clear
-		InvalidateRect(iv->hwnd, NULL, TRUE);
+		InvalidateRect(iv->hwnd, NULL, FALSE);
 		return;
 	}
 
 	iv->image = uiprivImageCopy((uiImage *) image);
 
-	InvalidateRect(iv->hwnd, NULL, TRUE);
+	InvalidateRect(iv->hwnd, NULL, FALSE);
 }
