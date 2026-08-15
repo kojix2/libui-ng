@@ -283,6 +283,8 @@ static void d2dColorToRGB(uint32_t color, double *r, double *g, double *b)
 #define d2dOliveDrab 0x6B8E23
 #define d2dLightSkyBlue 0x87CEFA
 
+static double d2dTransformDashes[] = { 4.0, 4.0 };
+
 static void d2dSolidBrush(uiDrawBrush *brush, uint32_t color, double alpha)
 {
 	brush->Type = uiDrawBrushTypeSolid;
@@ -303,8 +305,8 @@ static void d2dClear(uiAreaDrawParams *p, uint32_t color, double alpha)
 	uiDrawFreePath(path);
 }
 
-// from https://msdn.microsoft.com/en-us/library/windows/desktop/hh780340%28v=vs.85%29.aspx
-// also at https://msdn.microsoft.com/en-us/library/windows/desktop/dd535473%28v=vs.85%29.aspx
+// From Microsoft Learn, "Direct2D quickstart for Windows 8":
+// https://learn.microsoft.com/en-us/windows/win32/direct2d/direct2d-quickstart-with-device-context
 static void drawD2DW8QS(uiAreaDrawParams *p)
 {
 	uiDrawPath *path;
@@ -322,7 +324,8 @@ static void drawD2DW8QS(uiAreaDrawParams *p)
 	uiDrawFreePath(path);
 }
 
-// from https://msdn.microsoft.com/en-us/library/windows/desktop/dd370994%28v=vs.85%29.aspx
+// From Microsoft Learn, "Create a simple Direct2D application":
+// https://learn.microsoft.com/en-us/windows/win32/direct2d/direct2d-quickstart
 static void drawD2DSimpleApp(uiAreaDrawParams *p)
 {
 	uiDrawPath *path;
@@ -387,15 +390,8 @@ static void drawD2DSimpleApp(uiAreaDrawParams *p)
 	uiDrawFreePath(path);
 }
 
-// TODO? https://msdn.microsoft.com/en-us/library/windows/desktop/dd372260(v=vs.85).aspx
-
-// TODO https://msdn.microsoft.com/en-us/library/windows/desktop/dd756654%28v=vs.85%29.aspx
-
-// TODO? all subsections too? https://msdn.microsoft.com/en-us/library/windows/desktop/hh973240%28v=vs.85%29.aspx
-
-// TODO differing examples of? https://msdn.microsoft.com/en-us/library/windows/desktop/dd756651%28v=vs.85%29.aspx
-
-// from https://msdn.microsoft.com/en-us/library/windows/desktop/dd756680%28v=vs.85%29.aspx
+// From Microsoft Learn, "How to Create a Solid Color Brush":
+// https://learn.microsoft.com/en-us/windows/win32/direct2d/how-to-create-a-solid-color-brush
 static void drawD2DSolidBrush(uiAreaDrawParams *p)
 {
 	uiDrawPath *path;
@@ -426,7 +422,8 @@ static void drawD2DSolidBrush(uiAreaDrawParams *p)
 	uiDrawFreePath(path);
 }
 
-// from https://msdn.microsoft.com/en-us/library/windows/desktop/dd756678%28v=vs.85%29.aspx
+// From Microsoft Learn, "How to Create a Linear Gradient Brush":
+// https://learn.microsoft.com/en-us/windows/win32/direct2d/how-to-create-a-linear-gradient-brush
 static void drawD2DLinearBrush(uiAreaDrawParams *p)
 {
 	uiDrawPath *path;
@@ -476,7 +473,8 @@ static void drawD2DLinearBrush(uiAreaDrawParams *p)
 	uiDrawFreePath(path);
 }
 
-// from https://msdn.microsoft.com/en-us/library/windows/desktop/dd756679%28v=vs.85%29.aspx
+// From Microsoft Learn, "How to Create a Radial Gradient Brush":
+// https://learn.microsoft.com/en-us/windows/win32/direct2d/how-to-create-a-radial-gradient-brush
 // TODO expand this to change the origin point with a mouse click (not in the original but useful to have)
 static void drawD2DRadialBrush(uiAreaDrawParams *p)
 {
@@ -534,11 +532,8 @@ static void drawD2DRadialBrush(uiAreaDrawParams *p)
 	uiDrawFreePath(path);
 }
 
-// TODO https://msdn.microsoft.com/en-us/library/windows/desktop/dd756677%28v=vs.85%29.aspx
-
-// TODO? other pages have some of these https://msdn.microsoft.com/en-us/library/windows/desktop/dd756653%28v=vs.85%29.aspx
-
-// from https://msdn.microsoft.com/en-us/library/windows/desktop/ee264309%28v=vs.85%29.aspx
+// From Microsoft Learn, "Path Geometries Overview":
+// https://learn.microsoft.com/en-us/windows/win32/direct2d/path-geometries-overview
 static void drawD2DPathGeometries(uiAreaDrawParams *p)
 {
 	uiDrawPath *leftMountain;
@@ -711,9 +706,8 @@ static void drawD2DPathGeometries(uiAreaDrawParams *p)
 	uiDrawFreePath(river);
 }
 
-// TODO https://msdn.microsoft.com/en-us/library/windows/desktop/dd756690%28v=vs.85%29.aspx
-
-// from https://msdn.microsoft.com/en-us/library/windows/desktop/dd756681%28v=vs.85%29.aspx
+// From Microsoft Learn, "How to Create Geometry Groups":
+// https://learn.microsoft.com/en-us/windows/win32/direct2d/how-to-create-geometry-groups
 static void drawD2DGeometryGroup(uiAreaDrawParams *p)
 {
 	uiDrawPath *alternate;
@@ -777,7 +771,7 @@ static void drawD2DGeometryGroup(uiAreaDrawParams *p)
 
 	// TODO grid
 
-	// TODO the example doesn't provide these
+	// The source example does not specify brush colors.
 	d2dSolidBrush(&fill, d2dForestGreen, 1.0);
 	d2dSolidBrush(&stroke, d2dCornflowerBlue, 1.0);
 
@@ -788,26 +782,19 @@ static void drawD2DGeometryGroup(uiAreaDrawParams *p)
 
 	uiDrawFill(p->Context, alternate, &fill);
 	uiDrawStroke(p->Context, alternate, &stroke, &sp);
-	// TODO text
+	// TODO add labels for both fill modes
 
 	uiDrawMatrixSetIdentity(&m);
 	uiDrawMatrixTranslate(&m, 300, 0);
 	uiDrawTransform(p->Context, &m);
 	uiDrawFill(p->Context, winding, &fill);
 	uiDrawStroke(p->Context, winding, &stroke, &sp);
-//	// TODO text
-
 	uiDrawFreePath(winding);
 	uiDrawFreePath(alternate);
 }
 
-// TODO https://msdn.microsoft.com/en-us/library/windows/desktop/dd756676%28v=vs.85%29.aspx
-
-// TODO? https://msdn.microsoft.com/en-us/library/windows/desktop/dd370971%28v=vs.85%29.aspx
-
-// TODO are there even examples here? https://msdn.microsoft.com/en-us/library/windows/desktop/dd370966%28v=vs.85%29.aspx
-
-// from https://msdn.microsoft.com/en-us/library/windows/desktop/dd756687%28v=vs.85%29.aspx
+// From Microsoft Learn, "How to Rotate an Object":
+// https://learn.microsoft.com/en-us/windows/win32/direct2d/how-to-rotate
 static void drawD2DRotate(uiAreaDrawParams *p)
 {
 	uiDrawPath *path;
@@ -829,11 +816,12 @@ static void drawD2DRotate(uiAreaDrawParams *p)
 	uiDrawPathAddRectangle(path, 438.0, 301.5, 498.0 - 438.0, 361.5 - 301.5);
 	uiDrawPathEnd(path);
 
-	// TODO the example doesn't specify what these should be
+	// The source example does not specify brush colors.
 	d2dSolidBrush(&original, d2dBlack, 1.0);
 	d2dSolidBrush(&fill, d2dWhite, 0.5);
 	d2dSolidBrush(&transform, d2dForestGreen, 1.0);
-	// TODO this needs to be dashed
+	originalsp.Dashes = d2dTransformDashes;
+	originalsp.NumDashes = sizeof (d2dTransformDashes) / sizeof (d2dTransformDashes[0]);
 	originalsp.Thickness = 1.0;
 	originalsp.Cap = uiDrawLineCapFlat;
 	originalsp.Join = uiDrawLineJoinMiter;
@@ -878,7 +866,8 @@ static void drawD2DRotate(uiAreaDrawParams *p)
 	uiDrawFreePath(path);
 }
 
-// from https://msdn.microsoft.com/en-us/library/windows/desktop/dd756688%28v=vs.85%29.aspx
+// From Microsoft Learn, "How to Scale an Object":
+// https://learn.microsoft.com/en-us/windows/win32/direct2d/how-to-scale
 static void drawD2DScale(uiAreaDrawParams *p)
 {
 	uiDrawPath *path;
@@ -900,11 +889,12 @@ static void drawD2DScale(uiAreaDrawParams *p)
 	uiDrawPathAddRectangle(path, 438.0, 80.5, 498.0 - 438.0, 140.5 - 80.5);
 	uiDrawPathEnd(path);
 
-	// TODO the example doesn't specify what these should be
+	// The source example does not specify brush colors.
 	d2dSolidBrush(&original, d2dBlack, 1.0);
 	d2dSolidBrush(&fill, d2dWhite, 0.5);
 	d2dSolidBrush(&transform, d2dForestGreen, 1.0);
-	// TODO this needs to be dashed
+	originalsp.Dashes = d2dTransformDashes;
+	originalsp.NumDashes = sizeof (d2dTransformDashes) / sizeof (d2dTransformDashes[0]);
 	originalsp.Thickness = 1.0;
 	originalsp.Cap = uiDrawLineCapFlat;
 	originalsp.Join = uiDrawLineJoinMiter;
@@ -949,8 +939,9 @@ static void drawD2DScale(uiAreaDrawParams *p)
 	uiDrawFreePath(path);
 }
 
-// from https://msdn.microsoft.com/en-us/library/windows/desktop/dd756689%28v=vs.85%29.aspx
-// TODO counterclockwise?!
+// From Microsoft Learn, "How to Skew an Object":
+// https://learn.microsoft.com/en-us/windows/win32/direct2d/how-to-skew
+// Direct2D measures the x-axis skew counterclockwise from the y-axis.
 void drawD2DSkew(uiAreaDrawParams *p)
 {
 	uiDrawPath *path;
@@ -972,11 +963,12 @@ void drawD2DSkew(uiAreaDrawParams *p)
 	uiDrawPathAddRectangle(path, 126.0, 301.5, 186.0 - 126.0, 361.5 - 301.5);
 	uiDrawPathEnd(path);
 
-	// TODO the example doesn't specify what these should be
+	// The source example does not specify brush colors.
 	d2dSolidBrush(&original, d2dBlack, 1.0);
 	d2dSolidBrush(&fill, d2dWhite, 0.5);
 	d2dSolidBrush(&transform, d2dForestGreen, 1.0);
-	// TODO this needs to be dashed
+	originalsp.Dashes = d2dTransformDashes;
+	originalsp.NumDashes = sizeof (d2dTransformDashes) / sizeof (d2dTransformDashes[0]);
 	originalsp.Thickness = 1.0;
 	originalsp.Cap = uiDrawLineCapFlat;
 	originalsp.Join = uiDrawLineJoinMiter;
@@ -1021,7 +1013,8 @@ void drawD2DSkew(uiAreaDrawParams *p)
 	uiDrawFreePath(path);
 }
 
-// from https://msdn.microsoft.com/en-us/library/windows/desktop/dd756691%28v=vs.85%29.aspx
+// From Microsoft Learn, "How to Translate an Object":
+// https://learn.microsoft.com/en-us/windows/win32/direct2d/how-to-translate
 static void drawD2DTranslate(uiAreaDrawParams *p)
 {
 	uiDrawPath *path;
@@ -1043,11 +1036,12 @@ static void drawD2DTranslate(uiAreaDrawParams *p)
 	uiDrawPathAddRectangle(path, 126.0, 80.5, 186.0 - 126.0, 140.5 - 80.5);
 	uiDrawPathEnd(path);
 
-	// TODO the example doesn't specify what these should be
+	// The source example does not specify brush colors.
 	d2dSolidBrush(&original, d2dBlack, 1.0);
 	d2dSolidBrush(&fill, d2dWhite, 0.5);
 	d2dSolidBrush(&transform, d2dForestGreen, 1.0);
-	// TODO this needs to be dashed
+	originalsp.Dashes = d2dTransformDashes;
+	originalsp.NumDashes = sizeof (d2dTransformDashes) / sizeof (d2dTransformDashes[0]);
 	originalsp.Thickness = 1.0;
 	originalsp.Cap = uiDrawLineCapFlat;
 	originalsp.Join = uiDrawLineJoinMiter;
@@ -1069,8 +1063,8 @@ static void drawD2DTranslate(uiAreaDrawParams *p)
 	uiDrawFreePath(path);
 }
 
-// from https://msdn.microsoft.com/en-us/library/windows/desktop/dd756672%28v=vs.85%29.aspx
-// TODO the points seem off
+// From Microsoft Learn, "How to Apply Multiple Transforms to an Object":
+// https://learn.microsoft.com/en-us/windows/win32/direct2d/how-to-apply-multiple-transforms
 static void drawD2DMultiTransforms(uiAreaDrawParams *p)
 {
 	uiDrawPath *path;
@@ -1093,11 +1087,12 @@ static void drawD2DMultiTransforms(uiAreaDrawParams *p)
 	uiDrawPathAddRectangle(path, 300.0, 40.0, 360.0 - 300.0, 100.0 - 40.0);
 	uiDrawPathEnd(path);
 
-	// TODO the example doesn't specify what these should be
+	// The source example does not specify brush colors.
 	d2dSolidBrush(&original, d2dBlack, 1.0);
 	d2dSolidBrush(&fill, d2dWhite, 0.5);
 	d2dSolidBrush(&transform, d2dForestGreen, 1.0);
-	// TODO this needs to be dashed
+	originalsp.Dashes = d2dTransformDashes;
+	originalsp.NumDashes = sizeof (d2dTransformDashes) / sizeof (d2dTransformDashes[0]);
 	originalsp.Thickness = 1.0;
 	originalsp.Cap = uiDrawLineCapFlat;
 	originalsp.Join = uiDrawLineJoinMiter;
@@ -1150,15 +1145,10 @@ static void drawD2DMultiTransforms(uiAreaDrawParams *p)
 	uiDrawFreePath(path);
 }
 
-// TODO https://msdn.microsoft.com/en-us/library/windows/desktop/dd756675%28v=vs.85%29.aspx
+// Custom dashing is covered by drawCSDash() below.
 
-// TODO https://msdn.microsoft.com/en-us/library/windows/desktop/dd756673%28v=vs.85%29.aspx
-
-// TODO https://msdn.microsoft.com/en-us/library/windows/desktop/dd756684%28v=vs.85%29.aspx
-
-// TODO dashing https://msdn.microsoft.com/en-us/library/windows/desktop/dd756683%28v=vs.85%29.aspx
-
-// from https://msdn.microsoft.com/en-us/library/windows/desktop/dd756682%28v=vs.85%29.aspx
+// From Microsoft Learn, "How to Draw and Fill a Complex Shape":
+// https://learn.microsoft.com/en-us/windows/win32/direct2d/how-to-draw-and-fill-a-complex-shape
 static void drawD2DComplexShape(uiAreaDrawParams *p)
 {
 	uiDrawPath *path;
@@ -1222,23 +1212,7 @@ static void drawD2DComplexShape(uiAreaDrawParams *p)
 	uiDrawFreePath(path);
 }
 
-// TODO https://msdn.microsoft.com/en-us/library/windows/desktop/dd756692%28v=vs.85%29.aspx
-
-// TODO https://msdn.microsoft.com/en-us/library/windows/desktop/dd756686%28v=vs.85%29.aspx
-
-// TODO https://msdn.microsoft.com/en-us/library/windows/desktop/dd756685%28v=vs.85%29.aspx
-
-// TODO https://msdn.microsoft.com/en-us/library/windows/desktop/dd756674%28v=vs.85%29.aspx
-
-// TODO? https://msdn.microsoft.com/en-us/library/windows/desktop/ee329947%28v=vs.85%29.aspx
-
-// TODO https://msdn.microsoft.com/en-us/library/windows/desktop/ff485857%28v=vs.85%29.aspx
-
-// TODO? https://msdn.microsoft.com/en-us/library/windows/desktop/dd756755%28v=vs.85%29.aspx
-
 // TODO go through the API reference and spot examples that aren't listed
-
-// TODO all of these https://msdn.microsoft.com/en-us/library/windows/desktop/dd368187%28v=vs.85%29.aspx
 
 // cairo Samples Page (http://cairographics.org/samples/)
 
@@ -1680,7 +1654,7 @@ static void drawCSFillStyle(uiAreaDrawParams *p)
 	uiDrawFreePath(path);
 }
 
-// TOOD gradient (radial gradient with two circles)
+// TODO gradient (radial gradient with two circles)
 
 // TODO image
 
@@ -1881,11 +1855,9 @@ static void drawCSSetLineJoin(uiAreaDrawParams *p)
 	uiDrawFreePath(path);
 }
 
-// TODO text
-
 // TODO text align center
 
-// TODO text extents
+// Text drawing and extents are covered by page10.
 
 // Quartz 2D Programming Guide
 
