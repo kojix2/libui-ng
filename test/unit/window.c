@@ -140,11 +140,7 @@ static void windowSetConstrainedContentSizeNoCallback(void **state)
 	button = uiNewButton("Window cannot shrink below its child");
 	uiWindowSetChild(w, uiControl(button));
 	uiWindowOnContentSizeChanged(w, onContentSizeChangedNoCall, NULL);
-	uiControlShow(uiControl(w));
-	uiMainSteps();
-	uiMainStep(1);
 	uiWindowSetContentSize(w, 1, 1);
-	uiMainStep(1);
 }
 
 void onPositionChangedCallback(uiWindow *w, void *data)
