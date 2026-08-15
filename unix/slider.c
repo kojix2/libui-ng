@@ -126,8 +126,17 @@ uiSlider *uiNewSlider(int min, int max)
 
 	uiUnixNewControl(uiSlider, s);
 
-	s->widget = gtk_scale_new_with_range(GTK_ORIENTATION_HORIZONTAL, min, max, 1);
-	s->range = GTK_RANGE(s->widget);
+	// gtk_scale_new_with_range() requires min < max, while GtkRange supports
+	// equal bounds. Create an empty scale and configure its range in that case.
+	if (min == max) {
+		s->widget = gtk_scale_new(GTK_ORIENTATION_HORIZONTAL, NULL);
+		s->range = GTK_RANGE(s->widget);
+		gtk_range_set_range(s->range, min, max);
+		gtk_range_set_increments(s->range, 1, 10);
+	} else {
+		s->widget = gtk_scale_new_with_range(GTK_ORIENTATION_HORIZONTAL, min, max, 1);
+		s->range = GTK_RANGE(s->widget);
+	}
 	s->scale = GTK_SCALE(s->widget);
 
 	// do not draw value, show tooltip instead

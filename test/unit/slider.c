@@ -25,6 +25,14 @@ static void sliderValueDefaultMin1(void **state)
 	assert_int_equal(uiSliderValue(*s), 1);
 }
 
+static void sliderValueDefaultEqualRange(void **state)
+{
+	uiSlider **s = uiSliderPtrFromState(state);
+
+	*s = uiNewSlider(5, 5);
+	assert_int_equal(uiSliderValue(*s), 5);
+}
+
 static void sliderSetValue(void **state)
 {
 	uiSlider **s = uiSliderPtrFromState(state);
@@ -93,6 +101,15 @@ static void sliderSetRangeGreaterThanValue(void **state)
 	assert_int_equal(uiSliderValue(*s), 1);
 }
 
+static void sliderSetRangeEqual(void **state)
+{
+	uiSlider **s = uiSliderPtrFromState(state);
+
+	*s = uiNewSlider(0, 1);
+	uiSliderSetRange(*s, 5, 5);
+	assert_int_equal(uiSliderValue(*s), 5);
+}
+
 static void onChangedNoCall(uiSlider *s, void *data)
 {
 	function_called();
@@ -117,6 +134,7 @@ int sliderRunUnitTests(void)
 		sliderUnitTest(sliderNew),
 		sliderUnitTest(sliderValueDefaultMin0),
 		sliderUnitTest(sliderValueDefaultMin1),
+		sliderUnitTest(sliderValueDefaultEqualRange),
 		sliderUnitTest(sliderSetValue),
 		sliderUnitTest(sliderSetValueOutOfRangeClampLow),
 		sliderUnitTest(sliderSetValueOutOfRangeClampHigh),
@@ -124,6 +142,7 @@ int sliderRunUnitTests(void)
 		sliderUnitTest(sliderSetHasToolTip),
 		sliderUnitTest(sliderSetRangeLessThanValue),
 		sliderUnitTest(sliderSetRangeGreaterThanValue),
+		sliderUnitTest(sliderSetRangeEqual),
 		sliderUnitTest(sliderSetValueNoCallback),
 	};
 
