@@ -131,6 +131,22 @@ static void windowSetContentSizeNoCallback(void **state)
 	uiWindowSetContentSize(w, UNIT_TEST_WINDOW_WIDTH + 20, UNIT_TEST_WINDOW_HEIGHT + 20);
 }
 
+static void windowSetConstrainedContentSizeNoCallback(void **state)
+{
+	uiWindow *w = uiWindowFromState(state);
+	uiButton *button;
+
+	// Give the window a minimum size larger than the following request.
+	button = uiNewButton("Window cannot shrink below its child");
+	uiWindowSetChild(w, uiControl(button));
+	uiWindowOnContentSizeChanged(w, onContentSizeChangedNoCall, NULL);
+	uiControlShow(uiControl(w));
+	uiMainSteps();
+	uiMainStep(1);
+	uiWindowSetContentSize(w, 1, 1);
+	uiMainStep(1);
+}
+
 void onPositionChangedCallback(uiWindow *w, void *data)
 {
 	function_called();
@@ -179,6 +195,7 @@ int windowRunUnitTests(void)
 		windowUnitTest(windowSetContentSize),
 		windowUnitTest(windowMarginedSetContentSize),
 		windowUnitTest(windowSetContentSizeNoCallback),
+		windowUnitTest(windowSetConstrainedContentSizeNoCallback),
 		windowUnitTest(windowSetPositionNoCallback),
 		windowUnitTest(windowSettersDoNotRunEventLoop),
 	};
