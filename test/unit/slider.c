@@ -125,6 +125,16 @@ static void sliderSetValueNoCallback(void **state)
 	uiSliderSetValue(*s, 0);
 }
 
+static void sliderSetRangeNoCallback(void **state)
+{
+	uiSlider **s = uiSliderPtrFromState(state);
+
+	*s = uiNewSlider(0, 1);
+	uiSliderOnChanged(*s, onChangedNoCall, NULL);
+	uiSliderSetRange(*s, 2, 3);
+	assert_int_equal(uiSliderValue(*s), 2);
+}
+
 #define sliderUnitTest(f) cmocka_unit_test_setup_teardown((f), \
 		unitTestSetup, unitTestTeardown)
 
@@ -144,6 +154,7 @@ int sliderRunUnitTests(void)
 		sliderUnitTest(sliderSetRangeGreaterThanValue),
 		sliderUnitTest(sliderSetRangeEqual),
 		sliderUnitTest(sliderSetValueNoCallback),
+		sliderUnitTest(sliderSetRangeNoCallback),
 	};
 
 	return cmocka_run_group_tests_name("uiSlider", tests, unitTestsSetup, unitTestsTeardown);
