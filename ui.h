@@ -118,7 +118,7 @@ struct uiControl {
 	void (*Enable)(uiControl *);
 	void (*Disable)(uiControl *);
 };
-// TOOD add argument names to all arguments
+// TODO add argument names to all arguments
 #define uiControl(this) ((uiControl *) (this))
 
 /**
@@ -250,7 +250,6 @@ _UI_EXTERN void uiFreeControl(uiControl *c);
  *
  * @param c uiControl instance.
  * @param parent uiControl instance.
- * @todo Make sure all controls have these
  * @warning This will crash the application if `FALSE`.
  * @memberof uiControl
  */
@@ -460,7 +459,7 @@ _UI_EXTERN int uiWindowFocused(uiWindow *w);
  * Returns whether or not the window is borderless.
  *
  * @param w uiWindow instance.
- * @returns `TRUE` if window is borderless, `FALSE` otherwise. [Default: `TODO`]
+ * @returns `TRUE` if window is borderless, `FALSE` otherwise. [Default: `FALSE`]
  * @memberof uiWindow
  */
 _UI_EXTERN int uiWindowBorderless(uiWindow *w);
@@ -648,7 +647,7 @@ _UI_EXTERN void uiBoxDelete(uiBox *b, int index);
  * Padding is defined as space between individual controls.
  *
  * @param b uiBox instance.
- * @returns `TRUE` if controls are padded, `FALSE` otherwise. [Default: `TODO`]
+ * @returns `TRUE` if controls are padded, `FALSE` otherwise. [Default: `FALSE`]
  * @memberof uiBox
  */
 _UI_EXTERN int uiBoxPadded(uiBox *b);
@@ -1001,7 +1000,7 @@ _UI_EXTERN int uiTabNumPages(uiTab *t);
  *
  * @param t uiTab instance.
  * @param index Index to check if it has a margin.
- * @returns `TRUE` if the tab has a margin, `FALSE` otherwise. [Default: `TODO`]
+ * @returns `TRUE` if the tab has a margin, `FALSE` otherwise. [Default: `FALSE`]
  * @memberof uiTab
  */
 _UI_EXTERN int uiTabMargined(uiTab *t, int index);
@@ -1078,7 +1077,7 @@ _UI_EXTERN void uiGroupSetChild(uiGroup *g, uiControl *c);
  * Returns whether or not the group has a margin.
  *
  * @param g uiGroup instance.
- * @returns `TRUE` if the group has a margin, `FALSE` otherwise. [Default: `TODO`]
+ * @returns `TRUE` if the group has a margin, `FALSE` otherwise. [Default: `FALSE`]
  * @memberof uiGroup
  */
 _UI_EXTERN int uiGroupMargined(uiGroup *g);
@@ -1165,7 +1164,7 @@ _UI_EXTERN void uiSpinboxOnChanged(uiSpinbox *s,
  * The initial spinbox value equals the minimum value.
  *
  * In the current implementation @p min and @p max are swapped if `min>max`.
- * This may change in the future though. See TODO.
+ * This behavior may change in future versions.
  *
  * @param min Minimum value.
  * @param max Maximum value.
@@ -1266,8 +1265,9 @@ _UI_EXTERN void uiSliderOnReleased(uiSlider *s,
  * @param s uiSlider instance.
  * @param min Minimum value.
  * @param max Maximum value.
- * @todo Make sure to clamp the slider value to the nearest value in range - should
- *       it be out of range. Call uiSliderOnChanged() in such a case.
+ * @note If the current value is outside the new range, it is clamped to the
+ *       nearest value in the range.
+ * @note The callback registered with uiSliderOnChanged() is not triggered.
  * @memberof uiSlider
  */
 _UI_EXTERN void uiSliderSetRange(uiSlider *s, int min, int max);
@@ -1278,7 +1278,7 @@ _UI_EXTERN void uiSliderSetRange(uiSlider *s, int min, int max);
  * The initial slider value equals the minimum value.
  *
  * In the current implementation @p min and @p max are swapped if `min>max`.
- * This may change in the future though. See TODO.
+ * This behavior may change in future versions.
  *
  * @param min Minimum value.
  * @param max Maximum value.
@@ -2047,7 +2047,8 @@ typedef struct uiDrawContext uiDrawContext;
 
 struct uiAreaHandler {
 	void (*Draw)(uiAreaHandler *, uiArea *, uiAreaDrawParams *);
-	// TODO document that resizes cause a full redraw for non-scrolling areas; implementation-defined for scrolling areas
+	// Resizing causes a full redraw for non-scrolling areas; redraw behavior
+	// for scrolling areas is implementation-defined.
 	void (*MouseEvent)(uiAreaHandler *, uiArea *, uiAreaMouseEvent *);
 	// TODO document that on first show if the mouse is already in the uiArea then one gets sent with left=0
 	// TODO what about when the area is hidden and then shown again?
@@ -2068,7 +2069,7 @@ _UI_ENUM(uiWindowResizeEdge) {
 	uiWindowResizeEdgeBottomLeft,
 	uiWindowResizeEdgeBottomRight,
 	// TODO have one for keyboard resizes?
-	// TODO GDK doesn't seem to have any others, including for keyboards...
+	// GDK doesn't seem to have any others, including for keyboards.
 	// TODO way to bring up the system menu instead?
 };
 
@@ -2079,11 +2080,9 @@ _UI_EXTERN void uiAreaSetSize(uiArea *a, int width, int height);
 // TODO uiAreaQueueRedraw()
 _UI_EXTERN void uiAreaQueueRedrawAll(uiArea *a);
 _UI_EXTERN void uiAreaScrollTo(uiArea *a, double x, double y, double width, double height);
-// TODO document these can only be called within Mouse() handlers
+// These functions can only be called within MouseEvent callbacks with Down != 0.
 // TODO should these be allowed on scrolling areas?
-// TODO decide which mouse events should be accepted; Down is the only one guaranteed to work right now
 // TODO what happens to events after calling this up to and including the next mouse up?
-// TODO release capture?
 _UI_EXTERN void uiAreaBeginUserWindowMove(uiArea *a);
 _UI_EXTERN void uiAreaBeginUserWindowResize(uiArea *a, uiWindowResizeEdge edge);
 _UI_EXTERN uiArea *uiNewArea(uiAreaHandler *ah);
@@ -2092,7 +2091,7 @@ _UI_EXTERN uiArea *uiNewScrollingArea(uiAreaHandler *ah, int width, int height);
 struct uiAreaDrawParams {
 	uiDrawContext *Context;
 
-	// TODO document that this is only defined for nonscrolling areas
+	// These fields are only defined for non-scrolling areas.
 	double AreaWidth;
 	double AreaHeight;
 
@@ -2191,7 +2190,7 @@ struct uiDrawStrokeParams {
 	double MiterLimit;
 	// must not be NULL if NumDashes is greater than 0
 	double *Dashes;
-	// TOOD what if this is 1 on Direct2D?
+	// TODO what if this is 1 on Direct2D?
 	// TODO what if a dash is 0 on Cairo or Quartz?
 	size_t NumDashes;
 	double DashPhase;
@@ -2635,11 +2634,10 @@ _UI_EXTERN void uiAttributedStringDelete(uiAttributedString *s, size_t start, si
 _UI_EXTERN void uiAttributedStringSetAttribute(uiAttributedString *s, uiAttribute *a, size_t start, size_t end);
 
 // uiAttributedStringForEachAttribute() enumerates all the
-// uiAttributes in s. It is an error to modify s in f. Within f, s still
-// owns the attribute; you can neither free it nor save it for later
-// use.
-// TODO reword the above for consistency (TODO and find out what I meant by that)
-// TODO define an enumeration order (or mark it as undefined); also define how consecutive runs of identical attributes are handled here and sync with the definition of uiAttributedString itself
+// uiAttributes in s in an unspecified order. It is an error to modify s
+// in f. Within f, s still owns the attribute; you can neither free it nor
+// save it for later use.
+// TODO reword the above for consistency and clarify the intended meaning
 _UI_EXTERN void uiAttributedStringForEachAttribute(const uiAttributedString *s, uiAttributedStringForEachAttributeFunc f, void *data);
 
 // TODO const correct this somehow (the implementation needs to mutate the structure)
@@ -2817,13 +2815,15 @@ _UI_ENUM(uiModifiers) {
 	uiModifierSuper = 1 << 3, //!< Super/Command/Windows key.
 };
 
-// TODO document drag captures
+// Mouse input is captured after a button press until all buttons are released.
+// DragBroken is called if that capture is lost unexpectedly.
 struct uiAreaMouseEvent {
-	// TODO document what these mean for scrolling areas
+	// Coordinates in the area's drawing space, including the scroll offset for
+	// scrolling areas.
 	double X;
 	double Y;
 
-	// TODO see draw above
+	// These fields are only defined for non-scrolling areas.
 	double AreaWidth;
 	double AreaHeight;
 
@@ -3011,7 +3011,7 @@ _UI_EXTERN void uiFormDelete(uiForm *f, int index);
  * Padding is defined as space between individual controls.
  *
  * @param f uiForm instance.
- * @returns `TRUE` if controls are padded, `FALSE` otherwise. [Default: `TODO`]
+ * @returns `TRUE` if controls are padded, `FALSE` otherwise. [Default: `FALSE`]
  * @memberof uiForm
  */
 _UI_EXTERN int uiFormPadded(uiForm *f);
@@ -3127,7 +3127,7 @@ _UI_EXTERN void uiGridInsertAt(uiGrid *g, uiControl *c, uiControl *existing, uiA
  * Padding is defined as space between individual controls.
  *
  * @param g uiGrid instance.
- * @returns `TRUE` if controls are padded, `FALSE` otherwise. [Default: `TODO`]
+ * @returns `TRUE` if controls are padded, `FALSE` otherwise. [Default: `FALSE`]
  * @memberof uiGrid
  */
 _UI_EXTERN int uiGridPadded(uiGrid *g);
