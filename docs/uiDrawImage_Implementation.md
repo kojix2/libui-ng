@@ -90,5 +90,8 @@ Platform validation should additionally check:
 - Windows ImageView backgrounds at 96 and 192 DPI in light and dark themes;
 - normal Windows painting and `WM_PRINTCLIENT` output.
 
-The implementation does not cache render-target-specific converted bitmaps.
-Repeated calls can therefore recreate native drawing resources.
+On Windows, `uiImageView` retains its HWND render target and the converted
+`ID2D1Bitmap` selected for that target. Both are recreated after device loss;
+the bitmap is also replaced when a different image representation is selected.
+`uiDrawImage()` itself does not cache render-target-specific converted bitmaps,
+so repeated calls can still recreate native drawing resources.
