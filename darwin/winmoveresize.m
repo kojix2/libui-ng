@@ -25,7 +25,7 @@ static void minMaxAutoLayoutSizes(NSWindow *w, NSSize *min, NSSize *max)
 {
 	NSLayoutConstraint *cw, *ch;
 	NSView *contentView;
-	NSRect prevFrame;
+	NSRect contentRect, prevFrame;
 
 	prevFrame = [w frame];
 
@@ -48,6 +48,8 @@ static void minMaxAutoLayoutSizes(NSWindow *w, NSSize *min, NSSize *max)
 	*min = [contentView fittingSize];
 	[contentView removeConstraint:cw];
 	[contentView removeConstraint:ch];
+	contentRect = NSMakeRect(0, 0, min->width, min->height);
+	*min = [w frameRectForContentRect:contentRect].size;
 
 	// maximum: encourage the window to be as large as possible
 	contentView = [w contentView];
@@ -68,6 +70,8 @@ static void minMaxAutoLayoutSizes(NSWindow *w, NSSize *min, NSSize *max)
 	*max = [contentView fittingSize];
 	[contentView removeConstraint:cw];
 	[contentView removeConstraint:ch];
+	contentRect = NSMakeRect(0, 0, max->width, max->height);
+	*max = [w frameRectForContentRect:contentRect].size;
 
 	[w setFrame:prevFrame display:YES];		// TODO really YES?
 }
@@ -78,8 +82,6 @@ static void handleResizeLeft(NSRect *frame, NSPoint old, NSPoint new)
 	frame->size.width -= new.x - old.x;
 }
 
-// TODO properly handle the menubar
-// TODO wait, OS X does it for us?!
 static void handleResizeTop(NSRect *frame, NSPoint old, NSPoint new)
 {
 	frame->size.height += new.y - old.y;
@@ -90,8 +92,6 @@ static void handleResizeRight(NSRect *frame, NSPoint old, NSPoint new)
 	frame->size.width += new.x - old.x;
 }
 
-
-// TODO properly handle the menubar
 static void handleResizeBottom(NSRect *frame, NSPoint old, NSPoint new)
 {
 	frame->origin.y += new.y - old.y;
@@ -101,7 +101,6 @@ static void handleResizeBottom(NSRect *frame, NSPoint old, NSPoint new)
 struct onResizeDragParams {
 	NSWindow *w;
 	// using the previous point causes weird issues like the mouse seeming to fall behind the window edge... so do this instead
-	// TODO will this make things like the menubar and dock easier too?
 	NSRect initialFrame;
 	NSPoint initialPoint;
 	uiWindowResizeEdge edge;
@@ -113,6 +112,7 @@ static void onResizeDrag(struct onResizeDragParams *p, NSEvent *e)
 {
 	NSPoint new;
 	NSRect frame;
+	CGFloat fixedRight, fixedTop;
 
 	new = makeIndependent([e locationInWindow], p->w);
 	frame = p->initialFrame;
@@ -144,17 +144,31 @@ static void onResizeDrag(struct onResizeDragParams *p, NSEvent *e)
 		break;
 	}
 
-	// constrain
-	// TODO should we constrain against anything else as well? minMaxAutoLayoutSizes() already gives us nonnegative sizes, but...
+	// Constrain the frame while keeping the edge opposite the dragged edge fixed.
+	fixedRight = NSMaxX(p->initialFrame);
+	fixedTop = NSMaxY(p->initialFrame);
 	if (frame.size.width < p->min.width)
 		frame.size.width = p->min.width;
 	if (frame.size.height < p->min.height)
 		frame.size.height = p->min.height;
-	// TODO > or >= ?
 	if (frame.size.width > p->max.width)
 		frame.size.width = p->max.width;
 	if (frame.size.height > p->max.height)
 		frame.size.height = p->max.height;
+	switch (p->edge) {
+	case uiWindowResizeEdgeLeft:
+	case uiWindowResizeEdgeTopLeft:
+	case uiWindowResizeEdgeBottomLeft:
+		frame.origin.x = fixedRight - frame.size.width;
+		break;
+	}
+	switch (p->edge) {
+	case uiWindowResizeEdgeBottom:
+	case uiWindowResizeEdgeBottomLeft:
+	case uiWindowResizeEdgeBottomRight:
+		frame.origin.y = fixedTop - frame.size.height;
+		break;
+	}
 
 	[p->w setFrame:frame display:YES];			// and do reflect the new frame immediately
 }
