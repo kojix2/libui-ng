@@ -166,7 +166,6 @@
 struct uiDrawTextLayout {
 	uiprivTextFrame *frame;
 	uiprivTextFrame *forLines;
-	BOOL empty;
 
 	// for converting CFAttributedString indices from/to byte offsets
 	size_t *u8tou16;
@@ -182,7 +181,6 @@ uiDrawTextLayout *uiDrawNewTextLayout(uiDrawTextLayoutParams *p)
 	tl = uiprivNew(uiDrawTextLayout);
 	tl->frame = nil;
 	tl->forLines = nil;
-	tl->empty = NO;
 	tl->u8tou16 = NULL;
 	tl->nUTF8 = 0;
 	tl->u16tou8 = NULL;
@@ -196,7 +194,6 @@ uiDrawTextLayout *uiDrawNewTextLayout(uiDrawTextLayoutParams *p)
 		uiAttributedString *space;
 		uiDrawTextLayoutParams p2;
 
-		tl->empty = YES;
 		space = uiNewAttributedString(" ");
 		p2 = *p;
 		p2.String = space;

@@ -166,11 +166,12 @@ static uiForEach featuresHash(const uiOpenTypeFeatures *otf, char a, char b, cha
 
 - (BOOL)isEqual:(id)bb
 {
-	uiprivCombinedFontAttr *b = (uiprivCombinedFontAttr *) bb;
+	uiprivCombinedFontAttr *b;
 	int i;
 
-	if (b == nil)
+	if (![bb isKindOfClass:[uiprivCombinedFontAttr class]])
 		return NO;
+	b = (uiprivCombinedFontAttr *) bb;
 	for (i = 0; i < nc; i++) {
 		if (self->attrs[i] == NULL && b->attrs[i] == NULL)
 			continue;

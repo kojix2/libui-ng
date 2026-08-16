@@ -36,9 +36,16 @@
 	if (self) {
 		self->uiprivT = t;
 		self->uiprivM = m;
-		self->headerViewRef = [self headerView];
+		self->headerViewRef = [[self headerView] retain];
 	}
 	return self;
+}
+
+- (void)dealloc
+{
+	[self->headerViewRef release];
+	self->headerViewRef = nil;
+	[super dealloc];
 }
 
 - (uiTable *)uiTable

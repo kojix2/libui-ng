@@ -215,6 +215,7 @@ struct textColumnCreateParams {
 		}
 
 		[self addConstraints:constraints];
+		[constraints release];
 
 		// take advantage of NSTableCellView-provided accessibility features
 		if (self->tf != nil)
@@ -403,12 +404,14 @@ struct textColumnCreateParams {
 		[self->p setIndeterminate:YES];
 		[self->p startAnimation:self->p];
 	} else if (progress == 100) {
+		[self->p stopAnimation:self->p];
 		[self->p setIndeterminate:NO];
 		[self->p setMaxValue:101];
 		[self->p setDoubleValue:101];
 		[self->p setDoubleValue:100];
 		[self->p setMaxValue:100];
 	} else {
+		[self->p stopAnimation:self->p];
 		[self->p setIndeterminate:NO];
 		[self->p setDoubleValue:(progress + 1)];
 		[self->p setDoubleValue:progress];

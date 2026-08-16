@@ -78,13 +78,9 @@ static fixed1616 fixed1616Divide(fixed1616 a, fixed1616 b)
 static fixed214 fixed1616ToFixed214(fixed1616 f)
 {
 	uint32_t t;
-	uint32_t topbit;
 
 	t = (uint32_t) (f + 0x00000002);
-	topbit = t & 0x80000000;
 	t >>= 2;
-	if (topbit != 0)
-		t |= 0xC000000;
 	return (fixed214) (t & 0xFFFF);
 }
 
