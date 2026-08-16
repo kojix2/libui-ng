@@ -49,7 +49,6 @@
 {
 	CFRange range;
 	CGFloat cgwidth;
-	CFRange unused;
 	CGRect rect;
 
 	self = [super init];
@@ -77,7 +76,7 @@
 			// TODO kCTFramePathWidthAttributeName?
 			NULL,
 			CGSizeMake(cgwidth, CGFLOAT_MAX),
-			&unused);			// not documented as accepting NULL (TODO really?)
+			NULL);
 
 		rect.origin = CGPointZero;
 		CGFloat frameWidth = (p->Width < 0) ? self->size.width : cgwidth;

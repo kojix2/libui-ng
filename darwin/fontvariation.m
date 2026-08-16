@@ -35,7 +35,8 @@
 #define fvarWeight 0x77676874
 #define fvarWidth 0x77647468
 
-// TODO explain why these are signed
+// OpenType 16.16 and 2.14 values are signed; normalized variation
+// coordinates in particular cover the range from -1 to 1.
 typedef int32_t fixed1616;
 typedef int16_t fixed214;
 
@@ -208,8 +209,8 @@ static BOOL extractAxisDictValue(CFDictionaryRef dict, CFStringRef key, fixed161
 	return YES;
 }
 
-// TODO here and elsewhere: make sure all Objective-C classes and possibly also custom method names have uipriv prefixes
-@interface fvarAxis : NSObject {
+// TODO prefix the remaining Objective-C classes and custom selectors throughout the Darwin backend.
+@interface uiprivFvarAxis : NSObject {
 	fixed1616 min;
 	fixed1616 max;
 	fixed1616 def;
@@ -220,7 +221,7 @@ static BOOL extractAxisDictValue(CFDictionaryRef dict, CFStringRef key, fixed161
 - (double)normalize:(double)v;
 @end
 
-@implementation fvarAxis
+@implementation uiprivFvarAxis
 
 - (id)initWithIndex:(CFIndex)i dict:(CFDictionaryRef)dict avarTable:(CFDataRef)table
 {
@@ -276,11 +277,11 @@ NSDictionary *uiprivMakeVariationAxisDict(CFArrayRef axes, CFDataRef avarTable)
 	out = [NSMutableDictionary new];
 	for (i = 0; i < n; i++) {
 		CFNumberRef key;
-		fvarAxis *fa;
+		uiprivFvarAxis *fa;
 
 		axis = (CFDictionaryRef) CFArrayGetValueAtIndex(axes, i);
 		key = (CFNumberRef) CFDictionaryGetValue(axis, kCTFontVariationAxisIdentifierKey);
-		fa = [[fvarAxis alloc] initWithIndex:i dict:axis avarTable:avarTable];
+		fa = [[uiprivFvarAxis alloc] initWithIndex:i dict:axis avarTable:avarTable];
 		if (fa != nil) {
 			[out setObject:fa forKey:((NSNumber *) key)];
 			[fa release];
@@ -295,19 +296,17 @@ NSDictionary *uiprivMakeVariationAxisDict(CFArrayRef axes, CFDataRef avarTable)
 
 static BOOL tryAxis(NSDictionary *axisDict, CFDictionaryRef var, NSNumber *key, double *out)
 {
-	fvarAxis *axis;
+	uiprivFvarAxis *axis;
 	CFNumberRef num;
 
-	axis = (fvarAxis *) [axisDict objectForKey:key];
+	axis = (uiprivFvarAxis *) [axisDict objectForKey:key];
 	if (axis == nil)
 		return NO;
 	num = (CFNumberRef) CFDictionaryGetValue(var, (CFNumberRef) key);
 	if (num == nil)
 		return NO;
-	if (CFNumberGetValue(num, kCFNumberDoubleType, out) == false) {
-		// TODO
+	if (CFNumberGetValue(num, kCFNumberDoubleType, out) == false)
 		return NO;
-	}
 	*out = [axis normalize:*out];
 	return YES;
 }

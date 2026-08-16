@@ -59,7 +59,6 @@ void uiprivUninitUnderlineColors(void)
 }
 
 // TODO opentype features are lost when using uiFontDescriptor, so a handful of fonts in the font panel ("Titling" variants of some fonts and possibly others but those are the examples I know about) cannot be represented by uiFontDescriptor; what *can* we do about this since this info is NOT part of the font on other platforms?
-// TODO see if we could use NSAttributedString?
 // TODO consider renaming this struct and the fep variable(s)
 // TODO restructure all this so the important details at the top are below with the combined font attributes type?
 // TODO in fact I should just write something to explain everything in this file...
@@ -70,9 +69,8 @@ struct foreachParams {
 
 // unlike the other systems, Core Text rolls family, size, weight, italic, width, AND opentype features into the "font" attribute
 // instead of incrementally adjusting CTFontRefs (which, judging from NSFontManager, seems finicky and UI-centric), we use a custom class to incrementally store attributes that go into a CTFontRef, and then convert everything to CTFonts en masse later
-// https://developer.apple.com/library/content/documentation/Cocoa/Conceptual/AttributedStrings/Tasks/ChangingAttrStrings.html#//apple_ref/doc/uid/20000162-BBCBGCDG says we must have -hash and -isEqual: workign properly for this to work, so we must do that too, using a basic xor-based hash and leveraging Cocoa -hash implementations where useful and feasible (if not necessary)
+// CFAttributedString and NSAttributedString are toll-free bridged and can carry custom attribute values. This class provides stable copying, hashing, and equality semantics for those values.
 // TODO structure and rewrite this part
-// TODO re-find sources proving support of custom attributes
 static const CFStringRef combinedFontAttrName = CFSTR("libuiCombinedFontAttribute");
 
 enum {
@@ -113,7 +111,7 @@ static uiForEach featuresHash(const uiOpenTypeFeatures *otf, char a, char b, cha
 	BOOL hasHash;
 	NSUInteger hash;
 }
-- (void)addAttribute:(uiAttribute *)attr;
+- (void)addAttribute:(const uiAttribute *)attr;
 - (CTFontRef)toCTFontWithDefaultFont:(uiFontDescriptor *)defaultFont;
 @end
 
@@ -155,14 +153,14 @@ static uiForEach featuresHash(const uiOpenTypeFeatures *otf, char a, char b, cha
 	return ret;
 }
 
-- (void)addAttribute:(uiAttribute *)attr
+- (void)addAttribute:(const uiAttribute *)attr
 {
 	int index;
 
 	index = toc[uiAttributeGetType(attr)];
 	if (self->attrs[index] != NULL)
 		uiprivAttributeRelease(self->attrs[index]);
-	self->attrs[index] = uiprivAttributeRetain(attr);
+	self->attrs[index] = uiprivAttributeRetain((uiAttribute *) attr);
 	self->hasHash = NO;
 }
 
@@ -195,7 +193,7 @@ static uiForEach featuresHash(const uiOpenTypeFeatures *otf, char a, char b, cha
 		self->hash = 0;
 		if (self->attrs[cFamily] != NULL) {
 			family = [NSString stringWithUTF8String:uiAttributeFamily(self->attrs[cFamily])];
-			// TODO make sure this aligns with case-insensitive compares when those are done in common/attribute.c
+			// uiprivAttributeEqual() compares font families case-insensitively.
 			self->hash ^= [[family uppercaseString] hash];
 		}
 		if (self->attrs[cSize] != NULL) {
@@ -226,7 +224,7 @@ static uiForEach featuresHash(const uiOpenTypeFeatures *otf, char a, char b, cha
 
 	uidesc = *defaultFont;
 	if (self->attrs[cFamily] != NULL)
-		// TODO const-correct uiFontDescriptor or change this function below
+		// uiFontDescriptor predates const-correctness; the string is not modified.
 		uidesc.Family = (char *) uiAttributeFamily(self->attrs[cFamily]);
 	if (self->attrs[cSize] != NULL)
 		uidesc.Size = uiAttributeSize(self->attrs[cSize]);
@@ -250,7 +248,7 @@ static uiForEach featuresHash(const uiOpenTypeFeatures *otf, char a, char b, cha
 
 @end
 
-static void addFontAttributeToRange(struct foreachParams *p, size_t start, size_t end, uiAttribute *attr)
+static void addFontAttributeToRange(struct foreachParams *p, size_t start, size_t end, const uiAttribute *attr)
 {
 	uiprivCombinedFontAttr *cfa;
 	CFRange range;
@@ -279,12 +277,14 @@ static void addFontAttributeToRange(struct foreachParams *p, size_t start, size_
 
 static CGColorRef mkcolor(double r, double g, double b, double a)
 {
-	CGColorSpaceRef colorspace;
+	static CGColorSpaceRef colorspace = NULL;
+	static dispatch_once_t once;
 	CGColorRef color;
 	CGFloat components[4];
 
-	// TODO we should probably just create this once and recycle it throughout program execution...
-	colorspace = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
+	dispatch_once(&once, ^{
+		colorspace = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
+	});
 	if (colorspace == NULL)
 		return NULL;
 	components[0] = r;
@@ -292,7 +292,6 @@ static CGColorRef mkcolor(double r, double g, double b, double a)
 	components[2] = b;
 	components[3] = a;
 	color = CGColorCreate(colorspace, components);
-	CGColorSpaceRelease(colorspace);
 	return color;
 }
 
@@ -426,8 +425,11 @@ static int applyFontAttributes(CFMutableAttributedStringRef mas, uiFontDescripto
 	// we are best off treating series of identical fonts as single ranges ourselves for parity across platforms, even if OS X does something similar itself
 	range.location = 0;
 	while (range.location < n) {
-		// TODO consider seeing if CFAttributedStringGetAttributeAndLongestEffectiveRange() can make things faster by reducing the number of potential iterations, either here or above
-		cfa = (uiprivCombinedFontAttr *) CFAttributedStringGetAttribute(mas, range.location, combinedFontAttrName, &range);
+		CFRange limit;
+
+		limit.location = 0;
+		limit.length = n;
+		cfa = (uiprivCombinedFontAttr *) CFAttributedStringGetAttributeAndLongestEffectiveRange(mas, range.location, combinedFontAttrName, limit, &range);
 		if (cfa != nil) {
 			font = [cfa toCTFontWithDefaultFont:defaultFont];
 			if (font == NULL)
@@ -463,9 +465,6 @@ static CTParagraphStyleRef mkParagraphStyle(uiDrawTextLayoutParams *p)
 	nSettings++;
 
 	ps = CTParagraphStyleCreate(settings, nSettings);
-	if (ps == NULL) {
-		// TODO
-	}
 	return ps;
 }
 

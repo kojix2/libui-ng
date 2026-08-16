@@ -3,8 +3,8 @@
 #import "attrstr.h"
 
 // TODOs:
-// - switching from Skia to a non-fvar-based font crashes because the CTFontDescriptorRef we get has an empty variation dictionary for some reason...
-// - Futura causes the Courier New in the drawtext example to be bold for some reason...
+// - switching from Skia to a non-fvar-based font crashes because the CTFontDescriptorRef we get has an empty variation dictionary for some reason
+// - Futura causes the Courier New in the drawtext example to be bold for some reason
 
 // Core Text exposes font style info in two forms:
 // - Fonts with a QuickDraw GX font variation (fvar) table, a feature
@@ -388,21 +388,18 @@ static CTFontDescriptorRef matchStyle(CTFontDescriptorRef against, uiFontDescrip
 		closeness[i].weight = fields.Weight - styles->Weight;
 		closeness[i].italic = italicClosenesses[styles->Italic][fields.Italic];
 		closeness[i].stretch = fields.Stretch - styles->Stretch;
+		{
+			double weight, italic, stretch;
+
+			weight = (double) (closeness[i].weight);
+			weight *= weight;
+			italic = closeness[i].italic;
+			italic *= italic;
+			stretch = (double) (closeness[i].stretch);
+			stretch *= stretch;
+			closeness[i].distance = sqrt(weight + italic + stretch);
+		}
 		[d release];
-	}
-
-	// now figure out the 3-space difference between the three and sort by that
-	// TODO merge this loop with the previous loop?
-	for (i = 0; i < n; i++) {
-		double weight, italic, stretch;
-
-		weight = (double) (closeness[i].weight);
-		weight *= weight;
-		italic = closeness[i].italic;
-		italic *= italic;
-		stretch = (double) (closeness[i].stretch);
-		stretch *= stretch;
-		closeness[i].distance = sqrt(weight + italic + stretch);
 	}
 	qsort_b(closeness, n, sizeof (struct closeness), ^(const void *aa, const void *bb) {
 		const struct closeness *a = (const struct closeness *) aa;
@@ -517,10 +514,9 @@ void uiprivFontDescriptorFromCTFontDescriptor(CTFontDescriptorRef ctdesc, uiFont
 	NSDictionary *axisDict;
 
 	cffamily = (CFStringRef) CTFontDescriptorCopyAttribute(ctdesc, kCTFontFamilyNameAttribute);
-	if (cffamily == NULL) {
-		// TODO
-	}
-	// TODO normalize this by adding a uiDarwinCFStringToText()
+	if (cffamily == NULL)
+		uiprivImplBug("Core Text returned a font descriptor without a family name");
+	// CFString and NSString are toll-free bridged.
 	uidesc->Family = uiDarwinNSStringToText((NSString *) cffamily);
 	CFRelease(cffamily);
 
