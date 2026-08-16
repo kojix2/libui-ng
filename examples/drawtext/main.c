@@ -111,8 +111,7 @@ static void handlerDraw(uiAreaHandler *a, uiArea *area, uiAreaDrawParams *p)
 	uiDrawText(p->Context, textLayout, 0, 0);
 	uiDrawFreeTextLayout(textLayout);
 
-	//TODO RENAME?
-	uiFreeFontButtonFont(&defaultFont);
+	uiFreeFontDescriptor(&defaultFont);
 }
 
 static void handlerMouseEvent(uiAreaHandler *a, uiArea *area, uiAreaMouseEvent *e)
@@ -207,7 +206,7 @@ int main(void)
 
 	form = uiNewForm();
 	uiFormSetPadded(form, 1);
-	// TODO on OS X if this is set to 1 then the window can't resize; does the form not have the concept of stretchy trailing space?
+	// the form has no stretchy rows, so keep it non-stretchy in the box
 	uiBoxAppend(vbox, uiControl(form), 0);
 
 	alignment = uiNewCombobox();

@@ -175,7 +175,7 @@ static void handlerDraw(uiAreaHandler *a, uiArea *area, uiAreaDrawParams *p)
 
 static int inPoint(double x, double y, double xtest, double ytest)
 {
-	// TODO switch to using a matrix
+	// transform from area coordinates to graph coordinates
 	x -= xoffLeft;
 	y -= yoffTop;
 	return (x >= xtest - pointRadius) &&
@@ -199,8 +199,10 @@ static void handlerMouseEvent(uiAreaHandler *a, uiArea *area, uiAreaMouseEvent *
 	if (i == 10)		// not in a point
 		i = -1;
 
+	if (currentPoint == i)
+		return;
 	currentPoint = i;
-	// TODO only redraw the relevant area
+	// uiArea currently only supports queueing a redraw of the whole area
 	uiAreaQueueRedrawAll(histogram);
 }
 
@@ -288,7 +290,6 @@ int main(void)
 	}
 
 	colorButton = uiNewColorButton();
-	// TODO inline these
 	setSolidBrush(&brush, colorDodgerBlue, 1.0);
 	uiColorButtonSetColor(colorButton,
 		brush.R,
