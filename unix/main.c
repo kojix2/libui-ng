@@ -95,7 +95,9 @@ static gboolean quit(gpointer data)
 {
 	if (iteration == stepsIteration)
 		stepsQuit = TRUE;
-		// TODO run a gtk_main() here just to do the cleanup steps of syncing the clipboard and other stuff gtk_main() does before it returns
+		// TODO uiMainSteps() bypasses the shutdown housekeeping performed by
+		// gtk_main(), including clipboard persistence. Avoid entering a nested
+		// gtk_main() here because it may dispatch application callbacks reentrantly.
 	else
 		gtk_main_quit();
 	return FALSE;

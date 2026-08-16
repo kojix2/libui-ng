@@ -71,6 +71,7 @@ int main(void)
 		{ tabRunUnitTests },
 		{ entryRunUnitTests },
 		{ progressBarRunUnitTests },
+		{ dateTimePickerRunUnitTests },
 		{ drawMatrixRunUnitTests },
 		{ attrstrRunUnitTests },
 	};

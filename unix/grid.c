@@ -3,11 +3,6 @@
 
 struct gridChild {
 	uiControl *c;
-	GtkWidget *label;
-	gboolean oldhexpand;
-	GtkAlign oldhalign;
-	gboolean oldvexpand;
-	GtkAlign oldvalign;
 };
 
 struct uiGrid {
@@ -69,10 +64,6 @@ static GtkWidget *prepare(struct gridChild *gc, uiControl *c, int hexpand, uiAli
 
 	gc->c = c;
 	widget = GTK_WIDGET(uiControlHandle(gc->c));
-	gc->oldhexpand = gtk_widget_get_hexpand(widget);
-	gc->oldhalign = gtk_widget_get_halign(widget);
-	gc->oldvexpand = gtk_widget_get_vexpand(widget);
-	gc->oldvalign = gtk_widget_get_valign(widget);
 	gtk_widget_set_hexpand(widget, hexpand != 0);
 	gtk_widget_set_halign(widget, gtkAligns[halign]);
 	gtk_widget_set_vexpand(widget, vexpand != 0);

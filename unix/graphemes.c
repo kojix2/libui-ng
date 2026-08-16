@@ -14,12 +14,11 @@ uiprivGraphemes *uiprivNewGraphemes(void *s, size_t len)
 	size_t lenchars;
 	PangoLogAttr *logattrs;
 	size_t i;
-	size_t *op;
-	char *p;
+	size_t gpos;
+	char *p, *next;
 
 	g = uiprivNew(uiprivGraphemes);
 
-	// TODO see if we can use the utf routines
 	lenchars = g_utf8_strlen(text, -1);
 	logattrs = (PangoLogAttr *) uiprivAlloc((lenchars + 1) * sizeof (PangoLogAttr), "PangoLogAttr[] (graphemes)");
 	pango_get_log_attrs(text, len,
@@ -35,31 +34,19 @@ uiprivGraphemes *uiprivNewGraphemes(void *s, size_t len)
 	g->pointsToGraphemes = (size_t *) uiprivAlloc((len + 1) * sizeof (size_t), "size_t[] (graphemes)");
 	g->graphemesToPoints = (size_t *) uiprivAlloc((g->len + 1) * sizeof (size_t), "size_t[] (graphemes)");
 
-	// compute the graphemesToPoints array
-	// TODO merge with the next for loop somehow?
-	op = g->graphemesToPoints;
+	// compute both index conversion arrays in a single pass
+	gpos = 0;
 	p = text;
 	for (i = 0; i < lenchars; i++) {
+		next = g_utf8_next_char(p);
 		if (logattrs[i].is_cursor_position != 0)
-			*op++ = p - text;
-		p = g_utf8_next_char(p);
+			g->graphemesToPoints[gpos++] = p - text;
+		for (; p < next; p++)
+			g->pointsToGraphemes[p - text] = gpos - 1;
 	}
-	// and do the last one
-	*op++ = len;
-
-	// and finally build the pointsToGraphemes array
-	op = g->pointsToGraphemes;
-	for (i = 0; i < g->len; i++) {
-		size_t j;
-		size_t first, last;
-
-		first = g->graphemesToPoints[i];
-		last = g->graphemesToPoints[i + 1];
-		for (j = first; j < last; j++)
-			*op++ = i;
-	}
-	// and do the last one
-	*op++ = i;
+	// and set the entries for the end of the string
+	g->graphemesToPoints[gpos] = len;
+	g->pointsToGraphemes[len] = gpos;
 
 	uiprivFree(logattrs);
 	return g;

@@ -45,7 +45,7 @@ void uiProgressBarSetValue(uiProgressBar *p, int value)
 	if (value == -1) {
 		if (!p->indeterminate) {
 			p->indeterminate = TRUE;
-			// TODO verify the timeout
+			// Pulse at 10 Hz, matching indeterminate progress cells in uiTable.
 			p->pulser = g_timeout_add(100, pulse, p);
 		}
 		return;

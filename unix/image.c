@@ -109,7 +109,10 @@ struct matcher {
 	gboolean foundLarger;
 };
 
-// TODO is this the right algorithm?
+// Prefer the closest representation that is at least as large as the target,
+// avoiding upscaling. If none is large enough, use the closest smaller one.
+// Representations must have the same aspect ratio, so comparing the distance
+// in both dimensions independently is sufficient.
 static void match(gpointer surface, gpointer data)
 {
 	cairo_surface_t *cs = (cairo_surface_t *) surface;
@@ -135,11 +138,10 @@ static void match(gpointer surface, gpointer data)
 	if (x2 < m->distX && y2 < m->distY)
 		goto writeMatch;
 
-	// TODO weight one dimension? threshhold?
 	return;
 
 writeMatch:
-	// must set this here too; otherwise the first image will never have ths set
+	// must set this here too; otherwise the first image will never have this set
 	if (x >= m->targetX && y >= m->targetY && !m->foundLarger)
 		m->foundLarger = TRUE;
 	m->best = cs;

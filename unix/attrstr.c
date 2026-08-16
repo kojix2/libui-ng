@@ -30,7 +30,7 @@ static uiForEach processAttribute(const uiAttributedString *s, const uiAttribute
 {
 	struct foreachParams *p = (struct foreachParams *) data;
 	double r, g, b, a;
-	PangoUnderline underline;
+	PangoUnderline underline = PANGO_UNDERLINE_NONE;
 	uiUnderlineColor colorType;
 	const uiOpenTypeFeatures *features;
 	GString *featurestr;
@@ -45,7 +45,6 @@ static uiForEach processAttribute(const uiAttributedString *s, const uiAttribute
 			pango_attr_size_new(cairoToPango(uiAttributeSize(attr))));
 		break;
 	case uiAttributeTypeWeight:
-		// TODO reverse the misalignment from drawtext.c if it is corrected 
 		addattr(p, start, end,
 			pango_attr_weight_new(uiprivWeightToPangoWeight(uiAttributeWeight(attr))));
 		break;
@@ -69,7 +68,6 @@ static uiForEach processAttribute(const uiAttributedString *s, const uiAttribute
 				pangoAlpha(a)));
 		break;
 	case uiAttributeTypeBackground:
-		// TODO make sure this works properly with line paragraph spacings (after figuring out what that means, of course)
 		uiAttributeColor(attr, &r, &g, &b, &a);
 		addattr(p, start, end,
 			pango_attr_background_new(
@@ -109,17 +107,18 @@ static uiForEach processAttribute(const uiAttributedString *s, const uiAttribute
 					(guint16) (b * G_MAXUINT16)));
 			break;
 		case uiUnderlineColorSpelling:
-			// TODO GtkTextView style property error-underline-color
+			// This layout has no GtkTextView style context from which to
+			// obtain the theme's error underline color, so use red.
 			addattr(p, start, end,
 				pango_attr_underline_color_new(G_MAXUINT16, 0, 0));
 			break;
 		case uiUnderlineColorGrammar:
-			// TODO find a more appropriate color
+			// GTK defines no standard grammar underline color; use green.
 			addattr(p, start, end,
 				pango_attr_underline_color_new(0, G_MAXUINT16, 0));
 			break;
 		case uiUnderlineColorAuxiliary:
-			// TODO find a more appropriate color
+			// GTK defines no standard auxiliary underline color; use blue.
 			addattr(p, start, end,
 				pango_attr_underline_color_new(0, 0, G_MAXUINT16));
 			break;
@@ -135,9 +134,6 @@ static uiForEach processAttribute(const uiAttributedString *s, const uiAttribute
 			uiprivFUTURE_pango_attr_font_features_new(featurestr->str));
 		g_string_free(featurestr, TRUE);
 		break;
-	default:
-		// TODO complain
-		;
 	}
 	return uiForEachContinue;
 }

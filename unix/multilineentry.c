@@ -1,8 +1,6 @@
 // 6 december 2015
 #include "uipriv_unix.h"
 
-// TODO GTK_WRAP_WORD_CHAR to avoid spurious resizes?
-
 struct uiMultilineEntry {
 	uiUnixControl c;
 	GtkWidget *widget;
@@ -113,7 +111,7 @@ static uiMultilineEntry *finishMultilineEntry(GtkPolicyType hpolicy, GtkWrapMode
 
 uiMultilineEntry *uiNewMultilineEntry(void)
 {
-	return finishMultilineEntry(GTK_POLICY_NEVER, GTK_WRAP_WORD);
+	return finishMultilineEntry(GTK_POLICY_NEVER, GTK_WRAP_WORD_CHAR);
 }
 
 uiMultilineEntry *uiNewNonWrappingMultilineEntry(void)

@@ -10,7 +10,6 @@ struct uiWindow {
 
 	GtkWidget *vboxWidget;
 	GtkContainer *vboxContainer;
-	GtkBox *vbox;
 
 	GtkWidget *childHolderWidget;
 	GtkContainer *childHolderContainer;
@@ -243,12 +242,9 @@ int uiWindowFullscreen(uiWindow *w)
 	return w->fullscreen;
 }
 
-// TODO does this send an extra size changed?
-// TODO what behavior do we want?
 void uiWindowSetFullscreen(uiWindow *w, int fullscreen)
 {
-	w->fullscreen = fullscreen;
-	if (w->fullscreen)
+	if (fullscreen)
 		gtk_window_fullscreen(w->window);
 	else
 		gtk_window_unfullscreen(w->window);
@@ -287,7 +283,6 @@ void uiWindowSetBorderless(uiWindow *w, int borderless)
 	gtk_window_set_decorated(w->window, borderless == 0);
 }
 
-// TODO save and restore expands and aligns
 void uiWindowSetChild(uiWindow *w, uiControl *child)
 {
 	if (w->child != NULL) {
@@ -354,7 +349,6 @@ uiWindow *uiNewWindow(const char *title, int width, int height, int hasMenubar)
 
 	w->vboxWidget = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
 	w->vboxContainer = GTK_CONTAINER(w->vboxWidget);
-	w->vbox = GTK_BOX(w->vboxWidget);
 
 	// set the vbox as the GtkWindow child
 	gtk_container_add(w->container, w->vboxWidget);
@@ -391,10 +385,6 @@ uiWindow *uiNewWindow(const char *title, int width, int height, int hasMenubar)
 	uiWindowOnContentSizeChanged(w, defaultOnPositionContentSizeChanged, NULL);
 	uiWindowOnFocusChanged(w, defaultOnFocusChanged, NULL);
 	uiWindowOnPositionChanged(w, defaultOnPositionContentSizeChanged, NULL);
-
-	// normally it's SetParent() that does this, but we can't call SetParent() on a uiWindow
-	// TODO we really need to clean this up, especially since see uiWindowDestroy() above
-	g_object_ref(w->widget);
 
 	return w;
 }

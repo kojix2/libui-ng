@@ -12,11 +12,6 @@ static void uiTableModel_init(uiTableModel *m)
 	m->tables = g_ptr_array_new();
 }
 
-static void uiTableModel_dispose(GObject *obj)
-{
-	G_OBJECT_CLASS(uiTableModel_parent_class)->dispose(obj);
-}
-
 static void uiTableModel_finalize(GObject *obj)
 {
 	uiTableModel *m = uiTableModel(obj);
@@ -210,7 +205,6 @@ gboolean uiTableModel_iter_parent(GtkTreeModel *mm, GtkTreeIter *iter, GtkTreeIt
 
 static void uiTableModel_class_init(uiTableModelClass *class)
 {
-	G_OBJECT_CLASS(class)->dispose = uiTableModel_dispose;
 	G_OBJECT_CLASS(class)->finalize = uiTableModel_finalize;
 }
 

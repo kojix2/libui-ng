@@ -300,7 +300,6 @@ static void addBackgroundAttribute(struct foreachParams *p, size_t start, size_t
 {
 	uiprivDrawTextBackgroundParams *dtb;
 
-	// TODO make sure this works properly with line paragraph spacings (after figuring out what that means, of course)
 	if (uiprivFUTURE_kCTBackgroundColorAttributeName != NULL) {
 		CGColorRef color;
 		CFRange range;

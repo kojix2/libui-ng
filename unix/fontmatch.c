@@ -20,11 +20,9 @@ static const PangoStretch pangoStretches[] = {
 	[uiTextStretchUltraExpanded] = PANGO_STRETCH_ULTRA_EXPANDED,
 };
 
-// for the most part, pango weights correlate to ours
-// the differences:
-// - Book — libui: 350, Pango: 380
-// - Ultra Heavy — libui: 950, Pango: 1000
-// TODO figure out what to do about this misalignment
+// Pango's named Book and Ultra Heavy weights differ from ours (380 vs. 350
+// and 1000 vs. 950, respectively). Both APIs also accept intermediate numeric
+// weights, so preserve the numeric value instead of remapping named constants.
 PangoWeight uiprivWeightToPangoWeight(uiTextWeight w)
 {
 	return (PangoWeight) w;
@@ -61,7 +59,6 @@ void uiprivFontDescriptorFromPangoFontDescription(PangoFontDescription *pdesc, u
 
 	uidesc->Family = uiUnixStrdupText(pango_font_description_get_family(pdesc));
 	pitalic = pango_font_description_get_style(pdesc);
-	// TODO reverse the above misalignment if it is corrected
 	uidesc->Weight = pango_font_description_get_weight(pdesc);
 	pstretch = pango_font_description_get_stretch(pdesc);
 	// absolute size does not matter because, as above, 1 device unit == 1 cairo point

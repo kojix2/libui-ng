@@ -26,6 +26,7 @@ int tabRunUnitTests(void);
 int entryRunUnitTests(void);
 int menuRunUnitTests(void);
 int progressBarRunUnitTests(void);
+int dateTimePickerRunUnitTests(void);
 int drawMatrixRunUnitTests(void);
 int attrstrRunUnitTests(void);
 

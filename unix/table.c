@@ -50,14 +50,10 @@ static void applyColor(GtkTreeModel *m, GtkTreeIter *iter, int modelColumn, GtkC
 
 static void setEditable(uiTableModel *m, GtkTreeIter *iter, int modelColumn, GtkCellRenderer *r, const char *prop)
 {
-	GtkTreePath *path;
 	int row;
 	gboolean editable;
 
-	// TODO avoid the need for this
-	path = gtk_tree_model_get_path(GTK_TREE_MODEL(m), iter);
-	row = gtk_tree_path_get_indices(path)[0];
-	gtk_tree_path_free(path);
+	row = GPOINTER_TO_INT(iter->user_data);
 	editable = uiprivTableModelCellEditable(m, row, modelColumn) != 0;
 	g_object_set(r, prop, editable, NULL);
 }
@@ -84,7 +80,6 @@ static void onEdited(uiTableModel *m, int column, const char *pathstr, const uiT
 
 struct textColumnParams {
 	uiTable *t;
-	uiTableModel *m;
 	int modelColumn;
 	int editableColumn;
 	uiTableTextColumnOptionalParams params;
@@ -101,7 +96,7 @@ static void textColumnDataFunc(GtkTreeViewColumn *c, GtkCellRenderer *r, GtkTree
 	g_object_set(r, "text", str, NULL);
 	g_value_unset(&value);
 
-	setEditable(p->m, iter, p->editableColumn, r, "editable");
+	setEditable(p->t->model, iter, p->editableColumn, r, "editable");
 
 	if (p->params.ColorModelColumn != -1)
 		applyColor(m, iter, p->params.ColorModelColumn,
@@ -117,10 +112,10 @@ static void textColumnEdited(GtkCellRendererText *r, gchar *path, gchar *newText
 	GtkTreeIter iter;
 
 	tvalue = uiNewTableValueString(newText);
-	onEdited(p->m, p->modelColumn, path, tvalue, &iter);
+	onEdited(p->t->model, p->modelColumn, path, tvalue, &iter);
 	uiFreeTableValue(tvalue);
 	// Refresh the renderer because the model callback may not emit a change.
-	textColumnDataFunc(NULL, GTK_CELL_RENDERER(r), GTK_TREE_MODEL(p->m), &iter, data);
+	textColumnDataFunc(NULL, GTK_CELL_RENDERER(r), GTK_TREE_MODEL(p->t->model), &iter, data);
 }
 
 struct imageColumnParams {
@@ -146,7 +141,6 @@ static void imageColumnDataFunc(GtkTreeViewColumn *c, GtkCellRenderer *r, GtkTre
 
 struct checkboxColumnParams {
 	uiTable *t;
-	uiTableModel *m;
 	int modelColumn;
 	int editableColumn;
 };
@@ -162,7 +156,7 @@ static void checkboxColumnDataFunc(GtkTreeViewColumn *c, GtkCellRenderer *r, Gtk
 	g_object_set(r, "active", active, NULL);
 	g_value_unset(&value);
 
-	setEditable(p->m, iter, p->editableColumn, r, "activatable");
+	setEditable(p->t->model, iter, p->editableColumn, r, "activatable");
 
 	applyBackgroundColor(p->t, m, iter, r);
 }
@@ -177,17 +171,17 @@ static void checkboxColumnToggled(GtkCellRendererToggle *r, gchar *pathstr, gpoi
 	GtkTreeIter iter;
 
 	path = gtk_tree_path_new_from_string(pathstr);
-	gtk_tree_model_get_iter(GTK_TREE_MODEL(p->m), &iter, path);
+	gtk_tree_model_get_iter(GTK_TREE_MODEL(p->t->model), &iter, path);
 	gtk_tree_path_free(path);
-	gtk_tree_model_get_value(GTK_TREE_MODEL(p->m), &iter, p->modelColumn, &value);
+	gtk_tree_model_get_value(GTK_TREE_MODEL(p->t->model), &iter, p->modelColumn, &value);
 	v = g_value_get_int(&value);
 	g_value_unset(&value);
 	tvalue = uiNewTableValueInt(!v);
-	onEdited(p->m, p->modelColumn, pathstr, tvalue, NULL);
+	onEdited(p->t->model, p->modelColumn, pathstr, tvalue, NULL);
 	uiFreeTableValue(tvalue);
-	// Refresh the renderer because the model callback may not emit a change.
-	// TODO avoid fetching the model data twice
-	checkboxColumnDataFunc(NULL, GTK_CELL_RENDERER(r), GTK_TREE_MODEL(p->m), &iter, data);
+	// Re-fetch the authoritative value because the model callback may
+	// normalize it without emitting a change.
+	checkboxColumnDataFunc(NULL, GTK_CELL_RENDERER(r), GTK_TREE_MODEL(p->t->model), &iter, data);
 }
 
 struct progressBarColumnParams {
@@ -306,15 +300,11 @@ static void progressBarColumnDataFunc(GtkTreeViewColumn *c, GtkCellRenderer *r, 
 	int pval;
 	struct rowcol *rc;
 	gint *val;
-	GtkTreePath *path;
 
 	gtk_tree_model_get_value(m, iter, p->modelColumn, &value);
 	pval = g_value_get_int(&value);
 	rc = uiprivNew(struct rowcol);
-	// TODO avoid the need for this
-	path = gtk_tree_model_get_path(GTK_TREE_MODEL(m), iter);
-	rc->row = gtk_tree_path_get_indices(path)[0];
-	gtk_tree_path_free(path);
+	rc->row = GPOINTER_TO_INT(iter->user_data);
 	rc->col = p->modelColumn;
 	val = (gint *) g_hash_table_lookup(p->t->indeterminatePositions, rc);
 	if (pval == -1) {
@@ -332,7 +322,6 @@ static void progressBarColumnDataFunc(GtkTreeViewColumn *c, GtkCellRenderer *r, 
 			"pulse", *val,
 			NULL);
 		if (p->t->indeterminateTimer == 0)
-			// TODO verify the timeout
 			p->t->indeterminateTimer = g_timeout_add(100, indeterminatePulse, p->t);
 	} else {
 		if (val != NULL) {
@@ -355,7 +344,6 @@ static void progressBarColumnDataFunc(GtkTreeViewColumn *c, GtkCellRenderer *r, 
 
 struct buttonColumnParams {
 	uiTable *t;
-	uiTableModel *m;
 	int modelColumn;
 	int clickableColumn;
 };
@@ -371,17 +359,16 @@ static void buttonColumnDataFunc(GtkTreeViewColumn *c, GtkCellRenderer *r, GtkTr
 	g_object_set(r, "text", str, NULL);
 	g_value_unset(&value);
 
-	setEditable(p->m, iter, p->clickableColumn, r, "sensitive");
+	setEditable(p->t->model, iter, p->clickableColumn, r, "sensitive");
 
 	applyBackgroundColor(p->t, m, iter, r);
 }
 
-// TODO wrong type here
 static void buttonColumnClicked(GtkCellRenderer *r, gchar *pathstr, gpointer data)
 {
 	struct buttonColumnParams *p = (struct buttonColumnParams *) data;
 
-	onEdited(p->m, p->modelColumn, pathstr, NULL, NULL);
+	onEdited(p->t->model, p->modelColumn, pathstr, NULL, NULL);
 }
 
 uiSortIndicator uiTableHeaderSortIndicator(uiTable *t, int lcol)
@@ -567,7 +554,6 @@ void uiTableSetSelection(uiTable *t, uiTableSelection *sel)
 	if ((mode == uiTableSelectionModeNone && sel->NumRows > 0) ||
 	    (mode == uiTableSelectionModeZeroOrOne && sel->NumRows > 1) ||
 	    (mode == uiTableSelectionModeOne && sel->NumRows > 1)) {
-		// TODO log error
 		return;
 	}
 
@@ -605,8 +591,6 @@ static void addTextColumn(uiTable *t, GtkTreeViewColumn *c, int textModelColumn,
 
 	p = uiprivNew(struct textColumnParams);
 	p->t = t;
-	// TODO get rid of these fields AND rename t->model in favor of t->m
-	p->m = t->model;
 	p->modelColumn = textModelColumn;
 	p->editableColumn = textEditableModelColumn;
 	if (textParams != NULL)
@@ -621,7 +605,6 @@ static void addTextColumn(uiTable *t, GtkTreeViewColumn *c, int textModelColumn,
 	g_ptr_array_add(t->columnParams, p);
 }
 
-// TODO rename modelCOlumn and params everywhere
 void uiTableAppendTextColumn(uiTable *t, const char *name, int textModelColumn, int textEditableModelColumn, uiTableTextColumnOptionalParams *textParams)
 {
 	GtkTreeViewColumn *c;
@@ -669,7 +652,6 @@ static void addCheckboxColumn(uiTable *t, GtkTreeViewColumn *c, int checkboxMode
 
 	p = uiprivNew(struct checkboxColumnParams);
 	p->t = t;
-	p->m = t->model;
 	p->modelColumn = checkboxModelColumn;
 	p->editableColumn = checkboxEditableModelColumn;
 
@@ -707,7 +689,6 @@ void uiTableAppendProgressBarColumn(uiTable *t, const char *name, int progressMo
 
 	p = uiprivNew(struct progressBarColumnParams);
 	p->t = t;
-	// TODO make progress and progressBar consistent everywhere
 	p->modelColumn = progressModelColumn;
 
 	r = gtk_cell_renderer_progress_new();
@@ -726,7 +707,6 @@ void uiTableAppendButtonColumn(uiTable *t, const char *name, int buttonModelColu
 
 	p = uiprivNew(struct buttonColumnParams);
 	p->t = t;
-	p->m = t->model;
 	p->modelColumn = buttonModelColumn;
 	p->clickableColumn = buttonClickableModelColumn;
 

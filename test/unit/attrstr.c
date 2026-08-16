@@ -209,6 +209,7 @@ static void attrstrGraphemeIndexes(void **state)
 	uiAttributedString *s;
 	const char *text = "Ae\314\201\360\237\230\200Z";
 	const size_t indexes[] = { 0, 1, 4, 8, 9 };
+	const size_t graphemes[] = { 0, 1, 1, 1, 2, 2, 2, 2, 3, 4 };
 	size_t i;
 
 	(void) state;
@@ -218,6 +219,8 @@ static void attrstrGraphemeIndexes(void **state)
 		assert_int_equal(uiAttributedStringGraphemeToByteIndex(s, i), indexes[i]);
 		assert_int_equal(uiAttributedStringByteIndexToGrapheme(s, indexes[i]), i);
 	}
+	for (i = 0; i < sizeof(graphemes) / sizeof(graphemes[0]); i++)
+		assert_int_equal(uiAttributedStringByteIndexToGrapheme(s, i), graphemes[i]);
 	uiFreeAttributedString(s);
 }
 

@@ -13,11 +13,23 @@ struct uiEntry {
 
 uiUnixControlAllDefaults(uiEntry)
 
+static void sendChanged(uiEntry *e)
+{
+	(*(e->onChanged))(e, e->onChangedData);
+}
+
 static void onChanged(GtkEditable *editable, gpointer data)
 {
 	uiEntry *e = uiEntry(data);
 
-	(*(e->onChanged))(e, e->onChangedData);
+	sendChanged(e);
+}
+
+static void onSearchChanged(GtkSearchEntry *entry, gpointer data)
+{
+	uiEntry *e = uiEntry(data);
+
+	sendChanged(e);
 }
 
 static void defaultOnChanged(uiEntry *e, void *data)
@@ -60,7 +72,7 @@ void uiEntrySetReadOnly(uiEntry *e, int readonly)
 	gtk_editable_set_editable(e->editable, editable);
 }
 
-static uiEntry *finishNewEntry(GtkWidget *w, const gchar *signal)
+static uiEntry *finishNewEntry(GtkWidget *w)
 {
 	uiEntry *e;
 
@@ -70,15 +82,23 @@ static uiEntry *finishNewEntry(GtkWidget *w, const gchar *signal)
 	e->entry = GTK_ENTRY(e->widget);
 	e->editable = GTK_EDITABLE(e->widget);
 
-	e->onChangedSignal = g_signal_connect(e->widget, signal, G_CALLBACK(onChanged), e);
 	uiEntryOnChanged(e, defaultOnChanged, NULL);
 
 	return e;
 }
 
+static uiEntry *finishNewEditableEntry(GtkWidget *w)
+{
+	uiEntry *e;
+
+	e = finishNewEntry(w);
+	e->onChangedSignal = g_signal_connect(e->editable, "changed", G_CALLBACK(onChanged), e);
+	return e;
+}
+
 uiEntry *uiNewEntry(void)
 {
-	return finishNewEntry(gtk_entry_new(), "changed");
+	return finishNewEditableEntry(gtk_entry_new());
 }
 
 uiEntry *uiNewPasswordEntry(void)
@@ -87,11 +107,14 @@ uiEntry *uiNewPasswordEntry(void)
 
 	e = gtk_entry_new();
 	gtk_entry_set_visibility(GTK_ENTRY(e), FALSE);
-	return finishNewEntry(e, "changed");
+	return finishNewEditableEntry(e);
 }
 
-// TODO make it use a separate function to be type-safe
 uiEntry *uiNewSearchEntry(void)
 {
-	return finishNewEntry(gtk_search_entry_new(), "search-changed");
+	uiEntry *e;
+
+	e = finishNewEntry(gtk_search_entry_new());
+	e->onChangedSignal = g_signal_connect(e->widget, "search-changed", G_CALLBACK(onSearchChanged), e);
+	return e;
 }

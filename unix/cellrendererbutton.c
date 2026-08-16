@@ -1,11 +1,10 @@
 // 28 june 2016
 #include "uipriv_unix.h"
 
-// TODOs
-// - it's a rather tight fit
-// - selected row text color is white (TODO not on 3.22)
-// - accessibility
-// - right side too big? (TODO reverify)
+// TODO:
+// - Verify padding and sizing across supported GTK versions and themes.
+// - Verify selected-row text color on GTK 3.18.
+// - Add accessibility support.
 
 #define cellRendererButtonType (cellRendererButton_get_type())
 #define cellRendererButton(obj) (G_TYPE_CHECK_INSTANCE_CAST((obj), cellRendererButtonType, cellRendererButton))
@@ -29,11 +28,6 @@ static void cellRendererButton_init(cellRendererButton *c)
 	g_object_set(c, "mode", GTK_CELL_RENDERER_MODE_ACTIVATABLE, NULL);
 	// the standard cell renderers all do this
 	gtk_cell_renderer_set_padding(GTK_CELL_RENDERER(c), 2, 2);
-}
-
-static void cellRendererButton_dispose(GObject *obj)
-{
-	G_OBJECT_CLASS(cellRendererButton_parent_class)->dispose(obj);
 }
 
 static void cellRendererButton_finalize(GObject *obj)
@@ -79,13 +73,16 @@ static GtkStyleContext *setButtonStyle(GtkCellRenderer *r, GtkWidget *widget, Gt
 	return context;
 }
 
-void unsetButtonStyle(GtkStyleContext *context)
+static void unsetButtonStyle(GtkStyleContext *context)
 {
 	g_object_unref(context);
 }
 
-// this is based on what GtkCellRendererText in GTK+ 3.22.30 does
-// TODO compare to 3.18.9 (https://gitlab.gnome.org/GNOME/gtk/blob/3.18.9/gtk/gtkcellrenderertext.c)
+// The layout and sizing code below is based on GtkCellRendererText in GTK+ 3.22.30.
+// Button rendering also follows GtkCellRendererToggle.
+// TODO verify both against GTK+ 3.18.9 from the minimum supported 3.18 series:
+// - https://gitlab.gnome.org/GNOME/gtk/-/blob/3.18.9/gtk/gtkcellrenderertext.c
+// - https://gitlab.gnome.org/GNOME/gtk/-/blob/3.18.9/gtk/gtkcellrenderertoggle.c
 static PangoLayout *cellRendererButtonPangoLayout(cellRendererButton *c, GtkWidget *widget)
 {
 	PangoLayout *layout;
@@ -98,8 +95,6 @@ static PangoLayout *cellRendererButtonPangoLayout(cellRendererButton *c, GtkWidg
 	return layout;
 }
 
-// this is based on what GtkCellRendererText in GTK+ 3.22.30 does
-// TODO compare to 3.18.9 (https://gitlab.gnome.org/GNOME/gtk/blob/3.18.9/gtk/gtkcellrenderertext.c)
 static void cellRendererButtonSize(cellRendererButton *c, GtkWidget *widget, PangoLayout *layout, const GdkRectangle *cell_area, gint *xoff, gint *yoff, gint *width, gint *height)
 {
 	PangoRectangle rect;
@@ -132,8 +127,6 @@ static void cellRendererButtonSize(cellRendererButton *c, GtkWidget *widget, Pan
 		*height = rect.height - (2 * ypad);
 }
 
-// this is based on what GtkCellRendererText in GTK+ 3.22.30 does
-// TODO compare to 3.18.9 (https://gitlab.gnome.org/GNOME/gtk/blob/3.18.9/gtk/gtkcellrenderertext.c)
 static void cellRendererButton_get_preferred_width(GtkCellRenderer *r, GtkWidget *widget, gint *minimum, gint *natural)
 {
 	cellRendererButton *c = cellRendererButton(r);
@@ -157,8 +150,6 @@ static void cellRendererButton_get_preferred_width(GtkCellRenderer *r, GtkWidget
 		*natural = out;
 }
 
-// this is based on what GtkCellRendererText in GTK+ 3.22.30 does
-// TODO compare to 3.18.9 (https://gitlab.gnome.org/GNOME/gtk/blob/3.18.9/gtk/gtkcellrenderertext.c)
 static void cellRendererButton_get_preferred_height_for_width(GtkCellRenderer *r, GtkWidget *widget, gint width, gint *minimum, gint *natural)
 {
 	cellRendererButton *c = cellRendererButton(r);
@@ -181,8 +172,6 @@ static void cellRendererButton_get_preferred_height_for_width(GtkCellRenderer *r
 		*natural = out;
 }
 
-// this is based on what GtkCellRendererText in GTK+ 3.22.30 does
-// TODO compare to 3.18.9 (https://gitlab.gnome.org/GNOME/gtk/blob/3.18.9/gtk/gtkcellrenderertext.c)
 static void cellRendererButton_get_preferred_height(GtkCellRenderer *r, GtkWidget *widget, gint *minimum, gint *natural)
 {
 	gint width;
@@ -191,8 +180,6 @@ static void cellRendererButton_get_preferred_height(GtkCellRenderer *r, GtkWidge
 	gtk_cell_renderer_get_preferred_height_for_width(r, widget, width, minimum, natural);
 }
 
-// this is based on what GtkCellRendererText in GTK+ 3.22.30 does
-// TODO compare to 3.18.9 (https://gitlab.gnome.org/GNOME/gtk/blob/3.18.9/gtk/gtkcellrenderertext.c)
 static void cellRendererButton_get_aligned_area(GtkCellRenderer *r, GtkWidget *widget, GtkCellRendererState flags, const GdkRectangle *cell_area, GdkRectangle *aligned_area)
 {
 	cellRendererButton *c = cellRendererButton(r);
@@ -212,7 +199,6 @@ static void cellRendererButton_get_aligned_area(GtkCellRenderer *r, GtkWidget *w
 	g_object_unref(layout);
 }
 
-// this is based on both what GtkCellRendererText on 3.22.30 does and what GtkCellRendererToggle does (TODO verify the latter on 3.18.9)
 static void cellRendererButton_render(GtkCellRenderer *r, cairo_t *cr, GtkWidget *widget, const GdkRectangle *background_area, const GdkRectangle *cell_area, GtkCellRendererState flags)
 {
 	cellRendererButton *c = cellRendererButton(r);
@@ -288,7 +274,6 @@ static void cellRendererButton_get_property(GObject *object, guint prop, GValue 
 
 static void cellRendererButton_class_init(cellRendererButtonClass *class)
 {
-	G_OBJECT_CLASS(class)->dispose = cellRendererButton_dispose;
 	G_OBJECT_CLASS(class)->finalize = cellRendererButton_finalize;
 	G_OBJECT_CLASS(class)->set_property = cellRendererButton_set_property;
 	G_OBJECT_CLASS(class)->get_property = cellRendererButton_get_property;
