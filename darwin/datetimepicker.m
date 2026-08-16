@@ -13,10 +13,12 @@ struct uiDateTimePicker {
 // the primary advantage of the delegate is the ability to reject changes, but libui doesn't support that yet — we should consider that API option as well
 @interface uiprivDatePicker : NSDatePicker<NSDatePickerCellDelegate> {
 	uiDateTimePicker *picker;
+	NSTimer *pendingTimer;
 }
 - (id)initWithElements:(NSDatePickerElementFlags)elements uiDateTimePicker:(uiDateTimePicker *)d;
 - (void)datePickerCell:(NSDatePickerCell *)aDatePickerCell validateProposedDateValue:(NSDate **)proposedDateValue timeInterval:(NSTimeInterval *)proposedTimeInterval;
 - (void)doTimer:(NSTimer *)timer;
+- (void)disconnect;
 @end
 
 @implementation uiprivDatePicker
@@ -42,7 +44,8 @@ struct uiDateTimePicker {
 
 - (void)datePickerCell:(NSDatePickerCell *)cell validateProposedDateValue:(NSDate **)proposedDateValue timeInterval:(NSTimeInterval *)proposedTimeInterval
 {
-	[NSTimer scheduledTimerWithTimeInterval:0
+	[self->pendingTimer invalidate];
+	self->pendingTimer = [NSTimer scheduledTimerWithTimeInterval:0
 		target:self
 		selector:@selector(doTimer:)
 		userInfo:nil
@@ -53,11 +56,22 @@ struct uiDateTimePicker {
 {
 	uiDateTimePicker *d = self->picker;
 
+	self->pendingTimer = nil;
+	if (d == NULL)
+		return;
 	if (d->blockSendOnce) {
 		d->blockSendOnce = NO;
 		return;
 	}
 	(*(d->onChanged))(d, d->onChangedData);
+}
+
+- (void)disconnect
+{
+	[self setDelegate:nil];
+	[self->pendingTimer invalidate];
+	self->pendingTimer = nil;
+	self->picker = NULL;
 }
 
 @end
@@ -68,6 +82,7 @@ static void uiDateTimePickerDestroy(uiControl *c)
 {
 	uiDateTimePicker *d = uiDateTimePicker(c);
 
+	[d->dp disconnect];
 	[d->dp release];
 	uiFreeControl(uiControl(d));
 }
