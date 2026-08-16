@@ -48,9 +48,9 @@ void uiDrawPathNewFigureWithArc(uiDrawPath *p, double xCenter, double yCenter, d
 
 void uiDrawPathLineTo(uiDrawPath *p, double x, double y)
 {
-	// TODO refine this to require being in a path
+	// TODO define and enforce current-figure preconditions consistently across all backends.
 	if (p->ended)
-		uiprivImplBug("attempt to add line to ended path in uiDrawPathLineTo()");
+		uiprivUserBug("You cannot modify a uiDrawPath that has been ended. (path: %p)", p);
 	CGPathAddLineToPoint(p->path, NULL, x, y);
 }
 
@@ -58,9 +58,8 @@ void uiDrawPathArcTo(uiDrawPath *p, double xCenter, double yCenter, double radiu
 {
 	bool cw;
 
-	// TODO likewise
 	if (p->ended)
-		uiprivImplBug("attempt to add arc to ended path in uiDrawPathArcTo()");
+		uiprivUserBug("You cannot modify a uiDrawPath that has been ended. (path: %p)", p);
 	if (sweep > 2 * uiPi)
 		sweep = 2 * uiPi;
 	cw = false;
@@ -75,9 +74,8 @@ void uiDrawPathArcTo(uiDrawPath *p, double xCenter, double yCenter, double radiu
 
 void uiDrawPathBezierTo(uiDrawPath *p, double c1x, double c1y, double c2x, double c2y, double endX, double endY)
 {
-	// TODO likewise
 	if (p->ended)
-		uiprivImplBug("attempt to add bezier to ended path in uiDrawPathBezierTo()");
+		uiprivUserBug("You cannot modify a uiDrawPath that has been ended. (path: %p)", p);
 	CGPathAddCurveToPoint(p->path, NULL,
 		c1x, c1y,
 		c2x, c2y,
@@ -86,9 +84,8 @@ void uiDrawPathBezierTo(uiDrawPath *p, double c1x, double c1y, double c2x, doubl
 
 void uiDrawPathCloseFigure(uiDrawPath *p)
 {
-	// TODO likewise
 	if (p->ended)
-		uiprivImplBug("attempt to close figure of ended path in uiDrawPathCloseFigure()");
+		uiprivUserBug("You cannot modify a uiDrawPath that has been ended. (path: %p)", p);
 	CGPathCloseSubpath(p->path);
 }
 
@@ -154,6 +151,8 @@ void uiDrawStroke(uiDrawContext *c, uiDrawPath *path, uiDrawBrush *b, uiDrawStro
 	case uiDrawLineCapSquare:
 		cap = kCGLineCapSquare;
 		break;
+	default:
+		uiprivUserBug("Unknown line cap %d passed to uiDrawStroke().", p->Cap);
 	}
 	switch (p->Join) {
 	case uiDrawLineJoinMiter:
@@ -165,6 +164,8 @@ void uiDrawStroke(uiDrawContext *c, uiDrawPath *path, uiDrawBrush *b, uiDrawStro
 	case uiDrawLineJoinBevel:
 		join = kCGLineJoinBevel;
 		break;
+	default:
+		uiprivUserBug("Unknown line join %d passed to uiDrawStroke().", p->Join);
 	}
 
 	// create a temporary path identical to the previous one
@@ -204,11 +205,36 @@ void uiDrawStroke(uiDrawContext *c, uiDrawPath *path, uiDrawBrush *b, uiDrawStro
 	CGPathRelease((CGPathRef) (p2.path));
 }
 
+static CGColorSpaceRef sRGBColorSpace(void)
+{
+	static CGColorSpaceRef colorspace = NULL;
+	static dispatch_once_t once;
+
+	dispatch_once(&once, ^{
+		colorspace = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
+	});
+	return colorspace;
+}
+
 // for a solid fill, we can merely have Core Graphics fill directly
 static void fillSolid(CGContextRef ctxt, uiDrawPath *p, uiDrawBrush *b)
 {
-	// TODO this uses DeviceRGB; switch to sRGB
-	CGContextSetRGBFillColor(ctxt, b->R, b->G, b->B, b->A);
+	CGColorRef color;
+	CGFloat components[4];
+	CGColorSpaceRef colorspace;
+
+	colorspace = sRGBColorSpace();
+	if (colorspace == NULL)
+		return;
+	components[0] = b->R;
+	components[1] = b->G;
+	components[2] = b->B;
+	components[3] = b->A;
+	color = CGColorCreate(colorspace, components);
+	if (color == NULL)
+		return;
+	CGContextSetFillColorWithColor(ctxt, color);
+	CGColorRelease(color);
 	switch (p->fillMode) {
 	case uiDrawFillModeWinding:
 		CGContextFillPath(ctxt);
@@ -231,10 +257,9 @@ static void fillGradient(CGContextRef ctxt, uiDrawPath *p, uiDrawBrush *b)
 
 	// gradients need a color space
 	// for consistency with windows, use sRGB
-	colorspace = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
+	colorspace = sRGBColorSpace();
 	if (colorspace == NULL)
 		return;
-	// TODO add NULL check to other uses of CGColorSpace
 
 	// make the gradient
 	colors = uiprivAlloc(b->NumStops * 4 * sizeof (CGFloat), "CGFloat[]");
@@ -249,10 +274,8 @@ static void fillGradient(CGContextRef ctxt, uiDrawPath *p, uiDrawBrush *b)
 	gradient = CGGradientCreateWithColorComponents(colorspace, colors, locations, b->NumStops);
 	uiprivFree(locations);
 	uiprivFree(colors);
-	if (gradient == NULL) {
-		CGColorSpaceRelease(colorspace);
+	if (gradient == NULL)
 		return;
-	}
 
 	// because we're mucking with clipping, we need to save the graphics state and restore it later
 	CGContextSaveGState(ctxt);
@@ -291,13 +314,12 @@ static void fillGradient(CGContextRef ctxt, uiDrawPath *p, uiDrawBrush *b)
 	// and clean up
 	CGContextRestoreGState(ctxt);
 	CGGradientRelease(gradient);
-	CGColorSpaceRelease(colorspace);
 }
 
 void uiDrawFill(uiDrawContext *c, uiDrawPath *path, uiDrawBrush *b)
 {
 	if (!path->ended)
-		uiprivUserBug("You cannot call uiDrawStroke() on a uiDrawPath that has not been ended. (path: %p)", path);
+		uiprivUserBug("You cannot call uiDrawFill() on a uiDrawPath that has not been ended. (path: %p)", path);
 	CGContextAddPath(c->c, (CGPathRef) (path->path));
 	switch (b->Type) {
 	case uiDrawBrushTypeSolid:
@@ -307,9 +329,9 @@ void uiDrawFill(uiDrawContext *c, uiDrawPath *path, uiDrawBrush *b)
 	case uiDrawBrushTypeRadialGradient:
 		fillGradient(c->c, path, b);
 		return;
-//	case uiDrawBrushTypeImage:
-		// TODO
-		return;
+	// TODO implement image brushes after their public data and cross-platform semantics are defined.
+	case uiDrawBrushTypeImage:
+		uiprivUserBug("Image brushes are not implemented.");
 	}
 	uiprivUserBug("Unknown brush type %d passed to uiDrawFill().", b->Type);
 }
@@ -445,7 +467,7 @@ void uiDrawTransform(uiDrawContext *c, uiDrawMatrix *m)
 void uiDrawClip(uiDrawContext *c, uiDrawPath *path)
 {
 	if (!path->ended)
-		uiprivUserBug("You cannot call uiDrawCilp() on a uiDrawPath that has not been ended. (path: %p)", path);
+		uiprivUserBug("You cannot call uiDrawClip() on a uiDrawPath that has not been ended. (path: %p)", path);
 	CGContextAddPath(c->c, (CGPathRef) (path->path));
 	switch (path->fillMode) {
 	case uiDrawFillModeWinding:
@@ -457,7 +479,7 @@ void uiDrawClip(uiDrawContext *c, uiDrawPath *path)
 	}
 }
 
-// TODO figure out what besides transforms these save/restore on all platforms
+// TODO define the drawing state guaranteed to be preserved by Save/Restore across all backends.
 void uiDrawSave(uiDrawContext *c)
 {
 	CGContextSaveGState(c->c);
