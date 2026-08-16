@@ -1,7 +1,6 @@
 # 23 march 2019
 
 libui_sources += [
-	'darwin/aat.m',
 	'darwin/alloc.m',
 	'darwin/area.m',
 	'darwin/areaevents.m',

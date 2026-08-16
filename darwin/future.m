@@ -4,10 +4,6 @@
 // functions and constants FROM THE FUTURE!
 // note: for constants, dlsym() returns the address of the constant itself, as if we had done &constantName
 
-// available in OS X 10.10
-CFStringRef *uiprivFUTURE_kCTFontOpenTypeFeatureTag = NULL;
-CFStringRef *uiprivFUTURE_kCTFontOpenTypeFeatureValue = NULL;
-
 // added in OS X 10.12; we need 10.11
 CFStringRef *uiprivFUTURE_kCTBackgroundColorAttributeName = NULL;
 
@@ -21,8 +17,6 @@ void uiprivLoadFutures(void)
 	if (handle == NULL)
 		return;
 #define GET(var, fn) *((void **) (&var)) = dlsym(handle, #fn)
-	GET(uiprivFUTURE_kCTFontOpenTypeFeatureTag, kCTFontOpenTypeFeatureTag);
-	GET(uiprivFUTURE_kCTFontOpenTypeFeatureValue, kCTFontOpenTypeFeatureValue);
 	GET(uiprivFUTURE_kCTBackgroundColorAttributeName, kCTBackgroundColorAttributeName);
 #undef GET
 	dlclose(handle);
