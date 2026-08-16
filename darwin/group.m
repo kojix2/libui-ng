@@ -136,8 +136,6 @@ void uiGroupSetTitle(uiGroup *g, const char *title)
 
 void uiGroupSetChild(uiGroup *g, uiControl *child)
 {
-	NSView *childView;
-
 	if (g->child != NULL) {
 		removeConstraints(g);
 		uiDarwinControlSetHuggingPriority(uiDarwinControl(g->child), g->oldHorzHuggingPri, NSLayoutConstraintOrientationHorizontal);
@@ -147,7 +145,6 @@ void uiGroupSetChild(uiGroup *g, uiControl *child)
 	}
 	g->child = child;
 	if (g->child != NULL) {
-		childView = (NSView *) uiControlHandle(g->child);
 		uiControlSetParent(g->child, uiControl(g));
 		uiDarwinControlSetSuperview(uiDarwinControl(g->child), [g->box contentView]);
 		uiDarwinControlSyncEnableState(uiDarwinControl(g->child), uiControlEnabledToUser(uiControl(g)));

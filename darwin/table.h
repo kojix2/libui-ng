@@ -2,7 +2,6 @@
 #import "../common/table.h"
 
 // table.m
-// TODO get rid of forward declaration
 @class uiprivTableModel;
 struct uiTableModel {
 	uiTableModelHandler *mh;
@@ -13,7 +12,6 @@ struct uiTable {
 	uiDarwinControl c;
 	NSScrollView *sv;
 	NSTableView *tv;
-	uiprivScrollViewData *d;
 	int backgroundColumn;
 	uiTableModel *m;
 	void (*headerOnClicked)(uiTable *, int, void *);

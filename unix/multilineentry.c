@@ -46,7 +46,6 @@ void uiMultilineEntrySetText(uiMultilineEntry *e, const char *text)
 	g_signal_handler_unblock(e->textbuf, e->onChangedSignal);
 }
 
-// TODO scroll to end?
 void uiMultilineEntryAppend(uiMultilineEntry *e, const char *text)
 {
 	GtkTextIter end;

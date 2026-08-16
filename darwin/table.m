@@ -227,7 +227,6 @@ static void uiTableDestroy(uiControl *c)
 	uiTable *t = uiTable(c);
 
 	[t->m->tables removeObject:t->tv];
-	uiprivScrollViewFreeData(t->sv, t->d);
 	[t->tv release];
 	[t->sv release];
 	uiFreeControl(uiControl(t));
@@ -409,7 +408,7 @@ uiTable *uiNewTable(uiTableParams *p)
 	sp.Bordered = YES;
 	sp.HScroll = YES;
 	sp.VScroll = YES;
-	t->sv = uiprivMkScrollView(&sp, &(t->d));
+	t->sv = uiprivMkScrollView(&sp);
 
 	uiTableSetSelectionMode(t, uiTableSelectionModeZeroOrOne);
 	uiTableHeaderOnClicked(t, defaultHeaderOnClicked, NULL);

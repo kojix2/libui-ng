@@ -117,11 +117,9 @@ struct uiFontButton {
 
 - (void)changeFont:(id)sender
 {
-	NSFontManager *fm;
 	NSFont *old;
 	uiFontButton *b = self->libui_b;
 
-	fm = (NSFontManager *) sender;
 	old = self->libui_font;
 	self->libui_font = [sender convertFont:self->libui_font];
 	// do this even if it returns the same; we don't own anything that isn't from a new or alloc/init

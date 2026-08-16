@@ -29,7 +29,6 @@ struct uiArea {
 	NSView *view;			// either sv or area depending on whether it is scrolling
 	NSScrollView *sv;
 	areaView *area;
-	uiprivScrollViewData *d;
 	uiAreaHandler *ah;
 	BOOL scrolling;
 	NSEvent *dragevent;
@@ -374,8 +373,6 @@ static void uiAreaDestroy(uiControl *c)
 {
 	uiArea *a = uiArea(c);
 
-	if (a->scrolling)
-		uiprivScrollViewFreeData(a->sv, a->d);
 	[a->area release];
 	if (a->scrolling)
 		[a->sv release];
@@ -498,7 +495,7 @@ uiArea *uiNewScrollingArea(uiAreaHandler *ah, int width, int height)
 	p.Bordered = NO;
 	p.HScroll = YES;
 	p.VScroll = YES;
-	a->sv = uiprivMkScrollView(&p, &(a->d));
+	a->sv = uiprivMkScrollView(&p);
 
 	a->view = a->sv;
 

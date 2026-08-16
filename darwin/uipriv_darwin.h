@@ -136,10 +136,7 @@ struct uiprivScrollViewCreateParams {
 	BOOL HScroll;
 	BOOL VScroll;
 };
-typedef struct uiprivScrollViewData uiprivScrollViewData;
-extern NSScrollView *uiprivMkScrollView(uiprivScrollViewCreateParams *p, uiprivScrollViewData **dout);
-extern void uiprivScrollViewSetScrolling(NSScrollView *sv, uiprivScrollViewData *d, BOOL hscroll, BOOL vscroll);
-extern void uiprivScrollViewFreeData(NSScrollView *sv, uiprivScrollViewData *d);
+extern NSScrollView *uiprivMkScrollView(uiprivScrollViewCreateParams *p);
 
 // label.m
 extern NSTextField *uiprivNewLabel(NSString *str);

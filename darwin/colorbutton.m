@@ -1,8 +1,6 @@
 // 15 may 2016
 #import "uipriv_darwin.h"
 
-// TODO no intrinsic height?
-
 @interface colorButton : NSColorWell {
 	uiColorButton *libui_b;
 	BOOL libui_changing;
@@ -120,10 +118,17 @@ struct uiColorButton {
 	self->libui_setting = NO;
 }
 
-// NSColorWell has no intrinsic size by default; give it the default Interface Builder size.
+// Use the default Interface Builder size on systems where NSColorWell does not provide one.
 - (NSSize)intrinsicContentSize
 {
-	return NSMakeSize(44, 23);
+	NSSize size;
+
+	size = [super intrinsicContentSize];
+	if (size.width == NSViewNoIntrinsicMetric)
+		size.width = 44;
+	if (size.height == NSViewNoIntrinsicMetric)
+		size.height = 23;
+	return size;
 }
 
 @end

@@ -6,19 +6,13 @@ struct uiDateTimePicker {
 	NSDatePicker *dp;
 	void (*onChanged)(uiDateTimePicker *, void *);
 	void *onChangedData;
-	BOOL blockSendOnce;
 };
 
-// TODO see if target-action works here or not; I forgot what cody271@ originally said
-// the primary advantage of the delegate is the ability to reject changes, but libui doesn't support that yet — we should consider that API option as well
-@interface uiprivDatePicker : NSDatePicker<NSDatePickerCellDelegate> {
+@interface uiprivDatePicker : NSDatePicker {
 	uiDateTimePicker *picker;
-	NSTimer *pendingTimer;
 }
 - (id)initWithElements:(NSDatePickerElementFlags)elements uiDateTimePicker:(uiDateTimePicker *)d;
-- (void)datePickerCell:(NSDatePickerCell *)aDatePickerCell validateProposedDateValue:(NSDate **)proposedDateValue timeInterval:(NSTimeInterval *)proposedTimeInterval;
-- (void)doTimer:(NSTimer *)timer;
-- (void)disconnect;
+- (IBAction)onChanged:(id)sender;
 @end
 
 @implementation uiprivDatePicker
@@ -37,43 +31,21 @@ struct uiDateTimePicker {
 		[self setDatePickerElements:elements];
 		[self setDatePickerMode:NSSingleDateMode];
 
-		[self setDelegate:self];
+		[self setTarget:self];
+		[self setAction:@selector(onChanged:)];
 	}
 	return self;
 }
 
-- (void)datePickerCell:(NSDatePickerCell *)cell validateProposedDateValue:(NSDate **)proposedDateValue timeInterval:(NSTimeInterval *)proposedTimeInterval
+- (IBAction)onChanged:(id)sender
 {
-	[self->pendingTimer invalidate];
-	self->pendingTimer = [NSTimer scheduledTimerWithTimeInterval:0
-		target:self
-		selector:@selector(doTimer:)
-		userInfo:nil
-		repeats:NO];
-}
+	uiDateTimePicker *d;
 
-- (void)doTimer:(NSTimer *)timer
-{
-	uiDateTimePicker *d = self->picker;
-
-	self->pendingTimer = nil;
+	d = self->picker;
 	if (d == NULL)
 		return;
-	if (d->blockSendOnce) {
-		d->blockSendOnce = NO;
-		return;
-	}
 	(*(d->onChanged))(d, d->onChangedData);
 }
-
-- (void)disconnect
-{
-	[self setDelegate:nil];
-	[self->pendingTimer invalidate];
-	self->pendingTimer = nil;
-	self->picker = NULL;
-}
-
 @end
 
 uiDarwinControlAllDefaultsExceptDestroy(uiDateTimePicker, dp)
@@ -82,7 +54,6 @@ static void uiDateTimePickerDestroy(uiControl *c)
 {
 	uiDateTimePicker *d = uiDateTimePicker(c);
 
-	[d->dp disconnect];
 	[d->dp release];
 	uiFreeControl(uiControl(d));
 }
@@ -92,7 +63,6 @@ static void defaultOnChanged(uiDateTimePicker *d, void *data)
 	// do nothing
 }
 
-// TODO consider using NSDateComponents iff we ever need the extra accuracy of not using NSTimeInterval
 void uiDateTimePickerTime(uiDateTimePicker *d, struct tm *time)
 {
 	time_t t;
@@ -117,8 +87,6 @@ void uiDateTimePickerSetTime(uiDateTimePicker *d, const struct tm *time)
 	memcpy(&tmbuf, time, sizeof (struct tm));
 	t = mktime(&tmbuf);
 
-	// TODO get rid of the need for this
-	d->blockSendOnce = YES;
 	[d->dp setDateValue:[NSDate dateWithTimeIntervalSince1970:t]];
 }
 

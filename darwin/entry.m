@@ -20,7 +20,6 @@
 
 @end
 
-// TODO does this have one on its own?
 @interface uiprivNSSecureTextField : NSSecureTextField
 @end
 
@@ -37,7 +36,6 @@
 
 @end
 
-// TODO does this have one on its own?
 @interface uiprivNSSearchField : NSSearchField
 @end
 

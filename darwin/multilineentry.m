@@ -14,7 +14,6 @@ struct uiMultilineEntry {
 	uiDarwinControl c;
 	NSScrollView *sv;
 	intrinsicSizeTextView *tv;
-	uiprivScrollViewData *d;
 	void (*onChanged)(uiMultilineEntry *, void *);
 	void *onChangedData;
 	BOOL changing;
@@ -87,7 +86,6 @@ static void uiMultilineEntryDestroy(uiControl *c)
 {
 	uiMultilineEntry *e = uiMultilineEntry(c);
 
-	uiprivScrollViewFreeData(e->sv, e->d);
 	[e->tv release];
 	[e->sv release];
 	uiFreeControl(uiControl(e));
@@ -124,7 +122,6 @@ void uiMultilineEntrySetText(uiMultilineEntry *e, const char *text)
 		uiprivToNSString(text));
 }
 
-// TODO scroll to end?
 void uiMultilineEntryAppend(uiMultilineEntry *e, const char *text)
 {
 	multilineEntryReplaceText(e, NSMakeRange([[e->tv string] length], 0),
@@ -251,7 +248,7 @@ if (@available(macOS 10.14, *)) {
 	p.Bordered = YES;
 	p.HScroll = hscroll;
 	p.VScroll = YES;
-	e->sv = uiprivMkScrollView(&p, &(e->d));
+	e->sv = uiprivMkScrollView(&p);
 
 	uiMultilineEntryOnChanged(e, defaultOnChanged, NULL);
 

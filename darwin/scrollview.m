@@ -2,18 +2,11 @@
 #include "uipriv_darwin.h"
 
 // see http://stackoverflow.com/questions/37979445/how-do-i-properly-set-up-a-scrolling-nstableview-using-auto-layout-what-ive-tr for why we don't use auto layout
-// TODO do the same with uiGroup and uiTab?
 
-struct uiprivScrollViewData {
-	BOOL hscroll;
-	BOOL vscroll;
-};
-
-NSScrollView *uiprivMkScrollView(uiprivScrollViewCreateParams *p, uiprivScrollViewData **dout)
+NSScrollView *uiprivMkScrollView(uiprivScrollViewCreateParams *p)
 {
 	NSScrollView *sv;
 	NSBorderType border;
-	uiprivScrollViewData *d;
 
 	sv = [[NSScrollView alloc] initWithFrame:NSZeroRect];
 	if (p->BackgroundColor != nil)
@@ -39,23 +32,8 @@ NSScrollView *uiprivMkScrollView(uiprivScrollViewCreateParams *p, uiprivScrollVi
 	[sv setAllowsMagnification:NO];
 
 	[sv setDocumentView:p->DocumentView];
-	d = uiprivNew(uiprivScrollViewData);
-	uiprivScrollViewSetScrolling(sv, d, p->HScroll, p->VScroll);
+	[sv setHasHorizontalScroller:p->HScroll];
+	[sv setHasVerticalScroller:p->VScroll];
 
-	*dout = d;
 	return sv;
-}
-
-// based on http://blog.bjhomer.com/2014/08/nsscrollview-and-autolayout.html because (as pointed out there) Apple's official guide is really only for iOS
-void uiprivScrollViewSetScrolling(NSScrollView *sv, uiprivScrollViewData *d, BOOL hscroll, BOOL vscroll)
-{
-	d->hscroll = hscroll;
-	[sv setHasHorizontalScroller:d->hscroll];
-	d->vscroll = vscroll;
-	[sv setHasVerticalScroller:d->vscroll];
-}
-
-void uiprivScrollViewFreeData(NSScrollView *sv, uiprivScrollViewData *d)
-{
-	uiprivFree(d);
 }

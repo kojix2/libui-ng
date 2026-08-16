@@ -1,18 +1,15 @@
 // 15 august 2015
 #import "uipriv_darwin.h"
 
-// TODO need to jiggle on tab change too (second page disabled tab label initially ambiguous)
-
 @interface tabPage : NSObject {
 	uiprivSingleChildConstraints constraints;
 	int margined;
 	NSView *view;		// the NSTabViewItem view itself
-	NSObject *pageID;
 }
 @property uiControl *c;
 @property NSLayoutPriority oldHorzHuggingPri;
 @property NSLayoutPriority oldVertHuggingPri;
-- (id)initWithView:(NSView *)v pageID:(NSObject *)o;
+- (id)initWithView:(NSView *)v;
 - (NSView *)childView;
 - (void)establishChildConstraints;
 - (void)removeChildConstraints;
@@ -33,13 +30,11 @@ struct uiTab {
 
 @implementation tabPage
 
-- (id)initWithView:(NSView *)v pageID:(NSObject *)o
+- (id)initWithView:(NSView *)v
 {
 	self = [super init];
-	if (self != nil) {
+	if (self != nil)
 		self->view = [v retain];
-		self->pageID = [o retain];
-	}
 	return self;
 }
 
@@ -47,7 +42,6 @@ struct uiTab {
 {
 	[self removeChildConstraints];
 	[self->view release];
-	[self->pageID release];
 	[super dealloc];
 }
 
@@ -108,6 +102,7 @@ struct uiTab {
 - (void)tabView:(NSTabView *)tabView didSelectTabViewItem:(NSTabViewItem *)tabViewItem
 {
 	uiTab *t = self->tab;
+	uiprivJiggleViewLayout(tabView);
 	if (!t->suppressOnSelected)
 		(*(t->onSelected))(t, t->onSelectedData);
 }
@@ -248,7 +243,7 @@ void uiTabInsertAt(uiTab *t, const char *name, int n, uiControl *child)
 
 	// the documentation says these can be nil but the headers say these must not be; let's be safe and make them non-nil anyway
 	pageID = [NSObject new];
-	page = [[[tabPage alloc] initWithView:view pageID:pageID] autorelease];
+	page = [[[tabPage alloc] initWithView:view] autorelease];
 	page.c = child;
 
 	// don't hug, just in case we're a stretchy tab

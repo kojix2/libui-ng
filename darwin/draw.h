@@ -1,8 +1,7 @@
 // 6 january 2017
 
-// TODO why do we still have this file; should we just split draw.m or not
-
+// Private drawing state shared by draw.m and drawtext.m.
 struct uiDrawContext {
 	CGContextRef c;
-	CGFloat height;				// needed for text; see below
+	CGFloat height;				// used for text coordinate conversion in drawtext.m
 };

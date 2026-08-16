@@ -1,10 +1,6 @@
 // 14 august 2015
 #import "uipriv_darwin.h"
 
-// TODO make this intrinsic
-#define separatorWidth 96
-#define separatorHeight 96
-
 struct uiSeparator {
 	uiDarwinControl c;
 	NSBox *box;
