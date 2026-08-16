@@ -2,7 +2,7 @@
 #import "uipriv_darwin.h"
 #import "table.h"
 
-// TODO is the initial scroll position still wrong?
+// TODO verify that a newly created table initially shows its first row on all supported macOS versions.
 
 @interface uiprivTableModel : NSObject<NSTableViewDataSource, NSTableViewDelegate> {
 	uiTableModel *m;
@@ -11,7 +11,7 @@
 - (NSIndexSet *)tableView:(NSTableView *)tv selectionIndexesForProposedSelection:(NSIndexSet *)set;
 @end
 
-// TODO we really need to clean up the sharing of the table and model variables...
+// TODO consolidate ownership and access to uiTable and uiTableModel across the AppKit wrapper objects.
 @interface uiprivTableView : NSTableView {
 	uiTable *uiprivT;
 	uiTableModel *uiprivM;
@@ -73,7 +73,7 @@
 	(*(t->onRowDoubleClicked))(t, row, t->onRowDoubleClickedData);
 }
 
-// TODO is this correct for overflow scrolling?
+// TODO verify custom row backgrounds while scrolling through and beyond populated rows.
 static void setBackgroundColor(uiprivTableView *t, NSTableRowView *rv, NSInteger row)
 {
 	NSColor *color;
@@ -87,8 +87,7 @@ static void setBackgroundColor(uiprivTableView *t, NSTableRowView *rv, NSInteger
 		NSArray *colors;
 		NSInteger index;
 
-		// this usage is primarily a guess; hopefully it is correct for the non-two color case... (TODO)
-		// it does seem to be correct for the two-color case, judging from comparing against the value of backgroundColor before changing it (and no, nil does not work; it just sets to white)
+		// AppKit provides the colors in row-alternation order.
 		colors = [NSColor controlAlternatingRowBackgroundColors];
 		index = row % [colors count];
 		color = (NSColor *) [colors objectAtIndex:index];
@@ -355,10 +354,8 @@ void uiTableSetSelection(uiTable *t, uiTableSelection *sel)
 	uiprivValidateTableSelection(t->m, sel);
 	if ((mode == uiTableSelectionModeNone && sel->NumRows > 0) ||
 	    (mode == uiTableSelectionModeZeroOrOne && sel->NumRows > 1) ||
-	    (mode == uiTableSelectionModeOne && sel->NumRows > 1)) {
-		// TODO log error
+	    (mode == uiTableSelectionModeOne && sel->NumRows > 1))
 		return;
-	}
 
 	set = [NSMutableIndexSet new];
 	for (i = 0; i < sel->NumRows; ++i)
@@ -385,7 +382,6 @@ uiTable *uiNewTable(uiTableParams *p)
 	[t->tv reloadData];
 	[t->m->tables addObject:t->tv];
 
-	// TODO is this sufficient?
 	[t->tv setAllowsColumnReordering:NO];
 	[t->tv setAllowsColumnResizing:YES];
 	[t->tv setAllowsColumnSelection:NO];
@@ -401,9 +397,8 @@ uiTable *uiNewTable(uiTableParams *p)
 
 	memset(&sp, 0, sizeof (uiprivScrollViewCreateParams));
 	sp.DocumentView = t->tv;
-	// this is what Interface Builder sets it to
-	// TODO verify
-	sp.BackgroundColor = [NSColor colorWithCalibratedWhite:1.0 alpha:1.0];
+	// Match NSTableView's default background, including system appearance changes.
+	sp.BackgroundColor = [NSColor controlBackgroundColor];
 	sp.DrawsBackground = YES;
 	sp.Bordered = YES;
 	sp.HScroll = YES;
@@ -414,9 +409,7 @@ uiTable *uiNewTable(uiTableParams *p)
 	uiTableHeaderOnClicked(t, defaultHeaderOnClicked, NULL);
 	uiTableOnSelectionChanged(t, defaultOnSelectionChanged, NULL);
 
-	// TODO WHY DOES THIS REMOVE ALL GRAPHICAL GLITCHES?
-	// I got the idea from http://jwilling.com/blog/optimized-nstableview-scrolling/ but that was on an unrelated problem I didn't seem to have (although I have small-ish tables to start with)
-	// I don't get layer-backing... am I supposed to layer-back EVERYTHING manually? I need to check Interface Builder again...
+	// TODO verify whether explicit layer backing is still required; removing it historically caused graphical glitches.
 	[t->sv setWantsLayer:YES];
 
 	return t;
@@ -457,7 +450,7 @@ void uiTableColumnSetWidth(uiTable *t, int column, int width)
 	NSTableColumn *tc = [t->tv tableColumnWithIdentifier:[@(column) stringValue]];
 
 	if (width == -1)
-		//TODO: resize not only to header but also to max content width
+		// TODO include the widest cell content, not only the header, without making large models prohibitively expensive.
 		[tc sizeToFit];
 	else
 		[tc setWidth: width];

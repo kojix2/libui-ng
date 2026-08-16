@@ -89,13 +89,14 @@ struct textColumnCreateParams {
 			self->textParams = p->textParams;
 
 			self->tf = uiprivNewLabel(@"");
-			// TODO set wrap and ellipsize modes?
+			[[self->tf cell] setUsesSingleLineMode:YES];
+			[[self->tf cell] setLineBreakMode:NSLineBreakByTruncatingTail];
 			[self->tf setTarget:self];
 			[self->tf setAction:@selector(uiprivOnTextFieldAction:)];
 			[self->tf setTranslatesAutoresizingMaskIntoConstraints:NO];
 			[self addSubview:self->tf];
 
-			// TODO for all three controls: set hugging and compression resistance properly
+			// TODO verify horizontal hugging and compression priorities for text/image/checkbox combinations.
 			[constraints addObject:uiprivMkConstraint(self, NSLayoutAttributeLeading,
 				NSLayoutRelationEqual,
 				self->tf, NSLayoutAttributeLeading,
@@ -335,21 +336,19 @@ struct textColumnCreateParams {
 @end
 
 @interface uiprivProgressBarTableCellView : uiprivTableCellView {
-	uiTable *t;
 	uiTableModel *m;
 	NSProgressIndicator *p;
 	int modelColumn;
 }
-- (id)initWithFrame:(NSRect)r table:(uiTable *)table model:(uiTableModel *)model modelColumn:(int)mc;
+- (id)initWithFrame:(NSRect)r model:(uiTableModel *)model modelColumn:(int)mc;
 @end
 
 @implementation uiprivProgressBarTableCellView
 
-- (id)initWithFrame:(NSRect)r table:(uiTable *)table model:(uiTableModel *)model modelColumn:(int)mc
+- (id)initWithFrame:(NSRect)r model:(uiTableModel *)model modelColumn:(int)mc
 {
 	self = [super initWithFrame:r];
 	if (self) {
-		self->t = table;
 		self->m = model;
 		self->modelColumn = mc;
 
@@ -360,7 +359,7 @@ struct textColumnCreateParams {
 		[self->p setTranslatesAutoresizingMaskIntoConstraints:NO];
 		[self addSubview:self->p];
 
-		// TODO set hugging and compression resistance properly
+		// TODO verify progress bar hugging and compression priorities while resizing columns.
 		[self addConstraint:uiprivMkConstraint(self, NSLayoutAttributeLeading,
 			NSLayoutRelationEqual,
 			self->p, NSLayoutAttributeLeading,
@@ -419,21 +418,18 @@ struct textColumnCreateParams {
 @end
 
 @interface uiprivProgressBarTableColumn : uiprivTableColumn {
-	uiTable *t;
-	// TODO remove the need for this given t (or make t not require m, one of the two)
 	uiTableModel *m;
 	int modelColumn;
 }
-- (id)initWithIdentifier:(NSString *)ident table:(uiTable *)table model:(uiTableModel *)model modelColumn:(int)mc;
+- (id)initWithIdentifier:(NSString *)ident model:(uiTableModel *)model modelColumn:(int)mc;
 @end
 
 @implementation uiprivProgressBarTableColumn
 
-- (id)initWithIdentifier:(NSString *)ident table:(uiTable *)table model:(uiTableModel *)model modelColumn:(int)mc
+- (id)initWithIdentifier:(NSString *)ident model:(uiTableModel *)model modelColumn:(int)mc
 {
 	self = [super initWithIdentifier:ident];
 	if (self) {
-		self->t = table;
 		self->m = model;
 		self->modelColumn = mc;
 	}
@@ -444,7 +440,7 @@ struct textColumnCreateParams {
 {
 	uiprivTableCellView *cv;
 
-	cv = [[[uiprivProgressBarTableCellView alloc] initWithFrame:NSZeroRect table:self->t model:self->m modelColumn:self->modelColumn] autorelease];
+	cv = [[[uiprivProgressBarTableCellView alloc] initWithFrame:NSZeroRect model:self->m modelColumn:self->modelColumn] autorelease];
 	[cv setIdentifier:[self identifier]];
 	return cv;
 }
@@ -483,7 +479,7 @@ struct textColumnCreateParams {
 		[self->b setTranslatesAutoresizingMaskIntoConstraints:NO];
 		[self addSubview:self->b];
 
-		// TODO set hugging and compression resistance properly
+		// TODO verify button hugging and compression priorities while resizing columns.
 		[self addConstraint:uiprivMkConstraint(self, NSLayoutAttributeLeading,
 			NSLayoutRelationEqual,
 			self->b, NSLayoutAttributeLeading,
@@ -712,7 +708,7 @@ void uiTableAppendProgressBarColumn(uiTable *t, const char *name, int progressMo
 	NSString *ident;
 
 	ident = [@([[t->tv tableColumns] count]) stringValue];
-	col = [[uiprivProgressBarTableColumn alloc] initWithIdentifier:ident table:t model:t->m modelColumn:progressModelColumn];
+	col = [[uiprivProgressBarTableColumn alloc] initWithIdentifier:ident model:t->m modelColumn:progressModelColumn];
 	str = [NSString stringWithUTF8String:name];
 	[col setTitle:str];
 	[t->tv addTableColumn:col];
