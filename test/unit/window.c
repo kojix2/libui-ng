@@ -122,18 +122,21 @@ void onContentSizeChangedNoCall(uiWindow *w, void *data)
 	function_called();
 }
 
-static void onContentSizeChangedIgnored(uiWindow *w, void *data)
+static void onWindowChangedIgnored(uiWindow *w, void *data)
 {
 	// Accept notifications after the setter has returned.
 }
 
-static void windowSetContentSizeNoCallback(void **state)
+static void windowSetContentSizeNoSynchronousCallback(void **state)
 {
 	uiWindow *w = uiWindowFromState(state);
 
 	uiWindowOnContentSizeChanged(w, onContentSizeChangedNoCall, NULL);
 	uiWindowSetContentSize(w, UNIT_TEST_WINDOW_WIDTH + 10, UNIT_TEST_WINDOW_HEIGHT + 10);
 	uiWindowSetContentSize(w, UNIT_TEST_WINDOW_WIDTH + 20, UNIT_TEST_WINDOW_HEIGHT + 20);
+
+	// Accept notifications after the setters have returned.
+	uiWindowOnContentSizeChanged(w, onWindowChangedIgnored, NULL);
 }
 
 static void windowSetConstrainedContentSizeNoSynchronousCallback(void **state)
@@ -152,21 +155,28 @@ static void windowSetConstrainedContentSizeNoSynchronousCallback(void **state)
 	may later report a platform-constrained size when teardown shows the window;
 	that notification is outside the scope of this test.
 	*/
-	uiWindowOnContentSizeChanged(w, onContentSizeChangedIgnored, NULL);
+	uiWindowOnContentSizeChanged(w, onWindowChangedIgnored, NULL);
 }
 
-void onPositionChangedCallback(uiWindow *w, void *data)
+static void onPositionChangedNoCall(uiWindow *w, void *data)
 {
 	function_called();
 }
 
-static void windowSetPositionNoCallback(void **state)
+static void windowSetPositionNoSynchronousCallback(void **state)
 {
 	uiWindow *w = uiWindowFromState(state);
 
-	uiWindowOnPositionChanged(w, onPositionChangedCallback, NULL);
+	uiWindowOnPositionChanged(w, onPositionChangedNoCall, NULL);
 	uiWindowSetPosition(w, 0, 0);
 	uiWindowSetPosition(w, 1, 1);
+
+	/*
+	The setter must not invoke the callback while it runs. AppKit may later
+	constrain the position when teardown shows the window; that notification is
+	outside the scope of this test.
+	*/
+	uiWindowOnPositionChanged(w, onWindowChangedIgnored, NULL);
 }
 
 static int queuedCallbackCalled;
@@ -202,9 +212,9 @@ int windowRunUnitTests(void)
 		windowUnitTest(windowSetPosition),
 		windowUnitTest(windowSetContentSize),
 		windowUnitTest(windowMarginedSetContentSize),
-		windowUnitTest(windowSetContentSizeNoCallback),
+		windowUnitTest(windowSetContentSizeNoSynchronousCallback),
 		windowUnitTest(windowSetConstrainedContentSizeNoSynchronousCallback),
-		windowUnitTest(windowSetPositionNoCallback),
+		windowUnitTest(windowSetPositionNoSynchronousCallback),
 		windowUnitTest(windowSettersDoNotRunEventLoop),
 	};
 
