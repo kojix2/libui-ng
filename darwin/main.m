@@ -113,6 +113,9 @@ uiInitOptions uiprivOptions;
 
 const char *uiInit(uiInitOptions *o)
 {
+	canQuit = NO;
+	stepsIsRunning = NO;
+
 	@autoreleasepool {
 		uiprivOptions = *o;
 		app = [[uiprivApplicationClass sharedApplication] retain];
@@ -163,12 +166,16 @@ void uiUninit(void)
 		uiprivUserBug("You must call uiInit() first!");
 	uiprivUninitTimers();
 	[globalPool release];
+	globalPool = nil;
 
 	@autoreleasepool {
 		uiprivUninitUnderlineColors();
-		[delegate release];
+		uiprivAppDelegate().menuManager = nil;
 		[uiprivNSApp() setDelegate:nil];
+		[delegate release];
+		delegate = nil;
 		[app release];
+		app = nil;
 		uiprivUninitAlloc();
 	}
 }

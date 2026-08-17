@@ -23,19 +23,19 @@ void uiprivUninitAlloc(void)
 	NSMutableString *str;
 	NSValue *v;
 
-	if ([allocations count] == 0) {
-		[allocations release];
-		return;
-	}
-	str = [NSMutableString new];
-	for (v in allocations) {
-		void *ptr;
+	if ([allocations count] != 0) {
+		str = [NSMutableString new];
+		for (v in allocations) {
+			void *ptr;
 
-		ptr = [v pointerValue];
-		[str appendString:[NSString stringWithFormat:@"%p %s\n", ptr, *TYPE(ptr)]];
+			ptr = [v pointerValue];
+			[str appendString:[NSString stringWithFormat:@"%p %s\n", ptr, *TYPE(ptr)]];
+		}
+		uiprivUserBug("Some data was leaked; either you left a uiControl lying around or there's a bug in libui itself. Leaked data:\n%s", [str UTF8String]);
+		[str release];
 	}
-	uiprivUserBug("Some data was leaked; either you left a uiControl lying around or there's a bug in libui itself. Leaked data:\n%s", [str UTF8String]);
-	[str release];
+	[allocations release];
+	allocations = nil;
 }
 
 void *uiprivAlloc(size_t size, const char *type)
