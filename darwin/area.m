@@ -9,6 +9,8 @@
 	NSTrackingArea *libui_ta;
 	NSSize libui_ss;
 	BOOL libui_enabled;
+	BOOL libui_modifierKeyDown[128];
+	BOOL libui_modifierKeyKnown[128];
 }
 - (id)initWithFrame:(NSRect)r area:(uiArea *)a;
 - (uiModifiers)parseModifiers:(NSEvent *)e;
@@ -308,17 +310,31 @@ mouseEvent(otherMouseUp)
 {
 	uiAreaKeyEvent ke;
 	uiModifiers whichmod;
+	unsigned short keycode;
 
 	ke.Key = 0;
 	ke.ExtKey = 0;
 
-	// Mac OS X sends this event on both key up and key down.
-	// Fortunately -[e keyCode] IS valid here, so we can simply map from key code to Modifiers, get the value of [e modifierFlags], and check if the respective bit is set or not — that will give us the up/down state
-	if (!uiprivKeycodeModifier([e keyCode], &whichmod))
+	// macOS sends this event on both key up and key down. Track each
+	// physical modifier key separately because modifierFlags combines the
+	// left and right keys into one flag.
+	keycode = [e keyCode];
+	if (!uiprivKeycodeModifier(keycode, &whichmod))
+		return 0;
+	if (keycode >= sizeof (self->libui_modifierKeyDown) /
+		sizeof (self->libui_modifierKeyDown[0]))
 		return 0;
 	ke.Modifier = whichmod;
 	ke.Modifiers = [self parseModifiers:e];
-	ke.Up = (ke.Modifiers & ke.Modifier) == 0;
+	if (self->libui_modifierKeyKnown[keycode]) {
+		ke.Up = self->libui_modifierKeyDown[keycode];
+		self->libui_modifierKeyDown[keycode] = !ke.Up;
+	} else {
+		// Synchronize keys that changed before this view became first responder.
+		ke.Up = (ke.Modifiers & ke.Modifier) == 0;
+		self->libui_modifierKeyDown[keycode] = !ke.Up;
+		self->libui_modifierKeyKnown[keycode] = YES;
+	}
 	// and then drop the current modifier from Modifiers
 	ke.Modifiers &= ~ke.Modifier;
 	return [self sendKeyEvent:&ke];
@@ -350,6 +366,13 @@ mouseEvent(otherMouseUp)
 - (BOOL)becomeFirstResponder
 {
 	return [self isEnabled];
+}
+
+- (BOOL)resignFirstResponder
+{
+	memset(self->libui_modifierKeyKnown, 0,
+		sizeof (self->libui_modifierKeyKnown));
+	return YES;
 }
 
 - (BOOL)isEnabled
