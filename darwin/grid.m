@@ -1,57 +1,51 @@
 // 11 june 2016
 #import "uipriv_darwin.h"
 
-// TODO the assorted test doesn't work right at all
+#include <limits.h>
+#include <stdint.h>
 
-@interface gridChild : NSView
-@property uiControl *c;
+// NSGridView uses a dense matrix internally. Keep hostile sparse coordinates
+// from turning a small logical grid into an uncontrolled allocation.
+enum {
+	maxGridRows = 10000,
+	maxGridColumns = 10000,
+	maxGridCells = 100000,
+};
+
+@interface gridChild : NSObject
+@property uiControl *control;
 @property int left;
 @property int top;
 @property int xspan;
 @property int yspan;
-@property int hexpand;
+@property BOOL hexpand;
 @property uiAlign halign;
-@property int vexpand;
+@property BOOL vexpand;
 @property uiAlign valign;
-
-@property (strong) NSLayoutConstraint *leadingc;
-@property (strong) NSLayoutConstraint *topc;
-@property (strong) NSLayoutConstraint *trailingc;
-@property (strong) NSLayoutConstraint *bottomc;
-@property (strong) NSLayoutConstraint *xcenterc;
-@property (strong) NSLayoutConstraint *ycenterc;
-
-@property NSLayoutPriority oldHorzHuggingPri;
-@property NSLayoutPriority oldVertHuggingPri;
-- (void)setC:(uiControl *)c grid:(uiGrid *)g;
-- (void)onDestroy;
+@property NSLayoutPriority oldHorizontalHuggingPriority;
+@property NSLayoutPriority oldVerticalHuggingPriority;
 - (NSView *)view;
 @end
 
 @interface gridView : NSView {
-	uiGrid *g;
+	uiGrid *grid;
 	NSMutableArray *children;
-	int padded;
-
-	NSMutableArray *edges;
-	NSMutableArray *inBetweens;
-
-	NSMutableArray *emptyCellViews;
+	NSGridView *nativeGrid;
+	NSMutableArray *nativeGridConstraints;
+	BOOL padded;
+	BOOL horizontalExpansion;
+	BOOL verticalExpansion;
 }
-- (id)initWithG:(uiGrid *)gg;
+- (id)initWithGrid:(uiGrid *)g;
 - (void)onDestroy;
-- (void)removeOurConstraints;
 - (void)syncEnableStates:(int)enabled;
-- (CGFloat)paddingAmount;
-- (void)establishOurConstraints;
-- (void)append:(gridChild *)gc;
-- (void)insert:(gridChild *)gc after:(uiControl *)c at:(uiAt)at;
+- (void)rebuild;
+- (void)append:(gridChild *)child;
+- (void)insert:(gridChild *)child after:(uiControl *)existing at:(uiAt)at;
 - (int)isPadded;
 - (void)setPadded:(int)p;
 - (BOOL)hugsTrailing;
 - (BOOL)hugsBottom;
-- (int)nhexpand;
-- (int)nvexpand;
 @end
 
 struct uiGrid {
@@ -61,624 +55,527 @@ struct uiGrid {
 
 @implementation gridChild
 
-- (void)setC:(uiControl *)c grid:(uiGrid *)g
-{
-	self.c = c;
-	self.oldHorzHuggingPri = uiDarwinControlHuggingPriority(uiDarwinControl(self.c), NSLayoutConstraintOrientationHorizontal);
-	self.oldVertHuggingPri = uiDarwinControlHuggingPriority(uiDarwinControl(self.c), NSLayoutConstraintOrientationVertical);
-
-	uiControlSetParent(self.c, uiControl(g));
-	uiDarwinControlSetSuperview(uiDarwinControl(self.c), self);
-	uiDarwinControlSyncEnableState(uiDarwinControl(self.c), uiControlEnabledToUser(uiControl(g)));
-
-	if (self.halign == uiAlignStart || self.halign == uiAlignFill) {
-		self.leadingc = uiprivMkConstraint(self, NSLayoutAttributeLeading,
-			NSLayoutRelationEqual,
-			[self view], NSLayoutAttributeLeading,
-			1, 0,
-			@"uiGrid child horizontal alignment start constraint");
-		[self addConstraint:self.leadingc];
-	}
-	if (self.halign == uiAlignCenter) {
-		self.xcenterc = uiprivMkConstraint(self, NSLayoutAttributeCenterX,
-			NSLayoutRelationEqual,
-			[self view], NSLayoutAttributeCenterX,
-			1, 0,
-			@"uiGrid child horizontal alignment center constraint");
-		[self addConstraint:self.xcenterc];
-	}
-	if (self.halign == uiAlignEnd || self.halign == uiAlignFill) {
-		self.trailingc = uiprivMkConstraint(self, NSLayoutAttributeTrailing,
-			NSLayoutRelationEqual,
-			[self view], NSLayoutAttributeTrailing,
-			1, 0,
-			@"uiGrid child horizontal alignment end constraint");
-		[self addConstraint:self.trailingc];
-	}
-
-	if (self.valign == uiAlignStart || self.valign == uiAlignFill) {
-		self.topc = uiprivMkConstraint(self, NSLayoutAttributeTop,
-			NSLayoutRelationEqual,
-			[self view], NSLayoutAttributeTop,
-			1, 0,
-			@"uiGrid child vertical alignment start constraint");
-		[self addConstraint:self.topc];
-	}
-	if (self.valign == uiAlignCenter) {
-		self.ycenterc = uiprivMkConstraint(self, NSLayoutAttributeCenterY,
-			NSLayoutRelationEqual,
-			[self view], NSLayoutAttributeCenterY,
-			1, 0,
-			@"uiGrid child vertical alignment center constraint");
-		[self addConstraint:self.ycenterc];
-	}
-	if (self.valign == uiAlignEnd || self.valign == uiAlignFill) {
-		self.bottomc = uiprivMkConstraint(self, NSLayoutAttributeBottom,
-			NSLayoutRelationEqual,
-			[self view], NSLayoutAttributeBottom,
-			1, 0,
-			@"uiGrid child vertical alignment end constraint");
-		[self addConstraint:self.bottomc];
-	}
-}
-
-- (void)onDestroy
-{
-	if (self.leadingc != nil) {
-		[self removeConstraint:self.leadingc];
-		self.leadingc = nil;
-	}
-	if (self.topc != nil) {
-		[self removeConstraint:self.topc];
-		self.topc = nil;
-	}
-	if (self.trailingc != nil) {
-		[self removeConstraint:self.trailingc];
-		self.trailingc = nil;
-	}
-	if (self.bottomc != nil) {
-		[self removeConstraint:self.bottomc];
-		self.bottomc = nil;
-	}
-	if (self.xcenterc != nil) {
-		[self removeConstraint:self.xcenterc];
-		self.xcenterc = nil;
-	}
-	if (self.ycenterc != nil) {
-		[self removeConstraint:self.ycenterc];
-		self.ycenterc = nil;
-	}
-
-	uiControlSetParent(self.c, NULL);
-	uiDarwinControlSetSuperview(uiDarwinControl(self.c), nil);
-	uiDarwinControlSetHuggingPriority(uiDarwinControl(self.c), self.oldHorzHuggingPri, NSLayoutConstraintOrientationHorizontal);
-	uiDarwinControlSetHuggingPriority(uiDarwinControl(self.c), self.oldVertHuggingPri, NSLayoutConstraintOrientationVertical);
-}
-
 - (NSView *)view
 {
-	return (NSView *) uiControlHandle(self.c);
+	return (NSView *) uiControlHandle(self.control);
 }
 
 @end
 
+
+static NSGridCellPlacement placement(uiAlign align)
+{
+	switch (align) {
+	case uiAlignFill:
+		return NSGridCellPlacementFill;
+	case uiAlignStart:
+		return NSGridCellPlacementLeading;
+	case uiAlignCenter:
+		return NSGridCellPlacementCenter;
+	case uiAlignEnd:
+		return NSGridCellPlacementTrailing;
+	}
+	uiprivUserBug("Invalid uiAlign value %d.", align);
+	return NSGridCellPlacementFill;
+}
+
+static void validateSpan(int span, const char *name)
+{
+	if (span < 1)
+		uiprivUserBug("uiGrid %s must be at least 1.", name);
+}
+
+static int checkedEnd(int origin, int span, const char *axis)
+{
+	int64_t end;
+
+	end = ((int64_t) origin) + span;
+	if (end > INT_MAX)
+		uiprivUserBug("uiGrid %s coordinate and span overflow.", axis);
+	return (int) end;
+}
+
+static BOOL rangesOverlap(int astart, int aend, int bstart, int bend)
+{
+	return astart < bend && bstart < aend;
+}
+
+static void addConstraint(NSView *owner, id first, NSLayoutAttribute firstAttribute,
+	NSLayoutRelation relation, id second, NSLayoutAttribute secondAttribute,
+	NSString *description)
+{
+	[owner addConstraint:uiprivMkConstraint(first, firstAttribute, relation,
+		second, secondAttribute, 1, 0, description)];
+}
+
+static NSView *newCellView(gridChild *child)
+{
+	NSView *container;
+	NSView *view;
+
+	container = [[NSView alloc] initWithFrame:NSZeroRect];
+	[container setTranslatesAutoresizingMaskIntoConstraints:NO];
+	view = [child view];
+	uiDarwinControlSetSuperview(uiDarwinControl(child.control), container);
+
+	switch (child.halign) {
+	case uiAlignFill:
+		addConstraint(container, container, NSLayoutAttributeLeading,
+			NSLayoutRelationEqual, view, NSLayoutAttributeLeading,
+			@"uiGrid cell fill leading constraint");
+		addConstraint(container, container, NSLayoutAttributeTrailing,
+			NSLayoutRelationEqual, view, NSLayoutAttributeTrailing,
+			@"uiGrid cell fill trailing constraint");
+		break;
+	case uiAlignStart:
+		addConstraint(container, container, NSLayoutAttributeLeading,
+			NSLayoutRelationEqual, view, NSLayoutAttributeLeading,
+			@"uiGrid cell leading alignment constraint");
+		addConstraint(container, container, NSLayoutAttributeTrailing,
+			NSLayoutRelationGreaterThanOrEqual, view, NSLayoutAttributeTrailing,
+			@"uiGrid cell trailing bound constraint");
+		break;
+	case uiAlignCenter:
+		addConstraint(container, container, NSLayoutAttributeCenterX,
+			NSLayoutRelationEqual, view, NSLayoutAttributeCenterX,
+			@"uiGrid cell horizontal center constraint");
+		addConstraint(container, container, NSLayoutAttributeLeading,
+			NSLayoutRelationLessThanOrEqual, view, NSLayoutAttributeLeading,
+			@"uiGrid cell leading bound constraint");
+		addConstraint(container, container, NSLayoutAttributeTrailing,
+			NSLayoutRelationGreaterThanOrEqual, view, NSLayoutAttributeTrailing,
+			@"uiGrid cell trailing bound constraint");
+		break;
+	case uiAlignEnd:
+		addConstraint(container, container, NSLayoutAttributeTrailing,
+			NSLayoutRelationEqual, view, NSLayoutAttributeTrailing,
+			@"uiGrid cell trailing alignment constraint");
+		addConstraint(container, container, NSLayoutAttributeLeading,
+			NSLayoutRelationLessThanOrEqual, view, NSLayoutAttributeLeading,
+			@"uiGrid cell leading bound constraint");
+		break;
+	}
+
+	switch (child.valign) {
+	case uiAlignFill:
+		addConstraint(container, container, NSLayoutAttributeTop,
+			NSLayoutRelationEqual, view, NSLayoutAttributeTop,
+			@"uiGrid cell fill top constraint");
+		addConstraint(container, container, NSLayoutAttributeBottom,
+			NSLayoutRelationEqual, view, NSLayoutAttributeBottom,
+			@"uiGrid cell fill bottom constraint");
+		break;
+	case uiAlignStart:
+		addConstraint(container, container, NSLayoutAttributeTop,
+			NSLayoutRelationEqual, view, NSLayoutAttributeTop,
+			@"uiGrid cell top alignment constraint");
+		addConstraint(container, container, NSLayoutAttributeBottom,
+			NSLayoutRelationGreaterThanOrEqual, view, NSLayoutAttributeBottom,
+			@"uiGrid cell bottom bound constraint");
+		break;
+	case uiAlignCenter:
+		addConstraint(container, container, NSLayoutAttributeCenterY,
+			NSLayoutRelationEqual, view, NSLayoutAttributeCenterY,
+			@"uiGrid cell vertical center constraint");
+		addConstraint(container, container, NSLayoutAttributeTop,
+			NSLayoutRelationLessThanOrEqual, view, NSLayoutAttributeTop,
+			@"uiGrid cell top bound constraint");
+		addConstraint(container, container, NSLayoutAttributeBottom,
+			NSLayoutRelationGreaterThanOrEqual, view, NSLayoutAttributeBottom,
+			@"uiGrid cell bottom bound constraint");
+		break;
+	case uiAlignEnd:
+		addConstraint(container, container, NSLayoutAttributeBottom,
+			NSLayoutRelationEqual, view, NSLayoutAttributeBottom,
+			@"uiGrid cell bottom alignment constraint");
+		addConstraint(container, container, NSLayoutAttributeTop,
+			NSLayoutRelationLessThanOrEqual, view, NSLayoutAttributeTop,
+			@"uiGrid cell top bound constraint");
+		break;
+	}
+	return container;
+}
+
 @implementation gridView
 
-- (id)initWithG:(uiGrid *)gg
+- (id)initWithGrid:(uiGrid *)g
 {
 	self = [super initWithFrame:NSZeroRect];
 	if (self != nil) {
-		self->g = gg;
-		self->padded = 0;
+		self->grid = g;
 		self->children = [NSMutableArray new];
-
-		self->edges = [NSMutableArray new];
-		self->inBetweens = [NSMutableArray new];
-
-		self->emptyCellViews = [NSMutableArray new];
+		self->nativeGridConstraints = [NSMutableArray new];
+		self->nativeGrid = nil;
+		self->padded = NO;
+		self->horizontalExpansion = NO;
+		self->verticalExpansion = NO;
 	}
 	return self;
 }
 
-- (void)onDestroy
+- (void)removeNativeGrid
 {
-	gridChild *gc;
+	gridChild *child;
 
-	[self removeOurConstraints];
-	[self->edges release];
-	[self->inBetweens release];
-
-	[self->emptyCellViews release];
-
-	for (gc in self->children) {
-		[gc onDestroy];
-		uiControlDestroy(gc.c);
-		[gc removeFromSuperview];
+	for (child in self->children)
+		uiDarwinControlSetSuperview(uiDarwinControl(child.control), nil);
+	if ([self->nativeGridConstraints count] != 0) {
+		[self removeConstraints:self->nativeGridConstraints];
+		[self->nativeGridConstraints removeAllObjects];
 	}
-	[self->children release];
+	if (self->nativeGrid != nil) {
+		[self->nativeGrid removeFromSuperview];
+		[self->nativeGrid release];
+		self->nativeGrid = nil;
+	}
 }
 
-- (void)removeOurConstraints
+- (void)onDestroy
 {
-	NSView *v;
+	gridChild *child;
 
-	if ([self->edges count] != 0) {
-		[self removeConstraints:self->edges];
-		[self->edges removeAllObjects];
+	[self removeNativeGrid];
+	for (child in self->children) {
+		uiControlSetParent(child.control, NULL);
+		uiDarwinControlSetHuggingPriority(uiDarwinControl(child.control),
+			child.oldHorizontalHuggingPriority,
+			NSLayoutConstraintOrientationHorizontal);
+		uiDarwinControlSetHuggingPriority(uiDarwinControl(child.control),
+			child.oldVerticalHuggingPriority,
+			NSLayoutConstraintOrientationVertical);
+		uiControlDestroy(child.control);
 	}
-	if ([self->inBetweens count] != 0) {
-		[self removeConstraints:self->inBetweens];
-		[self->inBetweens removeAllObjects];
-	}
-
-	for (v in self->emptyCellViews)
-		[v removeFromSuperview];
-	[self->emptyCellViews removeAllObjects];
+	[self->nativeGridConstraints release];
+	[self->children release];
 }
 
 - (void)syncEnableStates:(int)enabled
 {
-	gridChild *gc;
+	gridChild *child;
 
-	for (gc in self->children)
-		uiDarwinControlSyncEnableState(uiDarwinControl(gc.c), enabled);
+	for (child in self->children)
+		uiDarwinControlSyncEnableState(uiDarwinControl(child.control), enabled);
 }
 
-- (CGFloat)paddingAmount
+- (void)addNativeGridConstraint:(NSLayoutConstraint *)constraint
 {
-	if (!self->padded)
-		return 0.0;
-	return uiDarwinPaddingAmount(NULL);
+	[self addConstraint:constraint];
+	[self->nativeGridConstraints addObject:constraint];
 }
 
-- (void)establishOurConstraints
+- (void)rebuild
 {
-	gridChild *gc;
-	CGFloat padding;
-	int xmin, ymin;
-	int xmax, ymax;
-	int xcount, ycount;
+	gridChild *child;
 	BOOL first;
-	int **gg;
-	NSView ***gv;
-	BOOL **gspan;
-	int x, y;
-	NSUInteger i;
-	NSLayoutConstraint *c;
-	int firstx, firsty;
-	BOOL *hexpand, *vexpand;
-	BOOL doit;
-	BOOL onlyEmptyAndSpanning;
+	int xmin, ymin, xmax, ymax;
+	int xcount, ycount;
+	int x, y, xx, yy;
+	int64_t cellCount;
+	CGFloat spacing;
+	BOOL *expandedColumns, *expandedRows;
+	int *occupancy;
+	NSView **columnViews, **rowViews;
 
-	[self removeOurConstraints];
-	if ([self->children count] == 0)
-		return;
-	
-	// stop early if all controls are hidden
-	BOOL hasVisibleChildren = NO;
-	for (gc in self->children) {
-		if (uiControlVisible(gc.c)) {
-			hasVisibleChildren = YES;
-			break;
-		}
-	}
-	if (!hasVisibleChildren)
-		return;
-	
-	padding = [self paddingAmount];
+	[self removeNativeGrid];
+	self->horizontalExpansion = NO;
+	self->verticalExpansion = NO;
 
-	// first, figure out the minimum and maximum row and column numbers
-	// ignore hidden controls
 	first = YES;
-	for (gc in self->children) {
-		// this bit is important: it ensures row ymin and column xmin have at least one cell to draw, so the onlyEmptyAndSpanning logic below will never run on those rows
-		if (!uiControlVisible(gc.c))
+	for (child in self->children) {
+		int xend, yend;
+
+		if (!uiControlVisible(child.control))
 			continue;
+		xend = checkedEnd(child.left, child.xspan, "horizontal");
+		yend = checkedEnd(child.top, child.yspan, "vertical");
 		if (first) {
-			xmin = gc.left;
-			ymin = gc.top;
-			xmax = gc.left + gc.xspan;
-			ymax = gc.top + gc.yspan;
+			xmin = child.left;
+			ymin = child.top;
+			xmax = xend;
+			ymax = yend;
 			first = NO;
-			continue;
+		} else {
+			if (xmin > child.left)
+				xmin = child.left;
+			if (ymin > child.top)
+				ymin = child.top;
+			if (xmax < xend)
+				xmax = xend;
+			if (ymax < yend)
+				ymax = yend;
 		}
-		if (xmin > gc.left)
-			xmin = gc.left;
-		if (ymin > gc.top)
-			ymin = gc.top;
-		if (xmax < (gc.left + gc.xspan))
-			xmax = gc.left + gc.xspan;
-		if (ymax < (gc.top + gc.yspan))
-			ymax = gc.top + gc.yspan;
+		if (child.hexpand)
+			self->horizontalExpansion = YES;
+		if (child.vexpand)
+			self->verticalExpansion = YES;
 	}
-	if (first != NO)		// the entire grid is hidden; do nothing
+	if (first)
 		return;
+
 	xcount = xmax - xmin;
 	ycount = ymax - ymin;
+	cellCount = ((int64_t) xcount) * ycount;
+	if (xcount > maxGridColumns || ycount > maxGridRows ||
+		cellCount > maxGridCells)
+		uiprivUserBug("uiGrid dimensions are too large (%d columns, %d rows).",
+			xcount, ycount);
+	expandedColumns = (BOOL *) uiprivAlloc(xcount * sizeof (BOOL), "uiGrid expanded columns");
+	expandedRows = (BOOL *) uiprivAlloc(ycount * sizeof (BOOL), "uiGrid expanded rows");
+	occupancy = (int *) uiprivAlloc(cellCount * sizeof (int), "uiGrid occupancy");
+	columnViews = (NSView **) uiprivAlloc(xcount * sizeof (NSView *), "uiGrid column views");
+	rowViews = (NSView **) uiprivAlloc(ycount * sizeof (NSView *), "uiGrid row views");
+	for (x = 0; x < cellCount; x++)
+		occupancy[x] = -1;
 
-	// now build a topological map of the grid gg[y][x]
-	// also figure out which cells contain spanned views so they can be ignored later
-	// treat hidden controls by keeping the indices -1
-	gg = (int **) uiprivAlloc(ycount * sizeof (int *), "int[][]");
-	gspan = (BOOL **) uiprivAlloc(ycount * sizeof (BOOL *), "BOOL[][]");
-	for (y = 0; y < ycount; y++) {
-		gg[y] = (int *) uiprivAlloc(xcount * sizeof (int), "int[]");
-		gspan[y] = (BOOL *) uiprivAlloc(xcount * sizeof (BOOL), "BOOL[]");
-		for (x = 0; x < xcount; x++)
-			gg[y][x] = -1;		// empty
-	}
-	for (i = 0; i < [self->children count]; i++) {
-		gc = (gridChild *) [self->children objectAtIndex:i];
-		if (!uiControlVisible(gc.c))
+	// Non-spanning children select an expandable row or column directly.
+	for (child in self->children) {
+		if (!uiControlVisible(child.control))
 			continue;
-		for (y = gc.top; y < gc.top + gc.yspan; y++)
-			for (x = gc.left; x < gc.left + gc.xspan; x++) {
-				gg[y - ymin][x - xmin] = i;
-				if (x != gc.left || y != gc.top)
-					gspan[y - ymin][x - xmin] = YES;
-			}
+		if (child.hexpand && child.xspan == 1)
+			expandedColumns[child.left - xmin] = YES;
+		if (child.vexpand && child.yspan == 1)
+			expandedRows[child.top - ymin] = YES;
 	}
+	// A spanning child uses existing expandable tracks in its range. If none
+	// exist, all tracks in the span share the extra space.
+	for (child in self->children) {
+		BOOL found;
 
-	// if a row or column only contains emptys and spanning cells of a opposite-direction spannings, remove it by duplicating the previous row or column
-	for (y = 0; y < ycount; y++) {
-		onlyEmptyAndSpanning = YES;
-		for (x = 0; x < xcount; x++)
-			if (gg[y][x] != -1) {
-				gc = (gridChild *) [self->children objectAtIndex:gg[y][x]];
-				if (gc.yspan == 1 || gc.top - ymin == y) {
-					onlyEmptyAndSpanning = NO;
-					break;
-				}
-			}
-		if (onlyEmptyAndSpanning)
-			for (x = 0; x < xcount; x++) {
-				gg[y][x] = gg[y - 1][x];
-				gspan[y][x] = YES;
-			}
-	}
-	for (x = 0; x < xcount; x++) {
-		onlyEmptyAndSpanning = YES;
-		for (y = 0; y < ycount; y++)
-			if (gg[y][x] != -1) {
-				gc = (gridChild *) [self->children objectAtIndex:gg[y][x]];
-				if (gc.xspan == 1 || gc.left - xmin == x) {
-					onlyEmptyAndSpanning = NO;
-					break;
-				}
-			}
-		if (onlyEmptyAndSpanning)
-			for (y = 0; y < ycount; y++) {
-				gg[y][x] = gg[y][x - 1];
-				gspan[y][x] = YES;
-			}
-	}
-
-	// now build a topological map of the grid's views gv[y][x]
-	// for any empty cell, create a dummy view
-	gv = (NSView ***) uiprivAlloc(ycount * sizeof (NSView **), "NSView *[][]");
-	for (y = 0; y < ycount; y++) {
-		gv[y] = (NSView **) uiprivAlloc(xcount * sizeof (NSView *), "NSView *[]");
-		for (x = 0; x < xcount; x++)
-			if (gg[y][x] == -1) {
-				gv[y][x] = [[NSView alloc] initWithFrame:NSZeroRect];
-				[gv[y][x] setTranslatesAutoresizingMaskIntoConstraints:NO];
-				[self addSubview:gv[y][x]];
-				[self->emptyCellViews addObject:gv[y][x]];
-				[gv[y][x] release];
-			} else {
-				gc = (gridChild *) [self->children objectAtIndex:gg[y][x]];
-				gv[y][x] = gc;
-			}
-	}
-
-	// now figure out which rows and columns really expand
-	hexpand = (BOOL *) uiprivAlloc(xcount * sizeof (BOOL), "BOOL[]");
-	vexpand = (BOOL *) uiprivAlloc(ycount * sizeof (BOOL), "BOOL[]");
-	// first, which don't span
-	for (gc in self->children) {
-		if (!uiControlVisible(gc.c))
+		if (!uiControlVisible(child.control))
 			continue;
-		if (gc.hexpand && gc.xspan == 1)
-			hexpand[gc.left - xmin] = YES;
-		if (gc.vexpand && gc.yspan == 1)
-			vexpand[gc.top - ymin] = YES;
+		if (child.hexpand && child.xspan > 1) {
+			found = NO;
+			for (x = child.left - xmin; x < child.left - xmin + child.xspan; x++)
+				if (expandedColumns[x])
+					found = YES;
+			if (!found)
+				for (x = child.left - xmin; x < child.left - xmin + child.xspan; x++)
+					expandedColumns[x] = YES;
+		}
+		if (child.vexpand && child.yspan > 1) {
+			found = NO;
+			for (y = child.top - ymin; y < child.top - ymin + child.yspan; y++)
+				if (expandedRows[y])
+					found = YES;
+			if (!found)
+				for (y = child.top - ymin; y < child.top - ymin + child.yspan; y++)
+					expandedRows[y] = YES;
+		}
 	}
-	// second, which do span
-	// the way we handle this is simple: if none of the spanned rows/columns expand, make all rows/columns expand
-	for (gc in self->children) {
-		if (!uiControlVisible(gc.c))
+
+	self->nativeGrid = [[NSGridView gridViewWithNumberOfColumns:xcount rows:ycount] retain];
+	[self->nativeGrid setTranslatesAutoresizingMaskIntoConstraints:NO];
+	spacing = self->padded ? uiDarwinPaddingAmount(NULL) : 0;
+	[self->nativeGrid setColumnSpacing:spacing];
+	[self->nativeGrid setRowSpacing:spacing];
+	[self addSubview:self->nativeGrid];
+
+	[self addNativeGridConstraint:uiprivMkConstraint(self, NSLayoutAttributeLeading,
+		NSLayoutRelationEqual, self->nativeGrid, NSLayoutAttributeLeading,
+		1, 0, @"uiGrid native leading constraint")];
+	[self addNativeGridConstraint:uiprivMkConstraint(self, NSLayoutAttributeTop,
+		NSLayoutRelationEqual, self->nativeGrid, NSLayoutAttributeTop,
+		1, 0, @"uiGrid native top constraint")];
+	[self addNativeGridConstraint:uiprivMkConstraint(self, NSLayoutAttributeTrailing,
+		NSLayoutRelationEqual, self->nativeGrid, NSLayoutAttributeTrailing,
+		1, 0, @"uiGrid native trailing constraint")];
+	[self addNativeGridConstraint:uiprivMkConstraint(self, NSLayoutAttributeBottom,
+		NSLayoutRelationEqual, self->nativeGrid, NSLayoutAttributeBottom,
+		1, 0, @"uiGrid native bottom constraint")];
+
+	// Merge first, then install content into each top-leading cell.
+	for (child in self->children) {
+		NSUInteger index;
+
+		if (!uiControlVisible(child.control))
 			continue;
-		if (gc.hexpand && gc.xspan != 1) {
-			doit = YES;
-			for (x = gc.left; x < gc.left + gc.xspan; x++)
-				if (hexpand[x - xmin]) {
-					doit = NO;
-					break;
-				}
-			if (doit)
-				for (x = gc.left; x < gc.left + gc.xspan; x++)
-					hexpand[x - xmin] = YES;
-		}
-		if (gc.vexpand && gc.yspan != 1) {
-			doit = YES;
-			for (y = gc.top; y < gc.top + gc.yspan; y++)
-				if (vexpand[y - ymin]) {
-					doit = NO;
-					break;
-				}
-			if (doit)
-				for (y = gc.top; y < gc.top + gc.yspan; y++)
-					vexpand[y - ymin] = YES;
-		}
+		x = child.left - xmin;
+		y = child.top - ymin;
+		index = [self->children indexOfObjectIdenticalTo:child];
+		for (yy = y; yy < y + child.yspan; yy++)
+			for (xx = x; xx < x + child.xspan; xx++)
+				occupancy[yy * xcount + xx] = (int) index;
+		if (child.xspan != 1 || child.yspan != 1)
+			[self->nativeGrid
+				mergeCellsInHorizontalRange:NSMakeRange(x, child.xspan)
+				verticalRange:NSMakeRange(y, child.yspan)];
 	}
-
-	// now establish all the edge constraints
-	// leading and trailing edges
-	for (y = 0; y < ycount; y++) {
-		c = uiprivMkConstraint(self, NSLayoutAttributeLeading,
-			NSLayoutRelationEqual,
-			gv[y][0], NSLayoutAttributeLeading,
-			1, 0,
-			@"uiGrid leading edge constraint");
-		[self addConstraint:c];
-		[self->edges addObject:c];
-		c = uiprivMkConstraint(self, NSLayoutAttributeTrailing,
-			NSLayoutRelationEqual,
-			gv[y][xcount - 1], NSLayoutAttributeTrailing,
-			1, 0,
-			@"uiGrid trailing edge constraint");
-		[self addConstraint:c];
-		[self->edges addObject:c];
-	}
-	// top and bottom edges
-	for (x = 0; x < xcount; x++) {
-		c = uiprivMkConstraint(self, NSLayoutAttributeTop,
-			NSLayoutRelationEqual,
-			gv[0][x], NSLayoutAttributeTop,
-			1, 0,
-			@"uiGrid top edge constraint");
-		[self addConstraint:c];
-		[self->edges addObject:c];
-		c = uiprivMkConstraint(self, NSLayoutAttributeBottom,
-			NSLayoutRelationEqual,
-			gv[ycount - 1][x], NSLayoutAttributeBottom,
-			1, 0,
-			@"uiGrid bottom edge constraint");
-		[self addConstraint:c];
-		[self->edges addObject:c];
-	}
-
-	// now align leading and top edges
-	// do NOT align spanning cells!
-	for (x = 0; x < xcount; x++) {
-		for (y = 0; y < ycount; y++)
-			if (!gspan[y][x])
-				break;
-		firsty = y;
-		for (y++; y < ycount; y++) {
-			if (gspan[y][x])
-				continue;
-			c = uiprivMkConstraint(gv[firsty][x], NSLayoutAttributeLeading,
-				NSLayoutRelationEqual,
-				gv[y][x], NSLayoutAttributeLeading,
-				1, 0,
-				@"uiGrid column leading constraint");
-			[self addConstraint:c];
-			[self->edges addObject:c];
-		}
-	}
-	for (y = 0; y < ycount; y++) {
-		for (x = 0; x < xcount; x++)
-			if (!gspan[y][x])
-				break;
-		firstx = x;
-		for (x++; x < xcount; x++) {
-			if (gspan[y][x])
-				continue;
-			c = uiprivMkConstraint(gv[y][firstx], NSLayoutAttributeTop,
-				NSLayoutRelationEqual,
-				gv[y][x], NSLayoutAttributeTop,
-				1, 0,
-				@"uiGrid row top constraint");
-			[self addConstraint:c];
-			[self->edges addObject:c];
-		}
-	}
-
-	// now string adjacent views together
-	for (y = 0; y < ycount; y++)
-		for (x = 1; x < xcount; x++)
-			if (gv[y][x - 1] != gv[y][x]) {
-				c = uiprivMkConstraint(gv[y][x - 1], NSLayoutAttributeTrailing,
-					NSLayoutRelationEqual,
-					gv[y][x], NSLayoutAttributeLeading,
-					1, -padding,
-					@"uiGrid internal horizontal constraint");
-				[self addConstraint:c];
-				[self->inBetweens addObject:c];
-			}
-	for (x = 0; x < xcount; x++)
-		for (y = 1; y < ycount; y++)
-			if (gv[y - 1][x] != gv[y][x]) {
-				c = uiprivMkConstraint(gv[y - 1][x], NSLayoutAttributeBottom,
-					NSLayoutRelationEqual,
-					gv[y][x], NSLayoutAttributeTop,
-					1, -padding,
-					@"uiGrid internal vertical constraint");
-				[self addConstraint:c];
-				[self->inBetweens addObject:c];
-			}
-
-	// now set priorities for all widgets that expand or not
-	// if a cell is in an expanding row, OR If it spans, then it must be willing to stretch
-	// otherwise, it tries not to
-	// note we don't use NSLayoutPriorityRequired as that will cause things to squish when they shouldn't
-	for (gc in self->children) {
+	for (child in self->children) {
+		NSGridCell *cell;
+		NSView *container;
 		NSLayoutPriority priority;
 
-		if (!uiControlVisible(gc.c))
+		if (!uiControlVisible(child.control))
 			continue;
-		if (hexpand[gc.left - xmin] || gc.xspan != 1)
-			priority = NSLayoutPriorityDefaultLow;
-		else
-			priority = NSLayoutPriorityDefaultHigh;
-		uiDarwinControlSetHuggingPriority(uiDarwinControl(gc.c), priority, NSLayoutConstraintOrientationHorizontal);
-		// same for vertical direction
-		if (vexpand[gc.top - ymin] || gc.yspan != 1)
-			priority = NSLayoutPriorityDefaultLow;
-		else
-			priority = NSLayoutPriorityDefaultHigh;
-		uiDarwinControlSetHuggingPriority(uiDarwinControl(gc.c), priority, NSLayoutConstraintOrientationVertical);
+		x = child.left - xmin;
+		y = child.top - ymin;
+		cell = [self->nativeGrid cellAtColumnIndex:x rowIndex:y];
+		[cell setXPlacement:NSGridCellPlacementFill];
+		[cell setYPlacement:NSGridCellPlacementFill];
+		container = newCellView(child);
+		[cell setContentView:container];
+		if (child.xspan == 1)
+			columnViews[x] = container;
+		if (child.yspan == 1)
+			rowViews[y] = container;
+		[container release];
+
+		priority = child.hexpand ? NSLayoutPriorityDefaultLow :
+			child.oldHorizontalHuggingPriority;
+		uiDarwinControlSetHuggingPriority(uiDarwinControl(child.control),
+			priority, NSLayoutConstraintOrientationHorizontal);
+		priority = child.vexpand ? NSLayoutPriorityDefaultLow :
+			child.oldVerticalHuggingPriority;
+		uiDarwinControlSetHuggingPriority(uiDarwinControl(child.control),
+			priority, NSLayoutConstraintOrientationVertical);
 	}
 
-	// make all expanding rows/columns the same height/width
-	// first, find the first expanding column and row for reference
-	int firstExpandingCol = -1, firstExpandingRow = -1;
-	for (x = 0; x < xcount; x++) {
-		if (hexpand[x]) {
-			firstExpandingCol = x;
-			break;
+	// Empty cells can serve as sizing representatives for expandable tracks.
+	for (y = 0; y < ycount; y++)
+		for (x = 0; x < xcount; x++) {
+			NSGridCell *cell;
+			NSView *sizingView;
+
+			if (occupancy[y * xcount + x] != -1)
+				continue;
+			if (!expandedColumns[x] && !expandedRows[y])
+				continue;
+			sizingView = [[NSView alloc] initWithFrame:NSZeroRect];
+			[sizingView setTranslatesAutoresizingMaskIntoConstraints:NO];
+			cell = [self->nativeGrid cellAtColumnIndex:x rowIndex:y];
+			[cell setXPlacement:NSGridCellPlacementFill];
+			[cell setYPlacement:NSGridCellPlacementFill];
+			[cell setContentView:sizingView];
+			if (columnViews[x] == nil)
+				columnViews[x] = sizingView;
+			if (rowViews[y] == nil)
+				rowViews[y] = sizingView;
+			[sizingView release];
 		}
-	}
-	for (y = 0; y < ycount; y++) {
-		if (vexpand[y]) {
-			firstExpandingRow = y;
-			break;
-		}
-	}
-	
-	// make all other expanding columns the same width as the first
-	if (firstExpandingCol != -1) {
-		for (x = firstExpandingCol + 1; x < xcount; x++) {
-			if (hexpand[x]) {
-				// find representative views for width constraint
-				NSView *firstColView = nil, *thisColView = nil;
-				for (y = 0; y < ycount; y++) {
-					if (firstColView == nil && !gspan[y][firstExpandingCol])
-						firstColView = gv[y][firstExpandingCol];
-					if (thisColView == nil && !gspan[y][x])
-						thisColView = gv[y][x];
-					if (firstColView != nil && thisColView != nil)
-						break;
-				}
-				if (firstColView != nil && thisColView != nil) {
-					c = uiprivMkConstraint(firstColView, NSLayoutAttributeWidth,
-						NSLayoutRelationEqual,
-						thisColView, NSLayoutAttributeWidth,
-						1, 0,
-						@"uiGrid expanding column width constraint");
-					[c setPriority:NSLayoutPriorityDefaultHigh];
-					[self addConstraint:c];
-					[self->edges addObject:c];
-				}
+
+	{
+		NSView *firstColumnView;
+		NSView *firstRowView;
+
+		firstColumnView = nil;
+		for (x = 0; x < xcount; x++) {
+			NSLayoutConstraint *constraint;
+
+			if (!expandedColumns[x] || columnViews[x] == nil)
+				continue;
+			[columnViews[x] setContentHuggingPriority:NSLayoutPriorityDefaultLow
+				forOrientation:NSLayoutConstraintOrientationHorizontal];
+			if (firstColumnView == nil) {
+				firstColumnView = columnViews[x];
+				continue;
 			}
+			constraint = uiprivMkConstraint(firstColumnView, NSLayoutAttributeWidth,
+				NSLayoutRelationEqual, columnViews[x], NSLayoutAttributeWidth,
+				1, 0, @"uiGrid expandable column equality constraint");
+			[constraint setPriority:NSLayoutPriorityDefaultHigh];
+			[self->nativeGrid addConstraint:constraint];
 		}
-	}
-	
-	// make all other expanding rows the same height as the first
-	if (firstExpandingRow != -1) {
-		for (y = firstExpandingRow + 1; y < ycount; y++) {
-			if (vexpand[y]) {
-				// find representative views for height constraint
-				NSView *firstRowView = nil, *thisRowView = nil;
-				for (x = 0; x < xcount; x++) {
-					if (firstRowView == nil && !gspan[firstExpandingRow][x])
-						firstRowView = gv[firstExpandingRow][x];
-					if (thisRowView == nil && !gspan[y][x])
-						thisRowView = gv[y][x];
-					if (firstRowView != nil && thisRowView != nil)
-						break;
-				}
-				if (firstRowView != nil && thisRowView != nil) {
-					c = uiprivMkConstraint(firstRowView, NSLayoutAttributeHeight,
-						NSLayoutRelationEqual,
-						thisRowView, NSLayoutAttributeHeight,
-						1, 0,
-						@"uiGrid expanding row height constraint");
-					[c setPriority:NSLayoutPriorityDefaultHigh];
-					[self addConstraint:c];
-					[self->edges addObject:c];
-				}
+
+		firstRowView = nil;
+		for (y = 0; y < ycount; y++) {
+			NSLayoutConstraint *constraint;
+
+			if (!expandedRows[y] || rowViews[y] == nil)
+				continue;
+			[rowViews[y] setContentHuggingPriority:NSLayoutPriorityDefaultLow
+				forOrientation:NSLayoutConstraintOrientationVertical];
+			if (firstRowView == nil) {
+				firstRowView = rowViews[y];
+				continue;
 			}
+			constraint = uiprivMkConstraint(firstRowView, NSLayoutAttributeHeight,
+				NSLayoutRelationEqual, rowViews[y], NSLayoutAttributeHeight,
+				1, 0, @"uiGrid expandable row equality constraint");
+			[constraint setPriority:NSLayoutPriorityDefaultHigh];
+			[self->nativeGrid addConstraint:constraint];
 		}
 	}
 
-	// and finally clean up
-	uiprivFree(hexpand);
-	uiprivFree(vexpand);
-	for (y = 0; y < ycount; y++) {
-		uiprivFree(gg[y]);
-		uiprivFree(gv[y]);
-		uiprivFree(gspan[y]);
-	}
-	uiprivFree(gg);
-	uiprivFree(gv);
-	uiprivFree(gspan);
+	uiprivFree(rowViews);
+	uiprivFree(columnViews);
+	uiprivFree(occupancy);
+	uiprivFree(expandedRows);
+	uiprivFree(expandedColumns);
 }
 
-- (void)append:(gridChild *)gc
+- (void)validateChild:(gridChild *)candidate
 {
-	BOOL update;
-	int oldnh, oldnv;
+	gridChild *child;
+	int candidateRight, candidateBottom;
 
-	[gc setTranslatesAutoresizingMaskIntoConstraints:NO];
-	[self addSubview:gc];
+	validateSpan(candidate.xspan, "xspan");
+	validateSpan(candidate.yspan, "yspan");
+	candidateRight = checkedEnd(candidate.left, candidate.xspan, "horizontal");
+	candidateBottom = checkedEnd(candidate.top, candidate.yspan, "vertical");
+	for (child in self->children) {
+		int right, bottom;
 
-	// no need to set priority here; that's done in establishOurConstraints
-
-	oldnh = [self nhexpand];
-	oldnv = [self nvexpand];
-	[self->children addObject:gc];
-
-	[self establishOurConstraints];
-	update = NO;
-	if (gc.hexpand)
-		if (oldnh == 0)
-			update = YES;
-	if (gc.vexpand)
-		if (oldnv == 0)
-			update = YES;
-	if (update)
-		uiDarwinNotifyEdgeHuggingChanged(uiDarwinControl(self->g));
-
-	[gc release];		// we don't need the initial reference now
+		right = checkedEnd(child.left, child.xspan, "horizontal");
+		bottom = checkedEnd(child.top, child.yspan, "vertical");
+		if (rangesOverlap(candidate.left, candidateRight, child.left, right) &&
+			rangesOverlap(candidate.top, candidateBottom, child.top, bottom))
+			uiprivUserBug("Controls in a uiGrid cannot overlap.");
+	}
 }
 
-- (void)insert:(gridChild *)gc after:(uiControl *)c at:(uiAt)at
+- (void)append:(gridChild *)child
+{
+	BOOL oldHorizontalExpansion, oldVerticalExpansion;
+
+	[self validateChild:child];
+	oldHorizontalExpansion = self->horizontalExpansion;
+	oldVerticalExpansion = self->verticalExpansion;
+	uiControlSetParent(child.control, uiControl(self->grid));
+	uiDarwinControlSyncEnableState(uiDarwinControl(child.control),
+		uiControlEnabledToUser(uiControl(self->grid)));
+	[self->children addObject:child];
+	[child release];
+	[self rebuild];
+	if (oldHorizontalExpansion != self->horizontalExpansion ||
+		oldVerticalExpansion != self->verticalExpansion)
+		uiDarwinNotifyEdgeHuggingChanged(uiDarwinControl(self->grid));
+}
+
+- (void)insert:(gridChild *)child after:(uiControl *)existing at:(uiAt)at
 {
 	gridChild *other;
-	BOOL found;
+	int64_t left, top;
 
-	found = NO;
+	other = nil;
 	for (other in self->children)
-		if (other.c == c) {
-			found = YES;
+		if (other.control == existing)
 			break;
-		}
-	if (!found)
-		uiprivUserBug("Existing control %p is not in grid %p; you cannot add other controls next to it", c, self->g);
+	if (other == nil || other.control != existing)
+		uiprivUserBug("Existing control %p is not in grid %p.", existing, self->grid);
 
+	left = other.left;
+	top = other.top;
 	switch (at) {
 	case uiAtLeading:
-		gc.left = other.left - gc.xspan;
-		gc.top = other.top;
+		left -= child.xspan;
 		break;
 	case uiAtTop:
-		gc.left = other.left;
-		gc.top = other.top - gc.yspan;
+		top -= child.yspan;
 		break;
 	case uiAtTrailing:
-		gc.left = other.left + other.xspan;
-		gc.top = other.top;
+		left += other.xspan;
 		break;
 	case uiAtBottom:
-		gc.left = other.left;
-		gc.top = other.top + other.yspan;
+		top += other.yspan;
 		break;
-	// TODO add error checks to ALL enums
+	default:
+		uiprivUserBug("Invalid uiAt value %d.", at);
 	}
-
-	[self append:gc];
+	if (left < INT_MIN || left > INT_MAX || top < INT_MIN || top > INT_MAX)
+		uiprivUserBug("uiGrid insertion coordinate overflow.");
+	child.left = (int) left;
+	child.top = (int) top;
+	[self append:child];
 }
 
 - (int)isPadded
@@ -688,64 +585,24 @@ struct uiGrid {
 
 - (void)setPadded:(int)p
 {
-	CGFloat padding;
-	NSLayoutConstraint *c;
+	CGFloat spacing;
 
-	self->padded = p;
-	padding = [self paddingAmount];
-	for (c in self->inBetweens)
-		switch ([c firstAttribute]) {
-		case NSLayoutAttributeLeading:
-		case NSLayoutAttributeTop:
-			[c setConstant:padding];
-			break;
-		case NSLayoutAttributeTrailing:
-		case NSLayoutAttributeBottom:
-			[c setConstant:-padding];
-			break;
-		}
+	self->padded = p != 0;
+	if (self->nativeGrid == nil)
+		return;
+	spacing = self->padded ? uiDarwinPaddingAmount(NULL) : 0;
+	[self->nativeGrid setColumnSpacing:spacing];
+	[self->nativeGrid setRowSpacing:spacing];
 }
 
 - (BOOL)hugsTrailing
 {
-	// only hug if we have NO horizontally expanding children
-	return [self nhexpand] == 0;
+	return !self->horizontalExpansion;
 }
 
 - (BOOL)hugsBottom
 {
-	// only hug if we have NO vertically expanding children
-	return [self nvexpand] == 0;
-}
-
-- (int)nhexpand
-{
-	gridChild *gc;
-	int n;
-
-	n = 0;
-	for (gc in self->children) {
-		if (!uiControlVisible(gc.c))
-			continue;
-		if (gc.hexpand)
-			n++;
-	}
-	return n;
-}
-
-- (int)nvexpand
-{
-	gridChild *gc;
-	int n;
-
-	n = 0;
-	for (gc in self->children) {
-		if (!uiControlVisible(gc.c))
-			continue;
-		if (gc.vexpand)
-			n++;
-	}
-	return n;
+	return !self->verticalExpansion;
 }
 
 @end
@@ -799,7 +656,7 @@ static void uiGridChildEdgeHuggingChanged(uiDarwinControl *c)
 {
 	uiGrid *g = uiGrid(c);
 
-	[g->view establishOurConstraints];
+	[g->view rebuild];
 }
 
 uiDarwinControlDefaultHuggingPriority(uiGrid, view)
@@ -808,59 +665,61 @@ uiDarwinControlDefaultSetHuggingPriority(uiGrid, view)
 static void uiGridChildVisibilityChanged(uiDarwinControl *c)
 {
 	uiGrid *g = uiGrid(c);
+	BOOL oldHorizontalExpansion, oldVerticalExpansion;
 
-	int oldnh = [g->view nhexpand];
-	int oldnv = [g->view nvexpand];
-
-	[g->view establishOurConstraints];
-
-	int newnh = [g->view nhexpand];
-	int newnv = [g->view nvexpand];
-
-	// notify hugging change if there's a 0 ⇔ non-zero transition
-	if ((oldnh == 0) != (newnh == 0) || (oldnv == 0) != (newnv == 0))
+	oldHorizontalExpansion = ![g->view hugsTrailing];
+	oldVerticalExpansion = ![g->view hugsBottom];
+	[g->view rebuild];
+	if (oldHorizontalExpansion != ![g->view hugsTrailing] ||
+		oldVerticalExpansion != ![g->view hugsBottom])
 		uiDarwinNotifyEdgeHuggingChanged(uiDarwinControl(g));
 }
 
-static gridChild *toChild(uiControl *c, int xspan, int yspan, int hexpand, uiAlign halign, int vexpand, uiAlign valign, uiGrid *g)
+static gridChild *newGridChild(uiControl *control, int xspan, int yspan,
+	int hexpand, uiAlign halign, int vexpand, uiAlign valign)
 {
-	gridChild *gc;
+	gridChild *child;
 
-	if (xspan < 0)
-		uiprivUserBug("You cannot have a negative xspan in a uiGrid cell.");
-	if (yspan < 0)
-		uiprivUserBug("You cannot have a negative yspan in a uiGrid cell.");
-	gc = [gridChild new];
-	gc.xspan = xspan;
-	gc.yspan = yspan;
-	gc.hexpand = hexpand;
-	gc.halign = halign;
-	gc.vexpand = vexpand;
-	gc.valign = valign;
-	[gc setC:c grid:g];
-	return gc;
-}
-
-void uiGridAppend(uiGrid *g, uiControl *c, int left, int top, int xspan, int yspan, int hexpand, uiAlign halign, int vexpand, uiAlign valign)
-{
-	gridChild *gc;
-
-	// LONGTERM on other platforms
-	// or at leat allow this and implicitly turn it into a spacer
-	if (c == NULL)
+	if (control == NULL)
 		uiprivUserBug("You cannot add NULL to a uiGrid.");
-	gc = toChild(c, xspan, yspan, hexpand, halign, vexpand, valign, g);
-	gc.left = left;
-	gc.top = top;
-	[g->view append:gc];
+	validateSpan(xspan, "xspan");
+	validateSpan(yspan, "yspan");
+	placement(halign);
+	placement(valign);
+	child = [gridChild new];
+	child.control = control;
+	child.xspan = xspan;
+	child.yspan = yspan;
+	child.hexpand = hexpand != 0;
+	child.halign = halign;
+	child.vexpand = vexpand != 0;
+	child.valign = valign;
+	child.oldHorizontalHuggingPriority = uiDarwinControlHuggingPriority(
+		uiDarwinControl(control), NSLayoutConstraintOrientationHorizontal);
+	child.oldVerticalHuggingPriority = uiDarwinControlHuggingPriority(
+		uiDarwinControl(control), NSLayoutConstraintOrientationVertical);
+	return child;
 }
 
-void uiGridInsertAt(uiGrid *g, uiControl *c, uiControl *existing, uiAt at, int xspan, int yspan, int hexpand, uiAlign halign, int vexpand, uiAlign valign)
+void uiGridAppend(uiGrid *g, uiControl *c, int left, int top, int xspan,
+	int yspan, int hexpand, uiAlign halign, int vexpand, uiAlign valign)
 {
-	gridChild *gc;
+	gridChild *child;
 
-	gc = toChild(c, xspan, yspan, hexpand, halign, vexpand, valign, g);
-	[g->view insert:gc after:existing at:at];
+	child = newGridChild(c, xspan, yspan, hexpand, halign, vexpand, valign);
+	child.left = left;
+	child.top = top;
+	[g->view append:child];
+}
+
+void uiGridInsertAt(uiGrid *g, uiControl *c, uiControl *existing, uiAt at,
+	int xspan, int yspan, int hexpand, uiAlign halign, int vexpand,
+	uiAlign valign)
+{
+	gridChild *child;
+
+	child = newGridChild(c, xspan, yspan, hexpand, halign, vexpand, valign);
+	[g->view insert:child after:existing at:at];
 }
 
 int uiGridPadded(uiGrid *g)
@@ -878,8 +737,6 @@ uiGrid *uiNewGrid(void)
 	uiGrid *g;
 
 	uiDarwinNewControl(uiGrid, g);
-
-	g->view = [[gridView alloc] initWithG:g];
-
+	g->view = [[gridView alloc] initWithGrid:g];
 	return g;
 }
