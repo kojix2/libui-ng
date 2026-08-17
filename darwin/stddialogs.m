@@ -13,10 +13,8 @@
 static void setupSavePanel(NSSavePanel *s)
 {
 	[s setCanCreateDirectories:YES];
-	[s setShowsHiddenFiles:YES];
 	[s setExtensionHidden:NO];
 	[s setCanSelectHiddenExtension:NO];
-	[s setTreatsFilePackagesAsDirectories:YES];
 }
 
 static char *runSavePanel(NSWindow *parent, NSSavePanel *s)
