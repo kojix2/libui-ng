@@ -213,6 +213,7 @@ static void onShowAll(uiButton *b, void *data)
 		uiGridInsertAt(g, uiControl(uiNewButton("Button")), \
 			uiControl(b), uiAt ## x, 1, 1, \
 			0, uiAlignFill, 0, uiAlignFill); \
+		uiControlDisable(uiControl(b)); \
 	}
 AT(Leading)
 AT(Top)
@@ -257,23 +258,23 @@ static uiControl *assorted(void)
 		1, uiAlignFill, 1, uiAlignFill);
 
 	innergrid = newGrid();
-	b = uiNewButton("Insert Trailing");
-	uiButtonOnClicked(b, onInsertTrailing, innergrid);
-	uiGridAppend(innergrid, uiControl(b),
-		0, 0, 1, 1,
-		1, uiAlignFill, 0, uiAlignFill);
-	b = uiNewButton("Insert Bottom");
-	uiButtonOnClicked(b, onInsertBottom, innergrid);
-	uiGridAppend(innergrid, uiControl(b),
-		1, 0, 1, 1,
-		1, uiAlignFill, 0, uiAlignFill);
 	b = uiNewButton("Insert Leading");
 	uiButtonOnClicked(b, onInsertLeading, innergrid);
 	uiGridAppend(innergrid, uiControl(b),
-		1, 1, 1, 1,
+		0, 0, 1, 1,
 		1, uiAlignFill, 0, uiAlignFill);
 	b = uiNewButton("Insert Top");
 	uiButtonOnClicked(b, onInsertTop, innergrid);
+	uiGridAppend(innergrid, uiControl(b),
+		1, 0, 1, 1,
+		1, uiAlignFill, 0, uiAlignFill);
+	b = uiNewButton("Insert Trailing");
+	uiButtonOnClicked(b, onInsertTrailing, innergrid);
+	uiGridAppend(innergrid, uiControl(b),
+		1, 1, 1, 1,
+		1, uiAlignFill, 0, uiAlignFill);
+	b = uiNewButton("Insert Bottom");
+	uiButtonOnClicked(b, onInsertBottom, innergrid);
 	uiGridAppend(innergrid, uiControl(b),
 		0, 1, 1, 1,
 		1, uiAlignFill, 0, uiAlignFill);

@@ -1,9 +1,7 @@
 // 10 june 2016
 #include "uipriv_windows.hpp"
 
-// TODO compare with GTK+:
-// - what happens if you call InsertAt() twice?
-// - what happens if you call Append() twice?
+#include <limits.h>
 
 // TODOs
 // - the Assorted page has clipping and repositioning issues
@@ -587,10 +585,12 @@ static struct gridChild *toChild(uiControl *c, int xspan, int yspan, int hexpand
 {
 	struct gridChild *gc;
 
-	if (xspan < 0)
-		uiprivUserBug("You cannot have a negative xspan in a uiGrid cell.");
-	if (yspan < 0)
-		uiprivUserBug("You cannot have a negative yspan in a uiGrid cell.");
+	if (c == NULL)
+		uiprivUserBug("You cannot add NULL to a uiGrid.");
+	if (xspan < 1)
+		uiprivUserBug("uiGrid xspan must be at least 1.");
+	if (yspan < 1)
+		uiprivUserBug("uiGrid yspan must be at least 1.");
 	gc = uiprivNew(struct gridChild);
 	gc->c = c;
 	gc->xspan = xspan;
@@ -602,8 +602,41 @@ static struct gridChild *toChild(uiControl *c, int xspan, int yspan, int hexpand
 	return gc;
 }
 
+static int checkedGridEnd(int origin, int span, const char *axis)
+{
+	int64_t end;
+
+	end = ((int64_t) origin) + span;
+	if (end > INT_MAX)
+		uiprivUserBug("uiGrid %s coordinate and span overflow.", axis);
+	return (int) end;
+}
+
+static bool gridRangesOverlap(int astart, int aend, int bstart, int bend)
+{
+	return astart < bend && bstart < aend;
+}
+
+static void validateGridChild(uiGrid *g, struct gridChild *candidate)
+{
+	int candidateRight, candidateBottom;
+
+	candidateRight = checkedGridEnd(candidate->left, candidate->xspan, "horizontal");
+	candidateBottom = checkedGridEnd(candidate->top, candidate->yspan, "vertical");
+	for (struct gridChild *child : *(g->children)) {
+		int right, bottom;
+
+		right = checkedGridEnd(child->left, child->xspan, "horizontal");
+		bottom = checkedGridEnd(child->top, child->yspan, "vertical");
+		if (gridRangesOverlap(candidate->left, candidateRight, child->left, right) &&
+			gridRangesOverlap(candidate->top, candidateBottom, child->top, bottom))
+			uiprivUserBug("Controls in a uiGrid cannot overlap.");
+	}
+}
+
 static void add(uiGrid *g, struct gridChild *gc)
 {
+	validateGridChild(g, gc);
 	uiControlSetParent(gc->c, uiControl(g));
 	uiWindowsControlSetParentHWND(uiWindowsControl(gc->c), g->hwnd);
 	g->children->push_back(gc);
@@ -628,28 +661,36 @@ void uiGridInsertAt(uiGrid *g, uiControl *c, uiControl *existing, uiAt at, int x
 {
 	struct gridChild *gc;
 	struct gridChild *other;
+	std::map<uiControl *, size_t>::iterator existingIndex;
+	int64_t left, top;
 
 	gc = toChild(c, xspan, yspan, hexpand, halign, vexpand, valign);
-	other = (*(g->children))[(*(g->indexof))[existing]];
+	existingIndex = g->indexof->find(existing);
+	if (existingIndex == g->indexof->end())
+		uiprivUserBug("Existing control %p is not in grid %p.", existing, g);
+	other = (*(g->children))[existingIndex->second];
+	left = other->left;
+	top = other->top;
 	switch (at) {
 	case uiAtLeading:
-		gc->left = other->left - gc->xspan;
-		gc->top = other->top;
+		left -= gc->xspan;
 		break;
 	case uiAtTop:
-		gc->left = other->left;
-		gc->top = other->top - gc->yspan;
+		top -= gc->yspan;
 		break;
 	case uiAtTrailing:
-		gc->left = other->left + other->xspan;
-		gc->top = other->top;
+		left += other->xspan;
 		break;
 	case uiAtBottom:
-		gc->left = other->left;
-		gc->top = other->top + other->yspan;
+		top += other->yspan;
 		break;
-	// TODO add error checks to ALL enums
+	default:
+		uiprivUserBug("Invalid uiAt value %d.", at);
 	}
+	if (left < INT_MIN || left > INT_MAX || top < INT_MIN || top > INT_MAX)
+		uiprivUserBug("uiGrid insertion coordinate overflow.");
+	gc->left = (int) left;
+	gc->top = (int) top;
 	add(g, gc);
 }
 

@@ -3094,8 +3094,8 @@ typedef struct uiGrid uiGrid;
  * @param c The control to insert.
  * @param left Placement as number of columns from the left. Integer in range of `[INT_MIN, INT_MAX]`.
  * @param top Placement as number of rows from the top. Integer in range of `[INT_MIN, INT_MAX]`.
- * @param xspan Number of columns to span. Integer in range of `[0, INT_MAX]`.
- * @param yspan Number of rows to span. Integer in range of `[0, INT_MAX]`.
+ * @param xspan Number of columns to span. Integer in range of `[1, INT_MAX]`.
+ * @param yspan Number of rows to span. Integer in range of `[1, INT_MAX]`.
  * @param hexpand `TRUE` to expand reserved area horizontally, `FALSE` otherwise.
  * @param halign Horizontal alignment of the control within the reserved space.
  * @param vexpand `TRUE` to expand reserved area vertically, `FALSE` otherwise.
@@ -3111,8 +3111,8 @@ _UI_EXTERN void uiGridAppend(uiGrid *g, uiControl *c, int left, int top, int xsp
  * @param c The control to insert.
  * @param existing The existing control to position relatively to.
  * @param at Placement specifier in relation to @p existing control.
- * @param xspan Number of columns to span. Integer in range of `[0, INT_MAX]`.
- * @param yspan Number of rows to span. Integer in range of `[0, INT_MAX]`.
+ * @param xspan Number of columns to span. Integer in range of `[1, INT_MAX]`.
+ * @param yspan Number of rows to span. Integer in range of `[1, INT_MAX]`.
  * @param hexpand `TRUE` to expand reserved area horizontally, `FALSE` otherwise.
  * @param halign Horizontal alignment of the control within the reserved space.
  * @param vexpand `TRUE` to expand reserved area vertically, `FALSE` otherwise.
