@@ -62,13 +62,16 @@ libui_project_link_args = []
 if libui_OS == 'darwin'
 	libui_darwin_langs = ['c', 'objc']
 
-	libui_macosx_version_min = '-mmacosx-version-min=10.11'
+	if host_machine.cpu_family() == 'x86_64'
+		libui_macosx_deployment_target = '10.12'
+	elif host_machine.cpu_family() == 'aarch64'
+		libui_macosx_deployment_target = '11.0'
+	else
+		error('unsupported macOS architecture: ' + host_machine.cpu_family())
+	endif
+	libui_macosx_version_min = '-mmacosx-version-min=' + libui_macosx_deployment_target
 	add_global_arguments(libui_macosx_version_min, language: libui_darwin_langs)
 	add_global_link_arguments(libui_macosx_version_min, language: libui_darwin_langs)
-
-	libui_arch = ['-arch', 'x86_64', '-arch', 'arm64']
-	add_global_arguments(libui_arch, language: libui_darwin_langs)
-	add_global_link_arguments(libui_arch, language: libui_darwin_langs)
 endif
 
 if libui_MSVC
