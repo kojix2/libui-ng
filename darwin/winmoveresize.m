@@ -173,6 +173,33 @@ static void onResizeDrag(struct onResizeDragParams *p, NSEvent *e)
 	[p->w setFrame:frame display:YES];			// and do reflect the new frame immediately
 }
 
+static void validateResizeMouseDownType(NSEventType type)
+{
+	switch (type) {
+	case NSEventTypeLeftMouseDown:
+	case NSEventTypeRightMouseDown:
+	case NSEventTypeOtherMouseDown:
+		return;
+	default:
+		uiprivImplBug("invalid initial event type in uiprivDoManualResize(): %lu",
+			(unsigned long) type);
+	}
+}
+
+static BOOL isMouseDraggedType(NSEventType type)
+{
+	return type == NSEventTypeLeftMouseDragged ||
+		type == NSEventTypeRightMouseDragged ||
+		type == NSEventTypeOtherMouseDragged;
+}
+
+static BOOL isMouseUpType(NSEventType type)
+{
+	return type == NSEventTypeLeftMouseUp ||
+		type == NSEventTypeRightMouseUp ||
+		type == NSEventTypeOtherMouseUp;
+}
+
 // TODO do our events get fired with this? *should* they?
 void uiprivDoManualResize(NSWindow *w, NSEvent *initialEvent, uiWindowResizeEdge edge)
 {
@@ -180,6 +207,10 @@ void uiprivDoManualResize(NSWindow *w, NSEvent *initialEvent, uiWindowResizeEdge
 	uiprivNextEventArgs nea;
 	BOOL (^handleEvent)(NSEvent *e);
 	__block BOOL done;
+	NSInteger buttonNumber;
+
+	validateResizeMouseDownType([initialEvent type]);
+	buttonNumber = [initialEvent buttonNumber];
 
 	rdp.w = w;
 	rdp.initialFrame = [rdp.w frame];
@@ -188,16 +219,23 @@ void uiprivDoManualResize(NSWindow *w, NSEvent *initialEvent, uiWindowResizeEdge
 	// TODO what happens if these change during the loop?
 	minMaxAutoLayoutSizes(rdp.w, &(rdp.min), &(rdp.max));
 
-	nea.mask = NSLeftMouseDraggedMask | NSLeftMouseUpMask;
+	// Follow the physical button even if AppKit changes the event type family,
+	// and consume other buttons as complete sequences during the modal resize.
+	nea.mask = NSEventMaskLeftMouseDown | NSEventMaskLeftMouseDragged | NSEventMaskLeftMouseUp |
+		NSEventMaskRightMouseDown | NSEventMaskRightMouseDragged | NSEventMaskRightMouseUp |
+		NSEventMaskOtherMouseDown | NSEventMaskOtherMouseDragged | NSEventMaskOtherMouseUp;
 	nea.duration = [NSDate distantFuture];
 	nea.mode = NSEventTrackingRunLoopMode;		// nextEventMatchingMask: docs suggest using this for manual mouse tracking
 	nea.dequeue = YES;
 	handleEvent = ^(NSEvent *e) {
-		if ([e type] == NSLeftMouseUp) {
+		if ([e buttonNumber] != buttonNumber)
+			return YES;	// ignore other buttons during the modal resize
+		if (isMouseUpType([e type])) {
 			done = YES;
 			return YES;	// do not send
 		}
-		onResizeDrag(&rdp, e);
+		if (isMouseDraggedType([e type]))
+			onResizeDrag(&rdp, e);
 		return YES;		// do not send
 	};
 	done = NO;

@@ -33,7 +33,7 @@ struct uiArea {
 	areaView *area;
 	uiAreaHandler *ah;
 	BOOL scrolling;
-	NSEvent *dragevent;
+	NSEvent *mouseDownEvent;
 };
 
 @implementation areaView
@@ -229,10 +229,10 @@ if (@available(macOS 10.12, *)) {
 	}
 
 	if (self->libui_enabled) {
-		// and allow dragging here
-		a->dragevent = e;
+		// Allow window moving and resizing only from mouse-down callbacks.
+		a->mouseDownEvent = me.Down != 0 ? e : nil;
 		(*(a->ah->MouseEvent))(a->ah, a, &me);
-		a->dragevent = nil;
+		a->mouseDownEvent = nil;
 	}
 }
 
@@ -465,9 +465,9 @@ void uiAreaBeginUserWindowMove(uiArea *a)
 	w = (uiprivNSWindow *) [a->area window];
 	if (w == nil)
 		return;		// TODO
-	if (a->dragevent == nil)
+	if (a->mouseDownEvent == nil)
 		uiprivUserBug("cannot call uiAreaBeginUserWindowMove() outside of a Mouse() with Down != 0");
-	[w uiprivDoMove:a->dragevent];
+	[w uiprivDoMove:a->mouseDownEvent];
 }
 
 void uiAreaBeginUserWindowResize(uiArea *a, uiWindowResizeEdge edge)
@@ -477,9 +477,9 @@ void uiAreaBeginUserWindowResize(uiArea *a, uiWindowResizeEdge edge)
 	w = (uiprivNSWindow *) [a->area window];
 	if (w == nil)
 		return;		// TODO
-	if (a->dragevent == nil)
+	if (a->mouseDownEvent == nil)
 		uiprivUserBug("cannot call uiAreaBeginUserWindowResize() outside of a Mouse() with Down != 0");
-	[w uiprivDoResize:a->dragevent on:edge];
+	[w uiprivDoResize:a->mouseDownEvent on:edge];
 }
 
 uiArea *uiNewArea(uiAreaHandler *ah)
