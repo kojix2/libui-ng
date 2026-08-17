@@ -1,6 +1,6 @@
 // 6 january 2015
 #import <Cocoa/Cocoa.h>
-#import <dlfcn.h>		// see future.m
+#import <dlfcn.h>		// see undocumented.m
 #import "../ui.h"
 #import "../ui_darwin.h"
 #import "../common/uipriv.h"
@@ -144,10 +144,6 @@ extern NSImage *uiprivImageNSImage(uiImage *);
 // winmoveresize.m
 extern void uiprivDoManualMove(NSWindow *w, NSEvent *initialEvent);
 extern void uiprivDoManualResize(NSWindow *w, NSEvent *initialEvent, uiWindowResizeEdge edge);
-
-// future.m
-extern CFStringRef *uiprivFUTURE_kCTBackgroundColorAttributeName;
-extern void uiprivLoadFutures(void);
 
 // undocumented.m
 extern CFStringRef uiprivUNDOC_kCTFontPreferredSubFamilyNameKey;

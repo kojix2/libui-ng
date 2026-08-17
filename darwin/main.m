@@ -127,7 +127,6 @@ const char *uiInit(uiInitOptions *o)
 
 		uiprivInitAlloc();
 		timers = [NSMutableSet new];
-		uiprivLoadFutures();
 		uiprivLoadUndocumented();
 
 		// always do this so we always have an application menu

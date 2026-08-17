@@ -64,7 +64,6 @@ void uiprivUninitUnderlineColors(void)
 // TODO in fact I should just write something to explain everything in this file...
 struct foreachParams {
 	CFMutableAttributedStringRef mas;
-	NSMutableArray *backgroundParams;
 };
 
 // unlike the other systems, Core Text rolls family, size, weight, italic, width, AND opentype features into the "font" attribute
@@ -298,25 +297,17 @@ static CGColorRef mkcolor(double r, double g, double b, double a)
 
 static void addBackgroundAttribute(struct foreachParams *p, size_t start, size_t end, double r, double g, double b, double a)
 {
-	uiprivDrawTextBackgroundParams *dtb;
+	CGColorRef color;
+	CFRange range;
 
-	if (uiprivFUTURE_kCTBackgroundColorAttributeName != NULL) {
-		CGColorRef color;
-		CFRange range;
-
-		color = mkcolor(r, g, b, a);
-		if (color == NULL)
-			return;
-		range.location = start;
-		range.length = end - start;
-		CFAttributedStringSetAttribute(p->mas, range, *uiprivFUTURE_kCTBackgroundColorAttributeName, color);
-		CFRelease(color);
+	color = mkcolor(r, g, b, a);
+	if (color == NULL)
 		return;
-	}
-
-	dtb = [[uiprivDrawTextBackgroundParams alloc] initWithStart:start end:end r:r g:g b:b a:a];
-	[p->backgroundParams addObject:dtb];
-	[dtb release];
+	range.location = start;
+	range.length = end - start;
+	CFAttributedStringSetAttribute(p->mas, range,
+		kCTBackgroundColorAttributeName, color);
+	CFRelease(color);
 }
 
 static uiForEach processAttribute(const uiAttributedString *s, const uiAttribute *attr, size_t start, size_t end, void *data)
@@ -470,7 +461,7 @@ static CTParagraphStyleRef mkParagraphStyle(uiDrawTextLayoutParams *p)
 }
 
 // TODO either rename this (on all platforms) to uiprivDrawTextLayoutParams... or rename this file or both or split the struct or something else...
-CFAttributedStringRef uiprivAttributedStringToCFAttributedString(uiDrawTextLayoutParams *p, NSArray **backgroundParams)
+CFAttributedStringRef uiprivAttributedStringToCFAttributedString(uiDrawTextLayoutParams *p)
 {
 	CFStringRef cfstr;
 	CFMutableDictionaryRef defaultAttrs;
@@ -484,7 +475,6 @@ CFAttributedStringRef uiprivAttributedStringToCFAttributedString(uiDrawTextLayou
 	ps = NULL;
 	base = NULL;
 	mas = NULL;
-	fep.backgroundParams = nil;
 
 	cfstr = CFStringCreateWithCharacters(NULL, uiprivAttributedStringUTF16String(p->String), uiprivAttributedStringUTF16Len(p->String));
 	if (cfstr == NULL)
@@ -515,9 +505,6 @@ CFAttributedStringRef uiprivAttributedStringToCFAttributedString(uiDrawTextLayou
 		goto fail;
 
 	fep.mas = mas;
-	fep.backgroundParams = [NSMutableArray new];
-	if (fep.backgroundParams == nil)
-		goto fail;
 	CFAttributedStringBeginEditing(mas);
 	uiAttributedStringForEachAttribute(p->String, processAttribute, &fep);
 	if (!applyFontAttributes(mas, p->DefaultFont)) {
@@ -526,12 +513,9 @@ CFAttributedStringRef uiprivAttributedStringToCFAttributedString(uiDrawTextLayou
 	}
 	CFAttributedStringEndEditing(mas);
 
-	*backgroundParams = fep.backgroundParams;
 	return mas;
 
 fail:
-	if (fep.backgroundParams != nil)
-		[fep.backgroundParams release];
 	if (mas != NULL)
 		CFRelease(mas);
 	if (base != NULL)
@@ -542,6 +526,5 @@ fail:
 		CFRelease(defaultAttrs);
 	if (cfstr != NULL)
 		CFRelease(cfstr);
-	*backgroundParams = nil;
 	return NULL;
 }

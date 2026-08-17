@@ -24,7 +24,6 @@ libui_sources += [
 	'darwin/fonttraits.m',
 	'darwin/fontvariation.m',
 	'darwin/form.m',
-	'darwin/future.m',
 	'darwin/graphemes.m',
 	'darwin/grid.m',
 	'darwin/group.m',
