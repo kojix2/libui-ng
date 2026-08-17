@@ -16,6 +16,7 @@ libui_unit_sources = [
         'menu.c',
         'progressbar.c',
         'datetimepicker.c',
+	    'grid.c',
         'drawmatrix.c',
         'attrstr.c',
         'window.c',
