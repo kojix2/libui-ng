@@ -55,7 +55,7 @@ static uiForEach otfArrayForEach(const uiOpenTypeFeatures *otf, char a, char b, 
 
 	p.array = context->array;
 
-	// These keys are available since OS X 10.10; libui-ng requires 10.11.
+	// These keys are available since OS X 10.10; libui-ng requires macOS 10.12.
 	p.tagKey = kCTFontOpenTypeFeatureTag;
 	tagBytes[0] = (UInt8) a;
 	tagBytes[1] = (UInt8) b;

@@ -181,7 +181,7 @@ uiGroup *uiNewGroup(const char *title)
 	[g->box setTransparent:NO];
 	[g->box setTitlePosition:NSAtTop];
 	// we can't use uiDarwinSetControlFont() because the selector is different
-	[g->box setTitleFont:[NSFont systemFontOfSize:[NSFont systemFontSizeForControlSize:NSSmallControlSize]]];
+	[g->box setTitleFont:[NSFont systemFontOfSize:[NSFont systemFontSizeForControlSize:NSControlSizeSmall]]];
 
 	// default to low hugging to not hug edges
 	g->horzHuggingPri = NSLayoutPriorityDefaultLow;

@@ -103,7 +103,7 @@ static uiDateTimePicker *finishNewDateTimePicker(NSDatePickerElementFlags elemen
 	uiDarwinNewControl(uiDateTimePicker, d);
 
 	d->dp = [[uiprivDatePicker alloc] initWithElements:elements uiDateTimePicker:d];
-	uiDarwinSetControlFont(d->dp, NSRegularControlSize);
+	uiDarwinSetControlFont(d->dp, NSControlSizeRegular);
 
 	uiDateTimePickerOnChanged(d, defaultOnChanged, NULL);
 

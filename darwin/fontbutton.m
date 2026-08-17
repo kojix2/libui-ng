@@ -216,7 +216,7 @@ uiFontButton *uiNewFontButton(void)
 	uiDarwinNewControl(uiFontButton, b);
 
 	b->button = [[uiprivFontButton alloc] initWithFrame:NSZeroRect libuiFontButton:b];
-	uiDarwinSetControlFont(b->button, NSRegularControlSize);
+	uiDarwinSetControlFont(b->button, NSControlSizeRegular);
 
 	uiFontButtonOnChanged(b, defaultOnChanged, NULL);
 

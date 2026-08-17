@@ -1,7 +1,7 @@
 // 15 august 2015
 #import "uipriv_darwin.h"
 
-#define defaultStyleMask (NSTitledWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask | NSResizableWindowMask)
+#define defaultStyleMask (NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskResizable)
 
 struct uiWindow {
 	uiDarwinControl c;
@@ -25,13 +25,13 @@ struct uiWindow {
 	int focused;
 };
 
-static NSUInteger windowStyleMask(uiWindow *w)
+static NSWindowStyleMask windowStyleMask(uiWindow *w)
 {
-	NSUInteger styleMask;
+	NSWindowStyleMask styleMask;
 
-	styleMask = NSTitledWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask;
+	styleMask = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskMiniaturizable;
 	if (w->resizeable)
-		styleMask |= NSResizableWindowMask;
+		styleMask |= NSWindowStyleMaskResizable;
 	return styleMask;
 }
 
@@ -106,7 +106,7 @@ static NSUInteger windowStyleMask(uiWindow *w)
 	if (!w->suppressSizeChanged)
 		w->fullscreen = 0;
 	if (w->borderless)
-		[w->window setStyleMask:NSBorderlessWindowMask];
+		[w->window setStyleMask:NSWindowStyleMaskBorderless];
 }
 
 - (void)windowDidBecomeKey:(NSNotification *)note
@@ -329,7 +329,7 @@ void uiWindowSetFullscreen(uiWindow *w, int fullscreen)
 	[w->window toggleFullScreen:w->window];
 	w->suppressSizeChanged = NO;
 	if (!w->fullscreen && w->borderless)		// borderless doesn't play nice with fullscreen; restore borderless after removing
-		[w->window setStyleMask:NSBorderlessWindowMask];
+		[w->window setStyleMask:NSWindowStyleMaskBorderless];
 }
 
 void uiWindowOnContentSizeChanged(uiWindow *w, void (*f)(uiWindow *, void *), void *data)
@@ -366,7 +366,7 @@ void uiWindowSetBorderless(uiWindow *w, int borderless)
 	if (w->borderless) {
 		// borderless doesn't play nice with fullscreen; wait for later
 		if (!w->fullscreen)
-			[w->window setStyleMask:NSBorderlessWindowMask];
+			[w->window setStyleMask:NSWindowStyleMaskBorderless];
 	} else {
 		[w->window setStyleMask:windowStyleMask(w)];
 	}
@@ -411,9 +411,9 @@ void uiWindowSetResizeable(uiWindow *w, int resizeable)
 {
 	w->resizeable = resizeable;
 	if(resizeable) {
-		[w->window setStyleMask:[w->window styleMask] | NSResizableWindowMask];
+		[w->window setStyleMask:[w->window styleMask] | NSWindowStyleMaskResizable];
 	} else {
-		[w->window setStyleMask:[w->window styleMask] & ~NSResizableWindowMask];
+		[w->window setStyleMask:[w->window styleMask] & ~NSWindowStyleMaskResizable];
 	}
 }
 

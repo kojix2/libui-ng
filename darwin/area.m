@@ -1,9 +1,6 @@
 // 9 september 2015
 #import "uipriv_darwin.h"
 
-// 10.8 fixups
-#define NSEventModifierFlags NSUInteger
-
 @interface areaView : NSView {
 	uiArea *libui_a;
 	NSTrackingArea *libui_ta;
@@ -105,13 +102,13 @@ struct uiArea {
 
 	m = 0;
 	mods = [e modifierFlags];
-	if ((mods & NSControlKeyMask) != 0)
+	if ((mods & NSEventModifierFlagControl) != 0)
 		m |= uiModifierCtrl;
-	if ((mods & NSAlternateKeyMask) != 0)
+	if ((mods & NSEventModifierFlagOption) != 0)
 		m |= uiModifierAlt;
-	if ((mods & NSShiftKeyMask) != 0)
+	if ((mods & NSEventModifierFlagShift) != 0)
 		m |= uiModifierShift;
-	if ((mods & NSCommandKeyMask) != 0)
+	if ((mods & NSEventModifierFlagCommand) != 0)
 		m |= uiModifierSuper;
 	return m;
 }
@@ -170,7 +167,6 @@ struct uiArea {
 	me.Up = 0;
 	me.Count = 0;
 
-if (@available(macOS 10.12, *)) {
 	switch ([e type]) {
 	case NSEventTypeLeftMouseDown:
 	case NSEventTypeRightMouseDown:
@@ -190,20 +186,6 @@ if (@available(macOS 10.12, *)) {
 		buttonNumber = 0;
 		break;
 	}
-} else {
-	NSEventType type = [e type];
-	if (type == NSLeftMouseDown || type == NSRightMouseDown || type == NSOtherMouseDown) {
-		me.Down = buttonNumber;
-		me.Count = [e clickCount];
-	}
-	else if (type == NSLeftMouseUp || type == NSRightMouseUp || type == NSOtherMouseUp) {
-		me.Up = buttonNumber;
-	}
-	else if (type == NSLeftMouseDragged || type == NSRightMouseDragged || type == NSOtherMouseDragged) {
-		// we include the button that triggered the dragged event in the Held fields
-		buttonNumber = 0;
-	}
-}
 
 	me.Modifiers = [self parseModifiers:e];
 
@@ -413,7 +395,8 @@ int uiprivSendAreaEvents(NSEvent *e)
 	areaView *view;
 
 	type = [e type];
-	if (type != NSKeyDown && type != NSKeyUp && type != NSFlagsChanged)
+	if (type != NSEventTypeKeyDown && type != NSEventTypeKeyUp &&
+		type != NSEventTypeFlagsChanged)
 		return 0;
 	focused = [[e window] firstResponder];
 	if (focused == nil)
@@ -421,21 +404,16 @@ int uiprivSendAreaEvents(NSEvent *e)
 	if (![focused isKindOfClass:[areaView class]])
 		return 0;
 	view = (areaView *) focused;
-if (@available(macOS 10.12, *)) {
 	switch (type) {
-		case NSEventTypeKeyDown:      return [view doKeyDown:e];
-		case NSEventTypeKeyUp:        return [view doKeyUp:e];
-		case NSEventTypeFlagsChanged: return [view doFlagsChanged:e];
-	}
-} else {
-	if (type == NSKeyDown)
+	case NSEventTypeKeyDown:
 		return [view doKeyDown:e];
-	if (type == NSKeyUp)
+	case NSEventTypeKeyUp:
 		return [view doKeyUp:e];
-	if (type == NSFlagsChanged)
+	case NSEventTypeFlagsChanged:
 		return [view doFlagsChanged:e];
-}
-	return 0;
+	default:
+		return 0;
+	}
 }
 
 void uiAreaSetSize(uiArea *a, int width, int height)

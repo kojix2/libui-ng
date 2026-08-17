@@ -200,7 +200,7 @@ static uiWindow *currentMenuEventWindow(void)
 	// to do that, we simply leave the target as nil
 	[appMenu addItem:item];
 	item = [[[NSMenuItem alloc] initWithTitle:@"Hide Others" action:@selector(hideOtherApplications:) keyEquivalent:@"h"] autorelease];
-	[item setKeyEquivalentModifierMask:(NSAlternateKeyMask | NSCommandKeyMask)];
+	[item setKeyEquivalentModifierMask:(NSEventModifierFlagOption | NSEventModifierFlagCommand)];
 	[appMenu addItem:item];
 	item = [[[NSMenuItem alloc] initWithTitle:@"Show All" action:@selector(unhideAllApplications:) keyEquivalent:@""] autorelease];
 	[appMenu addItem:item];

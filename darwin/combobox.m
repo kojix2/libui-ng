@@ -33,7 +33,7 @@ struct uiCombobox {
 
 		// Use the regular font size for consistency instead of the
 		// Interface Builder defined one "Menu 13"
-		uiDarwinSetControlFont(self, NSRegularControlSize);
+		uiDarwinSetControlFont(self, NSControlSizeRegular);
 
 		[self setTarget:self];
 		[self setAction:@selector(onSelected:)];

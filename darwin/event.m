@@ -15,7 +15,7 @@ BOOL uiprivSendKeyboardEditEvents(uiprivApplicationClass *app, NSEvent *e)
 	NSString *chars;
 	NSEventModifierFlags flags;
 
-	if ([e type] != NSKeyDown)
+	if ([e type] != NSEventTypeKeyDown)
 		return FALSE;
 
 	flags = [e modifierFlags] & (NSEventModifierFlagCommand |

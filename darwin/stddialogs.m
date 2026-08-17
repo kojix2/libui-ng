@@ -127,10 +127,10 @@ static void msgbox(NSWindow *parent, const char *title, const char *description,
 
 void uiMsgBox(uiWindow *parent, const char *title, const char *description)
 {
-	msgbox(windowWindow(parent), title, description, NSInformationalAlertStyle);
+	msgbox(windowWindow(parent), title, description, NSAlertStyleInformational);
 }
 
 void uiMsgBoxError(uiWindow *parent, const char *title, const char *description)
 {
-	msgbox(windowWindow(parent), title, description, NSCriticalAlertStyle);
+	msgbox(windowWindow(parent), title, description, NSAlertStyleCritical);
 }

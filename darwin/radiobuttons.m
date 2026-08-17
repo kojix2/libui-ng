@@ -128,7 +128,7 @@ void uiRadioButtonsAppend(uiRadioButtons *r, const char *text)
 	// doesn't seem to have an associated bezel style
 	[b setBordered:NO];
 	[b setTransparent:NO];
-	uiDarwinSetControlFont(b, NSRegularControlSize);
+	uiDarwinSetControlFont(b, NSControlSizeRegular);
 	[b setTranslatesAutoresizingMaskIntoConstraints:NO];
 
 	[b setTarget:r->delegate];

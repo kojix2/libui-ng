@@ -64,7 +64,7 @@ static BOOL stepsIsRunning;
 
 	[uiprivNSApp() stop:uiprivNSApp()];
 	// stop: won't register until another event has passed; let's synthesize one
-	e = [NSEvent otherEventWithType:NSApplicationDefined
+	e = [NSEvent otherEventWithType:NSEventTypeApplicationDefined
 		location:NSZeroPoint
 		modifierFlags:0
 		timestamp:[[NSProcessInfo processInfo] systemUptime]
@@ -205,7 +205,7 @@ int uiMainStep(int wait)
 {
 	uiprivNextEventArgs nea;
 
-	nea.mask = NSAnyEventMask;
+	nea.mask = NSEventMaskAny;
 
 	// ProPuke did this in his original PR requesting this
 	// I'm not sure if this will work, but I assume it will...
@@ -247,7 +247,7 @@ int uiprivMainStep(uiprivNextEventArgs *nea, BOOL (^interceptEvent)(NSEvent *e))
 
 		// GNUstep does this
 		// it also updates the Services menu but there doesn't seem to be a public API for that so
-		if (type != NSPeriodic && type != NSMouseMoved)
+		if (type != NSEventTypePeriodic && type != NSEventTypeMouseMoved)
 			[[uiprivNSApp() mainMenu] update];
 
 		return 1;

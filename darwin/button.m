@@ -81,7 +81,7 @@ uiButton *uiNewButton(const char *text)
 
 	b->button = [[uiprivButton alloc] initWithFrame:NSZeroRect uiButton:b];
 	uiButtonSetText(b, text);
-	uiDarwinSetControlFont(b->button, NSRegularControlSize);
+	uiDarwinSetControlFont(b->button, NSControlSizeRegular);
 
 	uiButtonOnClicked(b, defaultOnClicked, NULL);
 
