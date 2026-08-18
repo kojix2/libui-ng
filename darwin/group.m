@@ -165,9 +165,13 @@ int uiGroupMargined(uiGroup *g)
 
 void uiGroupSetMargined(uiGroup *g, int margined)
 {
+	CGFloat padding;
+
 	g->margined = margined != 0;
-	[g->box setContentViewMargins:g->margined ?
-		g->nativeContentMargins : NSZeroSize];
+	padding = g->margined ? uiDarwinPaddingAmount(NULL) : 0;
+	[g->box setContentViewMargins:NSMakeSize(
+		g->nativeContentMargins.width + padding,
+		g->nativeContentMargins.height + padding)];
 	groupRelayout(g);
 }
 
@@ -179,7 +183,6 @@ uiGroup *uiNewGroup(const char *title)
 
 	g->box = [[NSBox alloc] initWithFrame:NSZeroRect];
 	g->nativeContentMargins = [g->box contentViewMargins];
-	[g->box setContentViewMargins:NSZeroSize];
 	[g->box setTitle:uiprivToNSString(title)];
 	[g->box setBoxType:NSBoxPrimary];
 	[g->box setBorderType:NSLineBorder];
