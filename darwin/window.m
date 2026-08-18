@@ -399,7 +399,7 @@ int uiWindowMargined(uiWindow *w)
 void uiWindowSetMargined(uiWindow *w, int margined)
 {
 	w->margined = margined;
-	uiprivSingleChildConstraintsSetMargined(&(w->constraints), w->margined);
+	windowRelayout(w);
 }
 
 int uiWindowResizeable(uiWindow *w)

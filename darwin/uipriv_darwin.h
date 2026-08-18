@@ -101,7 +101,6 @@ struct uiprivSingleChildConstraints {
 };
 extern void uiprivSingleChildConstraintsEstablish(uiprivSingleChildConstraints *c, NSView *contentView, NSView *childView, BOOL hugsTrailing, BOOL hugsBottom, int margined, NSString *desc);
 extern void uiprivSingleChildConstraintsRemove(uiprivSingleChildConstraints *c, NSView *cv);
-extern void uiprivSingleChildConstraintsSetMargined(uiprivSingleChildConstraints *c, int margined);
 
 // area.m
 extern int uiprivSendAreaEvents(NSEvent *);

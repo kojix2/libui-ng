@@ -35,20 +35,25 @@ void uiprivJiggleViewLayout(NSView *view)
 	[view layoutSubtreeIfNeeded];
 }
 
-static CGFloat margins(int margined)
+static id singleChildConstraintLayoutItem(NSView *contentView, int margined, CGFloat *margin)
 {
+	*margin = 0;
 	if (!margined)
-		return 0.0;
-	return uiDarwinMarginAmount(NULL);
+		return contentView;
+	if (@available(macOS 11.0, *))
+		return [contentView layoutMarginsGuide];
+	*margin = uiDarwinMarginAmount(NULL);
+	return contentView;
 }
 
 void uiprivSingleChildConstraintsEstablish(uiprivSingleChildConstraints *c, NSView *contentView, NSView *childView, BOOL hugsTrailing, BOOL hugsBottom, int margined, NSString *desc)
 {
+	id layoutItem;
 	CGFloat margin;
 
-	margin = margins(margined);
+	layoutItem = singleChildConstraintLayoutItem(contentView, margined, &margin);
 
-	c->leadingConstraint = uiprivMkConstraint(contentView, NSLayoutAttributeLeading,
+	c->leadingConstraint = uiprivMkConstraint(layoutItem, NSLayoutAttributeLeading,
 		NSLayoutRelationEqual,
 		childView, NSLayoutAttributeLeading,
 		1, -margin,
@@ -56,7 +61,7 @@ void uiprivSingleChildConstraintsEstablish(uiprivSingleChildConstraints *c, NSVi
 	[contentView addConstraint:c->leadingConstraint];
 	[c->leadingConstraint retain];
 
-	c->topConstraint = uiprivMkConstraint(contentView, NSLayoutAttributeTop,
+	c->topConstraint = uiprivMkConstraint(layoutItem, NSLayoutAttributeTop,
 		NSLayoutRelationEqual,
 		childView, NSLayoutAttributeTop,
 		1, -margin,
@@ -64,7 +69,7 @@ void uiprivSingleChildConstraintsEstablish(uiprivSingleChildConstraints *c, NSVi
 	[contentView addConstraint:c->topConstraint];
 	[c->topConstraint retain];
 
-	c->trailingConstraintGreater = uiprivMkConstraint(contentView, NSLayoutAttributeTrailing,
+	c->trailingConstraintGreater = uiprivMkConstraint(layoutItem, NSLayoutAttributeTrailing,
 		NSLayoutRelationGreaterThanOrEqual,
 		childView, NSLayoutAttributeTrailing,
 		1, margin,
@@ -74,7 +79,7 @@ void uiprivSingleChildConstraintsEstablish(uiprivSingleChildConstraints *c, NSVi
 	[contentView addConstraint:c->trailingConstraintGreater];
 	[c->trailingConstraintGreater retain];
 
-	c->trailingConstraintEqual = uiprivMkConstraint(contentView, NSLayoutAttributeTrailing,
+	c->trailingConstraintEqual = uiprivMkConstraint(layoutItem, NSLayoutAttributeTrailing,
 		NSLayoutRelationEqual,
 		childView, NSLayoutAttributeTrailing,
 		1, margin,
@@ -84,7 +89,7 @@ void uiprivSingleChildConstraintsEstablish(uiprivSingleChildConstraints *c, NSVi
 	[contentView addConstraint:c->trailingConstraintEqual];
 	[c->trailingConstraintEqual retain];
 
-	c->bottomConstraintGreater = uiprivMkConstraint(contentView, NSLayoutAttributeBottom,
+	c->bottomConstraintGreater = uiprivMkConstraint(layoutItem, NSLayoutAttributeBottom,
 		NSLayoutRelationGreaterThanOrEqual,
 		childView, NSLayoutAttributeBottom,
 		1, margin,
@@ -94,7 +99,7 @@ void uiprivSingleChildConstraintsEstablish(uiprivSingleChildConstraints *c, NSVi
 	[contentView addConstraint:c->bottomConstraintGreater];
 	[c->bottomConstraintGreater retain];
 
-	c->bottomConstraintEqual = uiprivMkConstraint(contentView, NSLayoutAttributeBottom,
+	c->bottomConstraintEqual = uiprivMkConstraint(layoutItem, NSLayoutAttributeBottom,
 		NSLayoutRelationEqual,
 		childView, NSLayoutAttributeBottom,
 		1, margin,
@@ -137,23 +142,4 @@ void uiprivSingleChildConstraintsRemove(uiprivSingleChildConstraints *c, NSView 
 		[c->bottomConstraintEqual release];
 		c->bottomConstraintEqual = nil;
 	}
-}
-
-void uiprivSingleChildConstraintsSetMargined(uiprivSingleChildConstraints *c, int margined)
-{
-	CGFloat margin;
-
-	margin = margins(margined);
-	if (c->leadingConstraint != nil)
-		[c->leadingConstraint setConstant:-margin];
-	if (c->topConstraint != nil)
-		[c->topConstraint setConstant:-margin];
-	if (c->trailingConstraintGreater != nil)
-		[c->trailingConstraintGreater setConstant:margin];
-	if (c->trailingConstraintEqual != nil)
-		[c->trailingConstraintEqual setConstant:margin];
-	if (c->bottomConstraintGreater != nil)
-		[c->bottomConstraintGreater setConstant:margin];
-	if (c->bottomConstraintEqual != nil)
-		[c->bottomConstraintEqual setConstant:margin];
 }

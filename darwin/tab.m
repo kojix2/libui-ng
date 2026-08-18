@@ -76,7 +76,7 @@ struct uiTab {
 - (void)setMargined:(int)m
 {
 	self->margined = m;
-	uiprivSingleChildConstraintsSetMargined(&(self->constraints), self->margined);
+	[self establishChildConstraints];
 }
 
 @end
