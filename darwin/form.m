@@ -16,6 +16,8 @@
 	NSMutableArray *stretchyConstraints;
 	BOOL padded;
 	BOOL verticalExpansion;
+	CGFloat nativeRowSpacing;
+	CGFloat nativeColumnSpacing;
 }
 - (id)initWithF:(uiForm *)ff;
 - (void)onDestroy;
@@ -61,6 +63,8 @@ struct uiForm {
 		self->stretchyConstraints = [NSMutableArray new];
 		self->padded = NO;
 		self->verticalExpansion = NO;
+		self->nativeRowSpacing = [self rowSpacing];
+		self->nativeColumnSpacing = [self columnSpacing];
 		[self setRowSpacing:0];
 		[self setColumnSpacing:0];
 	}
@@ -228,12 +232,9 @@ struct uiForm {
 
 - (void)setPadded:(int)p
 {
-	CGFloat spacing;
-
 	self->padded = p != 0;
-	spacing = self->padded ? uiDarwinPaddingAmount(NULL) : 0;
-	[self setRowSpacing:spacing];
-	[self setColumnSpacing:spacing];
+	[self setRowSpacing:self->padded ? self->nativeRowSpacing : 0];
+	[self setColumnSpacing:self->padded ? self->nativeColumnSpacing : 0];
 }
 
 - (BOOL)hugsTrailing

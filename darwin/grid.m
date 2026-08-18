@@ -35,6 +35,8 @@ enum {
 	BOOL padded;
 	BOOL horizontalExpansion;
 	BOOL verticalExpansion;
+	CGFloat nativeRowSpacing;
+	CGFloat nativeColumnSpacing;
 }
 - (id)initWithGrid:(uiGrid *)g;
 - (void)onDestroy;
@@ -271,7 +273,6 @@ static NSView *newCellView(gridChild *child)
 	int xcount, ycount;
 	int x, y, xx, yy;
 	int64_t cellCount;
-	CGFloat spacing;
 	BOOL *expandedColumns, *expandedRows;
 	int *occupancy;
 	NSView **columnViews, **rowViews;
@@ -365,9 +366,10 @@ static NSView *newCellView(gridChild *child)
 
 	self->nativeGrid = [[NSGridView gridViewWithNumberOfColumns:xcount rows:ycount] retain];
 	[self->nativeGrid setTranslatesAutoresizingMaskIntoConstraints:NO];
-	spacing = self->padded ? uiDarwinPaddingAmount(NULL) : 0;
-	[self->nativeGrid setColumnSpacing:spacing];
-	[self->nativeGrid setRowSpacing:spacing];
+	self->nativeRowSpacing = [self->nativeGrid rowSpacing];
+	self->nativeColumnSpacing = [self->nativeGrid columnSpacing];
+	[self->nativeGrid setRowSpacing:self->padded ? self->nativeRowSpacing : 0];
+	[self->nativeGrid setColumnSpacing:self->padded ? self->nativeColumnSpacing : 0];
 	[self addSubview:self->nativeGrid];
 
 	[self addNativeGridConstraint:uiprivMkConstraint(self, NSLayoutAttributeLeading,
@@ -585,14 +587,11 @@ static NSView *newCellView(gridChild *child)
 
 - (void)setPadded:(int)p
 {
-	CGFloat spacing;
-
 	self->padded = p != 0;
 	if (self->nativeGrid == nil)
 		return;
-	spacing = self->padded ? uiDarwinPaddingAmount(NULL) : 0;
-	[self->nativeGrid setColumnSpacing:spacing];
-	[self->nativeGrid setRowSpacing:spacing];
+	[self->nativeGrid setRowSpacing:self->padded ? self->nativeRowSpacing : 0];
+	[self->nativeGrid setColumnSpacing:self->padded ? self->nativeColumnSpacing : 0];
 }
 
 - (BOOL)hugsTrailing
