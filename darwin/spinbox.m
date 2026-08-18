@@ -72,30 +72,25 @@ struct uiSpinbox {
 			self, NSLayoutAttributeTrailing,
 			1, 0,
 			@"uiSpinbox right edge")];
-		[self addConstraint:uiprivMkConstraint(self->tf, NSLayoutAttributeTop,
-			NSLayoutRelationEqual,
-			self, NSLayoutAttributeTop,
-			1, 0,
-			@"uiSpinbox top edge text field")];
-		[self addConstraint:uiprivMkConstraint(self->tf, NSLayoutAttributeBottom,
-			NSLayoutRelationEqual,
-			self, NSLayoutAttributeBottom,
-			1, 0,
-			@"uiSpinbox bottom edge text field")];
 		[self addConstraint:uiprivMkConstraint(self->stepper, NSLayoutAttributeTop,
 			NSLayoutRelationEqual,
 			self, NSLayoutAttributeTop,
-			1, -1,
+			1, 0,
 			@"uiSpinbox top edge stepper")];
 		[self addConstraint:uiprivMkConstraint(self->stepper, NSLayoutAttributeBottom,
 			NSLayoutRelationEqual,
 			self, NSLayoutAttributeBottom,
-			1, -1,
+			1, 0,
 			@"uiSpinbox bottom edge stepper")];
+		[self addConstraint:uiprivMkConstraint(self->tf, NSLayoutAttributeCenterY,
+			NSLayoutRelationEqual,
+			self->stepper, NSLayoutAttributeCenterY,
+			1, 0,
+			@"uiSpinbox vertical alignment")];
 		[self addConstraint:uiprivMkConstraint(self->tf, NSLayoutAttributeTrailing,
 			NSLayoutRelationEqual,
 			self->stepper, NSLayoutAttributeLeading,
-			1, -3,		// arbitrary amount; good enough visually (and it seems to match NSDatePicker too, at least on 10.11, which is even better)
+			1, 0,
 			@"uiSpinbox space between text field and stepper")];
 
 		self->libui_enabled = YES;
