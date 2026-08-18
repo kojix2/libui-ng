@@ -3,8 +3,6 @@
 // Settings are based on the interface builder defaults.
 void uiprivNSTextFieldSetStyleLabel(NSTextField *t)
 {
-	uiDarwinSetControlFont(t, NSControlSizeRegular);
-
 	[t setBordered:NO];
 	[t setBezeled:NO];
 
@@ -28,4 +26,3 @@ void uiprivNSTextFieldSetStyleSearchEntry(NSTextField *t)
 
 	[t setBezelStyle:NSTextFieldRoundedBezel];
 }
-

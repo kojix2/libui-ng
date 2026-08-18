@@ -95,7 +95,6 @@ uiCheckbox *uiNewCheckbox(const char *text)
 
 	c->button = [[uiprivCheckbox alloc] initWithFrame:NSZeroRect uiCheckbox:c];
 	uiCheckboxSetText(c, text);
-	uiDarwinSetControlFont(c->button, NSControlSizeRegular);
 
 	uiCheckboxOnToggled(c, defaultOnToggled, NULL);
 

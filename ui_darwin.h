@@ -199,7 +199,8 @@ _UI_EXTERN void uiDarwinControlChildVisibilityChanged(uiDarwinControl *);
 // TODO document
 _UI_EXTERN uiDarwinControl *uiDarwinAllocControl(size_t n, uint32_t typesig, const char *typenamestr);
 
-// Use this function as a shorthand for setting control fonts.
+// Legacy compatibility helper; libui controls now use AppKit's default fonts.
+// Consider removing this function in a future API-breaking release.
 _UI_EXTERN void uiDarwinSetControlFont(NSControl *c, NSControlSize size);
 
 // You can use this function from within your control implementations to return text strings that can be freed with uiFreeText().

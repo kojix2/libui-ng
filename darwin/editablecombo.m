@@ -127,8 +127,6 @@ uiEditableCombobox *uiNewEditableCombobox(void)
 
 	c->cb = [[uiprivEditableCombobox alloc] initWithFrame:NSZeroRect uiEditableCombobox:c];
 
-	uiDarwinSetControlFont(c->cb, NSControlSizeRegular);
-
 	uiEditableComboboxOnChanged(c, defaultOnChanged, NULL);
 
 	return c;

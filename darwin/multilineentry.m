@@ -231,7 +231,7 @@ if (@available(macOS 10.14, *)) {
 	}
 	[[e->tv textContainer] setContainerSize:NSMakeSize(CGFLOAT_MAX, CGFLOAT_MAX)];
 
-	// don't use uiDarwinSetControlFont() directly; we have to do a little extra work to set the font
+	// NSTextView has no default font, so set the native regular control font explicitly.
 	font = [NSFont systemFontOfSize:[NSFont systemFontSizeForControlSize:NSControlSizeRegular]];
 	[e->tv setTypingAttributes:[NSDictionary
 		dictionaryWithObject:font

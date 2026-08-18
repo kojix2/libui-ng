@@ -342,8 +342,6 @@ uiTab *uiNewTab(void)
 	t->tabview = [[NSTabView alloc] initWithFrame:NSZeroRect];
 	delegate = [[uiprivTabDelegate alloc] initWithTab:t];
 	[t->tabview setDelegate:delegate];
-	// also good for NSTabView (same selector and everything)
-	uiDarwinSetControlFont((NSControl *) (t->tabview), NSControlSizeRegular);
 
 	t->pages = [NSMutableArray new];
 

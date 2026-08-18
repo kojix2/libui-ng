@@ -31,10 +31,6 @@ struct uiCombobox {
 
 		[[self cell] setArrowPosition:NSPopUpArrowAtBottom];
 
-		// Use the regular font size for consistency instead of the
-		// Interface Builder defined one "Menu 13"
-		uiDarwinSetControlFont(self, NSControlSizeRegular);
-
 		[self setTarget:self];
 		[self setAction:@selector(onSelected:)];
 	}
