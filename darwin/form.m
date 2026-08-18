@@ -95,9 +95,11 @@ struct uiForm {
 - (void)updateRows
 {
 	formChild *fc;
+	CGFloat labelColumnWidth;
 	NSView *firstStretchy;
 	NSLayoutConstraint *constraint;
 	NSInteger rowIndex;
+	BOOL hasVisibleRows;
 	BOOL hasVerticalExpansion;
 
 	if ([self->stretchyConstraints count] != 0) {
@@ -105,13 +107,22 @@ struct uiForm {
 		[self->stretchyConstraints removeAllObjects];
 	}
 	firstStretchy = nil;
+	labelColumnWidth = 0;
+	hasVisibleRows = NO;
 	rowIndex = 0;
 	for (fc in self->children) {
 		NSGridRow *row;
+		NSSize labelSize;
 
 		row = [self rowAtIndex:rowIndex++];
 		[row setHidden:!uiControlVisible(fc.c)];
-		if (!uiControlVisible(fc.c) || !fc.stretchy)
+		if (!uiControlVisible(fc.c))
+			continue;
+		hasVisibleRows = YES;
+		labelSize = [fc.label intrinsicContentSize];
+		if (labelColumnWidth < labelSize.width)
+			labelColumnWidth = labelSize.width;
+		if (!fc.stretchy)
 			continue;
 		if (firstStretchy == nil) {
 			firstStretchy = [fc view];
@@ -125,6 +136,12 @@ struct uiForm {
 		[self addConstraint:constraint];
 		[self->stretchyConstraints addObject:constraint];
 	}
+	// NSGridView can assign spare width to the label column when another
+	// column contains a view without an intrinsic width, such as NSScrollView.
+	// Keep labels content-sized so the control column receives the spare width.
+	if ([self numberOfColumns] != 0)
+		[[self columnAtIndex:0] setWidth:hasVisibleRows ?
+			labelColumnWidth : NSGridViewSizeForContent];
 	hasVerticalExpansion = firstStretchy != nil;
 	if (hasVerticalExpansion != self->verticalExpansion) {
 		self->verticalExpansion = hasVerticalExpansion;
