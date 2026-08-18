@@ -1,6 +1,20 @@
 // 7 june 2016
 #import "uipriv_darwin.h"
 
+// An ordinary NSView has no intrinsic height. Give the trailing spacer an
+// explicit zero natural height so it does not increase the Form's fitting size.
+@interface formSpacerView : NSView
+@end
+
+@implementation formSpacerView
+
+- (NSSize)intrinsicContentSize
+{
+	return NSZeroSize;
+}
+
+@end
+
 @interface formChild : NSObject
 @property uiControl *c;
 @property (strong) NSTextField *label;
@@ -14,6 +28,7 @@
 	uiForm *f;
 	NSMutableArray *children;
 	NSMutableArray *stretchyConstraints;
+	formSpacerView *spacer;
 	BOOL padded;
 	BOOL verticalExpansion;
 	CGFloat nativeRowSpacing;
@@ -65,8 +80,22 @@ struct uiForm {
 		self->verticalExpansion = NO;
 		self->nativeRowSpacing = [self rowSpacing];
 		self->nativeColumnSpacing = [self columnSpacing];
+		// rowSpacing would also insert a gap before the trailing spacer row.
+		// Preserve AppKit's native value and apply it only between visible
+		// content rows as topPadding in updateRows.
 		[self setRowSpacing:0];
 		[self setColumnSpacing:0];
+		self->spacer = [formSpacerView new];
+		[self->spacer setContentHuggingPriority:NSLayoutPriorityRequired
+			forOrientation:NSLayoutConstraintOrientationVertical];
+		// NSGridView otherwise distributes spare height among ordinary rows.
+		// When no row is stretchy, this trailing row receives that height so the
+		// content stays top-aligned. This deliberately avoids caching fittingSize:
+		// a descendant container can change its intrinsic height at any time.
+		[self addRowWithViews:[NSArray arrayWithObjects:
+			[NSGridCell emptyContentView], self->spacer, nil]];
+		[[self columnAtIndex:0] setXPlacement:NSGridCellPlacementTrailing];
+		[[self columnAtIndex:1] setXPlacement:NSGridCellPlacementFill];
 	}
 	return self;
 }
@@ -86,6 +115,7 @@ struct uiForm {
 		uiControlDestroy(fc.c);
 	}
 	[self->children release];
+	[self->spacer release];
 }
 
 - (void)syncEnableStates:(int)enabled
@@ -104,6 +134,7 @@ struct uiForm {
 	NSLayoutConstraint *constraint;
 	NSInteger rowIndex;
 	BOOL hasVisibleRows;
+	BOOL hasPreviousVisibleRow;
 	BOOL hasVerticalExpansion;
 
 	if ([self->stretchyConstraints count] != 0) {
@@ -113,6 +144,7 @@ struct uiForm {
 	firstStretchy = nil;
 	labelColumnWidth = 0;
 	hasVisibleRows = NO;
+	hasPreviousVisibleRow = NO;
 	rowIndex = 0;
 	for (fc in self->children) {
 		NSGridRow *row;
@@ -122,6 +154,11 @@ struct uiForm {
 		[row setHidden:!uiControlVisible(fc.c)];
 		if (!uiControlVisible(fc.c))
 			continue;
+		// Padding belongs between visible rows, never above the first one.
+		// Tracking visibility here also avoids gaps left by hidden rows.
+		[row setTopPadding:self->padded && hasPreviousVisibleRow ?
+			self->nativeRowSpacing : 0];
+		hasPreviousVisibleRow = YES;
 		hasVisibleRows = YES;
 		labelSize = [fc.label intrinsicContentSize];
 		if (labelColumnWidth < labelSize.width)
@@ -147,6 +184,9 @@ struct uiForm {
 		[[self columnAtIndex:0] setWidth:hasVisibleRows ?
 			labelColumnWidth : NSGridViewSizeForContent];
 	hasVerticalExpansion = firstStretchy != nil;
+	// A stretchy child, rather than the spacer, must receive spare height.
+	// Equal-height constraints above make multiple stretchy rows share it.
+	[[self rowAtIndex:[self->children count]] setHidden:hasVerticalExpansion];
 	if (hasVerticalExpansion != self->verticalExpansion) {
 		self->verticalExpansion = hasVerticalExpansion;
 		uiDarwinNotifyEdgeHuggingChanged(uiDarwinControl(self->f));
@@ -185,16 +225,23 @@ struct uiForm {
 	uiDarwinControlSetHuggingPriority(uiDarwinControl(fc.c), priority, NSLayoutConstraintOrientationVertical);
 	uiDarwinControlSetHuggingPriority(uiDarwinControl(fc.c), NSLayoutPriorityDefaultLow, NSLayoutConstraintOrientationHorizontal);
 
+	row = [self insertRowAtIndex:[self->children count]
+		withViews:[NSArray arrayWithObjects:fc.label, [fc view], nil]];
 	[self->children addObject:fc];
-	row = [self addRowWithViews:[NSArray arrayWithObjects:fc.label, [fc view], nil]];
-	if ([self numberOfRows] == 1) {
-		[[self columnAtIndex:0] setXPlacement:NSGridCellPlacementTrailing];
-		[[self columnAtIndex:1] setXPlacement:NSGridCellPlacementFill];
-	}
+	// Text-bearing controls use their baseline. Controls whose visual axis is
+	// horizontal use center alignment, while tall or baseline-less composites
+	// use top alignment. Treating every AppKit view as baseline-bearing can
+	// move a control down by much of its height (notably NSColorWell).
 	if ([[fc view] isKindOfClass:[NSScrollView class]]) {
 		[[row cellAtIndex:0] setYPlacement:NSGridCellPlacementTop];
 		[[row cellAtIndex:1] setYPlacement:NSGridCellPlacementFill];
-	} else
+	} else if ([[fc view] isKindOfClass:[NSSlider class]] ||
+		[[fc view] isKindOfClass:[NSProgressIndicator class]] ||
+		[[fc view] isKindOfClass:[NSColorWell class]])
+		[row setYPlacement:NSGridCellPlacementCenter];
+	else if ([[fc view] firstBaselineOffsetFromTop] == 0)
+		[row setYPlacement:NSGridCellPlacementTop];
+	else
 		[row setRowAlignment:NSGridRowAlignmentFirstBaseline];
 	[self updateRows];
 	[fc release];
@@ -233,8 +280,8 @@ struct uiForm {
 - (void)setPadded:(int)p
 {
 	self->padded = p != 0;
-	[self setRowSpacing:self->padded ? self->nativeRowSpacing : 0];
 	[self setColumnSpacing:self->padded ? self->nativeColumnSpacing : 0];
+	[self updateRows];
 }
 
 - (BOOL)hugsTrailing

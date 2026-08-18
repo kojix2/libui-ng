@@ -87,6 +87,19 @@ struct uiSpinbox {
 			self->stepper, NSLayoutAttributeCenterY,
 			1, 0,
 			@"uiSpinbox vertical alignment")];
+		// The text field and stepper have slightly different native heights.
+		// Keep the field inside the composite view while centering both controls;
+		// the same inset is used below to translate the field's baseline.
+		[self addConstraint:uiprivMkConstraint(self->tf, NSLayoutAttributeTop,
+			NSLayoutRelationGreaterThanOrEqual,
+			self, NSLayoutAttributeTop,
+			1, 0,
+			@"uiSpinbox text field top boundary")];
+		[self addConstraint:uiprivMkConstraint(self, NSLayoutAttributeBottom,
+			NSLayoutRelationGreaterThanOrEqual,
+			self->tf, NSLayoutAttributeBottom,
+			1, 0,
+			@"uiSpinbox text field bottom boundary")];
 		[self addConstraint:uiprivMkConstraint(self->tf, NSLayoutAttributeTrailing,
 			NSLayoutRelationEqual,
 			self->stepper, NSLayoutAttributeLeading,
@@ -111,14 +124,29 @@ struct uiSpinbox {
 	[super dealloc];
 }
 
-- (NSView *)viewForFirstBaselineLayout
+- (CGFloat)textFieldVerticalInset
 {
-	return self->tf;
+	NSSize fieldSize;
+
+	// Baseline offsets are expressed in the receiving view's coordinates.
+	// Account for the field being vertically centered beside a taller stepper.
+	fieldSize = [self->tf intrinsicContentSize];
+	return (MAX(fieldSize.height, [self->stepper intrinsicContentSize].height) -
+		fieldSize.height) / 2;
 }
 
-- (NSView *)viewForLastBaselineLayout
+- (CGFloat)firstBaselineOffsetFromTop
 {
-	return self->tf;
+	// NSGridView aligns the composite view's reported offset, not the text
+	// field returned by viewForFirstBaselineLayout, so expose it directly.
+	return [self textFieldVerticalInset] +
+		[self->tf firstBaselineOffsetFromTop];
+}
+
+- (CGFloat)lastBaselineOffsetFromBottom
+{
+	return [self textFieldVerticalInset] +
+		[self->tf lastBaselineOffsetFromBottom];
 }
 
 - (NSInteger)libui_value
