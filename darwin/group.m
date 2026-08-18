@@ -8,6 +8,7 @@ struct uiGroup {
 	NSLayoutPriority oldHorzHuggingPri;
 	NSLayoutPriority oldVertHuggingPri;
 	int margined;
+	NSSize nativeContentMargins;
 	uiprivSingleChildConstraints constraints;
 	NSLayoutPriority horzHuggingPri;
 	NSLayoutPriority vertHuggingPri;
@@ -68,7 +69,7 @@ static void groupRelayout(uiGroup *g)
 		[g->box contentView], childView,
 		uiDarwinControlHugsTrailingEdge(uiDarwinControl(g->child)),
 		uiDarwinControlHugsBottom(uiDarwinControl(g->child)),
-		g->margined,
+		0,
 		@"uiGroup");
 	// needed for some very rare drawing errors...
 	uiprivJiggleViewLayout(g->box);
@@ -164,8 +165,10 @@ int uiGroupMargined(uiGroup *g)
 
 void uiGroupSetMargined(uiGroup *g, int margined)
 {
-	g->margined = margined;
-	uiprivSingleChildConstraintsSetMargined(&(g->constraints), g->margined);
+	g->margined = margined != 0;
+	[g->box setContentViewMargins:g->margined ?
+		g->nativeContentMargins : NSZeroSize];
+	groupRelayout(g);
 }
 
 uiGroup *uiNewGroup(const char *title)
@@ -175,6 +178,8 @@ uiGroup *uiNewGroup(const char *title)
 	uiDarwinNewControl(uiGroup, g);
 
 	g->box = [[NSBox alloc] initWithFrame:NSZeroRect];
+	g->nativeContentMargins = [g->box contentViewMargins];
+	[g->box setContentViewMargins:NSZeroSize];
 	[g->box setTitle:uiprivToNSString(title)];
 	[g->box setBoxType:NSBoxPrimary];
 	[g->box setBorderType:NSLineBorder];
