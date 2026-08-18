@@ -17,6 +17,7 @@
 	BOOL vertical;
 	BOOL padded;
 	BOOL primaryExpansion;
+	CGFloat nativeSpacing;
 
 	NSLayoutAttribute primarySize;
 	NSLayoutAttribute secondarySize;
@@ -70,6 +71,7 @@ struct uiBox {
 		self->stretchyConstraints = [NSMutableArray new];
 		[self setDistribution:NSStackViewDistributionFill];
 		[self setDetachesHiddenViews:YES];
+		self->nativeSpacing = [self spacing];
 		[self setSpacing:0];
 
 		if (self->vertical) {
@@ -218,7 +220,7 @@ struct uiBox {
 - (void)setPadded:(int)p
 {
 	self->padded = p != 0;
-	[self setSpacing:self->padded ? uiDarwinPaddingAmount(NULL) : 0];
+	[self setSpacing:self->padded ? self->nativeSpacing : 0];
 }
 
 - (BOOL)hugsTrailing
