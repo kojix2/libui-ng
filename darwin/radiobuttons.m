@@ -112,7 +112,7 @@ void uiRadioButtonsAppend(uiRadioButtons *r, const char *text)
 	[b setEnabled:uiControlEnabledToUser(uiControl(r))];
 
 	[r->buttons addObject:b];
-	[r->view addArrangedSubview:b];
+	[r->view addView:b inGravity:NSStackViewGravityTop];
 	constraint = uiprivMkConstraint(b, NSLayoutAttributeWidth,
 		NSLayoutRelationEqual,
 		r->view, NSLayoutAttributeWidth,
@@ -173,7 +173,6 @@ uiRadioButtons *uiNewRadioButtons(void)
 	r->selected = -1;
 	r->view = [[NSStackView alloc] initWithFrame:NSZeroRect];
 	[r->view setOrientation:NSUserInterfaceLayoutOrientationVertical];
-	[r->view setDistribution:NSStackViewDistributionFill];
 
 	r->delegate = [[radioButtonsDelegate alloc] initWithR:r];
 
