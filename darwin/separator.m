@@ -17,7 +17,6 @@ uiSeparator *uiNewHorizontalSeparator(void)
 	// make the initial width >= initial height to force horizontal
 	s->box = [[NSBox alloc] initWithFrame:NSMakeRect(0, 0, 100, 1)];
 	[s->box setBoxType:NSBoxSeparator];
-	[s->box setBorderType:NSGrooveBorder];
 	[s->box setTransparent:NO];
 	[s->box setTitlePosition:NSNoTitle];
 
@@ -33,7 +32,6 @@ uiSeparator *uiNewVerticalSeparator(void)
 	// make the initial height >= initial width to force vertical
 	s->box = [[NSBox alloc] initWithFrame:NSMakeRect(0, 0, 1, 100)];
 	[s->box setBoxType:NSBoxSeparator];
-	[s->box setBorderType:NSGrooveBorder];
 	[s->box setTransparent:NO];
 	[s->box setTitlePosition:NSNoTitle];
 
