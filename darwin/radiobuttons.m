@@ -174,7 +174,6 @@ uiRadioButtons *uiNewRadioButtons(void)
 	r->view = [[NSStackView alloc] initWithFrame:NSZeroRect];
 	[r->view setOrientation:NSUserInterfaceLayoutOrientationVertical];
 	[r->view setDistribution:NSStackViewDistributionFill];
-	[r->view setSpacing:0];
 
 	r->delegate = [[radioButtonsDelegate alloc] initWithR:r];
 
