@@ -79,7 +79,7 @@ public:
 		this->setAttribute(a);
 	}
 
-	~combinedEffectsAttr()
+	virtual ~combinedEffectsAttr()
 	{
 		if (this->colorAttr != NULL)
 			uiprivAttributeRelease(this->colorAttr);

@@ -256,6 +256,12 @@ class textRenderer : public IDWriteTextRenderer {
 	ID2D1SolidColorBrush *black;
 	IDWriteFactory2 *dwfactory2;
 public:
+	virtual ~textRenderer(void)
+	{
+		if (this->dwfactory2 != NULL)
+			this->dwfactory2->Release();
+	}
+
 	textRenderer(ID2D1RenderTarget *rt, BOOL snap, ID2D1SolidColorBrush *black)
 	{
 		this->refcount = 1;
@@ -292,8 +298,6 @@ public:
 	{
 		this->refcount--;
 		if (this->refcount == 0) {
-			if (this->dwfactory2 != NULL)
-				this->dwfactory2->Release();
 			delete this;
 			return 0;
 		}

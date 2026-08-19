@@ -56,6 +56,7 @@ class drawingEffectsAttr : public IUnknown {
 	double ua;
 public:
 	drawingEffectsAttr(void);
+	virtual ~drawingEffectsAttr(void) {}
 
 	// IUnknown
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void **ppvObject);
