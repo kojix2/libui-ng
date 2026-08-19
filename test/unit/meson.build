@@ -41,7 +41,11 @@ unit = executable('unit', libui_unit_sources,
 	win_subsystem: 'console',
 	install: false)
 
-test('Unit Tests', unit)
+libui_unit_test_env = []
+if libui_backend == 'qt6'
+	libui_unit_test_env += ['QT_QPA_PLATFORM=offscreen']
+endif
+test('Unit Tests', unit, env: libui_unit_test_env)
 
 utf_unit = executable('utf-unit', [
 	'utf.c',

@@ -125,8 +125,20 @@ libui_sources = []
 libui_test_internal_sources = []
 libui_deps = []
 libui_rpath = ''
+libui_target_cpp_std = 'c++11'
 subdir('common')
-if libui_OS == 'windows'
+libui_backend = get_option('gui_backend')
+if libui_backend == 'qt6'
+	if libui_OS != 'linux'
+		error('The Qt 6 backend is currently supported on Linux only')
+	endif
+	if libui_mode != 'shared'
+		error('The Qt 6 backend currently supports shared libraries only')
+	endif
+	libui_target_cpp_std = 'c++17'
+	subdir('qt6')
+	install_headers('ui_qt.h')
+elif libui_OS == 'windows'
 	subdir('windows')
 	install_headers('ui_windows.h')
 elif libui_OS == 'darwin'
@@ -143,6 +155,7 @@ libui_libui = library('ui', libui_sources,
 	name_prefix: 'lib',		# always call it libui, even in Windows DLLs
 	install: true,
 	gnu_symbol_visibility: 'hidden',
+	override_options: ['cpp_std=' + libui_target_cpp_std],
 	c_args: ['-Dlibui_EXPORTS'],
 	cpp_args: ['-Dlibui_EXPORTS'],
 	objc_args: ['-Dlibui_EXPORTS'])

@@ -47,3 +47,12 @@ executable('tester', libui_test_sources,
 
 subdir('unit')
 subdir('qa')
+
+if libui_backend == 'qt6'
+	qt6_backend_unit = executable('qt6-backend-unit', 'unit/qt6.cpp',
+		dependencies: libui_dep,
+		override_options: ['cpp_std=c++17'],
+		install: false)
+	test('Qt 6 Backend Tests', qt6_backend_unit,
+		env: ['QT_QPA_PLATFORM=offscreen'])
+endif

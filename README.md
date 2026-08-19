@@ -42,6 +42,7 @@ Build automation is defined in `.github/workflows/build.yml`.
 - Ninja, or another Meson backend
 - Windows: Microsoft Visual Studio 2013 or newer, or MinGW-w64
 - Unix: GTK+ development packages
+- Qt backend on Linux: Qt 6.8 or newer (Core, Gui, and Widgets); shared builds only
 - macOS: tools required to build Cocoa programs
 
 MinGW-w64 builds currently support static libraries only.
@@ -62,6 +63,7 @@ Common options:
 - `--buildtype=debug|release|debugoptimized`
 - `--default-library=shared|static`
 - `--wrap-mode=forcefallback|nofallback|nodownload`
+- `-Dgui_backend=native|qt6` (`native` is the default)
 
 Example:
 
@@ -69,6 +71,19 @@ Example:
 meson setup build --buildtype=release --default-library=shared
 ninja -C build
 ```
+
+To build the experimental Qt 6 backend on Linux:
+
+```sh
+meson setup build-qt -Dgui_backend=qt6 --default-library=shared
+ninja -C build-qt
+QT_QPA_PLATFORM=offscreen meson test -C build-qt
+```
+
+Qt backend builds preserve the public C API in `ui.h`. C++ applications can
+include `ui_qt.h` to retrieve or embed `QWidget` controls. GTK-specific
+`ui_unix.h` is not installed for Qt builds. Static Qt builds and Qt backends on
+Windows or macOS are not supported yet.
 
 ## Test
 

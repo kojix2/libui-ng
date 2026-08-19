@@ -1,2 +1,4 @@
 option('tests', type : 'boolean', value : true, description : 'Build tests')
 option('examples', type : 'boolean', value : true, description : 'Build examples')
+option('gui_backend', type : 'combo', choices : ['native', 'qt6'], value : 'native',
+	description : 'GUI backend (qt6 is currently supported on Linux with shared libraries)')
