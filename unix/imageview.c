@@ -1,6 +1,5 @@
 // uiImageView — GTK3 implementation (MVP, copy-owned)
 #include "uipriv_unix.h"
-#include "ui.h"
 
 #define uiImageViewSignature 0x49566965
 
