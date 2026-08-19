@@ -2,7 +2,8 @@
 #include "uipriv_windows.hpp"
 #include "area.hpp"
 
-// TODO https://github.com/Microsoft/Windows-classic-samples/blob/master/Samples/Win7Samples/multimedia/DirectWrite/PadWrite/TextEditor.cpp notes on explicit RTL handling under MirrorXCoordinate(); also in areadraw.cpp too?
+// TODO when adding RTL layout support, mirror area input and drawing coordinates for WS_EX_LAYOUTRTL
+// See MirrorXCoordinate() in https://github.com/microsoft/Windows-classic-samples/blob/main/Samples/Win7Samples/multimedia/DirectWrite/PadWrite/TextEditor.cpp
 
 static uiModifiers getModifiers(void)
 {
@@ -75,6 +76,13 @@ static void capture(uiArea *a, BOOL capturing)
 			logLastError(L"error releasing capture on drag");
 }
 
+static void setMouseInside(uiArea *a, BOOL inside)
+{
+	a->inside = inside;
+	(*(a->ah->MouseCrossed))(a->ah, a, !inside);
+	uiprivClickCounterReset(&(a->cc));
+}
+
 static void areaMouseEvent(uiArea *a, int down, int  up, WPARAM wParam, LPARAM lParam)
 {
 	uiAreaMouseEvent me;
@@ -91,13 +99,9 @@ static void areaMouseEvent(uiArea *a, int down, int  up, WPARAM wParam, LPARAM l
 		uiWindowsEnsureGetClientRect(a->hwnd, &client);
 		inClient = PtInRect(&client, clientpt);
 		if (inClient && !a->inside) {
-			a->inside = TRUE;
-			(*(a->ah->MouseCrossed))(a->ah, a, 0);
-			uiprivClickCounterReset(&(a->cc));
+			setMouseInside(a, TRUE);
 		} else if (!inClient && a->inside) {
-			a->inside = FALSE;
-			(*(a->ah->MouseCrossed))(a->ah, a, 1);
-			uiprivClickCounterReset(&(a->cc));
+			setMouseInside(a, FALSE);
 		}
 	}
 
@@ -159,28 +163,20 @@ static void areaMouseEvent(uiArea *a, int down, int  up, WPARAM wParam, LPARAM l
 	a->inMouseDownEvent = FALSE;
 }
 
-// TODO genericize this so it can be called above
 static void onMouseEntered(uiArea *a)
 {
 	if (a->inside)
 		return;
 	if (a->capturing)		// we handle mouse crossing in areaMouseEvent()
 		return;
-	a->inside = TRUE;
 	track(a, TRUE);
-	(*(a->ah->MouseCrossed))(a->ah, a, 0);
-	// TODO figure out why we did this to begin with; either we do it on both GTK+ and Windows or not at all
-	uiprivClickCounterReset(&(a->cc));
+	setMouseInside(a, TRUE);
 }
 
-// TODO genericize it so that it can be called above
 static void onMouseLeft(uiArea *a)
 {
 	a->tracking = FALSE;
-	a->inside = FALSE;
-	(*(a->ah->MouseCrossed))(a->ah, a, 1);
-	// TODO figure out why we did this to begin with; either we do it on both GTK+ and Windows or not at all
-	uiprivClickCounterReset(&(a->cc));
+	setMouseInside(a, FALSE);
 }
 
 // we use VK_SNAPSHOT as a sentinel because libui will never support the print screen key; that key belongs to the user
@@ -310,7 +306,6 @@ static int areaKeyEvent(uiArea *a, int up, WPARAM wParam, LPARAM lParam)
 		goto keyFound;
 
 	// not a supported key, assume unhandled
-	// TODO the original code only did this if ke.Modifiers == 0 - why?
 	return 0;
 
 keyFound:
@@ -401,7 +396,7 @@ BOOL areaDoEvents(uiArea *a, UINT uMsg, WPARAM wParam, LPARAM lParam, LRESULT *l
 	return FALSE;
 }
 
-// TODO affect visibility properly
+// TODO decide whether queued key messages for hidden areas should be ignored
 BOOL areaFilter(MSG *msg)
 {
 	LRESULT handled;

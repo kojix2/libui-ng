@@ -113,9 +113,11 @@ void uiWindowsControlContinueMinimumSizeChanged(uiWindowsControl *c)
 		uiWindowsControlMinimumSizeChanged(uiWindowsControl(parent));
 }
 
-// TODO rename this nad the OS X this and hugging ones to NotifyChild
 void uiWindowsControlNotifyVisibilityChanged(uiWindowsControl *c)
 {
-	// TODO we really need to figure this out; the duplication is a mess
-	uiWindowsControlContinueMinimumSizeChanged(c);
+	uiControl *parent;
+
+	parent = uiControlParent(uiControl(c));
+	if (parent != NULL)
+		uiWindowsControlChildVisibilityChanged(uiWindowsControl(parent));
 }

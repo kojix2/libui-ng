@@ -49,8 +49,7 @@ static BOOL isMenuCommand(WPARAM wParam, LPARAM lParam)
 
 	// IsDialogMessage() will also generate IDOK and IDCANCEL when pressing
 	// Enter and Escape (respectively) on some controls, like EDIT controls.
-	// Swallow those too; they'll cause runMenuEvent() to panic.
-	// TODO fix the root cause somehow
+	// These reserved dialog command IDs are not menu item IDs.
 	if (HIWORD(wParam) != 0 || LOWORD(wParam) <= IDCANCEL)
 		return FALSE;
 
@@ -156,7 +155,8 @@ static LRESULT CALLBACK windowWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARA
 				}
 		if ((wp->flags & SWP_NOSIZE) != 0)
 			break;
-		if (w->onContentSizeChanged != NULL)		// TODO figure out why this is happening too early
+		// WM_WINDOWPOSCHANGED can arrive before window construction is complete.
+		if (w->onContentSizeChanged != NULL)
 			if (!w->changingSize) {
 				(*(w->onContentSizeChanged))(w, w->onContentSizeChangedData);
 				if (lifetime != 0 && windowLifetime(w) != lifetime)
@@ -294,11 +294,10 @@ static void uiWindowHide(uiControl *c)
 	ShowWindow(w->hwnd, SW_HIDE);
 }
 
-// TODO we don't want the window to be disabled completely; that would prevent it from being moved! ...would it?
+// TODO decide whether disabling a window should disable its frame or only its contents
 uiWindowsControlDefaultEnabled(uiWindow)
 uiWindowsControlDefaultEnable(uiWindow)
 uiWindowsControlDefaultDisable(uiWindow)
-// TODO we need to do something about undocumented fields in the OS control types
 uiWindowsControlDefaultSyncEnableState(uiWindow)
 uiWindowsControlDefaultSetParentHWND(uiWindow)
 
@@ -321,8 +320,7 @@ static void uiWindowMinimumSizeChanged(uiWindowsControl *c)
 	uiWindow *w = uiWindow(c);
 
 	if (uiWindowsControlTooSmall(uiWindowsControl(w))) {
-		// TODO figure out what to do with this function
-		// maybe split it into two so WM_GETMINMAXINFO can use it?
+		// TODO share the minimum window size calculation with WM_GETMINMAXINFO
 		ensureMinimumWindowSize(w);
 		return;
 	}
@@ -407,7 +405,7 @@ void uiWindowContentSize(uiWindow *w, int *width, int *height)
 	*height = r.bottom - r.top;
 }
 
-// TODO should this disallow too small?
+// TODO decide whether programmatic sizes should be clamped to the control minimum
 void uiWindowSetContentSize(uiWindow *w, int width, int height)
 {
 	w->changingSize = TRUE;
@@ -530,27 +528,10 @@ void uiWindowSetResizeable(uiWindow *w, int resizeable)
 	updateFrame(w);
 }
 
-// see http://blogs.msdn.com/b/oldnewthing/archive/2003/09/11/54885.aspx and http://blogs.msdn.com/b/oldnewthing/archive/2003/09/13/54917.aspx
-// TODO use clientSizeToWindowSize()
-static void setClientSize(uiWindow *w, int width, int height, BOOL hasMenubar, DWORD style, DWORD exstyle)
+static void setClientSize(uiWindow *w, int width, int height, BOOL hasMenubar)
 {
-	RECT window;
-
-	window.left = 0;
-	window.top = 0;
-	window.right = width;
-	window.bottom = height;
-	if (AdjustWindowRectEx(&window, style, hasMenubar, exstyle) == 0)
-		logLastError(L"error getting real window coordinates");
-	if (hasMenubar) {
-		RECT temp;
-
-		temp = window;
-		temp.bottom = 0x7FFF;		// infinite height
-		SendMessageW(w->hwnd, WM_NCCALCSIZE, (WPARAM) FALSE, (LPARAM) (&temp));
-		window.bottom += temp.top;
-	}
-	if (SetWindowPos(w->hwnd, NULL, 0, 0, window.right - window.left, window.bottom - window.top, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOOWNERZORDER | SWP_NOZORDER) == 0)
+	clientSizeToWindowSize(w->hwnd, &width, &height, hasMenubar);
+	if (SetWindowPos(w->hwnd, NULL, 0, 0, width, height, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOOWNERZORDER | SWP_NOZORDER) == 0)
 		logLastError(L"error resizing window");
 }
 
@@ -592,7 +573,7 @@ uiWindow *uiNewWindow(const char *title, int width, int height, int hasMenubar)
 	}
 
 	// and use the proper size
-	setClientSize(w, width, height, hasMenubarBOOL, style, exstyle);
+	setClientSize(w, width, height, hasMenubarBOOL);
 
 	uiWindowOnClosing(w, defaultOnClosing, NULL);
 	uiWindowOnContentSizeChanged(w, defaultOnPositionContentSizeChanged, NULL);

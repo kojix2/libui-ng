@@ -9,7 +9,7 @@ HRESULT initDraw(void)
 	D2D1_FACTORY_OPTIONS opts;
 
 	ZeroMemory(&opts, sizeof (D2D1_FACTORY_OPTIONS));
-	// TODO make this an option
+	// TODO allow debug builds or callers to enable the Direct2D debug layer.
 	opts.debugLevel = D2D1_DEBUG_LEVEL_NONE;
 	return D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED,
 		IID_ID2D1Factory,
@@ -128,7 +128,7 @@ void freeContext(uiDrawContext *c)
 	if (c->currentClip != NULL)
 		c->currentClip->Release();
 	if (c->states->size() != 0)
-		// TODO do this on other platforms
+		// TODO perform this Save/Restore balance check on the other platforms too.
 		uiprivUserBug("You did not balance uiDrawSave() and uiDrawRestore() calls.");
 	delete c->states;
 	uiprivFree(c);
@@ -268,14 +268,16 @@ static ID2D1Brush *makeBrush(uiDrawBrush *b, ID2D1RenderTarget *rt)
 		return makeLinearBrush(b, rt, &props);
 	case uiDrawBrushTypeRadialGradient:
 		return makeRadialBrush(b, rt, &props);
-//	case uiDrawBrushTypeImage:
-//		TODO
+	case uiDrawBrushTypeImage:
+		// TODO implement image brushes after their public data and cross-platform semantics are defined.
+		uiprivUserBug("Image brushes are not implemented.");
+		return NULL;
 	}
 
-	// TODO do this on all platforms
+	// TODO reject unknown brush types consistently on all platforms.
 	uiprivUserBug("Invalid brush type %d given to drawing operation.", b->Type);
-	// TODO dummy brush?
-	return NULL;		// make compiler happy
+	// Do not substitute a dummy brush, which would conceal the caller error.
+	return NULL;
 }
 
 // how clipping works:
@@ -314,7 +316,7 @@ static ID2D1Layer *applyClip(uiDrawContext *c)
 	params.contentBounds.right = FLT_MAX;
 	params.contentBounds.bottom = FLT_MAX;
 	params.geometricMask = (ID2D1Geometry *) (c->currentClip);
-	// TODO is this correct?
+	// Give the geometric mask the render target's current geometry antialiasing mode.
 	params.maskAntialiasMode = c->rt->GetAntialiasMode();
 	// identity matrix
 	params.maskTransform._11 = 1;
@@ -322,7 +324,7 @@ static ID2D1Layer *applyClip(uiDrawContext *c)
 	params.opacity = 1.0;
 	params.opacityBrush = NULL;
 	params.layerOptions = D2D1_LAYER_OPTIONS_NONE;
-	// TODO is this correct?
+	// On Windows 7, preserve ClearType rendering through the clipping layer.
 	if (c->rt->GetTextAntialiasMode() == D2D1_TEXT_ANTIALIAS_MODE_CLEARTYPE)
 		params.layerOptions = D2D1_LAYER_OPTIONS_INITIALIZE_FOR_CLEARTYPE;
 	c->rt->PushLayer(&params, layer);
@@ -389,8 +391,9 @@ void uiDrawStroke(uiDrawContext *c, uiDrawPath *p, uiDrawBrush *b, uiDrawStrokeP
 	}
 	dsp.dashStyle = D2D1_DASH_STYLE_SOLID;
 	dashes = NULL;
-	// note that dash widths and the dash phase are scaled up by the thickness by Direct2D
-	// TODO be sure to formally document this
+	// Direct2D scales dash lengths and offsets by stroke width, so convert the
+	// public absolute values to its width-relative representation.
+	// TODO formally document the public cross-platform dash units.
 	if (sp->NumDashes != 0) {
 		dsp.dashStyle = D2D1_DASH_STYLE_CUSTOM;
 		dashes = (FLOAT *) uiprivAlloc(sp->NumDashes * sizeof (FLOAT), "FLOAT[]");
@@ -448,13 +451,8 @@ void uiDrawTransform(uiDrawContext *c, uiDrawMatrix *m)
 
 	c->rt->GetTransform(&cur);
 	m2d(m, &dm);
-	// you would think we have to do already * m, right?
-	// WRONG! we have to do m * already
-	// why? a few reasons
-	// a) this lovely comment in cairo's source - http://cgit.freedesktop.org/cairo/tree/src/cairo-matrix.c?id=0537479bd1d4c5a3bc0f6f41dec4deb98481f34a#n330
-	// 	Direct2D uses column vectors and I don't know if this is even documented
-	// b) that's what Core Graphics does
-	// TODO see if Microsoft says to do this
+	// Direct2D applies M * N as M followed by N, so apply the new transform
+	// before the transform already on the render target.
 	dm = dm * cur;		// for whatever reason operator * is defined but not operator *=
 	c->rt->SetTransform(&dm);
 }
@@ -490,7 +488,7 @@ void uiDrawClip(uiDrawContext *c, uiDrawPath *path)
 		pathGeometry(path),
 		D2D1_COMBINE_MODE_INTERSECT,
 		NULL,
-		// TODO is this correct or can this be set per target?
+		// Geometry flattening tolerance is specified for this operation, not per target.
 		D2D1_DEFAULT_FLATTENING_TOLERANCE,
 		newSink);
 	if (hr != S_OK) {
@@ -513,11 +511,6 @@ void uiDrawClip(uiDrawContext *c, uiDrawPath *path)
 	// we have a reference already; no need for another
 }
 
-struct drawState {
-	ID2D1DrawingStateBlock *dsb;
-	ID2D1PathGeometry *clip;
-};
-
 void uiDrawSave(uiDrawContext *c)
 {
 	struct drawState state;
@@ -525,7 +518,8 @@ void uiDrawSave(uiDrawContext *c)
 
 	state.dsb = NULL;
 	hr = d2dfactory->CreateDrawingStateBlock(
-		// TODO verify that these are correct
+		// Start with Direct2D defaults; SaveDrawingState() immediately replaces
+		// them with the render target's current drawing and text-rendering state.
 		NULL,
 		NULL,
 		&(state.dsb));

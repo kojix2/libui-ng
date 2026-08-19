@@ -2,10 +2,7 @@
 #include "uipriv_windows.hpp"
 #include "area.hpp"
 
-// TODO
-// - recalculate scrolling after:
-// 	- creation?
-// - error if these are called without scrollbars?
+// TODO decide whether wheel messages for non-scrolling areas should be passed to the parent
 
 struct scrollParams {
 	int *pos;
@@ -101,8 +98,9 @@ static void wheelscroll(uiArea *a, int which, struct scrollParams *p, WPARAM wPa
 	UINT scrollAmount;
 
 	delta = GET_WHEEL_DELTA_WPARAM(wParam);
+	// This is the Windows default for both vertical lines and horizontal characters.
+	scrollAmount = 3;
 	if (SystemParametersInfoW(p->wheelSPIAction, 0, &scrollAmount, 0) == 0)
-		// TODO use scrollAmount == 3 (for both v and h) instead?
 		logLastError(L"error getting area wheel scroll amount");
 	if (scrollAmount == WHEEL_PAGESCROLL)
 		scrollAmount = p->pagesize;

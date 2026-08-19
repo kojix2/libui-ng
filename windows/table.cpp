@@ -1,7 +1,7 @@
 #include "uipriv_windows.hpp"
 #include "table.hpp"
 
-// general TODOs:
+// Known limitations and follow-up work:
 // - tooltips don't work properly on columns with icons (the listview always thinks there's enough room for a short label because it's not taking the icon into account); is this a bug in our LVN_GETDISPINFO handler or something else?
 // - should clicking on some other column of the same row, even one that doesn't edit, cancel editing?
 // - implement keyboard accessibility
@@ -85,7 +85,7 @@ void uiTableModelRowInserted(uiTableModel *m, int newIndex)
 		if (ListView_InsertItem(t->hwnd, &item) == -1)
 			logLastError(L"error calling ListView_InsertItem in uiTableModelRowInserted()");
 		// redraw every row from the new row down to simulate adding it
-		if (ListView_RedrawItems(t->hwnd, newIndex, ListView_GetItemCount(t->hwnd)-1) == -1)
+		if (ListView_RedrawItems(t->hwnd, newIndex, ListView_GetItemCount(t->hwnd)-1) == FALSE)
 			logLastError(L"error calling ListView_RedrawItems in uiTableModelRowInserted()");
 	}
 }
@@ -94,7 +94,7 @@ void uiTableModelRowInserted(uiTableModel *m, int newIndex)
 void uiTableModelRowChanged(uiTableModel *m, int index)
 {
 	for (auto t : *(m->tables))
-		if (SendMessageW(t->hwnd, LVM_UPDATE, (WPARAM) index, 0) == (LRESULT) (-1))
+		if (SendMessageW(t->hwnd, LVM_UPDATE, (WPARAM) index, 0) == FALSE)
 			logLastError(L"error calling LVM_UPDATE in uiTableModelRowChanged()");
 }
 
@@ -102,10 +102,10 @@ void uiTableModelRowDeleted(uiTableModel *m, int oldIndex)
 {
 	for (auto t : *(m->tables)) {
 		removeIndeterminateProgressRow(t, oldIndex);
-		if (ListView_DeleteItem(t->hwnd, oldIndex) == -1)
+		if (ListView_DeleteItem(t->hwnd, oldIndex) == FALSE)
 			logLastError(L"error calling ListView_DeleteItem() in uiTableModelRowDeleted()");
 		// redraw every row from the new nth row down to simulate removing the old nth row
-		if (ListView_RedrawItems(t->hwnd, oldIndex, ListView_GetItemCount(t->hwnd)-1) == -1)
+		if (ListView_RedrawItems(t->hwnd, oldIndex, ListView_GetItemCount(t->hwnd)-1) == FALSE)
 			logLastError(L"error calling ListView_RedrawItems() in uiTableModelRowDeleted()");
 	}
 }
@@ -137,7 +137,9 @@ uiTableModelHandler *uiprivTableModelHandler(uiTableModel *m)
 	return m->mh;
 }
 
-// TODO explain all this
+// Coordinate the lifetime of the in-place edit control with messages handled
+// by the list view itself. Commit edits when focus or column geometry changes,
+// and discard them when the edited row is about to disappear.
 static LRESULT CALLBACK tableSubProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIDSubclass, DWORD_PTR dwRefData)
 {
 	uiTable *t = (uiTable *) dwRefData;
@@ -162,8 +164,8 @@ static LRESULT CALLBACK tableSubProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
 		// TODO only increment and update if visible?
 		for (auto &i : *(t->indeterminatePositions)) {
 			i.second++;
-			// TODO check errors
-			SendMessageW(hwnd, LVM_UPDATE, (WPARAM) (i.first.first), 0);
+			if (SendMessageW(hwnd, LVM_UPDATE, (WPARAM) (i.first.first), 0) == FALSE)
+				logLastError(L"error calling LVM_UPDATE for indeterminate progress");
 		}
 		return 0;
 	case WM_LBUTTONDOWN:
@@ -176,7 +178,7 @@ static LRESULT CALLBACK tableSubProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
 			// the real list view resizes the edit control on this notification specifically
 			hr = uiprivTableResizeWhileEditing(t);
 			if (hr != S_OK) {
-				// TODO
+				// TODO decide whether a resize failure should abort editing
 			}
 			break;
 		}
@@ -201,7 +203,7 @@ static LRESULT CALLBACK tableSubProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
 				finishEdit = true;
 			}
 		}
-		// I think this mirrors the WM_COMMAND one above... TODO
+		// Like EN_KILLFOCUS above, a child common control losing focus commits the edit.
 		if (nmhdr->code == NM_KILLFOCUS)
 			finishEdit = true;
 		break;		// don't override default handling
@@ -230,12 +232,12 @@ static LRESULT CALLBACK tableSubProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
 	if (finishEdit) {
 		hr = uiprivTableFinishEditingText(t);
 		if (hr != S_OK) {
-			// TODO
+			// TODO decide how a commit failure should affect message handling
 		}
 	} else if (abortEdit) {
 		hr = uiprivTableAbortEditingText(t);
 		if (hr != S_OK) {
-			// TODO
+			// TODO decide how an abort failure should affect message handling
 		}
 	}
 	return DefSubclassProc(hwnd, uMsg, wParam, lParam);
@@ -273,7 +275,7 @@ int uiprivTableProgress(uiTable *t, int item, int subitem, int modelColumn, LONG
 
 	if (startTimer)
 		// the interval shown here is PBM_SETMARQUEE's default
-		// TODO should we pass a function here instead? it seems to be called by DispatchMessage(), not DefWindowProc(), but I'm still unsure
+		// A NULL callback posts WM_TIMER to the list view, where tableSubProc handles it.
 		if (SetTimer(t->hwnd, (UINT_PTR) t, 30, NULL) == 0)
 			logLastError(L"SetTimer()");
 	if (stopTimer)
@@ -416,7 +418,7 @@ static BOOL handleClick(uiTable *t, NMHDR *nmhdr, LRESULT *lResult)
 	// Handle editing
 	hr = uiprivTableHandleNM_CLICK(t, (NMITEMACTIVATE *) nmhdr, lResult);
 	if (hr != S_OK) {
-		// TODO
+		// TODO decide how notification handler failures should be surfaced
 		return FALSE;
 	}
 	return TRUE;
@@ -600,7 +602,7 @@ static BOOL handleItemChanged(uiTable *t, NMHDR *nmhdr, LRESULT *lResult)
 		// TODO see if the real list view accepts or rejects changes here; Windows Explorer accepts
 		hr = uiprivTableFinishEditingText(t);
 		if (hr != S_OK) {
-			// TODO
+			// TODO decide how a commit failure should affect this notification
 			return FALSE;
 		}
 		*lResult = 0;
@@ -645,7 +647,7 @@ static BOOL handleColumnClick(uiTable *t, NMHDR *nmhdr)
 
 	hr = uiprivTableFinishEditingText(t);
 	if (hr != S_OK) {
-		// TODO
+		// TODO decide how a commit failure should affect this notification
 		return FALSE;
 	}
 	t->headerOnClicked(t, nm->iSubItem, t->headerOnClickedData);
@@ -658,7 +660,7 @@ static BOOL handleBeginScroll(uiTable *t, LRESULT *lResult)
 
 	hr = uiprivTableFinishEditingText(t);
 	if (hr != S_OK) {
-		// TODO
+		// TODO decide how a commit failure should affect this notification
 		return FALSE;
 	}
 	*lResult = 0;
@@ -675,14 +677,14 @@ static BOOL onWM_NOTIFY(uiControl *c, HWND hwnd, NMHDR *nmhdr, LRESULT *lResult)
 	case LVN_GETDISPINFO:
 		hr = uiprivTableHandleLVN_GETDISPINFO(t, (NMLVDISPINFOW *) nmhdr, lResult);
 		if (hr != S_OK) {
-			// TODO
+			// TODO decide how notification handler failures should be surfaced
 			return FALSE;
 		}
 		return TRUE;
 	case NM_CUSTOMDRAW:
 		hr = uiprivTableHandleNM_CUSTOMDRAW(t, (NMLVCUSTOMDRAW *) nmhdr, lResult);
 		if (hr != S_OK) {
-			// TODO
+			// TODO decide how notification handler failures should be surfaced
 			return FALSE;
 		}
 		return TRUE;
@@ -713,7 +715,7 @@ static void uiTableDestroy(uiControl *c)
 	tables.erase(t);
 	hr = uiprivTableAbortEditingText(t);
 	if (hr != S_OK) {
-		// TODO
+		// The failure is already logged; destruction must continue.
 	}
 	uiWindowsUnregisterWM_NOTIFYHandler(t->hwnd);
 	uiWindowsEnsureDestroyWindow(t->hwnd);
@@ -767,7 +769,7 @@ static uiprivTableColumnParams *appendColumn(uiTable *t, const char *name, int c
 	ZeroMemory(&lvc, sizeof (LVCOLUMNW));
 	lvc.mask = LVCF_FMT | LVCF_WIDTH | LVCF_TEXT;
 	lvc.fmt = colfmt;
-	lvc.cx = 120;			// TODO
+	lvc.cx = 120;			// initial width in pixels; callers can resize the column later
 	wstr = toUTF16(name);
 	lvc.pszText = wstr;
 	if (SendMessageW(t->hwnd, LVM_INSERTCOLUMNW, t->nColumns, (LPARAM) (&lvc)) == (LRESULT) (-1))
@@ -957,7 +959,7 @@ uiTable *uiNewTable(uiTableParams *p)
 	uiWindowsRegisterWM_NOTIFYHandler(t->hwnd, onWM_NOTIFY, uiControl(t));
 
 	// TODO: try LVS_EX_AUTOSIZECOLUMNS
-	// TODO check error
+	// LVM_SETEXTENDEDLISTVIEWSTYLE returns the previous styles, not a success status.
 	SendMessageW(t->hwnd, LVM_SETEXTENDEDLISTVIEWSTYLE,
 		(WPARAM) (LVS_EX_FULLROWSELECT | LVS_EX_LABELTIP | LVS_EX_SUBITEMIMAGES),
 		(LPARAM) (LVS_EX_FULLROWSELECT | LVS_EX_LABELTIP | LVS_EX_SUBITEMIMAGES));
@@ -967,7 +969,7 @@ uiTable *uiNewTable(uiTableParams *p)
 
 	hr = uiprivUpdateImageListSize(t);
 	if (hr != S_OK) {
-		// TODO
+		// TODO decide whether image-list setup failure should fail table creation
 	}
 
 	t->indeterminatePositions = new std::map<std::pair<int, int>, LONG>;

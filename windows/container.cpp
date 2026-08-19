@@ -60,7 +60,8 @@ static LRESULT CALLBACK containerWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LP
 			break;	// defer to DefWindowProc();
 		onResize = (void (*)(uiWindowsControl *)) GetWindowLongPtrW(hwnd, GWLP_USERDATA);
 		c = (uiWindowsControl *) GetWindowLongPtrW(hwnd, 0);
-		(*(onResize))(c);
+		if (onResize != NULL)
+			(*(onResize))(c);
 		return 0;
 	case WM_GETMINMAXINFO:
 		lResult = DefWindowProcW(hwnd, uMsg, wParam, lParam);
@@ -140,7 +141,6 @@ HWND uiWindowsMakeContainer(uiWindowsControl *c, void (*onResize)(uiWindowsContr
 {
 	struct containerInit init;
 
-	// TODO onResize cannot be NULL
 	init.c = c;
 	init.onResize = onResize;
 	return uiWindowsEnsureCreateControlHWND(WS_EX_CONTROLPARENT,

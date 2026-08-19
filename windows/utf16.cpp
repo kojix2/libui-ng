@@ -86,7 +86,8 @@ WCHAR *vstrf(const WCHAR *format, va_list ap)
 	return buf;
 }
 
-// TODO merge the following two with the toUTF*()s?
+// Keep newline normalization separate from encoding conversion; only
+// multiline edit controls require Windows CRLF line endings.
 
 // Let's shove these utility routines here too.
 // Prerequisite: lfonly is UTF-8.

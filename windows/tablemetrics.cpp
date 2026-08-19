@@ -2,14 +2,14 @@
 #include "uipriv_windows.hpp"
 #include "table.hpp"
 
-static HRESULT itemRect(HRESULT hr, uiTable *t, UINT uMsg, WPARAM wParam, LONG left, LONG top, LRESULT bad, RECT *r)
+static HRESULT itemRect(HRESULT hr, uiTable *t, UINT uMsg, WPARAM wParam, LONG left, LONG top, RECT *r)
 {
 	if (hr != S_OK)
 		return hr;
 	ZeroMemory(r, sizeof (RECT));
 	r->left = left;
 	r->top = top;
-	if (SendMessageW(t->hwnd, uMsg, wParam, (LPARAM) r) == bad) {
+	if (SendMessageW(t->hwnd, uMsg, wParam, (LPARAM) r) == FALSE) {
 		logLastError(L"itemRect() message");
 		return E_FAIL;
 	}
@@ -37,17 +37,16 @@ HRESULT uiprivTableGetMetrics(uiTable *t, int iItem, int iSubItem, uiprivTableMe
 	m->focused = (state & LVIS_FOCUSED) != 0;
 	m->selected = (state & LVIS_SELECTED) != 0;
 
-	// TODO check LRESULT bad parameters here
 	hr = itemRect(S_OK, t, LVM_GETITEMRECT, iItem,
-		LVIR_BOUNDS, 0, FALSE, &(m->itemBounds));
+		LVIR_BOUNDS, 0, &(m->itemBounds));
 	hr = itemRect(hr, t, LVM_GETITEMRECT, iItem,
-		LVIR_ICON, 0, FALSE, &(m->itemIcon));
+		LVIR_ICON, 0, &(m->itemIcon));
 	hr = itemRect(hr, t, LVM_GETITEMRECT, iItem,
-		LVIR_LABEL, 0, FALSE, &(m->itemLabel));
+		LVIR_LABEL, 0, &(m->itemLabel));
 	hr = itemRect(hr, t, LVM_GETSUBITEMRECT, iItem,
-		LVIR_BOUNDS, iSubItem, 0, &(m->subitemBounds));
+		LVIR_BOUNDS, iSubItem, &(m->subitemBounds));
 	hr = itemRect(hr, t, LVM_GETSUBITEMRECT, iItem,
-		LVIR_ICON, iSubItem, 0, &(m->subitemIcon));
+		LVIR_ICON, iSubItem, &(m->subitemIcon));
 	if (hr != S_OK)
 		goto fail;
 	// LVM_GETSUBITEMRECT treats LVIR_LABEL as the same as
@@ -88,7 +87,8 @@ HRESULT uiprivTableGetMetrics(uiTable *t, int iItem, int iSubItem, uiprivTableMe
 	m->realTextBackground = r;
 
 	m->realTextRect = r;
-	// TODO confirm whether this really happens on column 0 as well
+	// TODO verify under multiple themes and DPIs whether column 0 also needs
+	// this two-pixel offset; changing it without visual testing can shift text.
 	if (m->hasImage && iSubItem != 0)
 		// Normally there's this many hard-coded logical units
 		// of blank space, followed by the background, followed

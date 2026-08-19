@@ -4,10 +4,11 @@
 
 IDWriteFactory *dwfactory = NULL;
 
-// TODO rename to something else, maybe
+// Initialize the DirectWrite factory used by text layout and font handling.
 HRESULT uiprivInitDrawText(void)
 {
-	// TODO use DWRITE_FACTORY_TYPE_ISOLATED instead?
+	// A shared factory reuses DirectWrite caches and is recommended for normal
+	// in-process application components.
 	return DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED,
 		__uuidof (IDWriteFactory),
 		(IUnknown **) (&dwfactory));
@@ -82,14 +83,14 @@ WCHAR *uiprivFontCollectionCorrectString(fontCollection *fc, IDWriteLocalizedStr
 	// 3) And if that fails, assume the first one
 	// This algorithm is straight from MSDN: https://msdn.microsoft.com/en-us/library/windows/desktop/dd368214%28v=vs.85%29.aspx
 	// For step 2 to work, start by setting hr to S_OK and exists to FALSE.
-	// TODO does it skip step 2 entirely if step 1 fails? rewrite it to be a more pure conversion of the MSDN code?
 	hr = S_OK;
 	exists = FALSE;
 	if (fc != NULL && fc->userLocaleSuccess != 0)
 		hr = names->FindLocaleName(fc->userLocale, &index, &exists);
-	if (hr != S_OK || (hr == S_OK && !exists))
+	// Retry with US English if the user-locale lookup fails or has no match.
+	if (hr != S_OK || !exists)
 		hr = names->FindLocaleName(L"en-us", &index, &exists);
-	// TODO check hr again here? or did I decide that would be redundant because COM requires output arguments to be filled regardless of return value?
+	// FindLocaleName() initializes exists to FALSE even when it fails.
 	if (!exists)
 		index = 0;
 
@@ -101,8 +102,11 @@ WCHAR *uiprivFontCollectionCorrectString(fontCollection *fc, IDWriteLocalizedStr
 	// GetStringLength() does not include the null terminator, but GetString() does
 	wname = (WCHAR *) uiprivAlloc((length + 1) * sizeof (WCHAR), "WCHAR[]");
 	hr = names->GetString(index, wname, length + 1);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error getting font name", hr);
+		uiprivFree(wname);
+		return emptyUTF16();
+	}
 
 	return wname;
 }

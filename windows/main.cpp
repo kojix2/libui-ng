@@ -10,10 +10,9 @@ static LRESULT CALLBACK filterProc(int code, WPARAM wParam, LPARAM lParam)
 	if (code < 0)
 		goto callNext;
 
-	if (areaFilter(msg))		// don't continue to our IsDialogMessage() hack if the area handled it
+	// Let uiArea consume key messages before dialog processing.
+	if (areaFilter(msg))
 		goto discard;
-
-	// TODO IsDialogMessage() hack here
 
 	// otherwise keep going
 	goto callNext;
@@ -108,7 +107,7 @@ int uiMainStep(int wait)
 	// don't wait for a message
 	switch (peekMessage(&msg)) {
 	case 0:		// quit
-		// TODO PostQuitMessage() again?
+		// WM_QUIT was removed from the queue; returning 0 consumes the quit request.
 		return 0;
 	case 1:		// process a message
 		processMessage(&msg);

@@ -1,8 +1,6 @@
 // 30 may 2015
 #include "uipriv_windows.hpp"
 
-// TODO refine error handling
-
 // from http://msdn.microsoft.com/en-us/library/windows/desktop/bb226818%28v=vs.85%29.aspx
 #define tabMargin 7
 
@@ -40,7 +38,8 @@ static void tabPageRelayout(struct tabPage *tp)
 
 // dummy dialog procedure; see below for details
 // let's handle parent messages here to avoid needing to subclass
-// TODO do we need to handle DM_GETDEFID/DM_SETDEFID here too because of the ES_WANTRETURN stuff at http://blogs.msdn.com/b/oldnewthing/archive/2007/08/20/4470527.aspx? what about multiple default buttons (TODO)?
+// Returning FALSE leaves DM_GETDEFID and DM_SETDEFID to DefDlgProc. libui
+// buttons use BS_PUSHBUTTON rather than defining page-level default buttons.
 // IsDialogMessage() translates Enter/Escape in edit controls into IDOK/IDCANCEL.
 // window.cpp filters those commands before menu dispatch; see isMenuCommand().
 static INT_PTR CALLBACK dlgproc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -94,6 +93,7 @@ struct tabPage *newTabPage(uiControl *child)
 	tp = uiprivNew(struct tabPage);
 
 	// unfortunately this needs to be a proper dialog for EnableThemeDialogTexture() to work; CreateWindowExW() won't suffice
+	// Dialog creation failure is fatal because there is no page window to use.
 	if (CreateDialogIndirectParamW(hInstance, (const DLGTEMPLATE *) data_rcTabPageDialog,
 		utilWindow, dlgproc, (LPARAM) tp) == NULL) {
 		logLastError(L"error creating tab page");
@@ -107,10 +107,10 @@ struct tabPage *newTabPage(uiControl *child)
 		uiWindowsControlAssignSoleControlIDZOrder(uiWindowsControl(tp->child));
 	}
 
+	// Theme setup is cosmetic, so keep the usable page on failure.
 	hr = EnableThemeDialogTexture(tp->hwnd, ETDT_ENABLE | ETDT_USETABTEXTURE | ETDT_ENABLETAB);
 	if (hr != S_OK)
 		logHRESULT(L"error setting tab page background", hr);
-		// continue anyway; it'll look wrong but eh
 
 	// and start the tab page hidden
 	ShowWindow(tp->hwnd, SW_HIDE);

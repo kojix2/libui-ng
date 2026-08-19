@@ -57,7 +57,7 @@ static void defaultOnSelected(uiCombobox *c, void *data)
 
 static void setComboboxSelected(uiCombobox *c, int n)
 {
-	// TODO error check
+	// CB_SETCURSEL also returns CB_ERR when -1 successfully clears the selection.
 	SendMessageW(c->hwnd, CB_SETCURSEL, (WPARAM) n, 0);
 }
 
@@ -173,7 +173,7 @@ uiCombobox *uiNewCombobox(void)
 
 	c->hwnd = uiWindowsEnsureCreateControlHWND(WS_EX_CLIENTEDGE,
 		L"combobox", L"",
-		CBS_DROPDOWNLIST | WS_TABSTOP,
+		CBS_DROPDOWNLIST | WS_TABSTOP | WS_VSCROLL,
 		hInstance, NULL,
 		TRUE);
 

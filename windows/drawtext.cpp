@@ -17,7 +17,8 @@ struct uiDrawTextLayout {
 	size_t nUTF16;
 };
 
-// TODO copy notes about DirectWrite DIPs being equal to Direct2D DIPs here
+// DirectWrite and Direct2D both use device-independent pixels (1/96 inch),
+// so layout coordinates can be passed directly to the render target.
 
 // TODO move this and the layout creation stuff to attrstr.cpp like the other ports, or move the other ports into their drawtext.* files
 static const std::map<uiDrawTextAlign, DWRITE_TEXT_ALIGNMENT> dwriteAligns = {
@@ -248,6 +249,54 @@ HRESULT drawingEffectsAttr::mkUnderlineBrush(ID2D1RenderTarget *rt, ID2D1SolidCo
 	return mkSolidBrush(rt, this->ur, this->ug, this->ub, this->ua, brush);
 }
 
+static HRESULT drawSuggestionUnderline(ID2D1RenderTarget *rt, ID2D1SolidColorBrush *brush, FLOAT baselineOriginX, FLOAT baselineOriginY, const DWRITE_UNDERLINE *underline)
+{
+	ID2D1PathGeometry *path = NULL;
+	ID2D1GeometrySink *sink = NULL;
+	double amplitude, period, xOffset, yOffset;
+	double t;
+	bool first = true;
+	HRESULT hr;
+
+	hr = d2dfactory->CreatePathGeometry(&path);
+	if (hr != S_OK)
+		goto cleanup;
+	hr = path->Open(&sink);
+	if (hr != S_OK)
+		goto cleanup;
+
+	amplitude = underline->thickness;
+	period = 5 * underline->thickness;
+	xOffset = baselineOriginX;
+	yOffset = baselineOriginY + underline->offset;
+	for (t = 0; t < underline->width; t++) {
+		double x, angle, y;
+		D2D1_POINT_2F wavePoint;
+
+		x = t + xOffset;
+		angle = 2 * uiPi * fmod(x, period) / period;
+		y = amplitude * sin(angle) + yOffset;
+		wavePoint.x = uiprivD2DFloat(x);
+		wavePoint.y = uiprivD2DFloat(y);
+		if (first) {
+			sink->BeginFigure(wavePoint, D2D1_FIGURE_BEGIN_HOLLOW);
+			first = false;
+		} else
+			sink->AddLine(wavePoint);
+	}
+	sink->EndFigure(D2D1_FIGURE_END_OPEN);
+	hr = sink->Close();
+	if (hr == S_OK)
+		rt->DrawGeometry(path, brush, underline->thickness);
+
+cleanup:
+	if (sink != NULL)
+		sink->Release();
+	if (path != NULL)
+		path->Release();
+	return hr;
+}
+
 // this is based on http://www.charlespetzold.com/blog/2014/01/Character-Formatting-Extensions-with-DirectWrite.html
 class textRenderer : public IDWriteTextRenderer {
 	ULONG refcount;
@@ -463,7 +512,6 @@ public:
 		return E_UNEXPECTED;
 	}
 
-	// TODO clean this function up
 	virtual HRESULT STDMETHODCALLTYPE DrawUnderline(void *clientDrawingContext, FLOAT baselineOriginX, FLOAT baselineOriginY, const DWRITE_UNDERLINE *underline, IUnknown *clientDrawingEffect)
 	{
 		drawingEffectsAttr *dea = (drawingEffectsAttr *) clientDrawingEffect;
@@ -486,12 +534,13 @@ public:
 		if (hr != S_OK)
 			return hr;
 		if (brush == NULL) {
-			// TODO document this rule if not already done
+			// An unspecified underline color inherits the text color.
 			hr = dea->mkColorBrush(this->rt, &brush);
 			if (hr != S_OK)
 				return hr;
 		}
 		if (brush == NULL) {
+			// Text without an explicit color uses the default black brush.
 			brush = this->black;
 			brush->AddRef();
 		}
@@ -526,53 +575,11 @@ public:
 			this->rt->FillRectangle(&rect, brush);
 			break;
 		case uiUnderlineSuggestion:
-			{		// TODO get rid of the extra block
-					// TODO properly clean resources on failure
-					// TODO use fully qualified C overloads for all methods
-					// TODO ensure all methods properly have errors handled
-				ID2D1PathGeometry *path = NULL;
-				ID2D1GeometrySink *sink = NULL;
-				double amplitude, period, xOffset, yOffset;
-				double t;
-				bool first = true;
-				HRESULT geometryHR;
-
-				geometryHR = d2dfactory->CreatePathGeometry(&path);
-				if (geometryHR != S_OK)
-					return geometryHR;
-				geometryHR = path->Open(&sink);
-				if (geometryHR != S_OK) {
-					path->Release();
-					return geometryHR;
-				}
-				amplitude = underline->thickness;
-				period = 5 * underline->thickness;
-				xOffset = baselineOriginX;
-				yOffset = baselineOriginY + underline->offset;
-				for (t = 0; t < underline->width; t++) {
-					double x, angle, y;
-					D2D1_POINT_2F wavePoint;
-
-					x = t + xOffset;
-					angle = 2 * uiPi * fmod(x, period) / period;
-					y = amplitude * sin(angle) + yOffset;
-					wavePoint.x = uiprivD2DFloat(x);
-					wavePoint.y = uiprivD2DFloat(y);
-					if (first) {
-						sink->BeginFigure(wavePoint, D2D1_FIGURE_BEGIN_HOLLOW);
-						first = false;
-					} else
-						sink->AddLine(wavePoint);
-				}
-				sink->EndFigure(D2D1_FIGURE_END_OPEN);
-				geometryHR = sink->Close();
-				sink->Release();
-				if (geometryHR != S_OK) {
-					path->Release();
-					return geometryHR;
-				}
-				this->rt->DrawGeometry(path, brush, underline->thickness);
-				path->Release();
+			hr = drawSuggestionUnderline(this->rt, brush,
+				baselineOriginX, baselineOriginY, underline);
+			if (hr != S_OK) {
+				brush->Release();
+				return hr;
 			}
 			break;
 		}
@@ -581,7 +588,7 @@ public:
 	}
 };
 
-// TODO this ignores clipping?
+// TODO apply uiDrawContext's current clip while drawing text.
 void uiDrawText(uiDrawContext *c, uiDrawTextLayout *tl, double x, double y)
 {
 	ID2D1SolidColorBrush *black = NULL;
@@ -590,12 +597,11 @@ void uiDrawText(uiDrawContext *c, uiDrawTextLayout *tl, double x, double y)
 
 	/*
 	for (auto p : *(tl->backgroundParams)) {
-		// TODO
+		// TODO draw attributed text backgrounds before drawing glyphs.
 	}
 	*/
 
-	// TODO document that fully opaque black is the default text color; figure out whether this is upheld in various scenarios on other platforms
-	// TODO figure out if this needs to be cleaned out
+	// Text without an explicit foreground color is rendered as opaque black.
 	black = mustMakeSolidBrush(c->rt, 0.0, 0.0, 0.0, 1.0);
 	if (black == NULL)
 		return;

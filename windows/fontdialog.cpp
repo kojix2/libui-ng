@@ -3,13 +3,13 @@
 #include "attrstr.hpp"
 #include "draw.hpp"
 
-// TODOs
-// - quote the Choose Font sample here for reference
-// - the Choose Font sample defaults to Regular/Italic/Bold/Bold Italic in some case (no styles?); do we? find out what the case is
-// - do we set initial family and style topmost as well?
-// - this should probably just handle IDWriteFonts
-// - localization?
-// - the Sample window overlaps the groupbox in a weird way (compare to the real ChooseFont() dialog)
+// Remaining font dialog work:
+// TODO quote the Choose Font sample here for reference
+// TODO determine when the Choose Font sample synthesizes Regular/Italic/Bold/Bold Italic styles, and whether we should too
+// TODO determine whether the initial family and style should be made topmost
+// TODO consider handling IDWriteFont objects directly
+// TODO localize the dialog
+// TODO fix the Sample window overlapping its group box unlike the native ChooseFont() dialog
 
 struct fontDialog {
 	HWND hwnd;
@@ -150,7 +150,7 @@ static BOOL cbTypeToSelect(HWND cb, LRESULT *posOut, BOOL restoreAfter)
 			logLastError(L"error restoring old combobox text");
 	uiprivFree(text);
 	// and restore the selection like above
-	// TODO isn't there a 32-bit version of this
+	// CB_SETEDITSEL defines the selection positions as packed 16-bit values.
 	if (SendMessageW(cb, CB_SETEDITSEL, 0, MAKELPARAM(selStart, selEnd)) != (LRESULT) TRUE)
 		logLastError(L"error restoring combobox edit selection");
 	return TRUE;
@@ -182,8 +182,8 @@ static WCHAR *fontStyleName(struct fontCollection *fc, IDWriteFont *font)
 
 static void queueRedrawSampleText(struct fontDialog *f)
 {
-	// TODO TRUE?
-	invalidateRect(f->sampleBox, NULL, TRUE);
+	// The Direct2D scratch paint path clears the entire render target.
+	invalidateRect(f->sampleBox, NULL, FALSE);
 }
 
 static void styleChanged(struct fontDialog *f)
@@ -256,7 +256,7 @@ static void familyChanged(struct fontDialog *f)
 		matchFont->Release();
 	}
 
-	// TODO test mutliple streteches; all the fonts I have have only one stretch value?
+	// Match all three DirectWrite WWS axes; a family can contain multiple stretches.
 	wipeStylesBox(f);
 	n = family->GetFontCount();
 	matching = 0;			// a safe/suitable default just in case
@@ -357,6 +357,7 @@ static void fontDialogDrawSampleText(struct fontDialog *f, ID2D1RenderTarget *rt
 	WCHAR *family;
 	IDWriteTextFormat *format = NULL;
 	D2D1_RECT_F rect;
+	const WCHAR *locale;
 	HRESULT hr;
 
 	color.r = 0.0;
@@ -390,6 +391,9 @@ static void fontDialogDrawSampleText(struct fontDialog *f, ID2D1RenderTarget *rt
 
 	// DirectWrite doesn't allow creating a text format from a font; we need to get this ourselves
 	family = cbGetItemText(f->familyCombobox, f->curFamily);
+	locale = L"en-us";
+	if (f->fc->userLocaleSuccess != 0)
+		locale = f->fc->userLocale;
 	hr = dwfactory->CreateTextFormat(family,
 		NULL,
 		font->GetWeight(),
@@ -397,8 +401,7 @@ static void fontDialogDrawSampleText(struct fontDialog *f, ID2D1RenderTarget *rt
 		font->GetStretch(),
 		uiprivDWriteSizeFromPointSize(f->curSize),
 		// see http://stackoverflow.com/questions/28397971/idwritefactorycreatetextformat-failing and https://msdn.microsoft.com/en-us/library/windows/desktop/dd368203.aspx
-		// TODO use the current locale again?
-		L"",
+		locale,
 		&format);
 	if (hr != S_OK) {
 		logHRESULT(L"error creating IDWriteTextFormat", hr);
@@ -417,7 +420,7 @@ static void fontDialogDrawSampleText(struct fontDialog *f, ID2D1RenderTarget *rt
 		format,
 		&rect,
 		black,
-		// TODO really?
+		// Use the Direct2D defaults: pixel snapping, no clipping, and natural metrics.
 		D2D1_DRAW_TEXT_OPTIONS_NONE,
 		DWRITE_MEASURING_MODE_NATURAL);
 
@@ -456,9 +459,7 @@ static void setupInitialFontDialogState(struct fontDialog *f)
 	// - if the chosen font size is not in the list, don't bother
 	// we'll simulate it by setting the text to a %f representation, then pretending as if it was entered
 	wsize = strf(L"%g", f->params->size);
-	// TODO make this a setWindowText()
-	if (SendMessageW(f->sizeCombobox, WM_SETTEXT, 0, (LPARAM) wsize) != (LRESULT) TRUE)
-		logLastError(L"error setting size combobox to initial font size");
+	setWindowText(f->sizeCombobox, wsize);
 	uiprivFree(wsize);
 	sizeEdited(f);
 	if (cbGetCurSel(f->sizeCombobox, &pos))

@@ -70,6 +70,7 @@ static HRESULT drawImagePart(HRESULT hr, struct drawState *s)
 	RECT r;
 	UINT fStyle;
 	bool ok;
+	int imageCount;
 
 	if (hr != S_OK)
 		return hr;
@@ -83,18 +84,19 @@ static HRESULT drawImagePart(HRESULT hr, struct drawState *s)
 	hr = uiprivWICToGDI(wb, s->dc, s->m->cxIcon, s->m->cyIcon, &b);
 	if (hr != S_OK)
 		return hr;
-	// TODO rewrite this condition to make more sense; possibly swap the if and else blocks too
+	imageCount = ImageList_GetImageCount(s->t->imagelist);
 	ok = true;
-	if (ImageList_GetImageCount(s->t->imagelist) > 1) {
-		if (ImageList_Replace(s->t->imagelist, 0, b, NULL) == 0) {
-			logLastError(L"ImageList_Replace()");
-			ok = false;
-		}
-	} else
+	if (imageCount == 0) {
 		if (ImageList_Add(s->t->imagelist, b, NULL) == -1) {
 			logLastError(L"ImageList_Add()");
 			ok = false;
 		}
+	} else {
+		if (ImageList_Replace(s->t->imagelist, 0, b, NULL) == 0) {
+			logLastError(L"ImageList_Replace()");
+			ok = false;
+		}
+	}
 	DeleteObject(b);
 	if (!ok)
 		return E_FAIL;
@@ -160,7 +162,7 @@ static HRESULT drawThemedCheckbox(struct drawState *s, HTHEME theme, int checked
 		NULL, TS_DRAW, &size);
 	if (hr != S_OK) {
 		logHRESULT(L"GetThemePartSize()", hr);
-		return hr;			// TODO fall back?
+		return hr;
 	}
 	r = s->m->subitemIcon;
 	r.right = r.left + size.cx;
@@ -190,6 +192,7 @@ static HRESULT drawCheckboxPart(HRESULT hr, struct drawState *s)
 	uiTableValue *value;
 	int checked, enabled;
 	HTHEME theme;
+	HRESULT hrClose;
 
 	if (hr != S_OK)
 		return hr;
@@ -204,19 +207,15 @@ static HRESULT drawCheckboxPart(HRESULT hr, struct drawState *s)
 	theme = OpenThemeData(s->t->hwnd, L"button");
 	if (theme != NULL) {
 		hr = drawThemedCheckbox(s, theme, checked, enabled);
-		if (hr != S_OK)
-			return hr;
-		hr = CloseThemeData(theme);
-		if (hr != S_OK) {
-			logHRESULT(L"CloseThemeData()", hr);
-			return hr;
-		}
-	} else {
-		hr = drawUnthemedCheckbox(s, checked, enabled);
-		if (hr != S_OK)
-			return hr;
+		hrClose = CloseThemeData(theme);
+		if (hrClose != S_OK)
+			logHRESULT(L"CloseThemeData()", hrClose);
+		if (hr == S_OK)
+			return S_OK;
 	}
-	return S_OK;
+	// Theme drawing is optional; use the classic checkbox if it is unavailable
+	// or fails for the current device context.
+	return drawUnthemedCheckbox(s, checked, enabled);
 }
 
 static HRESULT drawTextPart(HRESULT hr, struct drawState *s)
@@ -259,7 +258,8 @@ static HRESULT drawTextPart(HRESULT hr, struct drawState *s)
 	}
 	uiprivFree(wstr);
 
-	// TODO decide once and for all what to compare to here and with SelectObject()
+	// These setters return the state being replaced. The current state is
+	// TRANSPARENT and s->textColor respectively, so compare against those.
 	if (SetBkMode(s->dc, prevMode) != TRANSPARENT) {
 		logLastError(L"SetBkMode() prev");
 		return E_FAIL;
@@ -386,7 +386,8 @@ static HRESULT drawProgressBarPart(HRESULT hr, struct drawState *s)
 		LONG barWidth;
 		LONG pieceWidth;
 
-		// TODO explain all this
+		// Move one segment through the bar. If it crosses the right edge,
+		// split it and draw the overflow from the left edge.
 		// TODO this should really start the progressbar scrolling into view instead of already on screen when first set
 		rFill[1] = rFill[0];		// save in case we need it
 		barWidth = rFill[0].right - rFill[0].left;
@@ -496,7 +497,8 @@ static HRESULT drawButtonPart(HRESULT hr, struct drawState *s)
 		HBRUSH color, prevColor;
 		int prevBkMode;
 
-		// TODO explain why we're not doing this in the themed case (it has to do with extra transparent pixels)
+		// The themed bitmap includes transparent edge pixels; DrawFrameControl()
+		// does not, so inset only the unthemed rectangle.
 		if (InflateRect(&r, -1, -1) == 0) {
 			logLastError(L"InflateRect()");
 			hr = E_FAIL;
@@ -784,20 +786,19 @@ HRESULT uiprivUpdateImageListSize(uiTable *t)
 			NULL, TS_DRAW, &sizeCheck);
 		if (hr != S_OK) {
 			logHRESULT(L"GetThemePartSize()", hr);
-			goto cleanup;			// TODO fall back?
+			// Keep the system icon dimensions initialized above.
+		} else {
+			// make sure these checkmarks fit
+			// unthemed checkmarks will by the code above be smaller than cxList/cyList here
+			if (cxList < sizeCheck.cx)
+				cxList = sizeCheck.cx;
+			if (cyList < sizeCheck.cy)
+				cyList = sizeCheck.cy;
 		}
-		// make sure these checkmarks fit
-		// unthemed checkmarks will by the code above be smaller than cxList/cyList here
-		if (cxList < sizeCheck.cx)
-			cxList = sizeCheck.cx;
-		if (cyList < sizeCheck.cy)
-			cyList = sizeCheck.cy;
 		hr = CloseThemeData(theme);
 		theme = NULL;
-		if (hr != S_OK) {
+		if (hr != S_OK)
 			logHRESULT(L"CloseThemeData()", hr);
-			goto cleanup;
-		}
 	}
 
 	imagelist = ImageList_Create(cxList, cyList,

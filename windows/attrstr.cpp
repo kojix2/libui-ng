@@ -2,8 +2,6 @@
 #include "uipriv_windows.hpp"
 #include "attrstr.hpp"
 
-// TODO this whole file needs cleanup
-
 // yep, even when it supports C++11, it doesn't support C++11
 // we require MSVC 2013; this was added in MSVC 2015 (https://msdn.microsoft.com/en-us/library/wfa0edys.aspx)
 #ifdef _MSC_VER
@@ -13,11 +11,9 @@
 #endif
 
 // we need to collect all the background parameters and add them all at once
-// TODO consider having background parameters in the drawing effects
-// TODO contextual alternates override ligatures?
-// TODO rename this struct to something that isn't exclusively foreach-ing?
-struct foreachParams {
-	const uint16_t *s;
+// TODO decide whether background parameters should be represented as drawing effects
+// TODO define how contextual alternates interact with ligature attributes on overlapping ranges
+struct attributeApplyParams {
 	size_t len;
 	IDWriteTextLayout *layout;
 	std::vector<struct drawTextBackgroundParams *> *backgroundParams;
@@ -181,10 +177,10 @@ public:
 			dea->setUnderline(uiAttributeUnderline(this->underlineAttr));
 		if (this->underlineColorAttr != NULL) {
 			uiAttributeUnderlineColor(this->underlineColorAttr, &colorType, &r, &g, &b, &a);
-			// TODO see if Microsoft has any standard colors for these
+			// DirectWrite provides no standard semantic colors for proofing
+			// underlines, so use the same fallback colors as the other backends.
 			switch (colorType) {
 			case uiUnderlineColorSpelling:
-				// TODO consider using the GtkTextView style property error-underline-color here if Microsoft has no preference
 				r = 1.0;
 				g = 0.0;
 				b = 0.0;
@@ -210,7 +206,6 @@ public:
 };
 
 // also needed by applyEffectsAttributes() below
-// TODO provide all the fields of std::hash and std::equal_to?
 class applyEffectsHash {
 public:
 	typedef combinedEffectsAttr *ceaptr;
@@ -229,7 +224,7 @@ public:
 	}
 };
 
-static HRESULT addEffectAttributeToRange(struct foreachParams *p, size_t start, size_t end, uiAttribute *attr)
+static HRESULT addEffectAttributeToRange(struct attributeApplyParams *p, size_t start, size_t end, uiAttribute *attr)
 {
 	IUnknown *u = NULL;
 	combinedEffectsAttr *cea;
@@ -265,7 +260,7 @@ static HRESULT addEffectAttributeToRange(struct foreachParams *p, size_t start, 
 	return S_OK;
 }
 
-static void addBackgroundParams(struct foreachParams *p, size_t start, size_t end, const uiAttribute *attr)
+static void addBackgroundParams(struct attributeApplyParams *p, size_t start, size_t end, const uiAttribute *attr)
 {
 	struct drawTextBackgroundParams *params;
 
@@ -278,7 +273,7 @@ static void addBackgroundParams(struct foreachParams *p, size_t start, size_t en
 
 static uiForEach processAttribute(const uiAttributedString *s, const uiAttribute *attr, size_t start, size_t end, void *data)
 {
-	struct foreachParams *p = (struct foreachParams *) data;
+	struct attributeApplyParams *p = (struct attributeApplyParams *) data;
 	DWRITE_TEXT_RANGE range;
 	WCHAR *wfamily;
 	BOOL hasUnderline;
@@ -337,7 +332,7 @@ static uiForEach processAttribute(const uiAttributedString *s, const uiAttribute
 		// fall through
 	case uiAttributeTypeColor:
 	case uiAttributeTypeUnderlineColor:
-		// TODO const-correct this properly
+		// TODO make the retained attribute ownership path const-correct
 		hr = addEffectAttributeToRange(p, start, end, (uiAttribute *) attr);
 		if (hr != S_OK)
 			logHRESULT(L"error applying effect (color, underline, or underline color) attribute", hr);
@@ -358,7 +353,7 @@ static uiForEach processAttribute(const uiAttributedString *s, const uiAttribute
 	return uiForEachContinue;
 }
 
-static HRESULT applyEffectsAttributes(struct foreachParams *p)
+static HRESULT applyEffectsAttributes(struct attributeApplyParams *p)
 {
 	IUnknown *u = NULL;
 	combinedEffectsAttr *cea;
@@ -409,16 +404,15 @@ static HRESULT applyEffectsAttributes(struct foreachParams *p)
 
 void uiprivAttributedStringApplyAttributesToDWriteTextLayout(uiDrawTextLayoutParams *p, IDWriteTextLayout *layout, std::vector<struct drawTextBackgroundParams *> **backgroundParams)
 {
-	struct foreachParams fep;
+	struct attributeApplyParams params;
 	HRESULT hr;
 
-	fep.s = uiprivAttributedStringUTF16String(p->String);
-	fep.len = uiprivAttributedStringUTF16Len(p->String);
-	fep.layout = layout;
-	fep.backgroundParams = new std::vector<struct drawTextBackgroundParams *>;
-	uiAttributedStringForEachAttribute(p->String, processAttribute, &fep);
-	hr = applyEffectsAttributes(&fep);
+	params.len = uiprivAttributedStringUTF16Len(p->String);
+	params.layout = layout;
+	params.backgroundParams = new std::vector<struct drawTextBackgroundParams *>;
+	uiAttributedStringForEachAttribute(p->String, processAttribute, &params);
+	hr = applyEffectsAttributes(&params);
 	if (hr != S_OK)
 		logHRESULT(L"error applying effects attributes", hr);
-	*backgroundParams = fep.backgroundParams;
+	*backgroundParams = params.backgroundParams;
 }

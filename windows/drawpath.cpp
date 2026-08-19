@@ -2,9 +2,8 @@
 #include "uipriv_windows.hpp"
 #include "draw.hpp"
 
-// TODO
-// - write a test for transform followed by clip and clip followed by transform to make sure they work the same as on gtk+ and cocoa
-// - write a test for nested transforms for gtk+
+// TODO test transform-then-clip and clip-then-transform against GTK and Cocoa.
+// TODO test nested transforms on GTK.
 
 struct uiDrawPath {
 	ID2D1PathGeometry *path;
@@ -49,7 +48,7 @@ void uiDrawFreePath(uiDrawPath *p)
 	if (p->inFigure)
 		p->sink->EndFigure(D2D1_FIGURE_END_OPEN);
 	if (p->sink != NULL)
-		// TODO close sink first?
+		// The unfinished geometry is being discarded, so it does not need Close().
 		p->sink->Release();
 	p->path->Release();
 	uiprivFree(p);
@@ -78,7 +77,6 @@ void uiDrawPathNewFigure(uiDrawPath *p, double x, double y)
 // That is to say, it's NOT THE SWEEP.
 // The sweep is defined by the start and end points and whether the arc is "large".
 // As a result, this design does not allow for full circles or ellipses with a single arc; they have to be simulated with two.
-// TODO https://github.com/Microsoft/WinObjC/blob/develop/Frameworks/CoreGraphics/CGPath.mm#L313
 
 struct arc {
 	double xCenter;
@@ -118,7 +116,7 @@ static void drawArc(uiDrawPath *p, struct arc *a, void (*startFunction)(uiDrawPa
 		// if we got here then we know a->sweep is larger (or the same!)
 		fullCircle = aerDiff <= absSweep * aerMax;
 	}
-	// TODO make sure this works right for the negative direction
+	// TODO add coverage for full circles drawn in the negative direction.
 	if (fullCircle) {
 		a->sweep = uiPi;
 		drawArc(p, a, startFunction);
@@ -155,18 +153,19 @@ static void drawArc(uiDrawPath *p, struct arc *a, void (*startFunction)(uiDrawPa
 		as.sweepDirection = D2D1_SWEEP_DIRECTION_CLOCKWISE;
 	else
 		as.sweepDirection = D2D1_SWEEP_DIRECTION_COUNTER_CLOCKWISE;
-	// TODO explain the outer if
-	if (!a->negative)
+	// Reversing direction selects the complementary arc between the same
+	// endpoints, so the large/small choice must also be reversed.
+	if (!a->negative) {
 		if (a->sweep > uiPi)
 			as.arcSize = D2D1_ARC_SIZE_LARGE;
 		else
 			as.arcSize = D2D1_ARC_SIZE_SMALL;
-	else
-		// TODO especially this part
+	} else {
 		if (a->sweep > uiPi)
 			as.arcSize = D2D1_ARC_SIZE_SMALL;
 		else
 			as.arcSize = D2D1_ARC_SIZE_LARGE;
+	}
 	p->sink->AddArc(&as);
 }
 

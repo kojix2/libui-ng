@@ -8,9 +8,20 @@
 
 static void copyDispInfoText(NMLVDISPINFOW *nm, const WCHAR *text)
 {
+	HRESULT hr;
+	size_t len;
+
 	if (nm->item.cchTextMax <= 0)
 		return;
-	StringCchCopyW(nm->item.pszText, nm->item.cchTextMax, text);
+	hr = StringCchCopyW(nm->item.pszText, nm->item.cchTextMax, text);
+	if (hr != STRSAFE_E_INSUFFICIENT_BUFFER)
+		return;
+
+	// StringCchCopyW truncates by UTF-16 code unit. Do not leave an
+	// unmatched high surrogate at the end of the list view's buffer.
+	len = wcslen(nm->item.pszText);
+	if (len != 0 && IS_HIGH_SURROGATE(nm->item.pszText[len - 1]))
+		nm->item.pszText[len - 1] = L'\0';
 }
 
 static HRESULT handleLVIF_TEXT(uiTable *t, NMLVDISPINFOW *nm, uiprivTableColumnParams *p)
@@ -32,15 +43,8 @@ static HRESULT handleLVIF_TEXT(uiTable *t, NMLVDISPINFOW *nm, uiprivTableColumnP
 		value = uiprivTableModelCellValue(t->model, nm->item.iItem, strcol);
 		wstr = toUTF16(uiTableValueString(value));
 		uiFreeTableValue(value);
-		// We *could* just make pszText into a freshly allocated
-		// conversion and avoid the limitation of cchTextMax.
-		// But then, we would have to keep things around for some
-		// amount of time (some pages on MSDN say 2 additional
-		// LVN_GETDISPINFO messages). And in practice, anything
-		// that results in extra LVN_GETDISPINFO messages (such
-		// as LVN_GETITEMRECT with LVIR_LABEL) will break this
-		// counting.
-		// TODO make it so we don't have to make a copy; instead we can convert directly into pszText (this will also avoid the risk of having a dangling surrogate pair at the end)
+		// Copy into the list view's buffer so ownership remains with the
+		// control; copyDispInfoText() keeps truncation valid UTF-16.
 		copyDispInfoText(nm, wstr);
 		uiprivFree(wstr);
 		return S_OK;
@@ -76,9 +80,9 @@ static HRESULT handleLVIF_IMAGE(uiTable *t, NMLVDISPINFOW *nm, uiprivTableColumn
 	if ((nm->item.mask & LVIF_IMAGE) == 0)
 		return S_OK;		// nothing to do here
 
-	// TODO see if the -1 part is correct
-	// TODO see if we should use state instead of images for checkbox value
-	nm->item.iImage = -1;
+	// Checkboxes can appear in any subitem and are custom-drawn, whereas
+	// state images belong to the item as a whole.
+	nm->item.iImage = I_IMAGENONE;
 	if (p->imageModelColumn != -1 || p->checkboxModelColumn != -1)
 		nm->item.iImage = 0;
 	return S_OK;

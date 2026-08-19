@@ -1,7 +1,18 @@
 // 14 may 2015
 #include "uipriv_windows.hpp"
 
-// TODO rework the error handling
+static void fallbackSizing(uiWindowsSizing *sizing)
+{
+	LONG units;
+
+	// GetDialogBaseUnits() uses the system dialog font rather than the requested
+	// font, but provides safe values if measuring that font fails.
+	units = GetDialogBaseUnits();
+	sizing->BaseX = LOWORD(units);
+	sizing->BaseY = HIWORD(units);
+	sizing->InternalLeading = 0;
+}
+
 void getSizing(HWND hwnd, uiWindowsSizing *sizing, HFONT font)
 {
 	HDC dc;
@@ -9,22 +20,32 @@ void getSizing(HWND hwnd, uiWindowsSizing *sizing, HFONT font)
 	TEXTMETRICW tm;
 	SIZE size;
 
+	fallbackSizing(sizing);
+
 	dc = GetDC(hwnd);
-	if (dc == NULL)
+	if (dc == NULL) {
 		logLastError(L"error getting DC");
+		return;
+	}
 	prevfont = (HFONT) SelectObject(dc, font);
-	if (prevfont == NULL)
+	if (prevfont == NULL) {
 		logLastError(L"error loading control font into device context");
+		if (ReleaseDC(hwnd, dc) == 0)
+			logLastError(L"error releasing DC");
+		return;
+	}
 
 	ZeroMemory(&tm, sizeof (TEXTMETRICW));
-	if (GetTextMetricsW(dc, &tm) == 0)
+	ZeroMemory(&size, sizeof (SIZE));
+	if (GetTextMetricsW(dc, &tm) == 0) {
 		logLastError(L"error getting text metrics");
-	if (GetTextExtentPoint32W(dc, L"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", 52, &size) == 0)
+	} else if (GetTextExtentPoint32W(dc, L"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", 52, &size) == 0) {
 		logLastError(L"error getting text extent point");
-
-	sizing->BaseX = (int) ((size.cx / 26 + 1) / 2);
-	sizing->BaseY = (int) tm.tmHeight;
-	sizing->InternalLeading = tm.tmInternalLeading;
+	} else {
+		sizing->BaseX = (int) ((size.cx / 26 + 1) / 2);
+		sizing->BaseY = (int) tm.tmHeight;
+		sizing->InternalLeading = tm.tmInternalLeading;
+	}
 
 	if (SelectObject(dc, prevfont) != font)
 		logLastError(L"error restoring previous font into device context");
@@ -51,7 +72,7 @@ void uiWindowsSizingDlgUnitsToPixels(uiWindowsSizing *sizing, int *x, int *y)
 // from https://msdn.microsoft.com/en-us/library/windows/desktop/dn742486.aspx#sizingandspacing and https://msdn.microsoft.com/en-us/library/windows/desktop/bb226818%28v=vs.85%29.aspx
 // this X value is really only for buttons but I don't see a better one :/
 #define winXPadding 4
-// TODO is this too much?
+// Use the same four dialog units for standard vertical spacing.
 #define winYPadding 4
 
 void uiWindowsSizingStandardPadding(uiWindowsSizing *sizing, int *x, int *y)

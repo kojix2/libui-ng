@@ -20,13 +20,14 @@ static const std::map<uiTextStretch, DWRITE_FONT_STRETCH> dwriteStretches = {
 	{ uiTextStretchUltraExpanded, DWRITE_FONT_STRETCH_ULTRA_EXPANDED },
 };
 
-// for the most part, DirectWrite weights correlate to ours
-// the differences:
-// - Minimum — libui: 0, DirectWrite: 1
-// - Maximum — libui: 1000, DirectWrite: 999
-// TODO figure out what to do about this shorter range (the actual major values are the same (but with different names), so it's just a range issue)
+// DirectWrite accepts weights from 1 through 999, while libui accepts 0
+// through 1000. The named weights otherwise use the same numeric values.
 DWRITE_FONT_WEIGHT uiprivWeightToDWriteWeight(uiTextWeight w)
 {
+	if (w < 1)
+		return (DWRITE_FONT_WEIGHT) 1;
+	if (w > 999)
+		return (DWRITE_FONT_WEIGHT) 999;
 	return (DWRITE_FONT_WEIGHT) w;
 }
 
@@ -53,7 +54,7 @@ void uiprivFontDescriptorFromIDWriteFont(IDWriteFont *font, uiFontDescriptor *ui
 	}
 
 	dwitalic = font->GetStyle();
-	// TODO reverse the above misalignment if it is corrected
+	// DirectWrite's entire output range already fits within libui's range.
 	uidesc->Weight = (uiTextWeight) (font->GetWeight());
 	dwstretch = font->GetStretch();
 

@@ -2,7 +2,7 @@
 #include "uipriv_windows.hpp"
 #include "area.hpp"
 
-// TODO same for other Direct2D stuff
+// TODO audit other Direct2D-backed windows for render-target cleanup
 static void releaseAreaRenderTarget(uiArea *a)
 {
 	if (a->rt != NULL) {
@@ -79,7 +79,7 @@ uiWindowsControlAllDefaultsExceptDestroy(uiArea)
 
 static void uiAreaMinimumSize(uiWindowsControl *c, int *width, int *height)
 {
-	// TODO
+	// An area has no intrinsic minimum size.
 	*width = 0;
 	*height = 0;
 }
@@ -138,10 +138,8 @@ void uiAreaBeginUserWindowMove(uiArea *a)
 	if (ReleaseCapture() == 0)
 		logLastError(L"error releasing capture before user window move");
 	toplevel = parentToplevel(a->hwnd);
-	if (toplevel == NULL) {
-		// TODO
+	if (toplevel == NULL)
 		return;
-	}
 	// see http://stackoverflow.com/questions/40249940/how-do-i-initiate-a-user-mouse-driven-move-or-resize-for-custom-window-borders-o#40250654
 	SendMessageW(toplevel, WM_SYSCOMMAND,
 		SC_MOVE | 2, 0);
@@ -158,10 +156,8 @@ void uiAreaBeginUserWindowResize(uiArea *a, uiWindowResizeEdge edge)
 	if (ReleaseCapture() == 0)
 		logLastError(L"error releasing capture before user window resize");
 	toplevel = parentToplevel(a->hwnd);
-	if (toplevel == NULL) {
-		// TODO
+	if (toplevel == NULL)
 		return;
-	}
 	// see http://stackoverflow.com/questions/40249940/how-do-i-initiate-a-user-mouse-driven-move-or-resize-for-custom-window-borders-o#40250654
 	wParam = SC_SIZE;
 	switch (edge) {

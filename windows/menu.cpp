@@ -196,7 +196,6 @@ uiMenuItem *uiMenuAppendPreferencesItem(uiMenu *m)
 uiMenuItem *uiMenuAppendAboutItem(uiMenu *m)
 {
 	if (hasAbout)
-		// TODO place these uiprivImplBug() and uiprivUserBug() strings in a header
 		uiprivUserBug("You can not have multiple About menu items in a program.");
 	hasAbout = TRUE;
 	newItem(m, typeSeparator, NULL);

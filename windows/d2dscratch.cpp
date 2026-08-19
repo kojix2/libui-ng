@@ -13,11 +13,9 @@
 // - lResult - 0
 // Other messages can also be handled here.
 
-// TODO allow resize
-
 #define d2dScratchClass L"libui_d2dScratchClass"
 
-// TODO clip rect
+// TODO optimize partial repaints by clipping drawing and clearing to the update region.
 static HRESULT d2dScratchDoPaint(HWND hwnd, ID2D1RenderTarget *rt)
 {
 	COLORREF bgcolorref;
@@ -25,8 +23,7 @@ static HRESULT d2dScratchDoPaint(HWND hwnd, ID2D1RenderTarget *rt)
 
 	rt->BeginDraw();
 
-	// TODO only clear the clip area
-	// TODO clear with actual background brush
+	// Match the COLOR_BTNFACE brush registered as this window class's background.
 	bgcolorref = GetSysColor(COLOR_BTNFACE);
 	bgcolor.r = uiprivD2DFloat(((double) GetRValue(bgcolorref)) / 255.0);
 	// due to utter apathy on Microsoft's part, GetGValue() does not work with MSVC's Run-Time Error Checks
@@ -51,7 +48,7 @@ static void d2dScratchDoLButtonDown(HWND hwnd, ID2D1RenderTarget *rt, LPARAM lPa
 	xpix = (double) GET_X_LPARAM(lParam);
 	ypix = (double) GET_Y_LPARAM(lParam);
 	// these are in pixels; we need points
-	// TODO separate the function from areautil.cpp?
+	// TODO move pixelsToDIPWithRT() out of the area-specific utilities and reuse it here.
 	rt->GetDpi(&dpix, &dpiy);
 	pos.x = uiprivD2DFloat((xpix * 96) / dpix);
 	pos.y = uiprivD2DFloat((ypix * 96) / dpiy);
@@ -66,6 +63,7 @@ static LRESULT CALLBACK d2dScratchWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, L
 	LONG_PTR init;
 	ID2D1HwndRenderTarget *rt = NULL;
 	ID2D1DCRenderTarget *dcrt = NULL;
+	D2D1_SIZE_U size;
 	RECT client;
 	HRESULT hr;
 
@@ -88,6 +86,16 @@ static LRESULT CALLBACK d2dScratchWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, L
 			rt->Release();
 		SetWindowLongPtrW(hwnd, 0, (LONG_PTR) FALSE);
 		break;
+	case WM_SIZE:
+		if (rt == NULL)
+			return DefWindowProcW(hwnd, uMsg, wParam, lParam);
+		size.width = LOWORD(lParam);
+		size.height = HIWORD(lParam);
+		// EndDraw() reports any device loss; this mirrors uiArea resize handling.
+		rt->Resize(&size);
+		// Resizing does not preserve all render-target contents reliably.
+		invalidateRect(hwnd, NULL, FALSE);
+		return 0;
 	case WM_PAINT:
 		if (rt == NULL)
 			return DefWindowProcW(hwnd, uMsg, wParam, lParam);
@@ -101,9 +109,10 @@ static LRESULT CALLBACK d2dScratchWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, L
 			// DON'T validate the rect
 			// instead, simply drop the render target
 			// we'll get another WM_PAINT and make the render target again
-			// TODO would this require us to invalidate the entire client area?
 			rt->Release();
 			SetWindowLongPtrW(hwnd, GWLP_USERDATA, (LONG_PTR) NULL);
+			// A new render target has no retained contents, so redraw everything.
+			invalidateRect(hwnd, NULL, FALSE);
 			break;
 		default:
 			logHRESULT(L"error drawing D2D scratch window", hr);
@@ -167,7 +176,7 @@ HWND newD2DScratch(HWND parent, RECT *rect, HMENU controlID, SUBCLASSPROC subcla
 		rect->right - rect->left, rect->bottom - rect->top,
 		parent, controlID, hInstance, NULL);
 	if (hwnd == NULL)
-		// TODO return decoy window
+		// TODO use the same failed-control/decoy-window policy as uiWindowsEnsureCreateControlHWND().
 		logLastError(L"error creating D2D scratch window");
 	if (SetWindowSubclass(hwnd, subclass, 0, subclassData) == FALSE)
 		logLastError(L"error subclassing D2D scratch window");

@@ -229,7 +229,7 @@ static void formArrangeChildren(uiForm *f)
 	controlID = 100;
 	insertAfter = NULL;
 	for (const struct formChild &fc : *(f->controls)) {
-		// TODO assign label ID and z-order
+		uiWindowsEnsureAssignControlIDZOrder(fc.label, &controlID, &insertAfter);
 		uiWindowsControlAssignControlIDZOrder(uiWindowsControl(fc.c), &controlID, &insertAfter);
 	}
 }

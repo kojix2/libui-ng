@@ -2,8 +2,7 @@
 #include "uipriv_windows.hpp"
 #include "table.hpp"
 
-// TODOs
-// - clicking on the same item restarts editing instead of cancels it
+// TODO make clicking the item being edited cancel editing instead of restarting it
 
 // this is not how the real list view positions and sizes the edit control, but this is a) close enough b) a lot easier to follow c) something I can actually get working d) something I'm slightly more comfortable including in libui
 static HRESULT resizeEdit(uiTable *t, WCHAR *wstr, int iItem, int iSubItem)
@@ -49,22 +48,22 @@ static HRESULT resizeEdit(uiTable *t, WCHAR *wstr, int iItem, int iSubItem)
 	r.top -= editRect.top;
 	r.right = r.left + textSize.cx;
 	// the real listview does this to add some extra space at the end
-	// TODO this still isn't enough space
+	// TODO determine the extra trailing space needed to match the list view editor
 	r.right += 4 * GetSystemMetrics(SM_CXEDGE) + GetSystemMetrics(SM_CYEDGE);
 	// and make the bottom equally positioned to the top
 	r.bottom = r.top + editRect.top + tm.tmHeight + editRect.top;
 
 	// make sure the edit box doesn't stretch outside the listview
 	// the list view just does this, which is dumb for when the list view wouldn't be visible at all, but given that it doesn't scroll the edit into view either...
-	// TODO check errors
-	GetClientRect(t->hwnd, &clientRect);
+	if (GetClientRect(t->hwnd, &clientRect) == 0)
+		return logLastError(L"GetClientRect()");
 	IntersectRect(&r, &r, &clientRect);
 
-	// TODO check error or use the right function
-	SetWindowPos(t->edit, NULL,
+	if (SetWindowPos(t->edit, NULL,
 		r.left, r.top,
 		r.right - r.left, r.bottom - r.top,
-		SWP_NOACTIVATE | SWP_NOOWNERZORDER | SWP_NOZORDER);
+		SWP_NOACTIVATE | SWP_NOOWNERZORDER | SWP_NOZORDER) == 0)
+		return logLastError(L"SetWindowPos()");
 	return S_OK;
 }
 
@@ -72,23 +71,16 @@ static HRESULT resizeEdit(uiTable *t, WCHAR *wstr, int iItem, int iSubItem)
 static LRESULT CALLBACK editSubProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIDSubclass, DWORD_PTR dwRefData)
 {
 	uiTable *t = (uiTable *) dwRefData;
-	HRESULT hr;
 
 	switch (uMsg) {
 	case WM_KEYDOWN:
 		switch (wParam) {
 		// TODO handle VK_TAB and VK_SHIFT+VK_TAB
 		case VK_RETURN:
-			hr = uiprivTableFinishEditingText(t);
-			if (hr != S_OK) {
-				// TODO
-			}
+			uiprivTableFinishEditingText(t);
 			return 0;		// yes, the real list view just returns here
 		case VK_ESCAPE:
-			hr = uiprivTableAbortEditingText(t);
-			if (hr != S_OK) {
-				// TODO
-			}
+			uiprivTableAbortEditingText(t);
 			return 0;
 		}
 		break;
@@ -118,7 +110,7 @@ static HRESULT openEditControl(uiTable *t, int iItem, int iSubItem, uiprivTableC
 	value = uiprivTableModelCellValue(t->model, iItem, p->textModelColumn);
 	wstr = toUTF16(uiTableValueString(value));
 	uiFreeTableValue(value);
-	// TODO copy WS_EX_RTLREADING
+	// TODO propagate WS_EX_RTLREADING from the list view
 	t->edit = CreateWindowExW(0,
 		L"EDIT", wstr,
 		// these styles are what the normal listview edit uses
@@ -133,8 +125,12 @@ static HRESULT openEditControl(uiTable *t, int iItem, int iSubItem, uiprivTableC
 		return E_FAIL;
 	}
 	SendMessageW(t->edit, WM_SETFONT, (WPARAM) hMessageFont, (LPARAM) TRUE);
-	// TODO check errors
-	SetWindowSubclass(t->edit, editSubProc, 0, (DWORD_PTR) t);
+	if (SetWindowSubclass(t->edit, editSubProc, 0, (DWORD_PTR) t) == FALSE) {
+		hr = logLastError(L"SetWindowSubclass()");
+		uiprivTableAbortEditingText(t);
+		uiprivFree(wstr);
+		return hr;
+	}
 
 	hr = resizeEdit(t, wstr, iItem, iSubItem);
 	if (hr != S_OK) {
@@ -142,7 +138,6 @@ static HRESULT openEditControl(uiTable *t, int iItem, int iSubItem, uiprivTableC
 		uiprivFree(wstr);
 		return hr;
 	}
-	// TODO check errors on these two, if any
 	SetFocus(t->edit);
 	ShowWindow(t->edit, SW_SHOW);
 	SendMessageW(t->edit, EM_SETSEL, 0, (LPARAM) (-1));

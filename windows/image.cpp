@@ -58,7 +58,8 @@ void uiImageAppend(uiImage *i, void *pixels, int pixelWidth, int pixelHeight, in
 	WICRect r;
 	IWICBitmapLock *l = NULL;
 	uint8_t *pix, *data;
-	// TODO WICInProcPointer is not available in MinGW-w64
+	// MinGW-w64 does not declare the WICInProcPointer alias used by
+	// IWICBitmapLock::GetDataPointer(); BYTE * is the equivalent type.
 	BYTE *dipp;
 	UINT size;
 	UINT realStride;
@@ -197,7 +198,8 @@ IWICBitmap *uiprivImageAppropriateForDC(uiImage *i, HDC dc)
 	m.best = NULL;
 	m.distX = INT_MAX;
 	m.distY = INT_MAX;
-	// TODO explain this
+	// uiImage dimensions are in points at 96 DPI; select a representation
+	// using the corresponding pixel dimensions for this device context.
 	m.targetX = MulDiv((int) i->width, GetDeviceCaps(dc, LOGPIXELSX), 96);
 	m.targetY = MulDiv((int) i->height, GetDeviceCaps(dc, LOGPIXELSY), 96);
 	m.foundLarger = false;
@@ -266,8 +268,8 @@ HRESULT uiprivWICToGDI(IWICBitmap *b, HDC dc, int width, int height, HBITMAP *hb
 				return hr;
 			}
 			hr = conv->Initialize(scaler, formatForGDI,
-				// TODO is the dither type correct in all cases?
-				WICBitmapDitherTypeNone, NULL, 0, WICBitmapPaletteTypeMedianCut);
+				// A 32-bit true-color destination needs neither dithering nor a palette.
+				WICBitmapDitherTypeNone, NULL, 0, WICBitmapPaletteTypeCustom);
 			scaler->Release();
 			if (hr != S_OK) {
 				conv->Release();
@@ -292,11 +294,13 @@ HRESULT uiprivWICToGDI(IWICBitmap *b, HDC dc, int width, int height, HBITMAP *hb
 		goto fail;
 	}
 
-	// now we need to figure out the stride of the image data GDI gave us
-	// TODO find out if CreateDIBSection() fills that in bmi for us
-	// TODO fill in the error returns here too
-	if (GetObject(*hb, sizeof (BITMAP), &bmp) == 0)
+	// BITMAPINFO is input-only for CreateDIBSection(); query the resulting
+	// bitmap to obtain the actual row stride.
+	if (GetObject(*hb, sizeof (BITMAP), &bmp) == 0) {
 		logLastError(L"error calling GetObject() in uiprivWICToGDI()");
+		hr = E_FAIL;
+		goto fail;
+	}
 	hr = src->CopyPixels(NULL, bmp.bmWidthBytes,
 		bmp.bmWidthBytes * bmp.bmHeight, (BYTE *) bits);
 

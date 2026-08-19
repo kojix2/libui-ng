@@ -1,17 +1,16 @@
 // 22 may 2015
 #include "uipriv_windows.hpp"
 
-// TODO document all this is what we want
-// TODO do the same for font and color buttons
+// File and message dialogs are application-modal: disable the other libui
+// windows while they are open.
+// TODO apply the same application-modal behavior to font and color dialogs
 
 // notes:
 // - FOS_SUPPORTSTREAMABLEITEMS doesn't seem to be supported on windows vista, or at least not with the flags we use
 // - even with FOS_NOVALIDATE the dialogs will reject invalid filenames (at least on Vista, anyway)
 // - lack of FOS_NOREADONLYRETURN doesn't seem to matter on Windows 7
 
-// TODO
-// - http://blogs.msdn.com/b/wpfsdk/archive/2006/10/26/uncommon-dialogs--font-chooser-and-color-picker-dialogs.aspx
-// - when a dialog is active, tab navigation in other windows stops working
+// TODO determine why an active dialog stops tab navigation in other windows
 
 #define windowHWND(w) (w ? (HWND)uiControlHandle(uiControl(w)) : NULL)
 
@@ -110,8 +109,6 @@ char *uiSaveFile(uiWindow *parent)
 	enableAllWindowsExcept(parent);
 	return res;
 }
-
-// TODO switch to TaskDialogIndirect()?
 
 static void msgbox(HWND parent, const char *title, const char *description, TASKDIALOG_COMMON_BUTTON_FLAGS buttons, PCWSTR icon)
 {

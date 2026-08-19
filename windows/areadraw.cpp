@@ -45,7 +45,8 @@ static HRESULT doPaint(uiArea *a, ID2D1RenderTarget *rt, RECT *clip)
 		rt->SetTransform(&scrollTransform);
 	}
 
-	// TODO clear with actual background brush
+	// Match the uiArea window class background; parent background inheritance
+	// is not currently supported.
 	bgcolorref = GetSysColor(COLOR_BTNFACE);
 	bgcolor.r = uiprivD2DFloat(((double) GetRValue(bgcolorref)) / 255.0);
 	// due to utter apathy on Microsoft's part, GetGValue() does not work with MSVC's Run-Time Error Checks
@@ -94,9 +95,10 @@ static void onWM_PAINT(uiArea *a)
 		// DON'T validate the rect
 		// instead, simply drop the render target
 		// we'll get another WM_PAINT and make the render target again
-		// TODO would this require us to invalidate the entire client area?
-		a->rt->Release();;
+		a->rt->Release();
 		a->rt = NULL;
+		// A new render target has no retained contents, so redraw everything.
+		invalidateRect(a->hwnd, NULL, FALSE);
 		break;
 	default:
 		logHRESULT(L"error painting", hr);
@@ -134,7 +136,6 @@ BOOL areaDoDraw(uiArea *a, UINT uMsg, WPARAM wParam, LPARAM lParam, LRESULT *lRe
 	return FALSE;
 }
 
-// TODO only if the render target wasn't just created?
 void areaDrawOnResize(uiArea *a, RECT *newClient)
 {
 	D2D1_SIZE_U size;
@@ -146,6 +147,8 @@ void areaDrawOnResize(uiArea *a, RECT *newClient)
 	size.height = newClient->bottom - newClient->top;
 	// don't track the error; we'll get that in EndDraw()
 	// see https://msdn.microsoft.com/en-us/library/windows/desktop/dd370994%28v=vs.85%29.aspx
+	// This can be redundant when the target was just created at the new size,
+	// but Resize() is harmless and avoids tracking creation state here.
 	a->rt->Resize(&size);
 
 	// according to Rick Brewster, we must always redraw the entire client area after calling ID2D1RenderTarget::Resize() (see http://stackoverflow.com/a/33222983/3408572)

@@ -1,11 +1,6 @@
 #ifndef __LIBUI_AREA_HPP__
 #define __LIBUI_AREA_HPP__
 
-// TODOs
-// - things look very wrong on initial draw
-// - initial scrolling is not set properly
-// - should background be inherited from parent control?
-
 struct uiArea {
 	uiWindowsControl c;
 	HWND hwnd;

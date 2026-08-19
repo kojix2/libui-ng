@@ -70,7 +70,7 @@ public:
 	HRESULT underline(uiUnderline *underlineType);
 	HRESULT mkUnderlineBrush(ID2D1RenderTarget *rt, ID2D1SolidColorBrush **brush);
 };
-// TODO figure out where this type should *really* go in all the headers...
+// Shared between attrstr.cpp (collection) and drawtext.cpp (rendering).
 struct drawTextBackgroundParams {
 	size_t start;
 	size_t end;

@@ -1,9 +1,8 @@
 // 20 may 2015
 #include "uipriv_windows.hpp"
 
-// TODO
-// - font scaling issues? https://www.viksoe.dk/code/bevelline.htm
-// 	- isn't something in vista app guidelines suggesting this too? or some other microsoft doc? and what about VS itself?
+// TODO verify that dialog-unit scaling gives etched separators the expected
+// thickness with different fonts and DPI settings.
 
 // references:
 // - http://stackoverflow.com/questions/2892703/how-do-i-draw-separators
@@ -20,7 +19,8 @@ uiWindowsControlAllDefaults(uiSeparator)
 // via https://msdn.microsoft.com/en-us/library/windows/desktop/bb226818%28v=vs.85%29.aspx
 #define separatorHeight 1
 
-// TODO
+// No separate standard width is documented for vertical separators; use the
+// same one-dialog-unit thickness as horizontal separators.
 #define separatorWidth 1
 
 static void uiSeparatorMinimumSize(uiWindowsControl *c, int *width, int *height)
@@ -29,7 +29,9 @@ static void uiSeparatorMinimumSize(uiWindowsControl *c, int *width, int *height)
 	uiWindowsSizing sizing;
 	int x, y;
 
-	*width = 1;		// TODO
+	// Give the unconstrained length axis a nonzero minimum; the layout
+	// container normally stretches the separator along that axis.
+	*width = 1;
 	*height = 1;
 	x = separatorWidth;
 	y = separatorHeight;

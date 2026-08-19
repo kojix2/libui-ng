@@ -3,8 +3,8 @@
 
 #include <limits.h>
 
-// TODOs
-// - the Assorted page has clipping and repositioning issues
+// TODO reproduce and characterize the Assorted test page's reported clipping
+// and repositioning issues before changing the layout algorithm.
 
 struct gridChild {
 	uiControl *c;
@@ -197,6 +197,31 @@ static void measureTracks(uiGrid *g, gridLayoutData *ld)
 			// save these for step 6
 			gc->minwidth = iwidth;
 			gc->minheight = iheight;
+		}
+}
+
+static void measureMinimumTracks(uiGrid *g, gridLayoutData *ld)
+{
+	int x, y;
+	int i;
+	struct gridChild *gc;
+	int minwid, minht;
+
+	// Minimum-size calculation includes spanning controls. Divide their
+	// minimum dimensions equally among the tracks they occupy.
+	for (y = 0; y < ycount(g); y++)
+		for (x = 0; x < xcount(g); x++) {
+			i = ld->gg[y][x];
+			if (i == -1)
+				continue;
+			gc = (*(g->children))[i];
+			uiWindowsControlMinimumSize(uiWindowsControl(gc->c), &minwid, &minht);
+			if (ld->colwidths[x] < minwid / gc->xspan)
+				ld->colwidths[x] = minwid / gc->xspan;
+			if (ld->rowheights[y] < minht / gc->yspan)
+				ld->rowheights[y] = minht / gc->yspan;
+			gc->minwidth = minwid;
+			gc->minheight = minht;
 		}
 }
 
@@ -483,9 +508,6 @@ static void uiGridMinimumSize(uiWindowsControl *c, int *width, int *height)
 	int xpadding, ypadding;
 	gridLayoutData *ld;
 	int x, y;
-	int i;
-	struct gridChild *gc;
-	int minwid, minht;
 	int colwidth, rowheight;
 
 	*width = 0;
@@ -500,24 +522,7 @@ static void uiGridMinimumSize(uiWindowsControl *c, int *width, int *height)
 		return;
 	}
 
-	// 1) compute colwidths and rowheights before handling expansion
-	// TODO put this in its own function (but careful about the spanning calculation in gridRelayout())
-	for (y = 0; y < ycount(g); y++)
-		for (x = 0; x < xcount(g); x++) {
-			i = ld->gg[y][x];
-			if (i == -1)
-				continue;
-			gc = (*(g->children))[i];
-			uiWindowsControlMinimumSize(uiWindowsControl(gc->c), &minwid, &minht);
-			// allot equal space in the presence of spanning to keep things sane
-			if (ld->colwidths[x] < minwid / gc->xspan)
-				ld->colwidths[x] = minwid / gc->xspan;
-			if (ld->rowheights[y] < minht / gc->yspan)
-				ld->rowheights[y] = minht / gc->yspan;
-			// save these for step 6
-			gc->minwidth = minwid;
-			gc->minheight = minht;
-		}
+	measureMinimumTracks(g, ld);
 
 	// 2) compute total column width/row height
 	colwidth = 0;
@@ -656,7 +661,6 @@ void uiGridAppend(uiGrid *g, uiControl *c, int left, int top, int xspan, int ysp
 	add(g, gc);
 }
 
-// TODO decide what happens if existing is NULL
 void uiGridInsertAt(uiGrid *g, uiControl *c, uiControl *existing, uiAt at, int xspan, int yspan, int hexpand, uiAlign halign, int vexpand, uiAlign valign)
 {
 	struct gridChild *gc;
@@ -664,6 +668,8 @@ void uiGridInsertAt(uiGrid *g, uiControl *c, uiControl *existing, uiAt at, int x
 	std::map<uiControl *, size_t>::iterator existingIndex;
 	int64_t left, top;
 
+	if (existing == NULL)
+		uiprivUserBug("uiGridInsertAt() existing control cannot be NULL.");
 	gc = toChild(c, xspan, yspan, hexpand, halign, vexpand, valign);
 	existingIndex = g->indexof->find(existing);
 	if (existingIndex == g->indexof->end())

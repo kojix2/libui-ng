@@ -1,7 +1,8 @@
 #ifndef __LIBUI_DRAW_HPP__
 #define __LIBUI_DRAW_HPP__
 
-// TODO resolve overlap between this and the other hpp files (some functions leaked into uipriv_windows.hpp)
+// TODO consolidate the drawing declarations currently split between this file,
+// uipriv_windows.hpp, and _uipriv_migrate.hpp.
 
 // draw.cpp
 extern ID2D1Factory *d2dfactory;
@@ -18,9 +19,15 @@ static inline void uiprivInitBrushProperties(D2D1_BRUSH_PROPERTIES *props, FLOAT
 	props->transform._22 = 1;
 }
 
+struct drawState {
+	ID2D1DrawingStateBlock *dsb;
+	ID2D1PathGeometry *clip;
+};
+
 struct uiDrawContext {
 	ID2D1RenderTarget *rt;
-	// TODO find out how this works
+	// uiDrawContext is allocated with uiprivNew(), which does not run C++
+	// constructors, so construct and destroy the vector separately.
 	std::vector<struct drawState> *states;
 	ID2D1PathGeometry *currentClip;
 };

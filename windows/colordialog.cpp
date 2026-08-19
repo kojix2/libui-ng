@@ -30,7 +30,6 @@ struct colorDialog {
 };
 
 // both of these are from the wikipedia page on HSV
-// TODO what to do about negative h?
 static void rgb2HSV(double r, double g, double b, double *h, double *s, double *v)
 {
 	double M, m;
@@ -69,6 +68,8 @@ static void rgb2HSV(double r, double g, double b, double *h, double *s, double *
 			*h = ((r - g) / c) + 4;
 			break;
 		}
+		if (*h < 0)
+			*h += 6;
 		*h /= 6;		// put in range [0,1)
 	}
 
@@ -80,7 +81,6 @@ static void rgb2HSV(double r, double g, double b, double *h, double *s, double *
 		*s = c / *v;
 }
 
-// TODO negative R values?
 static void hsv2RGB(double h, double s, double v, double *r, double *g, double *b)
 {
 	double c;
@@ -126,7 +126,10 @@ static void hsv2RGB(double h, double s, double v, double *r, double *g, double *
 		*b = x + m;
 		return;
 	}
-	// TODO
+	uiprivImplBug("hsv2RGB() received hue outside [0, 1): %g", h);
+	*r = 0;
+	*g = 0;
+	*b = 0;
 }
 
 #define hexd L"0123456789ABCDEF"
@@ -938,7 +941,7 @@ static void moveWindowsUp(struct colorDialog *c, LONG by, ...)
 		mapWindowRect(NULL, c->hwnd, &r);
 		r.top -= by;
 		r.bottom -= by;
-		// TODO this isn't technically during a resize
+		// The resize helper is also suitable for this one-time position fixup.
 		uiWindowsEnsureMoveWindowDuringResize(cur,
 			r.left, r.top,
 			r.right - r.left, r.bottom - r.top);
@@ -1002,8 +1005,6 @@ static struct colorDialog *beginColorDialog(HWND hwnd, LPARAM lParam)
 	// load initial values now
 	rgb2HSV(c->out->r, c->out->g, c->out->b, &(c->h), &(c->s), &(c->v));
 	c->a = c->out->a;
-
-	// TODO set up d2dscratches
 
 	// TODO prefix all these with rcColor instead of just rc
 	c->editH = getDlgItem(c->hwnd, rcH);

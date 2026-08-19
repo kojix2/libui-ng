@@ -12,6 +12,26 @@ struct uiDateTimePicker {
 
 #define GLI(what, buf, n) GetLocaleInfoEx(LOCALE_NAME_USER_DEFAULT, what, buf, n)
 
+static WCHAR *localeFormat(LCTYPE what, const WCHAR *fallback,
+	const WCHAR *lengthError, const WCHAR *formatError)
+{
+	WCHAR *format;
+	int n;
+
+	n = GLI(what, NULL, 0);
+	if (n == 0) {
+		logLastError(lengthError);
+		return utf16dup(fallback);
+	}
+	format = (WCHAR *) uiprivAlloc(n * sizeof (WCHAR), "WCHAR[]");
+	if (GLI(what, format, n) == 0) {
+		logLastError(formatError);
+		uiprivFree(format);
+		return utf16dup(fallback);
+	}
+	return format;
+}
+
 // The real date/time picker does a manual replacement of "yy" with "yyyy" for DTS_SHORTDATECENTURYFORMAT.
 // Because we're also duplicating its functionality (see below), we have to do it too.
 static WCHAR *expandYear(WCHAR *dts, int n)
@@ -64,30 +84,19 @@ static WCHAR *expandYear(WCHAR *dts, int n)
 }
 
 // Windows has no combined date/time prebuilt constant; we have to build the format string ourselves
-// TODO use a default format if one fails
 static void setDateTimeFormat(HWND hwnd)
 {
 	WCHAR *unexpandedDate, *date;
 	WCHAR *time;
 	WCHAR *datetime;
-	int ndate, ntime;
 
-	ndate = GLI(LOCALE_SSHORTDATE, NULL, 0);
-	if (ndate == 0)
-		logLastError(L"error getting date string length");
-	date = (WCHAR *) uiprivAlloc(ndate * sizeof (WCHAR), "WCHAR[]");
-	if (GLI(LOCALE_SSHORTDATE, date, ndate) == 0)
-		logLastError(L"error geting date string");
-	unexpandedDate = date;		// so we can free it
-	date = expandYear(unexpandedDate, ndate);
+	unexpandedDate = localeFormat(LOCALE_SSHORTDATE, L"yyyy-MM-dd",
+		L"error getting date string length", L"error getting date string");
+	date = expandYear(unexpandedDate, (int) wcslen(unexpandedDate) + 1);
 	uiprivFree(unexpandedDate);
 
-	ntime = GLI(LOCALE_STIMEFORMAT, NULL, 0);
-	if (ntime == 0)
-		logLastError(L"error getting time string length");
-	time = (WCHAR *) uiprivAlloc(ntime * sizeof (WCHAR), "WCHAR[]");
-	if (GLI(LOCALE_STIMEFORMAT, time, ntime) == 0)
-		logLastError(L"error geting time string");
+	time = localeFormat(LOCALE_STIMEFORMAT, L"HH:mm:ss",
+		L"error getting time string length", L"error getting time string");
 
 	datetime = strf(L"%s %s", date, time);
 	if (SendMessageW(hwnd, DTM_SETFORMAT, 0, (LPARAM) datetime) == 0)
@@ -244,9 +253,10 @@ uiDateTimePicker *uiNewDateTimePicker(void)
 
 	d = finishNewDateTimePicker(0);
 	setDateTimeFormat(d->hwnd);
-	if (SetWindowSubclass(d->hwnd, datetimepickerSubProc, 0, (DWORD_PTR) d) == FALSE)
+	if (SetWindowSubclass(d->hwnd, datetimepickerSubProc, 0, (DWORD_PTR) d) == FALSE) {
 		logLastError(L"error subclassing date-time-picker to assist in locale change handling");
-		// TODO set a suitable default in this case
+		// The initial format remains usable, but it will not track later locale changes.
+	}
 	return d;
 }
 

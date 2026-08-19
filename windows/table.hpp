@@ -31,12 +31,13 @@ struct uiTable {
 	std::vector<uiprivTableColumnParams *> *columns;
 	WPARAM nColumns;
 	int backgroundColumn;
-	// TODO make sure replacing images while selected in the listview is even allowed
+	// One-slot image list used by custom drawing; selection is applied at draw time.
 	HIMAGELIST imagelist;
-	// TODO document all this
+	// Animation positions keyed by row and subitem for indeterminate progress bars.
 	std::map<std::pair<int, int>, LONG> *indeterminatePositions;
+	// Distinguishes selection and focus changes caused by a mouse press.
 	BOOL inLButtonDown;
-	// TODO is this even necessary? it seems NM_CLICK is not sent if NM_DBLCLICK or LVN_ITEMACTIVATE (one of the two) happens...
+	// Delays text editing after the first click until the double-click interval expires.
 	BOOL inDoubleClickTimer;
 	HWND edit;
 	int editedItem;

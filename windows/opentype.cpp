@@ -2,7 +2,8 @@
 #include "uipriv_windows.hpp"
 #include "attrstr.hpp"
 
-// TODO pull out my decision for empty uiOpenTypeFeatures, assuming that it isn't in another file or that I even made one
+// An empty feature set specifies no overrides, leaving script- and
+// font-specific OpenType defaults unchanged.
 
 static uiForEach addToTypography(const uiOpenTypeFeatures *otf, char a, char b, char c, char d, uint32_t value, void *data)
 {

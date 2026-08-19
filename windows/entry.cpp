@@ -127,9 +127,8 @@ uiEntry *uiNewSearchEntry(void)
 	e = finishNewEntry(0);
 
 	hr = SetWindowTheme(e->hwnd, L"SearchBoxEditComposited", NULL);
-	if (hr != S_OK || !IsAppThemed()) {
-		//TODO log: Failed to apply search box theme.
-	}
+	if (hr != S_OK)
+		logHRESULT(L"error applying search box theme", hr);
 
 	return e;
 }

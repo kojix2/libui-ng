@@ -8,10 +8,9 @@
 #include "resources.hpp"
 #include "compilerver.hpp"
 
-// ui internal window messages
-// TODO make these either not messages or WM_USER-based, so we can be sane about reserving WM_APP
+// Private messages for libui-owned window classes.
 enum {
-	msgQueued = WM_APP + 0x43,
+	msgQueued = WM_USER + 0x43,
 	msgD2DScratchPaint,
 	msgD2DScratchLButtonDown,
 };
@@ -52,13 +51,13 @@ extern HRESULT _logLastError(debugargs, const WCHAR *s);
 #ifdef _MSC_VER
 #define logLastError(s) _logLastError(_ws(__FILE__), _wsn(__LINE__), _ws(__FUNCTION__), s)
 #else
-#define logLastError(s) _logLastError(_ws(__FILE__), _wsn(__LINE__), L"TODO none of the function name macros are macros in MinGW", s)
+#define logLastError(s) _logLastError(_ws(__FILE__), _wsn(__LINE__), L"(function name unavailable)", s)
 #endif
 extern HRESULT _logHRESULT(debugargs, const WCHAR *s, HRESULT hr);
 #ifdef _MSC_VER
 #define logHRESULT(s, hr) _logHRESULT(_ws(__FILE__), _wsn(__LINE__), _ws(__FUNCTION__), s, hr)
 #else
-#define logHRESULT(s, hr) _logHRESULT(_ws(__FILE__), _wsn(__LINE__), L"TODO none of the function name macros are macros in MinGW", s, hr)
+#define logHRESULT(s, hr) _logHRESULT(_ws(__FILE__), _wsn(__LINE__), L"(function name unavailable)", s, hr)
 #endif
 
 // winutil.cpp
@@ -153,7 +152,7 @@ extern BOOL showColorDialog(HWND parent, struct colorDialogRGBA *c);
 extern void getSizing(HWND hwnd, uiWindowsSizing *sizing, HFONT font);
 extern void uiWindowsStandardPadding(HWND hwnd, int padded, int *x, int *y);
 
-// TODO move into a dedicated file abibugs.cpp when we rewrite the drawing code
+// MinGW workaround for the ID2D1RenderTarget::GetSize() ABI mismatch.
 extern D2D1_SIZE_F realGetSize(ID2D1RenderTarget *rt);
 
 // Declarations retained under their legacy names during the internal API migration.
