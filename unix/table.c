@@ -275,21 +275,43 @@ void uiprivTableRowDeleted(uiTable *t, int oldIndex)
 	}
 }
 
-static void pulseOne(gpointer key, gpointer value, gpointer data)
+static void collectIndeterminateRow(gpointer key, gpointer value, gpointer data)
+{
+	struct rowcol *rc = (struct rowcol *) key;
+	GHashTable *rows = (GHashTable *) data;
+
+	// The rowcol keys outlive this temporary table.
+	g_hash_table_add(rows, &(rc->row));
+}
+
+static void queueIndeterminateRow(gpointer key, gpointer value, gpointer data)
 {
 	uiTable *t = uiTable(data);
-	struct rowcol *rc = (struct rowcol *) key;
+	GtkTreePath *path;
+	GdkRectangle rect;
+	gint x, y;
+	int row = *((int *) key);
 
-	// TODO this is bad: it produces changed handlers for every table because that's how GtkTreeModel works, yet this is per-table because that's how it works
-	// however, a proper fix would require decoupling progress from normal integers, which we could do...
-	uiTableModelRowChanged(t->model, rc->row);
+	path = gtk_tree_path_new_from_indices(row, -1);
+	gtk_tree_view_get_background_area(t->tv, path, NULL, &rect);
+	gtk_tree_path_free(path);
+	gtk_tree_view_convert_bin_window_to_widget_coords(t->tv,
+		rect.x, rect.y, &x, &y);
+	gtk_widget_queue_draw_area(t->treeWidget, x, y, rect.width, rect.height);
 }
 
 static gboolean indeterminatePulse(gpointer data)
 {
 	uiTable *t = uiTable(data);
+	GHashTable *rows;
 
-	g_hash_table_foreach(t->indeterminatePositions, pulseOne, t);
+	// Redraw only this table. Emitting GtkTreeModel::row-changed here would
+	// unnecessarily notify every uiTable that shares the model.
+	rows = g_hash_table_new(g_int_hash, g_int_equal);
+	g_hash_table_foreach(t->indeterminatePositions,
+		collectIndeterminateRow, rows);
+	g_hash_table_foreach(rows, queueIndeterminateRow, t);
+	g_hash_table_destroy(rows);
 	return TRUE;
 }
 
