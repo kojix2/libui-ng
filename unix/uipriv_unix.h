@@ -46,6 +46,8 @@ extern uiDrawContext *uiprivNewContext(cairo_t *cr, GtkStyleContext *style, GtkW
 extern void uiprivFreeContext(uiDrawContext *);
 
 // image.c
+extern uiImage *uiprivImageCopy(uiImage *i);
+extern void uiprivImageSize(uiImage *i, double *width, double *height);
 extern cairo_surface_t *uiprivImageAppropriateSurface(uiImage *i, GtkWidget *w);
 extern cairo_surface_t *uiprivImageAppropriateSurfaceForSize(uiImage *i,
 	int pixelWidth, int pixelHeight);

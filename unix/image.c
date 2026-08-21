@@ -46,6 +46,29 @@ void uiFreeImage(uiImage *i)
 	freeImage(i);
 }
 
+uiImage *uiprivImageCopy(uiImage *i)
+{
+	uiImage *copy;
+	guint n;
+
+	if (i == NULL)
+		return NULL;
+
+	copy = uiNewImage(i->width, i->height);
+	for (n = 0; n < i->images->len; n++)
+		g_ptr_array_add(copy->images,
+			cairo_surface_reference(g_ptr_array_index(i->images, n)));
+	return copy;
+}
+
+void uiprivImageSize(uiImage *i, double *width, double *height)
+{
+	if (width != NULL)
+		*width = i->width;
+	if (height != NULL)
+		*height = i->height;
+}
+
 void uiImageAppend(uiImage *i, void *pixels, int pixelWidth, int pixelHeight, int byteStride)
 {
 	cairo_surface_t *cs;

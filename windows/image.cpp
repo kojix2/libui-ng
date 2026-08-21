@@ -57,6 +57,29 @@ void uiFreeImage(uiImage *i)
 	freeImage(i);
 }
 
+uiImage *uiprivImageCopy(uiImage *i)
+{
+	uiImage *copy;
+
+	if (i == NULL)
+		return NULL;
+
+	copy = uiNewImage(i->width, i->height);
+	for (IWICBitmap *b : *(i->bitmaps)) {
+		b->AddRef();
+		copy->bitmaps->push_back(b);
+	}
+	return copy;
+}
+
+void uiprivImageSize(uiImage *i, double *width, double *height)
+{
+	if (width != NULL)
+		*width = i->width;
+	if (height != NULL)
+		*height = i->height;
+}
+
 // Store images as premultiplied BGRA, the format expected by Direct2D and by
 // AlphaBlend() on little-endian Windows.
 #define formatForGDI GUID_WICPixelFormat32bppPBGRA
