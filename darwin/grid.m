@@ -44,6 +44,7 @@ enum {
 - (void)rebuild;
 - (void)append:(gridChild *)child;
 - (void)insert:(gridChild *)child after:(uiControl *)existing at:(uiAt)at;
+- (void)delete:(uiControl *)control;
 - (int)isPadded;
 - (void)setPadded:(int)p;
 - (BOOL)hugsTrailing;
@@ -580,6 +581,40 @@ static NSView *newCellView(gridChild *child)
 	[self append:child];
 }
 
+- (void)delete:(uiControl *)control
+{
+	gridChild *child;
+	NSUInteger i;
+	BOOL oldHorizontalExpansion, oldVerticalExpansion;
+
+	i = 0;
+	for (child in self->children) {
+		if (child.control == control)
+			break;
+		i++;
+	}
+	if (i == [self->children count])
+		uiprivUserBug("Control %p is not in grid %p.", control, self->grid);
+	oldHorizontalExpansion = self->horizontalExpansion;
+	oldVerticalExpansion = self->verticalExpansion;
+	// Detach the deleted control directly. rebuild will tear down the native
+	// grid and detach the remaining controls once; doing it here as well would
+	// add a redundant full traversal to every deletion.
+	uiDarwinControlSetSuperview(uiDarwinControl(child.control), nil);
+	uiControlSetParent(child.control, NULL);
+	uiDarwinControlSetHuggingPriority(uiDarwinControl(child.control),
+		child.oldHorizontalHuggingPriority,
+		NSLayoutConstraintOrientationHorizontal);
+	uiDarwinControlSetHuggingPriority(uiDarwinControl(child.control),
+		child.oldVerticalHuggingPriority,
+		NSLayoutConstraintOrientationVertical);
+	[self->children removeObjectAtIndex:i];
+	[self rebuild];
+	if (oldHorizontalExpansion != self->horizontalExpansion ||
+		oldVerticalExpansion != self->verticalExpansion)
+		uiDarwinNotifyEdgeHuggingChanged(uiDarwinControl(self->grid));
+}
+
 - (int)isPadded
 {
 	return self->padded;
@@ -719,6 +754,11 @@ void uiGridInsertAt(uiGrid *g, uiControl *c, uiControl *existing, uiAt at,
 
 	child = newGridChild(c, xspan, yspan, hexpand, halign, vexpand, valign);
 	[g->view insert:child after:existing at:at];
+}
+
+void uiGridDelete(uiGrid *g, uiControl *c)
+{
+	[g->view delete:c];
 }
 
 int uiGridPadded(uiGrid *g)

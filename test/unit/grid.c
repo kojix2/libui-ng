@@ -79,6 +79,30 @@ static void gridVisibilityAndNesting(void **state)
 		1, uiAlignFill, 1, uiAlignFill);
 }
 
+static void gridDeleteDetachesAndUpdatesChildren(void **state)
+{
+	uiGrid *grid = uiGridFromState(state);
+	uiControl *first;
+	uiControl *second;
+	uiControl *replacement;
+
+	first = uiControl(uiNewButton("first"));
+	second = uiControl(uiNewButton("second"));
+	replacement = uiControl(uiNewButton("replacement"));
+	uiGridAppend(grid, first, 0, 0, 1, 1,
+		0, uiAlignFill, 0, uiAlignFill);
+	uiGridAppend(grid, second, 1, 0, 1, 1,
+		0, uiAlignFill, 0, uiAlignFill);
+	uiGridDelete(grid, first);
+	assert_null(uiControlParent(first));
+	uiGridInsertAt(grid, replacement, second, uiAtLeading, 1, 1,
+		0, uiAlignFill, 0, uiAlignFill);
+	uiGridDelete(grid, second);
+	assert_null(uiControlParent(second));
+	uiControlDestroy(first);
+	uiControlDestroy(second);
+}
+
 #define gridUnitTest(f) cmocka_unit_test_setup_teardown((f), \
 	gridSetup, unitTestTeardown)
 
@@ -90,6 +114,7 @@ int gridRunUnitTests(void)
 		gridUnitTest(gridCoordinatesAndSpans),
 		gridUnitTest(gridInsertAtAllDirections),
 		gridUnitTest(gridVisibilityAndNesting),
+		gridUnitTest(gridDeleteDetachesAndUpdatesChildren),
 	};
 
 	return cmocka_run_group_tests_name("uiGrid", tests,

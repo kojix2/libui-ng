@@ -3143,6 +3143,15 @@ _UI_EXTERN void uiGridAppend(uiGrid *g, uiControl *c, int left, int top, int xsp
 _UI_EXTERN void uiGridInsertAt(uiGrid *g, uiControl *c, uiControl *existing, uiAt at, int xspan, int yspan, int hexpand, uiAlign halign, int vexpand, uiAlign valign);
 
 /**
+ * Removes a control from the grid without destroying it.
+ *
+ * @param g uiGrid instance.
+ * @param c Control currently contained in the grid.
+ * @memberof uiGrid
+ */
+_UI_EXTERN void uiGridDelete(uiGrid *g, uiControl *c);
+
+/**
  * Returns whether or not controls within the grid are padded.
  *
  * Padding is defined as space between individual controls.

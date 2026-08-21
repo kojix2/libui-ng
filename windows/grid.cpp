@@ -700,6 +700,30 @@ void uiGridInsertAt(uiGrid *g, uiControl *c, uiControl *existing, uiAt at, int x
 	add(g, gc);
 }
 
+void uiGridDelete(uiGrid *g, uiControl *c)
+{
+	std::map<uiControl *, size_t>::iterator found;
+	struct gridChild *gc;
+	size_t index;
+	size_t i;
+
+	found = g->indexof->find(c);
+	if (found == g->indexof->end())
+		uiprivUserBug("Control %p is not in grid %p.", c, g);
+	index = found->second;
+	gc = (*(g->children))[index];
+	uiControlSetParent(gc->c, NULL);
+	uiWindowsControlSetParentHWND(uiWindowsControl(gc->c), NULL);
+	g->indexof->erase(found);
+	g->children->erase(g->children->begin() + index);
+	for (i = index; i < g->children->size(); i++)
+		(*(g->indexof))[(*(g->children))[i]->c] = i;
+	uiprivFree(gc);
+	gridRecomputeMinMax(g);
+	gridArrangeChildren(g);
+	uiWindowsControlMinimumSizeChanged(uiWindowsControl(g));
+}
+
 int uiGridPadded(uiGrid *g)
 {
 	return g->padded;

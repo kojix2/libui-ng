@@ -7,6 +7,10 @@ struct gridChild {
 	int top;
 	int xspan;
 	int yspan;
+	gboolean oldhexpand;
+	GtkAlign oldhalign;
+	gboolean oldvexpand;
+	GtkAlign oldvalign;
 };
 
 struct uiGrid {
@@ -63,6 +67,10 @@ static GtkWidget *prepare(struct gridChild *gc, uiControl *c, int hexpand, uiAli
 		uiprivUserBug("You cannot add NULL to a uiGrid.");
 	gc->c = c;
 	widget = GTK_WIDGET(uiControlHandle(gc->c));
+	gc->oldhexpand = gtk_widget_get_hexpand(widget);
+	gc->oldhalign = gtk_widget_get_halign(widget);
+	gc->oldvexpand = gtk_widget_get_vexpand(widget);
+	gc->oldvalign = gtk_widget_get_valign(widget);
 	gtk_widget_set_hexpand(widget, hexpand != 0);
 	gtk_widget_set_halign(widget, gtkAligns[halign]);
 	gtk_widget_set_vexpand(widget, vexpand != 0);
@@ -141,6 +149,29 @@ void uiGridAppend(uiGrid *g, uiControl *c, int left, int top, int xspan, int ysp
 		left, top,
 		xspan, yspan);
 	g_array_append_val(g->children, gc);
+}
+
+void uiGridDelete(uiGrid *g, uiControl *c)
+{
+	struct gridChild *gc;
+	GtkWidget *widget;
+	guint i;
+
+	for (i = 0; i < g->children->len; i++) {
+		gc = ctrl(g, i);
+		if (gc->c == c)
+			break;
+	}
+	if (i == g->children->len)
+		uiprivUserBug("Control %p is not in grid %p.", c, g);
+	widget = GTK_WIDGET(uiControlHandle(gc->c));
+	uiControlSetParent(gc->c, NULL);
+	uiUnixControlSetContainer(uiUnixControl(gc->c), g->container, TRUE);
+	gtk_widget_set_hexpand(widget, gc->oldhexpand);
+	gtk_widget_set_halign(widget, gc->oldhalign);
+	gtk_widget_set_vexpand(widget, gc->oldvexpand);
+	gtk_widget_set_valign(widget, gc->oldvalign);
+	g_array_remove_index(g->children, i);
 }
 
 void uiGridInsertAt(uiGrid *g, uiControl *c, uiControl *existing, uiAt at, int xspan, int yspan, int hexpand, uiAlign halign, int vexpand, uiAlign valign)
