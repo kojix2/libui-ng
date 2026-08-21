@@ -42,11 +42,13 @@ extern GtkWidget *uiprivChildBox(uiprivChild *c);
 extern void uiprivChildSetMargined(uiprivChild *c, int margined);
 
 // draw.c
-extern uiDrawContext *uiprivNewContext(cairo_t *cr, GtkStyleContext *style);
+extern uiDrawContext *uiprivNewContext(cairo_t *cr, GtkStyleContext *style, GtkWidget *widget);
 extern void uiprivFreeContext(uiDrawContext *);
 
 // image.c
 extern cairo_surface_t *uiprivImageAppropriateSurface(uiImage *i, GtkWidget *w);
+extern cairo_surface_t *uiprivImageAppropriateSurfaceForSize(uiImage *i,
+	int pixelWidth, int pixelHeight);
 
 // cellrendererbutton.c
 extern GtkCellRenderer *uiprivNewCellRendererButton(void);
