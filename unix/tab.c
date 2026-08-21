@@ -91,7 +91,8 @@ void uiTabSetMargined(uiTab *t, int n, int margined)
 static void onSelected(GtkNotebook* notebook, GtkWidget *page, guint index, gpointer data)
 {
 	uiTab *t = uiTab(data);
-	uiprivUserCallbackEnter();
+	if (!uiprivUserCallbackEnter(uiControl(t)))
+		return;
 	(*(t->onSelected))(t, t->onSelectedData);
 	uiprivUserCallbackLeave();
 }

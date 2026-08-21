@@ -127,7 +127,8 @@ struct uiFontButton {
 	// do this second just in case
 	[old release];
 	[self updateFontButtonLabel];
-	uiprivUserCallbackEnter();
+	if (!uiprivUserCallbackEnter(uiControl(b)))
+		return;
 	(*(b->onChanged))(b, b->onChangedData);
 	uiprivUserCallbackLeave();
 }

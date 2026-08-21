@@ -61,6 +61,8 @@ static uiWindow *currentMenuEventWindow(void)
 
 - (IBAction)onClicked:(id)sender
 {
+	uiWindow *w;
+
 	// System menu item (Quit/Preferences/About) that has not been user created (yet)
 	if (self->item == NULL) {
 		uiprivImplBug("Clicked nonexistent uiMenuItem which should be impossible");
@@ -76,8 +78,10 @@ static uiWindow *currentMenuEventWindow(void)
 		uiMenuItemSetChecked(self->item, !uiMenuItemChecked(self->item));
 		// fall through
 	default:
-		uiprivUserCallbackEnter();
-		(*(self->item->onClicked))(self->item, currentMenuEventWindow(), self->item->onClickedData);
+		w = currentMenuEventWindow();
+		if (!uiprivUserCallbackEnter(uiControl(w)))
+			return;
+		(*(self->item->onClicked))(self->item, w, self->item->onClickedData);
 		uiprivUserCallbackLeave();
 		break;
 	}

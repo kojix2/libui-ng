@@ -31,7 +31,8 @@ static void onToggled(GtkToggleButton *tb, gpointer data)
 	// ignore programmatic changes
 	if (r->changing)
 		return;
-	uiprivUserCallbackEnter();
+	if (!uiprivUserCallbackEnter(uiControl(r)))
+		return;
 	(*(r->onSelected))(r, r->onSelectedData);
 	uiprivUserCallbackLeave();
 }

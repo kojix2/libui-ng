@@ -421,7 +421,8 @@ static void headerOnClicked(GtkTreeViewColumn *c, gpointer data)
 
 	for (i = 0; i < gtk_tree_view_get_n_columns(t->tv); ++i)
 		if (gtk_tree_view_get_column(t->tv, i) == c) {
-			uiprivUserCallbackEnter();
+			if (!uiprivUserCallbackEnter(uiControl(t)))
+				return;
 			t->headerOnClicked(t, i, t->headerOnClickedData);
 			uiprivUserCallbackLeave();
 			return;
@@ -515,7 +516,8 @@ static void onSelectionChanged(GtkTreeSelection *s, gpointer data)
 	if (!selectionChanged(t, s))
 		return;
 
-	uiprivUserCallbackEnter();
+	if (!uiprivUserCallbackEnter(uiControl(t)))
+		return;
 	t->onSelectionChanged(t, t->onSelectionChangedData);
 	uiprivUserCallbackLeave();
 }
@@ -787,7 +789,8 @@ static void onButtonPressed(GtkGestureMultiPress *gesture, gint nPress, gdouble 
 	row = gtk_tree_path_get_indices(path)[0];
 	gtk_tree_path_free(path);
 
-	uiprivUserCallbackEnter();
+	if (!uiprivUserCallbackEnter(uiControl(t)))
+		return;
 	if (nPress == 1)
 		(*(t->onRowClicked))(t, row, t->onRowClickedData);
 	else if (nPress == 2)

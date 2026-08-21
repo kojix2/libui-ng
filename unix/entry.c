@@ -15,7 +15,8 @@ uiUnixControlAllDefaults(uiEntry)
 
 static void sendChanged(uiEntry *e)
 {
-	uiprivUserCallbackEnter();
+	if (!uiprivUserCallbackEnter(uiControl(e)))
+		return;
 	(*(e->onChanged))(e, e->onChangedData);
 	uiprivUserCallbackLeave();
 }

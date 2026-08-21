@@ -136,9 +136,12 @@ static void schedulePendingControlDestroys(void)
 	uiprivScheduleControlDestroyFlush(pendingControlDestroyFlushID);
 }
 
-void uiprivUserCallbackEnter(void)
+int uiprivUserCallbackEnter(uiControl *c)
 {
+	if (c != NULL && uiprivControlDestroyPending(c))
+		return 0;
 	userCallbackDepth++;
+	return 1;
 }
 
 void uiprivUserCallbackLeave(void)
@@ -233,6 +236,7 @@ void uiControlDestroy(uiControl *c)
 		pending->c = c;
 		*pendingControlDestroysTail = pending;
 		pendingControlDestroysTail = &(pending->next);
+		(*(c->Hide))(c);
 		return;
 	}
 	(*(c->Destroy))(c);
@@ -321,7 +325,7 @@ void uiFreeControl(uiControl *c)
 		freeing.c = c;
 		freeing.next = freeingControls;
 		freeingControls = &freeing;
-		uiprivUserCallbackEnter();
+		uiprivUserCallbackEnter(NULL);
 		(*f)(c, data);
 		uiprivUserCallbackLeave();
 		freeingControls = freeing.next;

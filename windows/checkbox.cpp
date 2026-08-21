@@ -22,7 +22,10 @@ static BOOL onWM_COMMAND(uiControl *cc, HWND hwnd, WORD code, LRESULT *lResult)
 		check = BST_UNCHECKED;
 	SendMessage(c->hwnd, BM_SETCHECK, check, 0);
 
-	uiprivUserCallbackEnter();
+	if (!uiprivUserCallbackEnter(uiControl(c))) {
+		*lResult = 0;
+		return TRUE;
+	}
 	(*(c->onToggled))(c, c->onToggledData);
 	*lResult = 0;
 	uiprivUserCallbackLeave();

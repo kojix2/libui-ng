@@ -63,6 +63,9 @@ struct uiArea {
 	CGContextRef c;
 	uiAreaDrawParams dp;
 
+	if (!uiprivUserCallbackEnter(uiControl(a)))
+		return;
+
 	c = (CGContextRef) [[NSGraphicsContext currentContext] graphicsPort];
 	// see draw.m under text for why we need the height
 	dp.Context = uiprivDrawNewContext(c, [self bounds].size.height);
@@ -79,7 +82,6 @@ struct uiArea {
 	dp.ClipWidth = r.size.width;
 	dp.ClipHeight = r.size.height;
 
-	uiprivUserCallbackEnter();
 	// no need to save or restore the graphics state to reset transformations; Cocoa creates a brand-new context each time
 	(*(a->ah->Draw))(a->ah, a, &dp);
 
@@ -212,8 +214,7 @@ struct uiArea {
 			me.Held1To64 |= j;
 	}
 
-	if (self->libui_enabled) {
-		uiprivUserCallbackEnter();
+	if (self->libui_enabled && uiprivUserCallbackEnter(uiControl(a))) {
 		// Allow window moving and resizing only from mouse-down callbacks.
 		a->mouseDownEvent = me.Down != 0 ? e : nil;
 		(*(a->ah->MouseEvent))(a->ah, a, &me);
@@ -242,8 +243,7 @@ mouseEvent(otherMouseUp)
 {
 	uiArea *a = self->libui_a;
 
-	if (self->libui_enabled) {
-		uiprivUserCallbackEnter();
+	if (self->libui_enabled && uiprivUserCallbackEnter(uiControl(a))) {
 		(*(a->ah->MouseCrossed))(a->ah, a, 0);
 		uiprivUserCallbackLeave();
 	}
@@ -253,8 +253,7 @@ mouseEvent(otherMouseUp)
 {
 	uiArea *a = self->libui_a;
 
-	if (self->libui_enabled) {
-		uiprivUserCallbackEnter();
+	if (self->libui_enabled && uiprivUserCallbackEnter(uiControl(a))) {
 		(*(a->ah->MouseCrossed))(a->ah, a, 1);
 		uiprivUserCallbackLeave();
 	}
@@ -269,7 +268,7 @@ mouseEvent(otherMouseUp)
 	uiArea *a = self->libui_a;
 	int handled;
 
-	uiprivUserCallbackEnter();
+	uiprivUserCallbackEnter(NULL);
 	handled = (*(a->ah->KeyEvent))(a->ah, a, ke);
 	uiprivUserCallbackLeave();
 	return handled;

@@ -9,7 +9,7 @@ int uiprivTableModelNumColumns(uiTableModel *m)
 	int n;
 
 	mh = uiprivTableModelHandler(m);
-	uiprivUserCallbackEnter();
+	uiprivUserCallbackEnter(NULL);
 	n = (*(mh->NumColumns))(mh, m);
 	uiprivUserCallbackLeave();
 	return n;
@@ -21,7 +21,7 @@ uiTableValueType uiprivTableModelColumnType(uiTableModel *m, int column)
 	uiTableValueType type;
 
 	mh = uiprivTableModelHandler(m);
-	uiprivUserCallbackEnter();
+	uiprivUserCallbackEnter(NULL);
 	type = (*(mh->ColumnType))(mh, m, column);
 	uiprivUserCallbackLeave();
 	return type;
@@ -33,7 +33,7 @@ int uiprivTableModelNumRows(uiTableModel *m)
 	int n;
 
 	mh = uiprivTableModelHandler(m);
-	uiprivUserCallbackEnter();
+	uiprivUserCallbackEnter(NULL);
 	n = (*(mh->NumRows))(mh, m);
 	uiprivUserCallbackLeave();
 	return n;
@@ -45,7 +45,7 @@ uiTableValue *uiprivTableModelCellValue(uiTableModel *m, int row, int column)
 	uiTableValue *value;
 
 	mh = uiprivTableModelHandler(m);
-	uiprivUserCallbackEnter();
+	uiprivUserCallbackEnter(NULL);
 	value = (*(mh->CellValue))(mh, m, row, column);
 	uiprivUserCallbackLeave();
 	return value;
@@ -56,7 +56,7 @@ void uiprivTableModelSetCellValue(uiTableModel *m, int row, int column, const ui
 	uiTableModelHandler *mh;
 
 	mh = uiprivTableModelHandler(m);
-	uiprivUserCallbackEnter();
+	uiprivUserCallbackEnter(NULL);
 	(*(mh->SetCellValue))(mh, m, row, column, value);
 
 	uiTableModelRowChanged(m, row);

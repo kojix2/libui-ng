@@ -34,7 +34,8 @@ static BOOL onWM_COMMAND(uiControl *c, HWND clicked, WORD code, LRESULT *lResult
 		}
 		SendMessage(hwnd, BM_SETCHECK, check, 0);
 	}
-	uiprivUserCallbackEnter();
+	if (!uiprivUserCallbackEnter(uiControl(r)))
+		return TRUE;
 	(*(r->onSelected))(r, r->onSelectedData);
 	uiprivUserCallbackLeave();
 	return TRUE;

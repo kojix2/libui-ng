@@ -77,7 +77,11 @@ static void onWM_PAINT(uiArea *a)
 	RECT clip;
 	HRESULT hr;
 
-	uiprivUserCallbackEnter();
+	if (!uiprivUserCallbackEnter(uiControl(a))) {
+		if (ValidateRect(a->hwnd, NULL) == 0)
+			logLastError(L"error validating rect");
+		return;
+	}
 	// do not clear the update rect; we do that ourselves in doPaint()
 	if (GetUpdateRect(a->hwnd, &clip, FALSE) == 0) {
 		// set a zero clip rect just in case GetUpdateRect() didn't change clip
@@ -117,7 +121,10 @@ static void onWM_PRINTCLIENT(uiArea *a, HDC dc)
 	rt = makeHDCRenderTarget(dc, &client);
 	if (rt == NULL)
 		return;
-	uiprivUserCallbackEnter();
+	if (!uiprivUserCallbackEnter(uiControl(a))) {
+		rt->Release();
+		return;
+	}
 	hr = doPaint(a, rt, &client);
 	if (hr != S_OK)
 		logHRESULT(L"error printing uiArea client area", hr);

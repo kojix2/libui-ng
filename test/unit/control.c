@@ -8,6 +8,7 @@ struct testControl {
 	testControl *child;
 	testControl *destroyFromCallback;
 	int *destroyCount;
+	int hideCount;
 };
 
 static int scheduleCount;
@@ -43,7 +44,7 @@ static void testControlDestroy(uiControl *c)
 		uiControlDestroy(uiControl(tc->child));
 	}
 	if (tc->destroyFromCallback != NULL) {
-		uiprivUserCallbackEnter();
+		uiprivUserCallbackEnter(NULL);
 		uiControlDestroy(uiControl(tc->destroyFromCallback));
 		uiprivUserCallbackLeave();
 	}
@@ -75,6 +76,11 @@ static void testControlVoid(uiControl *c)
 {
 }
 
+static void testControlHide(uiControl *c)
+{
+	((testControl *) c)->hideCount++;
+}
+
 static testControl *newTestControl(int *destroyCount)
 {
 	testControl *tc;
@@ -87,7 +93,7 @@ static testControl *newTestControl(int *destroyCount)
 	tc->c.Toplevel = testControlFalse;
 	tc->c.Visible = testControlFalse;
 	tc->c.Show = testControlVoid;
-	tc->c.Hide = testControlVoid;
+	tc->c.Hide = testControlHide;
 	tc->c.Enabled = testControlFalse;
 	tc->c.Enable = testControlVoid;
 	tc->c.Disable = testControlVoid;
@@ -100,7 +106,7 @@ static void destroyIsDeferred(void **state)
 	int destroyCount = 0;
 	testControl *tc = newTestControl(&destroyCount);
 
-	uiprivUserCallbackEnter();
+	uiprivUserCallbackEnter(NULL);
 	uiControlDestroy(uiControl(tc));
 	assert_true(uiprivControlDestroyPending(uiControl(tc)));
 	assert_int_equal(destroyCount, 0);
@@ -115,8 +121,8 @@ static void nestedCallbacksDeferUntilOutermostLeave(void **state)
 	int destroyCount = 0;
 	testControl *tc = newTestControl(&destroyCount);
 
-	uiprivUserCallbackEnter();
-	uiprivUserCallbackEnter();
+	uiprivUserCallbackEnter(NULL);
+	uiprivUserCallbackEnter(NULL);
 	uiControlDestroy(uiControl(tc));
 	uiprivUserCallbackLeave();
 	assert_int_equal(destroyCount, 0);
@@ -131,7 +137,7 @@ static void duplicateDestroyIsCoalesced(void **state)
 	int destroyCount = 0;
 	testControl *tc = newTestControl(&destroyCount);
 
-	uiprivUserCallbackEnter();
+	uiprivUserCallbackEnter(NULL);
 	uiControlDestroy(uiControl(tc));
 	uiControlDestroy(uiControl(tc));
 	uiprivUserCallbackLeave();
@@ -149,7 +155,7 @@ static void parentDestroyCancelsQueuedChild(void **state)
 
 	parent->child = child;
 	child->parent = uiControl(parent);
-	uiprivUserCallbackEnter();
+	uiprivUserCallbackEnter(NULL);
 	uiControlDestroy(uiControl(parent));
 	uiControlDestroy(uiControl(child));
 	uiprivUserCallbackLeave();
@@ -169,7 +175,7 @@ static void pendingAncestorMakesChildPending(void **state)
 
 	parent->child = child;
 	child->parent = uiControl(parent);
-	uiprivUserCallbackEnter();
+	uiprivUserCallbackEnter(NULL);
 	uiControlDestroy(uiControl(parent));
 	assert_true(uiprivControlDestroyPending(uiControl(parent)));
 	assert_true(uiprivControlDestroyPending(uiControl(child)));
@@ -187,7 +193,7 @@ static void callbackDuringFlushAppendsDestroy(void **state)
 	testControl *second = newTestControl(&secondDestroyCount);
 
 	first->destroyFromCallback = second;
-	uiprivUserCallbackEnter();
+	uiprivUserCallbackEnter(NULL);
 	uiControlDestroy(uiControl(first));
 	uiprivUserCallbackLeave();
 	assert_int_equal(firstDestroyCount, 0);
@@ -205,7 +211,7 @@ static void scheduledFlushChecksIDAndWaitsForOutermostLeave(void **state)
 
 	scheduleCount = 0;
 	scheduledID = 0;
-	uiprivUserCallbackEnter();
+	uiprivUserCallbackEnter(NULL);
 	uiControlDestroy(uiControl(tc));
 	uiprivUserCallbackLeave();
 	assert_int_equal(scheduleCount, 1);
@@ -218,7 +224,7 @@ static void scheduledFlushChecksIDAndWaitsForOutermostLeave(void **state)
 	assert_int_equal(scheduleCount, 1);
 
 	// A matching task inside a nested loop must neither destroy nor busy-spin.
-	uiprivUserCallbackEnter();
+	uiprivUserCallbackEnter(NULL);
 	uiprivControlDestroyFlush(firstID);
 	assert_int_equal(destroyCount, 0);
 	assert_int_equal(scheduleCount, 1);
@@ -237,7 +243,7 @@ static void destroyedHandlerRunsAtFree(void **state)
 	testControl *tc = newTestControl(&destroyCount);
 
 	uiControlOnDestroyed(uiControl(tc), countDestroyed, &destroyedHandlerCount);
-	uiprivUserCallbackEnter();
+	uiprivUserCallbackEnter(NULL);
 	uiControlDestroy(uiControl(tc));
 	assert_int_equal(destroyedHandlerCount, 0);
 	uiprivUserCallbackLeave();
@@ -293,6 +299,38 @@ static void destroyedHandlerCannotQueueSelfAgain(void **state)
 	uiprivControlDestroyFlushPending();
 	assert_int_equal(destroyCount, 1);
 }
+
+static void pendingControlIsHiddenAndSuppressesCallbacks(void **state)
+{
+	int destroyCount = 0;
+	testControl *tc = newTestControl(&destroyCount);
+
+	uiprivUserCallbackEnter(NULL);
+	uiControlDestroy(uiControl(tc));
+	assert_int_equal(tc->hideCount, 1);
+	assert_false(uiprivUserCallbackEnter(uiControl(tc)));
+	uiprivUserCallbackLeave();
+	uiprivControlDestroyFlushPending();
+	assert_int_equal(destroyCount, 1);
+}
+
+static void pendingAncestorSuppressesChildCallbacks(void **state)
+{
+	int parentDestroyCount = 0;
+	int childDestroyCount = 0;
+	testControl *parent = newTestControl(&parentDestroyCount);
+	testControl *child = newTestControl(&childDestroyCount);
+
+	parent->child = child;
+	child->parent = uiControl(parent);
+	uiprivUserCallbackEnter(NULL);
+	uiControlDestroy(uiControl(parent));
+	assert_false(uiprivUserCallbackEnter(uiControl(child)));
+	uiprivUserCallbackLeave();
+	uiprivControlDestroyFlushPending();
+	assert_int_equal(parentDestroyCount, 1);
+	assert_int_equal(childDestroyCount, 1);
+}
 static int controlSetup(void **state)
 {
 	uiInitOptions o = {0};
@@ -326,6 +364,8 @@ int controlRunUnitTests(void)
 		cmocka_unit_test(parentDestroyNotifiesForChild),
 		cmocka_unit_test(destroyedHandlerCanBeReplacedAndRemoved),
 		cmocka_unit_test(destroyedHandlerCannotQueueSelfAgain),
+		cmocka_unit_test(pendingControlIsHiddenAndSuppressesCallbacks),
+		cmocka_unit_test(pendingAncestorSuppressesChildCallbacks),
 	};
 
 	return cmocka_run_group_tests_name("uiControl deferred destruction", tests,

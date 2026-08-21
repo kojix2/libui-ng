@@ -45,7 +45,8 @@ struct uiRadioButtons {
 		return;
 
 	r->selected = index;
-	uiprivUserCallbackEnter();
+	if (!uiprivUserCallbackEnter(uiControl(r)))
+		return;
 	(*(r->onSelected))(r, r->onSelectedData);
 	uiprivUserCallbackLeave();
 }

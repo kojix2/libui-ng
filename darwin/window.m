@@ -71,7 +71,8 @@ static NSWindowStyleMask windowStyleMask(uiWindow *w)
 	uiWindow *w = self->window;
 	int close;
 
-	uiprivUserCallbackEnter();
+	if (!uiprivUserCallbackEnter(uiControl(w)))
+		return NO;
 	close = (*(w->onClosing))(w, w->onClosingData);
 	if (close)
 		uiControlDestroy(uiControl(w));
@@ -84,7 +85,8 @@ static NSWindowStyleMask windowStyleMask(uiWindow *w)
 	uiWindow *w = self->window;
 
 	if (!w->suppressSizeChanged) {
-		uiprivUserCallbackEnter();
+		if (!uiprivUserCallbackEnter(uiControl(w)))
+			return;
 		(*(w->onContentSizeChanged))(w, w->onContentSizeChangedData);
 		uiprivUserCallbackLeave();
 	}
@@ -95,7 +97,8 @@ static NSWindowStyleMask windowStyleMask(uiWindow *w)
 	uiWindow *w = self->window;
 
 	if (!w->suppressPositionChanged) {
-		uiprivUserCallbackEnter();
+		if (!uiprivUserCallbackEnter(uiControl(w)))
+			return;
 		(*(w->onPositionChanged))(w, w->onPositionChangedData);
 		uiprivUserCallbackLeave();
 	}
@@ -124,7 +127,8 @@ static NSWindowStyleMask windowStyleMask(uiWindow *w)
 	uiWindow *w = self->window;
 
 	w->focused = 1;
-	uiprivUserCallbackEnter();
+	if (!uiprivUserCallbackEnter(uiControl(w)))
+		return;
 	(*(w->onFocusChanged))(w, w->onFocusChangedData);
 	uiprivUserCallbackLeave();
 }
@@ -134,7 +138,8 @@ static NSWindowStyleMask windowStyleMask(uiWindow *w)
 	uiWindow *w = self->window;
 
 	w->focused = 0;
-	uiprivUserCallbackEnter();
+	if (!uiprivUserCallbackEnter(uiControl(w)))
+		return;
 	(*(w->onFocusChanged))(w, w->onFocusChangedData);
 	uiprivUserCallbackLeave();
 }

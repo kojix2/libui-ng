@@ -71,7 +71,8 @@ static void onClicked(GtkMenuItem *menuitem, gpointer data)
 		setChecked(item, gtk_check_menu_item_get_active(GTK_CHECK_MENU_ITEM(menuitem)));
 
 	w = (struct menuItemWindow *) g_hash_table_lookup(item->windows, menuitem);
-	uiprivUserCallbackEnter();
+	if (!uiprivUserCallbackEnter(uiControl(w->w)))
+		return;
 	(*(item->onClicked))(item, w->w, item->onClickedData);
 	uiprivUserCallbackLeave();
 }

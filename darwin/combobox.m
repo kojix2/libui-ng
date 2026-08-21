@@ -41,7 +41,8 @@ struct uiCombobox {
 {
 	uiCombobox *c = self->combobox;
 
-	uiprivUserCallbackEnter();
+	if (!uiprivUserCallbackEnter(uiControl(c)))
+		return;
 	(*(c->onSelected))(c, c->onSelectedData);
 	uiprivUserCallbackLeave();
 }

@@ -182,7 +182,8 @@ struct uiSpinbox {
 - (IBAction)stepperClicked:(id)sender
 {
 	[self libui_setValue:[self->stepper integerValue]];
-	uiprivUserCallbackEnter();
+	if (!uiprivUserCallbackEnter(uiControl(self->spinbox)))
+		return;
 	(*(self->spinbox->onChanged))(self->spinbox, self->spinbox->onChangedData);
 	uiprivUserCallbackLeave();
 }
@@ -190,7 +191,8 @@ struct uiSpinbox {
 - (void)controlTextDidChange:(NSNotification *)note
 {
 	[self libui_setValue:[self->tf integerValue]];
-	uiprivUserCallbackEnter();
+	if (!uiprivUserCallbackEnter(uiControl(self->spinbox)))
+		return;
 	(*(self->spinbox->onChanged))(self->spinbox, self->spinbox->onChangedData);
 	uiprivUserCallbackLeave();
 }

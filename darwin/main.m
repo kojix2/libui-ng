@@ -282,7 +282,7 @@ static void doQueued(void *data)
 {
 	struct queued *q = data;
 
-	uiprivUserCallbackEnter();
+	uiprivUserCallbackEnter(NULL);
 	(*(q->f))(q->data);
 	uiprivUserCallbackLeave();
 	free(q);
@@ -328,7 +328,7 @@ void uiQueueMain(void (*f)(void *data), void *data)
 {
 	int repeat;
 
-	uiprivUserCallbackEnter();
+	uiprivUserCallbackEnter(NULL);
 	repeat = (*(self->f))(self->data);
 	uiprivUserCallbackLeave();
 	if (!repeat) {

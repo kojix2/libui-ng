@@ -55,7 +55,8 @@ struct uiEditableCombobox {
 {
 	uiEditableCombobox *c = self->combobox;
 
-	uiprivUserCallbackEnter();
+	if (!uiprivUserCallbackEnter(uiControl(c)))
+		return;
 	(*(c->onChanged))(c, c->onChangedData);
 	uiprivUserCallbackLeave();
 }

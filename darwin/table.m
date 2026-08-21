@@ -66,7 +66,8 @@
 	if (row < 0)
 		return;
 
-	uiprivUserCallbackEnter();
+	if (!uiprivUserCallbackEnter(uiControl(t)))
+		return;
 	(*(t->onRowClicked))(t, row, t->onRowClickedData);
 	uiprivUserCallbackLeave();
 }
@@ -79,7 +80,8 @@
 	if (row < 0)
 		return;
 
-	uiprivUserCallbackEnter();
+	if (!uiprivUserCallbackEnter(uiControl(t)))
+		return;
 	(*(t->onRowDoubleClicked))(t, row, t->onRowDoubleClickedData);
 	uiprivUserCallbackLeave();
 }
@@ -151,7 +153,8 @@ static void setBackgroundColor(uiprivTableView *t, NSTableRowView *rv, NSInteger
 - (void)tableView:(uiprivTableView *)tv didClickTableColumn:(NSTableColumn *) tc
 {
 	uiTable *t = [tv uiTable];
-	uiprivUserCallbackEnter();
+	if (!uiprivUserCallbackEnter(uiControl(t)))
+		return;
 	t->headerOnClicked(t, [[tc identifier] intValue], t->headerOnClickedData);
 	uiprivUserCallbackLeave();
 }
@@ -160,7 +163,8 @@ static void setBackgroundColor(uiprivTableView *t, NSTableRowView *rv, NSInteger
 {
 	uiTable *t = [(uiprivTableView*)[notification object] uiTable];
 	if (t->suppressSelectionChanged == 0) {
-		uiprivUserCallbackEnter();
+		if (!uiprivUserCallbackEnter(uiControl(t)))
+			return;
 		t->onSelectionChanged(t, t->onSelectionChangedData);
 		uiprivUserCallbackLeave();
 	}

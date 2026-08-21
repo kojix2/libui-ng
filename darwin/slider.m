@@ -51,7 +51,8 @@ static void _uiSliderUpdateToolTip(uiSlider *s);
 	if (s->hasToolTip)
 		_uiSliderUpdateToolTip(s);
 
-	uiprivUserCallbackEnter();
+	if (!uiprivUserCallbackEnter(uiControl(s)))
+		return;
 	if([currentEvent type] == NSEventTypeLeftMouseUp) {
 		(*(s->onReleased))(s, s->onReleasedData);
 	} else {

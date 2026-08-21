@@ -22,7 +22,7 @@ int uiprivShouldQuit(void)
 {
 	int shouldQuit;
 
-	uiprivUserCallbackEnter();
+	uiprivUserCallbackEnter(NULL);
 	shouldQuit = (*onShouldQuit)(onShouldQuitData);
 	uiprivUserCallbackLeave();
 	return shouldQuit;

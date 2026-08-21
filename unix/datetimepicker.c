@@ -379,7 +379,8 @@ static void onChanged(uiprivDateTimePickerWidget *d, gpointer data)
 	uiDateTimePicker *c;
 
 	c = uiDateTimePicker(data);
-	uiprivUserCallbackEnter();
+	if (!uiprivUserCallbackEnter(uiControl(c)))
+		return;
 	(*(c->onChanged))(c, c->onChangedData);
 	uiprivUserCallbackLeave();
 }

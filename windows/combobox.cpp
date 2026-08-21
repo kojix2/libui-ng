@@ -16,7 +16,10 @@ static BOOL onWM_COMMAND(uiControl *cc, HWND hwnd, WORD code, LRESULT *lResult)
 
 	if (code != CBN_SELCHANGE)
 		return FALSE;
-	uiprivUserCallbackEnter();
+	if (!uiprivUserCallbackEnter(uiControl(c))) {
+		*lResult = 0;
+		return TRUE;
+	}
 	(*(c->onSelected))(c, c->onSelectedData);
 	*lResult = 0;
 	uiprivUserCallbackLeave();

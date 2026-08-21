@@ -134,7 +134,8 @@ static LRESULT CALLBACK windowWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARA
 		runMenuEvent(LOWORD(wParam), uiWindow(w));
 		return 0;
 	case WM_WINDOWPOSCHANGED:
-		uiprivUserCallbackEnter();
+		if (!uiprivUserCallbackEnter(uiControl(w)))
+			return 0;
 		if ((wp->flags & SWP_NOMOVE) == 0)
 			if (w->onPositionChanged != NULL)
 				if (!w->changingPosition) {
@@ -174,12 +175,14 @@ static LRESULT CALLBACK windowWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARA
 			w->focused = 0;
 		else
 			w->focused = 1;
-		uiprivUserCallbackEnter();
+		if (!uiprivUserCallbackEnter(uiControl(w)))
+			return 0;
 		w->onFocusChanged(w, w->onFocusChangedData);
 		uiprivUserCallbackLeave();
 		return 0;
 	case WM_CLOSE:
-		uiprivUserCallbackEnter();
+		if (!uiprivUserCallbackEnter(uiControl(w)))
+			return 0;
 		if ((*(w->onClosing))(w, w->onClosingData))
 			uiControlDestroy(uiControl(w));
 		uiprivUserCallbackLeave();

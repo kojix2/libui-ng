@@ -657,7 +657,12 @@ static BOOL onWM_NOTIFY(uiControl *c, HWND hwnd, NMHDR *nmhdr, LRESULT *lResult)
 	HRESULT hr;
 	BOOL handled;
 
-	uiprivUserCallbackEnter();
+	if (!uiprivUserCallbackEnter(
+		(nmhdr->code == LVN_GETDISPINFO || nmhdr->code == NM_CUSTOMDRAW) ?
+		NULL : uiControl(t))) {
+		*lResult = 0;
+		return TRUE;
+	}
 	switch (nmhdr->code) {
 	case LVN_GETDISPINFO:
 		hr = uiprivTableHandleLVN_GETDISPINFO(t, (NMLVDISPINFOW *) nmhdr, lResult);

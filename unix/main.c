@@ -129,7 +129,7 @@ static gboolean doqueued(gpointer data)
 {
 	struct queued *q = (struct queued *) data;
 
-	uiprivUserCallbackEnter();
+	uiprivUserCallbackEnter(NULL);
 	(*(q->f))(q->data);
 	uiprivUserCallbackLeave();
 	g_free(q);
@@ -153,7 +153,7 @@ static gboolean doTimer(gpointer data)
 	struct timer *t = (struct timer *) data;
 	int repeat;
 
-	uiprivUserCallbackEnter();
+	uiprivUserCallbackEnter(NULL);
 	repeat = (*(t->f))(t->data);
 	uiprivUserCallbackLeave();
 	if (!repeat) {

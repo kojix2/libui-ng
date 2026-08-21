@@ -37,7 +37,8 @@ struct uiButton {
 {
 	uiButton *b = self->button;
 
-	uiprivUserCallbackEnter();
+	if (!uiprivUserCallbackEnter(uiControl(b)))
+		return;
 	(*(b->onClicked))(b, b->onClickedData);
 	uiprivUserCallbackLeave();
 }

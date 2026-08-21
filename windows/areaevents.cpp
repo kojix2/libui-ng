@@ -347,7 +347,11 @@ BOOL areaDoEvents(uiArea *a, UINT uMsg, WPARAM wParam, LPARAM lParam, LRESULT *l
 		return FALSE;
 	}
 
-	uiprivUserCallbackEnter();
+	if (!uiprivUserCallbackEnter(
+		(uMsg == msgAreaKeyDown || uMsg == msgAreaKeyUp) ? NULL : uiControl(a))) {
+		*lResult = 0;
+		return TRUE;
+	}
 	switch (uMsg) {
 	case WM_ACTIVATE:
 		// don't keep the double-click timer running if the user switched programs in between clicks

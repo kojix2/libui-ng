@@ -20,7 +20,8 @@ static void onChanged(GtkTextBuffer *textbuf, gpointer data)
 {
 	uiMultilineEntry *e = uiMultilineEntry(data);
 
-	uiprivUserCallbackEnter();
+	if (!uiprivUserCallbackEnter(uiControl(e)))
+		return;
 	(*(e->onChanged))(e, e->onChangedData);
 	uiprivUserCallbackLeave();
 }

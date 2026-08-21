@@ -324,7 +324,8 @@ found:
 		uiMenuItemSetChecked(item, !uiMenuItemChecked(item));
 
 	// then run the event
-	uiprivUserCallbackEnter();
+	if (!uiprivUserCallbackEnter(uiControl(w)))
+		return;
 	(*(item->onClicked))(item, w, item->onClickedData);
 	uiprivUserCallbackLeave();
 }

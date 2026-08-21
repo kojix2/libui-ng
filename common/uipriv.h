@@ -40,7 +40,9 @@ extern int uiprivShouldQuit(void);
 // control.c
 // These delimit backend work that invokes user callbacks.  Destruction
 // requested inside a protected region is queued for a later main-loop turn.
-extern void uiprivUserCallbackEnter(void);
+// Returns zero without entering when c or one of its ancestors is pending
+// destruction. NULL always enters for callbacks not associated with a control.
+extern int uiprivUserCallbackEnter(uiControl *);
 extern void uiprivUserCallbackLeave(void);
 // Returns nonzero when c or one of its ancestors is queued for destruction.
 extern int uiprivControlDestroyPending(uiControl *);

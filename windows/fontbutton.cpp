@@ -41,7 +41,10 @@ static BOOL onWM_COMMAND(uiControl *c, HWND hwnd, WORD code, LRESULT *lResult)
 	if (code != BN_CLICKED)
 		return FALSE;
 
-	uiprivUserCallbackEnter();
+	if (!uiprivUserCallbackEnter(uiControl(b))) {
+		*lResult = 0;
+		return TRUE;
+	}
 	parent = parentToplevel(b->hwnd);
 	if (uiprivShowFontDialog(parent, &(b->params))) {
 		updateFontButtonLabel(b);

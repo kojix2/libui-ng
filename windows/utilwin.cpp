@@ -37,7 +37,7 @@ static LRESULT CALLBACK utilWindowWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, L
 		return 0;
 	case msgQueued:
 		qf = (void (*)(void *)) wParam;
-		uiprivUserCallbackEnter();
+		uiprivUserCallbackEnter(NULL);
 		(*qf)((void *) lParam);
 		uiprivUserCallbackLeave();
 		return 0;
@@ -46,7 +46,7 @@ static LRESULT CALLBACK utilWindowWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, L
 		return 0;
 	case WM_TIMER:
 		timer = (uiprivTimer *) wParam;
-		uiprivUserCallbackEnter();
+		uiprivUserCallbackEnter(NULL);
 		repeat = (*(timer->f))(timer->data);
 		uiprivUserCallbackLeave();
 		if (!repeat) {

@@ -17,7 +17,8 @@ static void onChanged(GtkComboBox *cbox, gpointer data)
 {
 	uiCombobox *c = uiCombobox(data);
 
-	uiprivUserCallbackEnter();
+	if (!uiprivUserCallbackEnter(uiControl(c)))
+		return;
 	(*(c->onSelected))(c, c->onSelectedData);
 	uiprivUserCallbackLeave();
 }

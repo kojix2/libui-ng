@@ -52,7 +52,8 @@ static gboolean onClosing(GtkWidget *win, GdkEvent *e, gpointer data)
 	int close;
 
 	// manually destroy the window ourselves; don't let the delete-event handler do it
-	uiprivUserCallbackEnter();
+	if (!uiprivUserCallbackEnter(uiControl(w)))
+		return TRUE;
 	close = (*(w->onClosing))(w, w->onClosingData);
 	if (close)
 		uiControlDestroy(uiControl(w));
@@ -77,7 +78,8 @@ static void onSizeAllocate(GtkWidget *widget, GdkRectangle *allocation, gpointer
 		w->cachedWidth = width;
 		w->cachedHeight = height;
 		if (!suppress) {
-			uiprivUserCallbackEnter();
+			if (!uiprivUserCallbackEnter(uiControl(w)))
+				return;
 			(*(w->onContentSizeChanged))(w, w->onContentSizeChangedData);
 			uiprivUserCallbackLeave();
 		}
@@ -88,7 +90,8 @@ static gboolean onGetFocus(GtkWidget *win, GdkEvent *e, gpointer data)
 {
 	uiWindow *w = uiWindow(data);
 	w->focused = 1;
-	uiprivUserCallbackEnter();
+	if (!uiprivUserCallbackEnter(uiControl(w)))
+		return FALSE;
 	w->onFocusChanged(w, w->onFocusChangedData);
 	uiprivUserCallbackLeave();
 	return FALSE;
@@ -98,7 +101,8 @@ static gboolean onLoseFocus(GtkWidget *win, GdkEvent *e, gpointer data)
 {
 	uiWindow *w = uiWindow(data);
 	w->focused = 0;
-	uiprivUserCallbackEnter();
+	if (!uiprivUserCallbackEnter(uiControl(w)))
+		return FALSE;
 	w->onFocusChanged(w, w->onFocusChangedData);
 	uiprivUserCallbackLeave();
 	return FALSE;
@@ -131,7 +135,8 @@ static gboolean onConfigure(GtkWidget *win, GdkEvent *e, gpointer data)
 		w->cachedPosX = x;
 		w->cachedPosY = y;
 		if (!suppress) {
-			uiprivUserCallbackEnter();
+			if (!uiprivUserCallbackEnter(uiControl(w)))
+				return FALSE;
 			(*(w->onPositionChanged))(w, w->onPositionChangedData);
 			uiprivUserCallbackLeave();
 		}

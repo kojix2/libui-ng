@@ -15,7 +15,10 @@ static BOOL onWM_HSCROLL(uiControl *c, HWND hwnd, WORD code, LRESULT *lResult)
 {
 	uiSlider *s = uiSlider(c);
 
-	uiprivUserCallbackEnter();
+	if (!uiprivUserCallbackEnter(uiControl(s))) {
+		*lResult = 0;
+		return TRUE;
+	}
 	if (code == TB_ENDTRACK) {
 		(*(s->onReleased))(s, s->onReleasedData);
 	} else {

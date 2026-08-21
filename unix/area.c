@@ -115,6 +115,9 @@ static gboolean areaWidget_draw(GtkWidget *w, cairo_t *cr)
 	uiAreaDrawParams dp;
 	double clipX0, clipY0, clipX1, clipY1;
 
+	if (!uiprivUserCallbackEnter(uiControl(a)))
+		return FALSE;
+
 	dp.Context = uiprivNewContext(cr,
 		gtk_widget_get_style_context(a->widget));
 
@@ -126,7 +129,6 @@ static gboolean areaWidget_draw(GtkWidget *w, cairo_t *cr)
 	dp.ClipWidth = clipX1 - clipX0;
 	dp.ClipHeight = clipY1 - clipY0;
 
-	uiprivUserCallbackEnter();
 	// no need to save or restore the graphics state to reset transformations; GTK+ does that for us
 	(*(a->ah->Draw))(a->ah, a, &dp);
 
@@ -240,7 +242,8 @@ static gboolean areaWidget_button_press_event(GtkWidget *w, GdkEventButton *e)
 	GtkSettings *settings;
 	uiAreaMouseEvent me;
 
-	uiprivUserCallbackEnter();
+	if (!uiprivUserCallbackEnter(uiControl(a)))
+		return GDK_EVENT_PROPAGATE;
 	// clicking doesn't automatically transfer keyboard focus; we must do so manually (thanks tristan in irc.gimp.net/#gtk+)
 	gtk_widget_grab_focus(w);
 
@@ -283,7 +286,8 @@ static gboolean areaWidget_button_release_event(GtkWidget *w, GdkEventButton *e)
 	me.Down = 0;
 	me.Up = e->button;
 	me.Count = 0;
-	uiprivUserCallbackEnter();
+	if (!uiprivUserCallbackEnter(uiControl(a)))
+		return GDK_EVENT_PROPAGATE;
 	finishMouseEvent(a, &me, e->button, e->x, e->y, e->state, e->window);
 	uiprivUserCallbackLeave();
 	return GDK_EVENT_PROPAGATE;
@@ -298,7 +302,8 @@ static gboolean areaWidget_motion_notify_event(GtkWidget *w, GdkEventMotion *e)
 	me.Down = 0;
 	me.Up = 0;
 	me.Count = 0;
-	uiprivUserCallbackEnter();
+	if (!uiprivUserCallbackEnter(uiControl(a)))
+		return GDK_EVENT_PROPAGATE;
 	finishMouseEvent(a, &me, 0, e->x, e->y, e->state, e->window);
 	uiprivUserCallbackLeave();
 	return GDK_EVENT_PROPAGATE;
@@ -310,7 +315,8 @@ static gboolean onCrossing(areaWidget *aw, int left)
 {
 	uiArea *a = aw->a;
 
-	uiprivUserCallbackEnter();
+	if (!uiprivUserCallbackEnter(uiControl(a)))
+		return GDK_EVENT_PROPAGATE;
 	(*(a->ah->MouseCrossed))(a->ah, a, left);
 	uiprivClickCounterReset(a->cc);
 	uiprivUserCallbackLeave();
@@ -431,7 +437,7 @@ static gboolean areaWidget_key_press_event(GtkWidget *w, GdkEventKey *e)
 	uiArea *a = aw->a;
 	int handled;
 
-	uiprivUserCallbackEnter();
+	uiprivUserCallbackEnter(NULL);
 	handled = areaKeyEvent(a, 0, e);
 	uiprivUserCallbackLeave();
 	if (handled)
@@ -445,7 +451,7 @@ static gboolean areaWidget_key_release_event(GtkWidget *w, GdkEventKey *e)
 	uiArea *a = aw->a;
 	int handled;
 
-	uiprivUserCallbackEnter();
+	uiprivUserCallbackEnter(NULL);
 	handled = areaKeyEvent(a, 1, e);
 	uiprivUserCallbackLeave();
 	if (handled)

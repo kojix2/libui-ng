@@ -102,7 +102,10 @@ static BOOL onWM_NOTIFY(uiControl *c, HWND hwnd, NMHDR *nm, LRESULT *lResult)
 
 	if (nm->code != TCN_SELCHANGING && nm->code != TCN_SELCHANGE)
 		return FALSE;
-	uiprivUserCallbackEnter();
+	if (!uiprivUserCallbackEnter(uiControl(t))) {
+		*lResult = 0;
+		return TRUE;
+	}
 	showHidePage(t, curpage(t), nm->code == TCN_SELCHANGING);
 	*lResult = 0;
 	if (nm->code == TCN_SELCHANGING)

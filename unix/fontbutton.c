@@ -18,7 +18,8 @@ static void onFontSet(GtkFontButton *button, gpointer data)
 {
 	uiFontButton *b = uiFontButton(data);
 
-	uiprivUserCallbackEnter();
+	if (!uiprivUserCallbackEnter(uiControl(b)))
+		return;
 	(*(b->onChanged))(b, b->onChangedData);
 	uiprivUserCallbackLeave();
 }
