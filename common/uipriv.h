@@ -77,6 +77,11 @@ extern int uiprivFromScancode(uintptr_t, uiAreaKeyEvent *);
 extern void uiprivFallbackSkew(uiDrawMatrix *, double, double, double, double);
 extern void uiprivFallbackTransformSize(uiDrawMatrix *, double *, double *);
 
+// imageview.c
+extern void uiprivImageViewComputeRect(double viewWidth, double viewHeight,
+	double imageWidth, double imageHeight, uiImageViewContentMode mode,
+	double *x, double *y, double *width, double *height);
+
 // imagerep.c
 extern int uiprivImageFinite(double value);
 extern int uiprivImagePositiveFinite(double value);

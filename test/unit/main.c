@@ -80,6 +80,7 @@ int main(void)
 		{ drawImageRunUnitTests },
 		{ attrstrRunUnitTests },
 		{ imageRepRunUnitTests },
+		{ imageViewRunUnitTests },
 	};
 
 	for (i = 0; i < sizeof(unitTests)/sizeof(*unitTests); ++i) {
