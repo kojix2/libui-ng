@@ -191,10 +191,12 @@ static void defaultOnChanged(uiDateTimePicker *d, void *data)
 
 void uiDateTimePickerTime(uiDateTimePicker *d, struct tm *time)
 {
-	SYSTEMTIME systime;
+	SYSTEMTIME systime = {};
 
-	if (SendMessageW(d->hwnd, DTM_GETSYSTEMTIME, 0, (LPARAM) (&systime)) != GDT_VALID)
+	if (SendMessageW(d->hwnd, DTM_GETSYSTEMTIME, 0, (LPARAM) (&systime)) != GDT_VALID) {
 		logLastError(L"error getting date and time");
+		return;
+	}
 	fromSystemTime(&systime, time);
 }
 
