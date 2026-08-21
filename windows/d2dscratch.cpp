@@ -175,10 +175,15 @@ HWND newD2DScratch(HWND parent, RECT *rect, HMENU controlID, SUBCLASSPROC subcla
 		rect->left, rect->top,
 		rect->right - rect->left, rect->bottom - rect->top,
 		parent, controlID, hInstance, NULL);
-	if (hwnd == NULL)
+	if (hwnd == NULL) {
 		// TODO use the same failed-control/decoy-window policy as uiWindowsEnsureCreateControlHWND().
 		logLastError(L"error creating D2D scratch window");
-	if (SetWindowSubclass(hwnd, subclass, 0, subclassData) == FALSE)
+		return NULL;
+	}
+	if (SetWindowSubclass(hwnd, subclass, 0, subclassData) == FALSE) {
 		logLastError(L"error subclassing D2D scratch window");
+		uiWindowsEnsureDestroyWindow(hwnd);
+		return NULL;
+	}
 	return hwnd;
 }

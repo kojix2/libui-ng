@@ -901,15 +901,33 @@ static LRESULT CALLBACK opacitySliderSubProc(HWND hwnd, UINT uMsg, WPARAM wParam
 // TODO extract into d2dscratch.cpp, use in font dialog
 HWND replaceWithD2DScratch(HWND parent, int id, SUBCLASSPROC subproc, void *data)
 {
+	HWND hwnd;
 	HWND replace;
 	RECT r;
 
 	replace = getDlgItem(parent, id);
+	if (replace == NULL)
+		return NULL;
 	uiWindowsEnsureGetWindowRect(replace, &r);
 	mapWindowRect(NULL, parent, &r);
-	uiWindowsEnsureDestroyWindow(replace);
-	return newD2DScratch(parent, &r, (HMENU) (INT_PTR) id, subproc, (DWORD_PTR) data);
-	// TODO preserve Z-order
+	hwnd = newD2DScratch(parent, &r, (HMENU) (INT_PTR) id,
+		subproc, (DWORD_PTR) data);
+	if (hwnd == NULL)
+		return NULL;
+	// Put the scratch window immediately after the placeholder. Destroying the
+	// placeholder below then leaves the scratch window in the same Z-order slot.
+	if (SetWindowPos(hwnd, replace, 0, 0, 0, 0,
+		SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOOWNERZORDER | SWP_NOSIZE) == 0) {
+		logLastError(L"error setting D2D scratch window Z-order");
+		uiWindowsEnsureDestroyWindow(hwnd);
+		return NULL;
+	}
+	if (DestroyWindow(replace) == 0) {
+		logLastError(L"error destroying D2D scratch placeholder window");
+		uiWindowsEnsureDestroyWindow(hwnd);
+		return NULL;
+	}
+	return hwnd;
 }
 
 // a few issues:
@@ -1021,15 +1039,37 @@ static struct colorDialog *beginColorDialog(HWND hwnd, LPARAM lParam)
 	c->editHex = getDlgItem(c->hwnd, rcHex);
 
 	c->svChooser = replaceWithD2DScratch(c->hwnd, rcColorSVChooser, svChooserSubProc, c);
+	if (c->svChooser == NULL)
+		goto fail;
 	c->hSlider = replaceWithD2DScratch(c->hwnd, rcColorHSlider, hSliderSubProc, c);
+	if (c->hSlider == NULL)
+		goto fail;
 	c->preview = replaceWithD2DScratch(c->hwnd, rcPreview, previewSubProc, c);
+	if (c->preview == NULL)
+		goto fail;
 	c->opacitySlider = replaceWithD2DScratch(c->hwnd, rcOpacitySlider, opacitySliderSubProc, c);
+	if (c->opacitySlider == NULL)
+		goto fail;
 
 	fixupControlPositions(c);
 
 	// and get the ball rolling
 	updateDialog(c, NULL);
 	return c;
+
+fail:
+	if (c->svChooser != NULL)
+		uiWindowsEnsureDestroyWindow(c->svChooser);
+	if (c->hSlider != NULL)
+		uiWindowsEnsureDestroyWindow(c->hSlider);
+	if (c->preview != NULL)
+		uiWindowsEnsureDestroyWindow(c->preview);
+	if (c->opacitySlider != NULL)
+		uiWindowsEnsureDestroyWindow(c->opacitySlider);
+	if (EndDialog(hwnd, 0) == 0)
+		logLastError(L"error ending color dialog after initialization failure");
+	uiprivFree(c);
+	return NULL;
 }
 
 static void endColorDialog(struct colorDialog *c, INT_PTR code)
@@ -1251,6 +1291,8 @@ static INT_PTR CALLBACK colorDialogDlgProc(HWND hwnd, UINT uMsg, WPARAM wParam, 
 	if (c == NULL) {
 		if (uMsg == WM_INITDIALOG) {
 			c = beginColorDialog(hwnd, lParam);
+			if (c == NULL)
+				return TRUE;
 			SetWindowLongPtrW(hwnd, DWLP_USER, (LONG_PTR) c);
 			return TRUE;
 		}
@@ -1487,6 +1529,7 @@ static_assert(ARRAYSIZE(data_rcColorDialog) == 1144, "wrong size for resource rc
 BOOL showColorDialog(HWND parent, struct colorDialogRGBA *c)
 {
 	switch (DialogBoxIndirectParamW(hInstance, (const DLGTEMPLATE *) data_rcColorDialog, parent, colorDialogDlgProc, (LPARAM) c)) {
+	case 0:			// initialization failure
 	case 1:			// cancel
 		return FALSE;
 	case 2:			// ok
@@ -1494,6 +1537,7 @@ BOOL showColorDialog(HWND parent, struct colorDialogRGBA *c)
 		break;
 	default:
 		logLastError(L"error running color dialog");
+		return FALSE;
 	}
 	return TRUE;
 }
