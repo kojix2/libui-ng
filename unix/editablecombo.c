@@ -18,7 +18,9 @@ static void onChanged(GtkComboBox *cbox, gpointer data)
 {
 	uiEditableCombobox *c = uiEditableCombobox(data);
 
+	uiprivUserCallbackEnter();
 	(*(c->onChanged))(c, c->onChangedData);
+	uiprivUserCallbackLeave();
 }
 
 static void defaultOnChanged(uiEditableCombobox *c, void *data)

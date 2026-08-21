@@ -38,7 +38,9 @@ struct uiCheckbox {
 {
 	uiCheckbox *c = self->checkbox;
 
+	uiprivUserCallbackEnter();
 	(*(c->onToggled))(c, c->onToggledData);
+	uiprivUserCallbackLeave();
 }
 
 @end

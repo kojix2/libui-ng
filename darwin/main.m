@@ -163,6 +163,7 @@ void uiUninit(void)
 {
 	if (!globalPool)
 		uiprivUserBug("You must call uiInit() first!");
+	uiprivControlDestroyUninit();
 	uiprivUninitTimers();
 	[globalPool release];
 	globalPool = nil;
@@ -260,13 +261,47 @@ void uiQuit(void)
 	[uiprivNSApp() terminate:uiprivNSApp()];
 }
 
+static void flushControlDestroys(void *data)
+{
+	uiprivControlDestroyFlush((uintptr_t) data);
+}
+
+void uiprivScheduleControlDestroyFlush(uintptr_t id)
+{
+	dispatch_async_f(dispatch_get_main_queue(), (void *) id, flushControlDestroys);
+}
+
 // thanks to mikeash in irc.freenode.net/#macdev for suggesting the use of Grand Central Dispatch for this
 // LONGTERM will dispatch_get_main_queue() break after _CFRunLoopSetCurrent()?
+struct queued {
+	void (*f)(void *);
+	void *data;
+};
+
+static void doQueued(void *data)
+{
+	struct queued *q = data;
+
+	uiprivUserCallbackEnter();
+	(*(q->f))(q->data);
+	uiprivUserCallbackLeave();
+	free(q);
+}
+
 void uiQueueMain(void (*f)(void *data), void *data)
 {
+	struct queued *q;
+
 	// dispatch_get_main_queue() is a serial queue so it will not execute multiple uiQueueMain() functions concurrently
-	// the signature of f matches dispatch_function_t
-	dispatch_async_f(dispatch_get_main_queue(), data, f);
+	// Use calloc()/free() because uiQueueMain() may be called off the main thread.
+	q = calloc(1, sizeof (struct queued));
+	if (q == NULL) {
+		fprintf(stderr, "memory exhausted in uiQueueMain()\n");
+		abort();
+	}
+	q->f = f;
+	q->data = data;
+	dispatch_async_f(dispatch_get_main_queue(), q, doQueued);
 }
 
 @interface uiprivTimerDelegate : NSObject {
@@ -291,10 +326,15 @@ void uiQueueMain(void (*f)(void *data), void *data)
 
 - (void)doTimer:(NSTimer *)timer
 {
-        if (!(*(self->f))(self->data)) {
-                [timers removeObject:timer];
-                [timer invalidate];
-        }
+	int repeat;
+
+	uiprivUserCallbackEnter();
+	repeat = (*(self->f))(self->data);
+	uiprivUserCallbackLeave();
+	if (!repeat) {
+		[timers removeObject:timer];
+		[timer invalidate];
+	}
 }
 
 @end

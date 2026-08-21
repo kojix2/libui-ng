@@ -14,6 +14,9 @@
  * Unit test run functions.
  */
 int initRunUnitTests(void);
+#ifdef _UI_STATIC
+int controlRunUnitTests(void);
+#endif
 int windowRunUnitTests(void);
 int sliderRunUnitTests(void);
 int spinboxRunUnitTests(void);

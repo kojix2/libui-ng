@@ -69,9 +69,13 @@ static NSWindowStyleMask windowStyleMask(uiWindow *w)
 - (BOOL)windowShouldClose:(id)sender
 {
 	uiWindow *w = self->window;
+	int close;
 
-	if ((*(w->onClosing))(w, w->onClosingData))
+	uiprivUserCallbackEnter();
+	close = (*(w->onClosing))(w, w->onClosingData);
+	if (close)
 		uiControlDestroy(uiControl(w));
+	uiprivUserCallbackLeave();
 	return NO;
 }
 
@@ -79,16 +83,22 @@ static NSWindowStyleMask windowStyleMask(uiWindow *w)
 {
 	uiWindow *w = self->window;
 
-	if (!w->suppressSizeChanged)
+	if (!w->suppressSizeChanged) {
+		uiprivUserCallbackEnter();
 		(*(w->onContentSizeChanged))(w, w->onContentSizeChangedData);
+		uiprivUserCallbackLeave();
+	}
 }
 
 - (void)windowDidMove:(NSNotification *)note
 {
 	uiWindow *w = self->window;
 
-	if (!w->suppressPositionChanged)
+	if (!w->suppressPositionChanged) {
+		uiprivUserCallbackEnter();
 		(*(w->onPositionChanged))(w, w->onPositionChangedData);
+		uiprivUserCallbackLeave();
+	}
 }
 
 - (void)windowDidEnterFullScreen:(NSNotification *)note
@@ -114,7 +124,9 @@ static NSWindowStyleMask windowStyleMask(uiWindow *w)
 	uiWindow *w = self->window;
 
 	w->focused = 1;
+	uiprivUserCallbackEnter();
 	(*(w->onFocusChanged))(w, w->onFocusChangedData);
+	uiprivUserCallbackLeave();
 }
 
 - (void)windowDidResignKey:(NSNotification *)note
@@ -122,7 +134,9 @@ static NSWindowStyleMask windowStyleMask(uiWindow *w)
 	uiWindow *w = self->window;
 
 	w->focused = 0;
+	uiprivUserCallbackEnter();
 	(*(w->onFocusChanged))(w, w->onFocusChangedData);
+	uiprivUserCallbackLeave();
 }
 
 - (uiWindow *)window

@@ -127,7 +127,9 @@ struct uiFontButton {
 	// do this second just in case
 	[old release];
 	[self updateFontButtonLabel];
+	uiprivUserCallbackEnter();
 	(*(b->onChanged))(b, b->onChangedData);
+	uiprivUserCallbackLeave();
 }
 
 - (NSFontPanelModeMask)validModesForFontPanel:(NSFontPanel *)panel

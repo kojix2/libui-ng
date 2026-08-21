@@ -20,5 +20,10 @@ void uiOnShouldQuit(int (*f)(void *), void *data)
 
 int uiprivShouldQuit(void)
 {
-	return (*onShouldQuit)(onShouldQuitData);
+	int shouldQuit;
+
+	uiprivUserCallbackEnter();
+	shouldQuit = (*onShouldQuit)(onShouldQuitData);
+	uiprivUserCallbackLeave();
+	return shouldQuit;
 }

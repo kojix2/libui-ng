@@ -15,7 +15,9 @@ static void onClicked(GtkButton *button, gpointer data)
 {
 	uiButton *b = uiButton(data);
 
+	uiprivUserCallbackEnter();
 	(*(b->onClicked))(b, b->onClickedData);
+	uiprivUserCallbackLeave();
 }
 
 static void defaultOnClicked(uiButton *b, void *data)

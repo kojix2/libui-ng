@@ -44,7 +44,9 @@ struct uiDateTimePicker {
 	d = self->picker;
 	if (d == NULL)
 		return;
+	uiprivUserCallbackEnter();
 	(*(d->onChanged))(d, d->onChangedData);
+	uiprivUserCallbackLeave();
 }
 @end
 

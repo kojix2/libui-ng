@@ -76,7 +76,9 @@ static uiWindow *currentMenuEventWindow(void)
 		uiMenuItemSetChecked(self->item, !uiMenuItemChecked(self->item));
 		// fall through
 	default:
+		uiprivUserCallbackEnter();
 		(*(self->item->onClicked))(self->item, currentMenuEventWindow(), self->item->onClickedData);
+		uiprivUserCallbackLeave();
 		break;
 	}
 }

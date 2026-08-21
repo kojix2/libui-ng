@@ -79,10 +79,12 @@ struct uiArea {
 	dp.ClipWidth = r.size.width;
 	dp.ClipHeight = r.size.height;
 
+	uiprivUserCallbackEnter();
 	// no need to save or restore the graphics state to reset transformations; Cocoa creates a brand-new context each time
 	(*(a->ah->Draw))(a->ah, a, &dp);
 
 	uiprivDrawFreeContext(dp.Context);
+	uiprivUserCallbackLeave();
 }
 
 - (BOOL)isFlipped
@@ -211,10 +213,12 @@ struct uiArea {
 	}
 
 	if (self->libui_enabled) {
+		uiprivUserCallbackEnter();
 		// Allow window moving and resizing only from mouse-down callbacks.
 		a->mouseDownEvent = me.Down != 0 ? e : nil;
 		(*(a->ah->MouseEvent))(a->ah, a, &me);
 		a->mouseDownEvent = nil;
+		uiprivUserCallbackLeave();
 	}
 }
 
@@ -238,16 +242,22 @@ mouseEvent(otherMouseUp)
 {
 	uiArea *a = self->libui_a;
 
-	if (self->libui_enabled)
+	if (self->libui_enabled) {
+		uiprivUserCallbackEnter();
 		(*(a->ah->MouseCrossed))(a->ah, a, 0);
+		uiprivUserCallbackLeave();
+	}
 }
 
 - (void)mouseExited:(NSEvent *)e
 {
 	uiArea *a = self->libui_a;
 
-	if (self->libui_enabled)
+	if (self->libui_enabled) {
+		uiprivUserCallbackEnter();
 		(*(a->ah->MouseCrossed))(a->ah, a, 1);
+		uiprivUserCallbackLeave();
+	}
 }
 
 // note: there is no equivalent to WM_CAPTURECHANGED on Mac OS X; there literally is no way to break a grab like that
@@ -257,8 +267,12 @@ mouseEvent(otherMouseUp)
 - (int)sendKeyEvent:(uiAreaKeyEvent *)ke
 {
 	uiArea *a = self->libui_a;
+	int handled;
 
-	return (*(a->ah->KeyEvent))(a->ah, a, ke);
+	uiprivUserCallbackEnter();
+	handled = (*(a->ah->KeyEvent))(a->ah, a, ke);
+	uiprivUserCallbackLeave();
+	return handled;
 }
 
 - (int)doKeyDownUp:(NSEvent *)e up:(int)up

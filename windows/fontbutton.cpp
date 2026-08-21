@@ -41,6 +41,7 @@ static BOOL onWM_COMMAND(uiControl *c, HWND hwnd, WORD code, LRESULT *lResult)
 	if (code != BN_CLICKED)
 		return FALSE;
 
+	uiprivUserCallbackEnter();
 	parent = parentToplevel(b->hwnd);
 	if (uiprivShowFontDialog(parent, &(b->params))) {
 		updateFontButtonLabel(b);
@@ -48,6 +49,7 @@ static BOOL onWM_COMMAND(uiControl *c, HWND hwnd, WORD code, LRESULT *lResult)
 	}
 
 	*lResult = 0;
+	uiprivUserCallbackLeave();
 	return TRUE;
 }
 

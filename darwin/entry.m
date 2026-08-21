@@ -91,7 +91,9 @@ static BOOL isSearchField(NSTextField *tf)
 {
 	uiEntry *e = self->entry;;
 
+	uiprivUserCallbackEnter();
 	(*(e->onChanged))(e, e->onChangedData);
+	uiprivUserCallbackLeave();
 }
 
 @end

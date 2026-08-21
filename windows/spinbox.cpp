@@ -54,7 +54,9 @@ static BOOL onWM_COMMAND(uiControl *c, HWND hwnd, WORD code, LRESULT *lResult)
 	uiprivFree(wtext);
 	// value() does the work for us
 	value(s);
+	uiprivUserCallbackEnter();
 	(*(s->onChanged))(s, s->onChangedData);
+	uiprivUserCallbackLeave();
 	return TRUE;
 }
 

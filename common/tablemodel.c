@@ -6,33 +6,49 @@
 int uiprivTableModelNumColumns(uiTableModel *m)
 {
 	uiTableModelHandler *mh;
+	int n;
 
 	mh = uiprivTableModelHandler(m);
-	return (*(mh->NumColumns))(mh, m);
+	uiprivUserCallbackEnter();
+	n = (*(mh->NumColumns))(mh, m);
+	uiprivUserCallbackLeave();
+	return n;
 }
 
 uiTableValueType uiprivTableModelColumnType(uiTableModel *m, int column)
 {
 	uiTableModelHandler *mh;
+	uiTableValueType type;
 
 	mh = uiprivTableModelHandler(m);
-	return (*(mh->ColumnType))(mh, m, column);
+	uiprivUserCallbackEnter();
+	type = (*(mh->ColumnType))(mh, m, column);
+	uiprivUserCallbackLeave();
+	return type;
 }
 
 int uiprivTableModelNumRows(uiTableModel *m)
 {
 	uiTableModelHandler *mh;
+	int n;
 
 	mh = uiprivTableModelHandler(m);
-	return (*(mh->NumRows))(mh, m);
+	uiprivUserCallbackEnter();
+	n = (*(mh->NumRows))(mh, m);
+	uiprivUserCallbackLeave();
+	return n;
 }
 
 uiTableValue *uiprivTableModelCellValue(uiTableModel *m, int row, int column)
 {
 	uiTableModelHandler *mh;
+	uiTableValue *value;
 
 	mh = uiprivTableModelHandler(m);
-	return (*(mh->CellValue))(mh, m, row, column);
+	uiprivUserCallbackEnter();
+	value = (*(mh->CellValue))(mh, m, row, column);
+	uiprivUserCallbackLeave();
+	return value;
 }
 
 void uiprivTableModelSetCellValue(uiTableModel *m, int row, int column, const uiTableValue *value)
@@ -40,9 +56,11 @@ void uiprivTableModelSetCellValue(uiTableModel *m, int row, int column, const ui
 	uiTableModelHandler *mh;
 
 	mh = uiprivTableModelHandler(m);
+	uiprivUserCallbackEnter();
 	(*(mh->SetCellValue))(mh, m, row, column, value);
 
 	uiTableModelRowChanged(m, row);
+	uiprivUserCallbackLeave();
 }
 
 const uiTableTextColumnOptionalParams uiprivDefaultTextColumnOptionalParams = {

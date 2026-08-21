@@ -32,6 +32,7 @@ static BOOL onWM_COMMAND(uiControl *c, HWND hwnd, WORD code, LRESULT *lResult)
 	if (code != BN_CLICKED)
 		return FALSE;
 
+	uiprivUserCallbackEnter();
 	parent = parentToplevel(b->hwnd);
 	rgba.r = b->r;
 	rgba.g = b->g;
@@ -47,6 +48,7 @@ static BOOL onWM_COMMAND(uiControl *c, HWND hwnd, WORD code, LRESULT *lResult)
 	}
 
 	*lResult = 0;
+	uiprivUserCallbackLeave();
 	return TRUE;
 }
 

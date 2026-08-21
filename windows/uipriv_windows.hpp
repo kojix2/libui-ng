@@ -11,6 +11,7 @@
 // Private messages for libui-owned window classes.
 enum {
 	msgQueued = WM_USER + 0x43,
+	msgControlDestroyFlush,
 	msgD2DScratchPaint,
 	msgD2DScratchLButtonDown,
 };

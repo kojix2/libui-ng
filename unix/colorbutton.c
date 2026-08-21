@@ -17,7 +17,9 @@ static void onColorSet(GtkColorButton *button, gpointer data)
 {
 	uiColorButton *b = uiColorButton(data);
 
+	uiprivUserCallbackEnter();
 	(*(b->onChanged))(b, b->onChangedData);
+	uiprivUserCallbackLeave();
 }
 
 static void defaultOnChanged(uiColorButton *b, void *data)

@@ -43,10 +43,22 @@ static void uninitTimer(gpointer key, gpointer value, gpointer data)
 
 void uiUninit(void)
 {
+	uiprivControlDestroyUninit();
 	g_hash_table_foreach(timers, uninitTimer, NULL);
 	g_hash_table_destroy(timers);
 	uiprivUninitMenus();
 	uiprivUninitAlloc();
+}
+
+static gboolean flushControlDestroys(gpointer data)
+{
+	uiprivControlDestroyFlush((uintptr_t) data);
+	return FALSE;
+}
+
+void uiprivScheduleControlDestroyFlush(uintptr_t id)
+{
+	gdk_threads_add_idle(flushControlDestroys, (gpointer) id);
 }
 
 void uiFreeInitError(const char *err)
@@ -117,7 +129,9 @@ static gboolean doqueued(gpointer data)
 {
 	struct queued *q = (struct queued *) data;
 
+	uiprivUserCallbackEnter();
 	(*(q->f))(q->data);
+	uiprivUserCallbackLeave();
 	g_free(q);
 	return FALSE;
 }
@@ -137,8 +151,12 @@ void uiQueueMain(void (*f)(void *data), void *data)
 static gboolean doTimer(gpointer data)
 {
 	struct timer *t = (struct timer *) data;
+	int repeat;
 
-	if (!(*(t->f))(t->data)) {
+	uiprivUserCallbackEnter();
+	repeat = (*(t->f))(t->data);
+	uiprivUserCallbackLeave();
+	if (!repeat) {
 		t->source = 0;
 		g_hash_table_remove(timers, t);
 		uiprivFree(t);

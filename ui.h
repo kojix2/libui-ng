@@ -125,6 +125,10 @@ struct uiControl {
  * Dispose and free all allocated resources.
  *
  * The platform specific APIs that actually destroy a control (and its children) are called.
+ * If called from a user callback, destruction is deferred to the main event
+ * loop so the native event handler can finish first. Outside a user callback,
+ * destruction remains synchronous. Until deferred destruction runs, the native
+ * event system may deliver additional callbacks for the control.
  *
  * @note Most of the time is needed to be used directly only on the top level windows.
  *

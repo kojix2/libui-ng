@@ -15,7 +15,9 @@ uiUnixControlAllDefaults(uiEntry)
 
 static void sendChanged(uiEntry *e)
 {
+	uiprivUserCallbackEnter();
 	(*(e->onChanged))(e, e->onChangedData);
+	uiprivUserCallbackLeave();
 }
 
 static void onChanged(GtkEditable *editable, gpointer data)

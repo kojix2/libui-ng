@@ -18,7 +18,9 @@ static void onToggled(GtkToggleButton *b, gpointer data)
 {
 	uiCheckbox *c = uiCheckbox(data);
 
+	uiprivUserCallbackEnter();
 	(*(c->onToggled))(c, c->onToggledData);
+	uiprivUserCallbackLeave();
 }
 
 static void defaultOnToggled(uiCheckbox *c, void *data)

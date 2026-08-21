@@ -103,8 +103,11 @@ struct uiTab {
 {
 	uiTab *t = self->tab;
 	uiprivJiggleViewLayout(tabView);
-	if (!t->suppressOnSelected)
+	if (!t->suppressOnSelected) {
+		uiprivUserCallbackEnter();
 		(*(t->onSelected))(t, t->onSelectedData);
+		uiprivUserCallbackLeave();
+	}
 }
 
 @end

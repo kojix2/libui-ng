@@ -85,8 +85,11 @@ struct uiColorButton {
 	[super setColor:color];
 	// NSColorWell initialization can invoke -setColor: before libui callback wiring is complete.
 	// Ignore changes while setting color programmatically, and only signal when callback is ready.
-	if (b != nil && b->onChanged != NULL && !self->libui_setting)
+	if (b != nil && b->onChanged != NULL && !self->libui_setting) {
+		uiprivUserCallbackEnter();
 		(*(b->onChanged))(b, b->onChangedData);
+		uiprivUserCallbackLeave();
+	}
 }
 
 - (void)libuiColor:(double *)r g:(double *)g b:(double *)b a:(double *)a

@@ -17,8 +17,10 @@ static BOOL onWM_COMMAND(uiControl *c, HWND hwnd, WORD code, LRESULT *lResult)
 		return FALSE;
 	if (e->inhibitChanged)
 		return FALSE;
+	uiprivUserCallbackEnter();
 	(*(e->onChanged))(e, e->onChangedData);
 	*lResult = 0;
+	uiprivUserCallbackLeave();
 	return TRUE;
 }
 

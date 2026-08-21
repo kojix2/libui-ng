@@ -77,6 +77,7 @@ static void onWM_PAINT(uiArea *a)
 	RECT clip;
 	HRESULT hr;
 
+	uiprivUserCallbackEnter();
 	// do not clear the update rect; we do that ourselves in doPaint()
 	if (GetUpdateRect(a->hwnd, &clip, FALSE) == 0) {
 		// set a zero clip rect just in case GetUpdateRect() didn't change clip
@@ -103,6 +104,7 @@ static void onWM_PAINT(uiArea *a)
 	default:
 		logHRESULT(L"error painting", hr);
 	}
+	uiprivUserCallbackLeave();
 }
 
 static void onWM_PRINTCLIENT(uiArea *a, HDC dc)
@@ -115,10 +117,12 @@ static void onWM_PRINTCLIENT(uiArea *a, HDC dc)
 	rt = makeHDCRenderTarget(dc, &client);
 	if (rt == NULL)
 		return;
+	uiprivUserCallbackEnter();
 	hr = doPaint(a, rt, &client);
 	if (hr != S_OK)
 		logHRESULT(L"error printing uiArea client area", hr);
 	rt->Release();
+	uiprivUserCallbackLeave();
 }
 
 BOOL areaDoDraw(uiArea *a, UINT uMsg, WPARAM wParam, LPARAM lParam, LRESULT *lResult)

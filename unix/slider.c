@@ -35,7 +35,9 @@ static void onChanged(GtkRange *range, gpointer data)
 	if (uiSliderHasToolTip(s))
 		_uiSliderUpdateToolTip(s);
 
+	uiprivUserCallbackEnter();
 	(*(s->onChanged))(s, s->onChangedData);
+	uiprivUserCallbackLeave();
 }
 
 static void defaultOnChanged(uiSlider *s, void *data)
@@ -47,7 +49,9 @@ static gboolean onReleased(GtkWidget *w, GdkEventButton *event, gpointer data)
 {
 	uiSlider *s = uiSlider(data);
 
+	uiprivUserCallbackEnter();
 	(*(s->onReleased))(s, s->onReleasedData);
+	uiprivUserCallbackLeave();
 	return FALSE;
 }
 

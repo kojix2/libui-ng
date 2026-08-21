@@ -421,7 +421,9 @@ static void headerOnClicked(GtkTreeViewColumn *c, gpointer data)
 
 	for (i = 0; i < gtk_tree_view_get_n_columns(t->tv); ++i)
 		if (gtk_tree_view_get_column(t->tv, i) == c) {
+			uiprivUserCallbackEnter();
 			t->headerOnClicked(t, i, t->headerOnClickedData);
+			uiprivUserCallbackLeave();
 			return;
 		}
 }
@@ -513,7 +515,9 @@ static void onSelectionChanged(GtkTreeSelection *s, gpointer data)
 	if (!selectionChanged(t, s))
 		return;
 
+	uiprivUserCallbackEnter();
 	t->onSelectionChanged(t, t->onSelectionChangedData);
+	uiprivUserCallbackLeave();
 }
 
 uiTableSelection* uiTableGetSelection(uiTable *t)
@@ -783,10 +787,12 @@ static void onButtonPressed(GtkGestureMultiPress *gesture, gint nPress, gdouble 
 	row = gtk_tree_path_get_indices(path)[0];
 	gtk_tree_path_free(path);
 
+	uiprivUserCallbackEnter();
 	if (nPress == 1)
 		(*(t->onRowClicked))(t, row, t->onRowClickedData);
 	else if (nPress == 2)
 		(*(t->onRowDoubleClicked))(t, row, t->onRowDoubleClickedData);
+	uiprivUserCallbackLeave();
 }
 
 uiTable *uiNewTable(uiTableParams *p)

@@ -59,6 +59,9 @@ int main(void)
 	int failedComponents = 0;
 	struct unitTest unitTests[] = {
 		{ initRunUnitTests },
+#ifdef _UI_STATIC
+		{ controlRunUnitTests },
+#endif
 		{ windowRunUnitTests },
 		{ menuRunUnitTests },
 		{ sliderRunUnitTests },

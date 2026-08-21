@@ -8,18 +8,6 @@
 // - implement accessibility in general (Dynamic Annotations maybe?)
 // - if I didn't handle these already: "drawing focus rects here, subitem navigation and activation with the keyboard"
 
-static std::map<uiTable *, uint64_t> tables;
-static uint64_t nextTableLifetime = 1;
-
-static uint64_t tableLifetime(uiTable *t)
-{
-	auto i = tables.find(t);
-
-	if (i == tables.end())
-		return 0;
-	return i->second;
-}
-
 uiTableModel *uiNewTableModel(uiTableModelHandler *mh)
 {
 	uiTableModel *m;
@@ -390,12 +378,9 @@ void uiTableSetSelection(uiTable *t, uiTableSelection *sel)
 
 static BOOL signalOnSelectionChanged(uiTable *t)
 {
-	uint64_t lifetime;
-
 	if (t->suppressSelectionChanged == 0) {
-		lifetime = tableLifetime(t);
 		t->onSelectionChanged(t, t->onSelectionChangedData);
-		if (lifetime != 0 && tableLifetime(t) != lifetime)
+		if (uiprivControlDestroyPending(uiControl(t)))
 			return FALSE;
 	}
 	return TRUE;
@@ -405,14 +390,12 @@ static BOOL handleClick(uiTable *t, NMHDR *nmhdr, LRESULT *lResult)
 {
 	LVHITTESTINFO ht = {};
 	HRESULT hr;
-	uint64_t lifetime;
 
 	ht.pt = ((NMITEMACTIVATE *) nmhdr)->ptAction;
 	if (SendMessageW(t->hwnd, LVM_SUBITEMHITTEST, 0, (LPARAM) &ht) == -1)
 		return FALSE;
-	lifetime = tableLifetime(t);
 	(*(t->onRowClicked))(t, ht.iItem, t->onRowClickedData);
-	if (lifetime != 0 && tableLifetime(t) != lifetime)
+	if (uiprivControlDestroyPending(uiControl(t)))
 		return TRUE;
 
 	// Handle editing
@@ -672,37 +655,53 @@ static BOOL onWM_NOTIFY(uiControl *c, HWND hwnd, NMHDR *nmhdr, LRESULT *lResult)
 {
 	uiTable *t = uiTable(c);
 	HRESULT hr;
+	BOOL handled;
 
+	uiprivUserCallbackEnter();
 	switch (nmhdr->code) {
 	case LVN_GETDISPINFO:
 		hr = uiprivTableHandleLVN_GETDISPINFO(t, (NMLVDISPINFOW *) nmhdr, lResult);
 		if (hr != S_OK) {
 			// TODO decide how notification handler failures should be surfaced
-			return FALSE;
+			handled = FALSE;
+			break;
 		}
-		return TRUE;
+		handled = TRUE;
+		break;
 	case NM_CUSTOMDRAW:
 		hr = uiprivTableHandleNM_CUSTOMDRAW(t, (NMLVCUSTOMDRAW *) nmhdr, lResult);
 		if (hr != S_OK) {
 			// TODO decide how notification handler failures should be surfaced
-			return FALSE;
+			handled = FALSE;
+			break;
 		}
-		return TRUE;
+		handled = TRUE;
+		break;
 	case NM_CLICK:
-		return handleClick(t, nmhdr, lResult);
+		handled = handleClick(t, nmhdr, lResult);
+		break;
 	case NM_DBLCLK:
-		return handleDoubleClick(t, nmhdr);
+		handled = handleDoubleClick(t, nmhdr);
+		break;
 	case LVN_ITEMCHANGED:
-		return handleItemChanged(t, nmhdr, lResult);
+		handled = handleItemChanged(t, nmhdr, lResult);
+		break;
 	case LVN_ODSTATECHANGED:
-		return handleODStateChanged(t, nmhdr);
+		handled = handleODStateChanged(t, nmhdr);
+		break;
 	case LVN_COLUMNCLICK:
-		return handleColumnClick(t, nmhdr);
+		handled = handleColumnClick(t, nmhdr);
+		break;
 	// the real list view accepts changes when scrolling or clicking column headers
 	case LVN_BEGINSCROLL:
-		return handleBeginScroll(t, lResult);
+		handled = handleBeginScroll(t, lResult);
+		break;
+	default:
+		handled = FALSE;
+		break;
 	}
-	return FALSE;
+	uiprivUserCallbackLeave();
+	return handled;
 }
 
 static void uiTableDestroy(uiControl *c)
@@ -712,7 +711,6 @@ static void uiTableDestroy(uiControl *c)
 	std::vector<uiTable *>::iterator it;
 	HRESULT hr;
 
-	tables.erase(t);
 	hr = uiprivTableAbortEditingText(t);
 	if (hr != S_OK) {
 		// The failure is already logged; destruction must continue.
@@ -979,7 +977,6 @@ uiTable *uiNewTable(uiTableParams *p)
 	uiTableOnRowClicked(t, defaultOnRowClicked, NULL);
 	uiTableOnRowDoubleClicked(t, defaultOnRowDoubleClicked, NULL);
 	uiTableSetSelectionMode(t, uiTableSelectionModeZeroOrOne);
-	tables[t] = nextTableLifetime++;
 
 	return t;
 }

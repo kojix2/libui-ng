@@ -324,7 +324,9 @@ found:
 		uiMenuItemSetChecked(item, !uiMenuItemChecked(item));
 
 	// then run the event
+	uiprivUserCallbackEnter();
 	(*(item->onClicked))(item, w, item->onClickedData);
+	uiprivUserCallbackLeave();
 }
 
 static void freeMenu(uiMenu *m, HMENU submenu)

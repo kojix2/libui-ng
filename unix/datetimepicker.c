@@ -379,7 +379,9 @@ static void onChanged(uiprivDateTimePickerWidget *d, gpointer data)
 	uiDateTimePicker *c;
 
 	c = uiDateTimePicker(data);
+	uiprivUserCallbackEnter();
 	(*(c->onChanged))(c, c->onChangedData);
+	uiprivUserCallbackLeave();
 }
 
 static GtkWidget *newDTP(void)

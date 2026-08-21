@@ -51,11 +51,13 @@ static void _uiSliderUpdateToolTip(uiSlider *s);
 	if (s->hasToolTip)
 		_uiSliderUpdateToolTip(s);
 
+	uiprivUserCallbackEnter();
 	if([currentEvent type] == NSEventTypeLeftMouseUp) {
 		(*(s->onReleased))(s, s->onReleasedData);
 	} else {
 		(*(s->onChanged))(s, s->onChangedData);
 	}
+	uiprivUserCallbackLeave();
 }
 
 - (NSSize)intrinsicContentSize

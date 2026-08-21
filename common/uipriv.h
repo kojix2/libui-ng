@@ -37,6 +37,21 @@ extern void uiprivDoUserBug(const char *file, const char *line, const char *func
 // shouldquit.c
 extern int uiprivShouldQuit(void);
 
+// control.c
+// These delimit backend work that invokes user callbacks.  Destruction
+// requested inside a protected region is queued for a later main-loop turn.
+extern void uiprivUserCallbackEnter(void);
+extern void uiprivUserCallbackLeave(void);
+// Returns nonzero when c or one of its ancestors is queued for destruction.
+extern int uiprivControlDestroyPending(uiControl *);
+extern void uiprivControlDestroyFlush(uintptr_t);
+extern void uiprivControlDestroyFlushPending(void);
+extern void uiprivControlDestroyUninit(void);
+extern void uiprivScheduleControlDestroyFlush(uintptr_t);
+#ifdef _UI_STATIC
+extern void uiprivControlDestroySetScheduleFuncForTests(void (*)(uintptr_t));
+#endif
+
 // areaevents.c
 typedef struct uiprivClickCounter uiprivClickCounter;
 // Call uiprivClickCounterReset() to initialize a new instance.

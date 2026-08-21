@@ -26,8 +26,10 @@ static BOOL onWM_COMMAND(uiControl *cc, HWND hwnd, WORD code, LRESULT *lResult)
 	}
 	if (code != CBN_EDITCHANGE)
 		return FALSE;
+	uiprivUserCallbackEnter();
 	(*(c->onChanged))(c, c->onChangedData);
 	*lResult = 0;
+	uiprivUserCallbackLeave();
 	return TRUE;
 }
 

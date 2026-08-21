@@ -47,8 +47,11 @@ struct uiMultilineEntry {
 {
 	[super didChangeText];
 	[self invalidateIntrinsicContentSize];
-	if (!self->libui_e->changing)
+	if (!self->libui_e->changing) {
+		uiprivUserCallbackEnter();
 		(*(self->libui_e->onChanged))(self->libui_e, self->libui_e->onChangedData);
+		uiprivUserCallbackLeave();
+	}
 }
 
 @end

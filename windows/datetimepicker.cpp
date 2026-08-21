@@ -149,7 +149,9 @@ static BOOL onWM_NOTIFY(uiControl *c, HWND hwnd, NMHDR *nmhdr, LRESULT *lResult)
 
 	if (nmhdr->code != DTN_DATETIMECHANGE)
 		return FALSE;
+	uiprivUserCallbackEnter();
 	(*(d->onChanged))(d, d->onChangedData);
+	uiprivUserCallbackLeave();
 	*lResult = 0;
 	return TRUE;
 }

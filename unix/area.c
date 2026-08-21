@@ -126,10 +126,12 @@ static gboolean areaWidget_draw(GtkWidget *w, cairo_t *cr)
 	dp.ClipWidth = clipX1 - clipX0;
 	dp.ClipHeight = clipY1 - clipY0;
 
+	uiprivUserCallbackEnter();
 	// no need to save or restore the graphics state to reset transformations; GTK+ does that for us
 	(*(a->ah->Draw))(a->ah, a, &dp);
 
 	uiprivFreeContext(dp.Context);
+	uiprivUserCallbackLeave();
 	return FALSE;
 }
 
@@ -238,6 +240,7 @@ static gboolean areaWidget_button_press_event(GtkWidget *w, GdkEventButton *e)
 	GtkSettings *settings;
 	uiAreaMouseEvent me;
 
+	uiprivUserCallbackEnter();
 	// clicking doesn't automatically transfer keyboard focus; we must do so manually (thanks tristan in irc.gimp.net/#gtk+)
 	gtk_widget_grab_focus(w);
 
@@ -247,7 +250,7 @@ static gboolean areaWidget_button_press_event(GtkWidget *w, GdkEventButton *e)
 	// we handle multiple clicks ourselves here, in the same way as we do on Windows
 	if (e->type != GDK_BUTTON_PRESS)
 		// ignore GDK's generated double-clicks and beyond
-		return GDK_EVENT_PROPAGATE;
+		goto done;
 	settings = gtk_widget_get_settings(w);
 	g_object_get(settings,
 		"gtk-double-click-time", &maxTime,
@@ -266,6 +269,8 @@ static gboolean areaWidget_button_press_event(GtkWidget *w, GdkEventButton *e)
 	a->dragevent = e;
 	finishMouseEvent(a, &me, e->button, e->x, e->y, e->state, e->window);
 	a->dragevent = NULL;
+done:
+	uiprivUserCallbackLeave();
 	return GDK_EVENT_PROPAGATE;
 }
 
@@ -278,7 +283,9 @@ static gboolean areaWidget_button_release_event(GtkWidget *w, GdkEventButton *e)
 	me.Down = 0;
 	me.Up = e->button;
 	me.Count = 0;
+	uiprivUserCallbackEnter();
 	finishMouseEvent(a, &me, e->button, e->x, e->y, e->state, e->window);
+	uiprivUserCallbackLeave();
 	return GDK_EVENT_PROPAGATE;
 }
 
@@ -291,7 +298,9 @@ static gboolean areaWidget_motion_notify_event(GtkWidget *w, GdkEventMotion *e)
 	me.Down = 0;
 	me.Up = 0;
 	me.Count = 0;
+	uiprivUserCallbackEnter();
 	finishMouseEvent(a, &me, 0, e->x, e->y, e->state, e->window);
+	uiprivUserCallbackLeave();
 	return GDK_EVENT_PROPAGATE;
 }
 
@@ -301,8 +310,10 @@ static gboolean onCrossing(areaWidget *aw, int left)
 {
 	uiArea *a = aw->a;
 
+	uiprivUserCallbackEnter();
 	(*(a->ah->MouseCrossed))(a->ah, a, left);
 	uiprivClickCounterReset(a->cc);
+	uiprivUserCallbackLeave();
 	return GDK_EVENT_PROPAGATE;
 }
 
@@ -418,8 +429,12 @@ static gboolean areaWidget_key_press_event(GtkWidget *w, GdkEventKey *e)
 {
 	areaWidget *aw = areaWidget(w);
 	uiArea *a = aw->a;
+	int handled;
 
-	if (areaKeyEvent(a, 0, e))
+	uiprivUserCallbackEnter();
+	handled = areaKeyEvent(a, 0, e);
+	uiprivUserCallbackLeave();
+	if (handled)
 		return GDK_EVENT_STOP;
 	return GDK_EVENT_PROPAGATE;
 }
@@ -428,8 +443,12 @@ static gboolean areaWidget_key_release_event(GtkWidget *w, GdkEventKey *e)
 {
 	areaWidget *aw = areaWidget(w);
 	uiArea *a = aw->a;
+	int handled;
 
-	if (areaKeyEvent(a, 1, e))
+	uiprivUserCallbackEnter();
+	handled = areaKeyEvent(a, 1, e);
+	uiprivUserCallbackLeave();
+	if (handled)
 		return GDK_EVENT_STOP;
 	return GDK_EVENT_PROPAGATE;
 }

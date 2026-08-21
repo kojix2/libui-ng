@@ -103,6 +103,8 @@ static void areaMouseEvent(uiArea *a, int down, int  up, WPARAM wParam, LPARAM l
 		} else if (!inClient && a->inside) {
 			setMouseInside(a, FALSE);
 		}
+		if (uiprivControlDestroyPending(uiControl(a)))
+			return;
 	}
 
 	xpix = (double) GET_X_LPARAM(lParam);
@@ -157,6 +159,8 @@ static void areaMouseEvent(uiArea *a, int down, int  up, WPARAM wParam, LPARAM l
 	// only release capture when all buttons released
 	if (me.Up != 0 && me.Held1To64 == 0)
 		capture(a, FALSE);
+	if (uiprivControlDestroyPending(uiControl(a)))
+		return;
 
 	a->inMouseDownEvent = me.Down != 0;
 	(*(a->ah->MouseEvent))(a->ah, a, &me);
@@ -325,46 +329,68 @@ BOOL areaDoEvents(uiArea *a, UINT uMsg, WPARAM wParam, LPARAM lParam, LRESULT *l
 {
 	switch (uMsg) {
 	case WM_ACTIVATE:
+	case WM_MOUSEMOVE:
+	case WM_MOUSELEAVE:
+	case WM_LBUTTONDOWN:
+	case WM_LBUTTONUP:
+	case WM_MBUTTONDOWN:
+	case WM_MBUTTONUP:
+	case WM_RBUTTONDOWN:
+	case WM_RBUTTONUP:
+	case WM_XBUTTONDOWN:
+	case WM_XBUTTONUP:
+	case WM_CAPTURECHANGED:
+	case msgAreaKeyDown:
+	case msgAreaKeyUp:
+		break;
+	default:
+		return FALSE;
+	}
+
+	uiprivUserCallbackEnter();
+	switch (uMsg) {
+	case WM_ACTIVATE:
 		// don't keep the double-click timer running if the user switched programs in between clicks
 		uiprivClickCounterReset(&(a->cc));
 		*lResult = 0;
-		return TRUE;
+		break;
 	case WM_MOUSEMOVE:
 		onMouseEntered(a);
-		areaMouseEvent(a, 0, 0, wParam, lParam);
+		if (!uiprivControlDestroyPending(uiControl(a)))
+			areaMouseEvent(a, 0, 0, wParam, lParam);
 		*lResult = 0;
-		return TRUE;
+		break;
 	case WM_MOUSELEAVE:
 		onMouseLeft(a);
 		*lResult = 0;
-		return TRUE;
+		break;
 	case WM_LBUTTONDOWN:
 		SetFocus(a->hwnd);
 		areaMouseEvent(a, 1, 0, wParam, lParam);
 		*lResult = 0;
-		return TRUE;
+		break;
 	case WM_LBUTTONUP:
 		areaMouseEvent(a, 0, 1, wParam, lParam);
 		*lResult = 0;
-		return TRUE;
+		break;
 	case WM_MBUTTONDOWN:
 		SetFocus(a->hwnd);
 		areaMouseEvent(a, 2, 0, wParam, lParam);
 		*lResult = 0;
-		return TRUE;
+		break;
 	case WM_MBUTTONUP:
 		areaMouseEvent(a, 0, 2, wParam, lParam);
 		*lResult = 0;
-		return TRUE;
+		break;
 	case WM_RBUTTONDOWN:
 		SetFocus(a->hwnd);
 		areaMouseEvent(a, 3, 0, wParam, lParam);
 		*lResult = 0;
-		return TRUE;
+		break;
 	case WM_RBUTTONUP:
 		areaMouseEvent(a, 0, 3, wParam, lParam);
 		*lResult = 0;
-		return TRUE;
+		break;
 	case WM_XBUTTONDOWN:
 		SetFocus(a->hwnd);
 		// values start at 1; we want them to start at 4
@@ -372,28 +398,29 @@ BOOL areaDoEvents(uiArea *a, UINT uMsg, WPARAM wParam, LPARAM lParam, LRESULT *l
 			GET_XBUTTON_WPARAM(wParam) + 3, 0,
 			GET_KEYSTATE_WPARAM(wParam), lParam);
 		*lResult = TRUE;	// XBUTTON messages are different!
-		return TRUE;
+		break;
 	case WM_XBUTTONUP:
 		areaMouseEvent(a,
 			0, GET_XBUTTON_WPARAM(wParam) + 3,
 			GET_KEYSTATE_WPARAM(wParam), lParam);
 		*lResult = TRUE;	// XBUTTON messages are different!
-		return TRUE;
+		break;
 	case WM_CAPTURECHANGED:
 		if (a->capturing) {
 			a->capturing = FALSE;
 			(*(a->ah->DragBroken))(a->ah, a);
 		}
 		*lResult = 0;
-		return TRUE;
+		break;
 	case msgAreaKeyDown:
 		*lResult = (LRESULT) areaKeyEvent(a, 0, wParam, lParam);
-		return TRUE;
+		break;
 	case msgAreaKeyUp:
 		*lResult = (LRESULT) areaKeyEvent(a, 1, wParam, lParam);
-		return TRUE;
+		break;
 	}
-	return FALSE;
+	uiprivUserCallbackLeave();
+	return TRUE;
 }
 
 // TODO decide whether queued key messages for hidden areas should be ignored

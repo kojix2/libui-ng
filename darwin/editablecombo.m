@@ -55,7 +55,9 @@ struct uiEditableCombobox {
 {
 	uiEditableCombobox *c = self->combobox;
 
+	uiprivUserCallbackEnter();
 	(*(c->onChanged))(c, c->onChangedData);
+	uiprivUserCallbackLeave();
 }
 
 // the above doesn't handle when an item is selected; this will

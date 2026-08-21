@@ -30,17 +30,7 @@ struct uiWindow {
 	BOOL changingPosition;
 };
 
-static std::map<uiWindow *, uint64_t> windows;
-static uint64_t nextWindowLifetime = 1;
-
-static uint64_t windowLifetime(uiWindow *w)
-{
-	auto i = windows.find(w);
-
-	if (i == windows.end())
-		return 0;
-	return i->second;
-}
+static std::set<uiWindow *> windows;
 
 static BOOL isMenuCommand(WPARAM wParam, LPARAM lParam)
 {
@@ -121,7 +111,6 @@ static LRESULT CALLBACK windowWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARA
 {
 	LONG_PTR ww;
 	uiWindow *w;
-	uint64_t lifetime;
 	CREATESTRUCTW *cs = (CREATESTRUCTW *) lParam;
 	WINDOWPOS *wp = (WINDOWPOS *) lParam;
 	MINMAXINFO *mmi = (MINMAXINFO *) lParam;
@@ -145,24 +134,31 @@ static LRESULT CALLBACK windowWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARA
 		runMenuEvent(LOWORD(wParam), uiWindow(w));
 		return 0;
 	case WM_WINDOWPOSCHANGED:
-		lifetime = windowLifetime(w);
+		uiprivUserCallbackEnter();
 		if ((wp->flags & SWP_NOMOVE) == 0)
 			if (w->onPositionChanged != NULL)
 				if (!w->changingPosition) {
 					(*(w->onPositionChanged))(w, w->onPositionChangedData);
-					if (lifetime != 0 && windowLifetime(w) != lifetime)
+					if (uiprivControlDestroyPending(uiControl(w))) {
+						uiprivUserCallbackLeave();
 						return 0;
+					}
 				}
-		if ((wp->flags & SWP_NOSIZE) != 0)
+		if ((wp->flags & SWP_NOSIZE) != 0) {
+			uiprivUserCallbackLeave();
 			break;
+		}
 		// WM_WINDOWPOSCHANGED can arrive before window construction is complete.
 		if (w->onContentSizeChanged != NULL)
 			if (!w->changingSize) {
 				(*(w->onContentSizeChanged))(w, w->onContentSizeChangedData);
-				if (lifetime != 0 && windowLifetime(w) != lifetime)
+				if (uiprivControlDestroyPending(uiControl(w))) {
+					uiprivUserCallbackLeave();
 					return 0;
+				}
 			}
 		windowRelayout(w);
+		uiprivUserCallbackLeave();
 		return 0;
 	case WM_GETMINMAXINFO:
 		// ensure the user cannot resize the window smaller than its minimum size
@@ -178,11 +174,15 @@ static LRESULT CALLBACK windowWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARA
 			w->focused = 0;
 		else
 			w->focused = 1;
+		uiprivUserCallbackEnter();
 		w->onFocusChanged(w, w->onFocusChangedData);
+		uiprivUserCallbackLeave();
 		return 0;
 	case WM_CLOSE:
+		uiprivUserCallbackEnter();
 		if ((*(w->onClosing))(w, w->onClosingData))
 			uiControlDestroy(uiControl(w));
+		uiprivUserCallbackLeave();
 		return 0;		// we destroyed it already
 	}
 	return DefWindowProcW(hwnd, uMsg, wParam, lParam);
@@ -580,7 +580,7 @@ uiWindow *uiNewWindow(const char *title, int width, int height, int hasMenubar)
 	uiWindowOnFocusChanged(w, defaultOnFocusChanged, NULL);
 	uiWindowOnPositionChanged(w, defaultOnPositionContentSizeChanged, NULL);
 
-	windows[w] = nextWindowLifetime++;
+	windows.insert(w);
 	return w;
 }
 
@@ -604,19 +604,19 @@ void ensureMinimumWindowSize(uiWindow *w)
 void disableAllWindowsExcept(uiWindow *which)
 {
 	for (auto &w : windows) {
-		if (w.first == which)
+		if (w == which)
 			continue;
-		EnableWindow(w.first->hwnd, FALSE);
+		EnableWindow(w->hwnd, FALSE);
 	}
 }
 
 void enableAllWindowsExcept(uiWindow *which)
 {
 	for (auto &w : windows) {
-		if (w.first == which)
+		if (w == which)
 			continue;
-		if (!uiControlEnabled(uiControl(w.first)))
+		if (!uiControlEnabled(uiControl(w)))
 			continue;
-		EnableWindow(w.first->hwnd, TRUE);
+		EnableWindow(w->hwnd, TRUE);
 	}
 }

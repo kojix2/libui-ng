@@ -17,7 +17,9 @@ static void onChanged(GtkSpinButton *sb, gpointer data)
 {
 	uiSpinbox *s = uiSpinbox(data);
 
+	uiprivUserCallbackEnter();
 	(*(s->onChanged))(s, s->onChangedData);
+	uiprivUserCallbackLeave();
 }
 
 static void defaultOnChanged(uiSpinbox *s, void *data)

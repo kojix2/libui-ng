@@ -22,7 +22,9 @@ static void onReplaceClicked(uiButton *button, void *data)
 	(void) button;
 	(void) data;
 
-	uiQueueMain(replaceChild, NULL);
+	// Destroying the control that owns the callback sender is safe; libui
+	// defers physical destruction to a later main-loop turn.
+	replaceChild(NULL);
 }
 
 static int onClosing(uiWindow *w, void *data)

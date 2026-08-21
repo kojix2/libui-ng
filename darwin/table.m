@@ -66,7 +66,9 @@
 	if (row < 0)
 		return;
 
+	uiprivUserCallbackEnter();
 	(*(t->onRowClicked))(t, row, t->onRowClickedData);
+	uiprivUserCallbackLeave();
 }
 
 - (void)onDoubleClicked:(id)sender
@@ -77,7 +79,9 @@
 	if (row < 0)
 		return;
 
+	uiprivUserCallbackEnter();
 	(*(t->onRowDoubleClicked))(t, row, t->onRowDoubleClickedData);
+	uiprivUserCallbackLeave();
 }
 
 // TODO verify custom row backgrounds while scrolling through and beyond populated rows.
@@ -147,14 +151,19 @@ static void setBackgroundColor(uiprivTableView *t, NSTableRowView *rv, NSInteger
 - (void)tableView:(uiprivTableView *)tv didClickTableColumn:(NSTableColumn *) tc
 {
 	uiTable *t = [tv uiTable];
+	uiprivUserCallbackEnter();
 	t->headerOnClicked(t, [[tc identifier] intValue], t->headerOnClickedData);
+	uiprivUserCallbackLeave();
 }
 
 - (void)tableViewSelectionDidChange:(NSNotification *)notification
 {
 	uiTable *t = [(uiprivTableView*)[notification object] uiTable];
-	if (t->suppressSelectionChanged == 0)
+	if (t->suppressSelectionChanged == 0) {
+		uiprivUserCallbackEnter();
 		t->onSelectionChanged(t, t->onSelectionChangedData);
+		uiprivUserCallbackLeave();
+	}
 }
 
 @end

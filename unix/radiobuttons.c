@@ -31,7 +31,9 @@ static void onToggled(GtkToggleButton *tb, gpointer data)
 	// ignore programmatic changes
 	if (r->changing)
 		return;
+	uiprivUserCallbackEnter();
 	(*(r->onSelected))(r, r->onSelectedData);
+	uiprivUserCallbackLeave();
 }
 
 static void uiRadioButtonsDestroy(uiControl *c)

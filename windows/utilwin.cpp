@@ -20,6 +20,7 @@ static LRESULT CALLBACK utilWindowWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, L
 	void (*qf)(void *);
 	LRESULT lResult;
 	uiprivTimer *timer;
+	int repeat;
 
 	if (handleParentMessages(hwnd, uMsg, wParam, lParam, &lResult) != FALSE)
 		return lResult;
@@ -36,11 +37,19 @@ static LRESULT CALLBACK utilWindowWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, L
 		return 0;
 	case msgQueued:
 		qf = (void (*)(void *)) wParam;
+		uiprivUserCallbackEnter();
 		(*qf)((void *) lParam);
+		uiprivUserCallbackLeave();
+		return 0;
+	case msgControlDestroyFlush:
+		uiprivControlDestroyFlush((uintptr_t) wParam);
 		return 0;
 	case WM_TIMER:
 		timer = (uiprivTimer *) wParam;
-		if (!(*(timer->f))(timer->data)) {
+		uiprivUserCallbackEnter();
+		repeat = (*(timer->f))(timer->data);
+		uiprivUserCallbackLeave();
+		if (!repeat) {
 			if (KillTimer(utilWindow, (UINT_PTR) timer) == 0)
 				logLastError(L"error calling KillTimer() to end uiTimer() procedure");
 			uiprivFreeTimer(timer);
@@ -48,6 +57,12 @@ static LRESULT CALLBACK utilWindowWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, L
 		return 0;
 	}
 	return DefWindowProcW(hwnd, uMsg, wParam, lParam);
+}
+
+void uiprivScheduleControlDestroyFlush(uintptr_t id)
+{
+	if (PostMessageW(utilWindow, msgControlDestroyFlush, (WPARAM) id, 0) == 0)
+		logLastError(L"error queueing deferred control destruction");
 }
 
 const char *initUtilWindow(HICON hDefaultIcon, HCURSOR hDefaultCursor)
