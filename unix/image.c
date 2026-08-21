@@ -1,6 +1,5 @@
 // 27 june 2016
 #include "uipriv_unix.h"
-#include <float.h>
 #include <limits.h>
 
 struct uiImage {
@@ -20,9 +19,9 @@ uiImage *uiNewImage(double width, double height)
 {
 	uiImage *i;
 
-	if (!(width > 0) || width > DBL_MAX ||
-		!(height > 0) || height > DBL_MAX) {
-		uiprivUserBug("uiNewImage() dimensions must be finite and positive.");
+	if (!(width > 0) || width > INT_MAX ||
+		!(height > 0) || height > INT_MAX) {
+		uiprivUserBug("uiNewImage() dimensions must be finite, positive, and no greater than INT_MAX.");
 		return NULL;
 	}
 	i = uiprivNew(uiImage);
@@ -161,12 +160,21 @@ writeMatch:
 cairo_surface_t *uiprivImageAppropriateSurface(uiImage *i, GtkWidget *w)
 {
 	struct matcher m;
+	int scale;
 
 	m.best = NULL;
 	m.distX = G_MAXINT;
 	m.distY = G_MAXINT;
-	m.targetX = i->width * gtk_widget_get_scale_factor(w);
-	m.targetY = i->height * gtk_widget_get_scale_factor(w);
+	scale = gtk_widget_get_scale_factor(w);
+	if (scale <= 0) {
+		m.targetX = 0;
+		m.targetY = 0;
+	} else {
+		m.targetX = i->width > G_MAXINT / scale ?
+			G_MAXINT : i->width * scale;
+		m.targetY = i->height > G_MAXINT / scale ?
+			G_MAXINT : i->height * scale;
+	}
 	m.foundLarger = FALSE;
 	g_ptr_array_foreach(i->images, match, &m);
 	return m.best;

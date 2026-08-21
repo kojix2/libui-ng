@@ -1,5 +1,5 @@
 #include "uipriv_windows.hpp"
-#include <float.h>
+#include <limits.h>
 
 // TODO:
 // - is the alpha channel ignored when drawing images in tables?
@@ -28,9 +28,9 @@ uiImage *uiNewImage(double width, double height)
 {
 	uiImage *i;
 
-	if (!(width > 0) || width > DBL_MAX ||
-		!(height > 0) || height > DBL_MAX) {
-		uiprivUserBug("uiNewImage() dimensions must be finite and positive.");
+	if (!(width > 0) || width > INT_MAX ||
+		!(height > 0) || height > INT_MAX) {
+		uiprivUserBug("uiNewImage() dimensions must be finite, positive, and no greater than INT_MAX.");
 		return NULL;
 	}
 	i = uiprivNew(uiImage);
@@ -203,14 +203,17 @@ writeMatch:
 IWICBitmap *uiprivImageAppropriateForDC(uiImage *i, HDC dc)
 {
 	struct matcher m;
+	int target;
 
 	m.best = NULL;
 	m.distX = INT_MAX;
 	m.distY = INT_MAX;
 	// uiImage dimensions are in points at 96 DPI; select a representation
 	// using the corresponding pixel dimensions for this device context.
-	m.targetX = MulDiv((int) i->width, GetDeviceCaps(dc, LOGPIXELSX), 96);
-	m.targetY = MulDiv((int) i->height, GetDeviceCaps(dc, LOGPIXELSY), 96);
+	target = MulDiv((int) i->width, GetDeviceCaps(dc, LOGPIXELSX), 96);
+	m.targetX = target == -1 ? INT_MAX : target;
+	target = MulDiv((int) i->height, GetDeviceCaps(dc, LOGPIXELSY), 96);
+	m.targetY = target == -1 ? INT_MAX : target;
 	m.foundLarger = false;
 	for (IWICBitmap *b : *(i->bitmaps))
 		match(b, &m);
