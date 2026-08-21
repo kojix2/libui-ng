@@ -179,3 +179,25 @@ cairo_surface_t *uiprivImageAppropriateSurface(uiImage *i, GtkWidget *w)
 	g_ptr_array_foreach(i->images, match, &m);
 	return m.best;
 }
+
+cairo_surface_t *uiprivImageAppropriateSurfaceForSize(uiImage *i,
+	int pixelWidth, int pixelHeight)
+{
+	uiprivImageRepMatcher matcher;
+	cairo_surface_t *best;
+	guint n;
+
+	uiprivImageRepMatcherInit(&matcher, pixelWidth, pixelHeight);
+	best = NULL;
+	for (n = 0; n < i->images->len; n++) {
+		cairo_surface_t *surface;
+		int width, height;
+
+		surface = g_ptr_array_index(i->images, n);
+		width = cairo_image_surface_get_width(surface);
+		height = cairo_image_surface_get_height(surface);
+		if (uiprivImageRepMatcherAdd(&matcher, width, height))
+			best = surface;
+	}
+	return best;
+}

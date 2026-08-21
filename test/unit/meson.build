@@ -18,7 +18,9 @@ libui_unit_sources = [
         'datetimepicker.c',
 	    'grid.c',
         'drawmatrix.c',
+        'drawimage.c',
         'attrstr.c',
+        'imagerep.c',
         'window.c',
 ]
 libui_unit_sources += libui_test_internal_sources
