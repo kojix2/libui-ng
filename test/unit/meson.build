@@ -21,6 +21,7 @@ libui_unit_sources = [
 	'drawimage.c',
 	'attrstr.c',
 	'imagerep.c',
+	'imageview.c',
 	'window.c',
 ]
 libui_unit_sources += libui_test_internal_sources

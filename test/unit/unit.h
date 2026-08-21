@@ -38,6 +38,7 @@ int drawMatrixRunUnitTests(void);
 int drawImageRunUnitTests(void);
 int attrstrRunUnitTests(void);
 int imageRepRunUnitTests(void);
+int imageViewRunUnitTests(void);
 
 /**
  * Helper for general setup/teardown of controls embedded in a window.
