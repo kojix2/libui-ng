@@ -239,8 +239,10 @@ static HRESULT addEffectAttributeToRange(struct attributeApplyParams *p, size_t 
 		cea = (combinedEffectsAttr *) u;
 		if (cea == NULL)
 			cea = new combinedEffectsAttr(attr);
-		else
+		else {
 			cea = cea->cloneWith(attr);
+			u->Release();
+		}
 		// clamp range within [start, end)
 		if (range.startPosition < start) {
 			diff = start - range.startPosition;
@@ -378,11 +380,17 @@ static HRESULT applyEffectsAttributes(struct attributeApplyParams *p)
 		cea = (combinedEffectsAttr *) u;
 		if (cea != NULL) {
 			auto diter = effects.find(cea);
-			if (diter != effects.end())
+			if (diter != effects.end()) {
 				dea = diter->second;
-			else {
+				cea->Release();
+			} else {
 				dea = cea->toDrawingEffectsAttr();
-				effects.insert({cea, dea});
+				auto inserted = effects.insert({cea, dea});
+				if (!inserted.second) {
+					cea->Release();
+					dea->Release();
+					dea = inserted.first->second;
+				}
 			}
 			hr = p->layout->SetDrawingEffect(dea, range);
 			// don't release dea; we need the reference that's inside the map
