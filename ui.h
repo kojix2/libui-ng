@@ -139,6 +139,23 @@ struct uiControl {
 _UI_EXTERN void uiControlDestroy(uiControl *c);
 
 /**
+ * Registers a function to be called when the control is destroyed.
+ *
+ * The function is called from uiFreeControl(), after platform resources have
+ * been released and immediately before the control's storage is freed. It is
+ * also called for a child destroyed as part of destroying its parent. Calling
+ * this function again replaces the previous function; pass `NULL` for @p f to
+ * remove it.
+ *
+ * @param c uiControl instance.
+ * @param f Function to call, or `NULL` to remove the current function.
+ * @param data Data to pass to @p f.
+ * @memberof uiControl
+ */
+_UI_EXTERN void uiControlOnDestroyed(uiControl *c,
+	void (*f)(uiControl *c, void *data), void *data);
+
+/**
  * Returns the control's OS-level handle.
  *
  * @param c uiControl instance.

@@ -8,12 +8,28 @@ struct pendingControlDestroy {
 	pendingControlDestroy *next;
 };
 
+typedef struct controlDestroyedHandler controlDestroyedHandler;
+struct controlDestroyedHandler {
+	uiControl *c;
+	void (*f)(uiControl *, void *);
+	void *data;
+	controlDestroyedHandler *next;
+};
+
+typedef struct freeingControl freeingControl;
+struct freeingControl {
+	uiControl *c;
+	freeingControl *next;
+};
+
 static unsigned int userCallbackDepth;
 static int flushingPendingControlDestroys;
 static uintptr_t pendingControlDestroyFlushID;
 static uintptr_t nextControlDestroyFlushID;
 static pendingControlDestroy *pendingControlDestroys;
 static pendingControlDestroy **pendingControlDestroysTail = &pendingControlDestroys;
+static controlDestroyedHandler *controlDestroyedHandlers;
+static freeingControl *freeingControls;
 
 #ifdef _UI_STATIC
 static void (*controlDestroyScheduleFuncForTests)(uintptr_t);
@@ -47,6 +63,39 @@ static void removePendingControlDestroy(uiControl *c)
 	if (pending->next == NULL)
 		pendingControlDestroysTail = p;
 	uiprivFree(pending);
+}
+
+static controlDestroyedHandler **findControlDestroyedHandler(uiControl *c)
+{
+	controlDestroyedHandler **p;
+
+	for (p = &controlDestroyedHandlers; *p != NULL; p = &((*p)->next))
+		if ((*p)->c == c)
+			return p;
+	return NULL;
+}
+
+static controlDestroyedHandler *removeControlDestroyedHandler(uiControl *c)
+{
+	controlDestroyedHandler **p;
+	controlDestroyedHandler *handler;
+
+	p = findControlDestroyedHandler(c);
+	if (p == NULL)
+		return NULL;
+	handler = *p;
+	*p = handler->next;
+	return handler;
+}
+
+static int controlIsBeingFreed(uiControl *c)
+{
+	freeingControl *freeing;
+
+	for (freeing = freeingControls; freeing != NULL; freeing = freeing->next)
+		if (freeing->c == c)
+			return 1;
+	return 0;
 }
 
 static void flushPendingControlDestroys(void)
@@ -136,12 +185,39 @@ void uiprivControlDestroyUninit(void)
 
 int uiprivControlDestroyPending(uiControl *c)
 {
-	if (pendingControlDestroys == NULL)
-		return 0;
 	for (; c != NULL; c = uiControlParent(c))
-		if (findPendingControlDestroy(c) != NULL)
+		if (findPendingControlDestroy(c) != NULL || controlIsBeingFreed(c))
 			return 1;
 	return 0;
+}
+
+void uiControlOnDestroyed(uiControl *c, void (*f)(uiControl *, void *), void *data)
+{
+	controlDestroyedHandler **p;
+	controlDestroyedHandler *handler;
+
+	if (c == NULL)
+		uiprivUserBug("uiControlOnDestroyed() cannot be called with NULL");
+	p = findControlDestroyedHandler(c);
+	if (p != NULL) {
+		handler = *p;
+		if (f == NULL) {
+			*p = handler->next;
+			uiprivFree(handler);
+			return;
+		}
+		handler->f = f;
+		handler->data = data;
+		return;
+	}
+	if (f == NULL)
+		return;
+	handler = uiprivNew(controlDestroyedHandler);
+	handler->c = c;
+	handler->f = f;
+	handler->data = data;
+	handler->next = controlDestroyedHandlers;
+	controlDestroyedHandlers = handler;
 }
 
 void uiControlDestroy(uiControl *c)
@@ -227,11 +303,29 @@ uiControl *uiAllocControl(size_t size, uint32_t OSsig, uint32_t typesig, const c
 
 void uiFreeControl(uiControl *c)
 {
+	controlDestroyedHandler *handler;
+	freeingControl freeing;
+	void (*f)(uiControl *, void *);
+	void *data;
+
 	if (uiControlParent(c) != NULL)
 		uiprivUserBug("You cannot destroy a uiControl while it still has a parent. (control: %p)", c);
 	// A parent destroy can synchronously destroy a child that was also queued.
 	// Remove that stale queue entry before releasing the child's storage.
 	removePendingControlDestroy(c);
+	handler = removeControlDestroyedHandler(c);
+	if (handler != NULL) {
+		f = handler->f;
+		data = handler->data;
+		uiprivFree(handler);
+		freeing.c = c;
+		freeing.next = freeingControls;
+		freeingControls = &freeing;
+		uiprivUserCallbackEnter();
+		(*f)(c, data);
+		uiprivUserCallbackLeave();
+		freeingControls = freeing.next;
+	}
 	uiprivFree(c);
 }
 

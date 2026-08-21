@@ -13,6 +13,21 @@ struct testControl {
 static int scheduleCount;
 static uintptr_t scheduledID;
 
+static void countDestroyed(uiControl *c, void *data)
+{
+	int *count = data;
+
+	(*count)++;
+}
+
+static void destroyAgainWhenDestroyed(uiControl *c, void *data)
+{
+	int *count = data;
+
+	(*count)++;
+	uiControlDestroy(c);
+}
+
 static void captureSchedule(uintptr_t id)
 {
 	scheduleCount++;
@@ -215,6 +230,69 @@ static void scheduledFlushChecksIDAndWaitsForOutermostLeave(void **state)
 	assert_int_equal(destroyCount, 1);
 }
 
+static void destroyedHandlerRunsAtFree(void **state)
+{
+	int destroyCount = 0;
+	int destroyedHandlerCount = 0;
+	testControl *tc = newTestControl(&destroyCount);
+
+	uiControlOnDestroyed(uiControl(tc), countDestroyed, &destroyedHandlerCount);
+	uiprivUserCallbackEnter();
+	uiControlDestroy(uiControl(tc));
+	assert_int_equal(destroyedHandlerCount, 0);
+	uiprivUserCallbackLeave();
+	assert_int_equal(destroyedHandlerCount, 0);
+	uiprivControlDestroyFlushPending();
+	assert_int_equal(destroyedHandlerCount, 1);
+}
+
+static void parentDestroyNotifiesForChild(void **state)
+{
+	int parentDestroyCount = 0;
+	int childDestroyCount = 0;
+	int childDestroyedHandlerCount = 0;
+	testControl *parent = newTestControl(&parentDestroyCount);
+	testControl *child = newTestControl(&childDestroyCount);
+
+	parent->child = child;
+	child->parent = uiControl(parent);
+	uiControlOnDestroyed(uiControl(child), countDestroyed,
+		&childDestroyedHandlerCount);
+	uiControlDestroy(uiControl(parent));
+	assert_int_equal(parentDestroyCount, 1);
+	assert_int_equal(childDestroyCount, 1);
+	assert_int_equal(childDestroyedHandlerCount, 1);
+}
+
+static void destroyedHandlerCanBeReplacedAndRemoved(void **state)
+{
+	int destroyCount = 0;
+	int firstCount = 0;
+	int secondCount = 0;
+	testControl *tc = newTestControl(&destroyCount);
+
+	uiControlOnDestroyed(uiControl(tc), countDestroyed, &firstCount);
+	uiControlOnDestroyed(uiControl(tc), countDestroyed, &secondCount);
+	uiControlOnDestroyed(uiControl(tc), NULL, NULL);
+	uiControlDestroy(uiControl(tc));
+	assert_int_equal(firstCount, 0);
+	assert_int_equal(secondCount, 0);
+}
+
+static void destroyedHandlerCannotQueueSelfAgain(void **state)
+{
+	int destroyCount = 0;
+	int destroyedHandlerCount = 0;
+	testControl *tc = newTestControl(&destroyCount);
+
+	uiControlOnDestroyed(uiControl(tc), destroyAgainWhenDestroyed,
+		&destroyedHandlerCount);
+	uiControlDestroy(uiControl(tc));
+	assert_int_equal(destroyCount, 1);
+	assert_int_equal(destroyedHandlerCount, 1);
+	uiprivControlDestroyFlushPending();
+	assert_int_equal(destroyCount, 1);
+}
 static int controlSetup(void **state)
 {
 	uiInitOptions o = {0};
@@ -244,6 +322,10 @@ int controlRunUnitTests(void)
 		cmocka_unit_test(pendingAncestorMakesChildPending),
 		cmocka_unit_test(callbackDuringFlushAppendsDestroy),
 		cmocka_unit_test(scheduledFlushChecksIDAndWaitsForOutermostLeave),
+		cmocka_unit_test(destroyedHandlerRunsAtFree),
+		cmocka_unit_test(parentDestroyNotifiesForChild),
+		cmocka_unit_test(destroyedHandlerCanBeReplacedAndRemoved),
+		cmocka_unit_test(destroyedHandlerCannotQueueSelfAgain),
 	};
 
 	return cmocka_run_group_tests_name("uiControl deferred destruction", tests,
