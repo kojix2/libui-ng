@@ -35,7 +35,9 @@ int progressBarRunUnitTests(void);
 int dateTimePickerRunUnitTests(void);
 int gridRunUnitTests(void);
 int drawMatrixRunUnitTests(void);
+int drawImageRunUnitTests(void);
 int attrstrRunUnitTests(void);
+int imageRepRunUnitTests(void);
 
 /**
  * Helper for general setup/teardown of controls embedded in a window.
