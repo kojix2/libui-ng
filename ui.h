@@ -3211,6 +3211,8 @@ _UI_EXTERN uiImage *uiNewImage(double width, double height);
 
 /**
  * Frees the image container and all associated resources.
+ * If called from a user callback, the free is deferred and ordered with any
+ * control destruction requested by that callback.
  *
  * @param i uiImage instance.
  * @memberof uiImage
@@ -3544,6 +3546,8 @@ _UI_EXTERN uiTableModel *uiNewTableModel(uiTableModelHandler *mh);
 
 /**
  * Frees the table model.
+ * If called from a user callback, the free is deferred and ordered with any
+ * control destruction requested by that callback.
  *
  * @param m Table model to free.
  * @warning It is an error to free table models currently associated with a

@@ -14,6 +14,20 @@ struct testControl {
 static int scheduleCount;
 static uintptr_t scheduledID;
 
+typedef struct deferredFreeState deferredFreeState;
+struct deferredFreeState {
+	int *destroyCount;
+	int freeCount;
+};
+
+static void freeAfterControl(void *p)
+{
+	deferredFreeState *s = p;
+
+	assert_int_equal(*(s->destroyCount), 1);
+	s->freeCount++;
+}
+
 static void countDestroyed(uiControl *c, void *data)
 {
 	int *count = data;
@@ -331,6 +345,23 @@ static void pendingAncestorSuppressesChildCallbacks(void **state)
 	assert_int_equal(parentDestroyCount, 1);
 	assert_int_equal(childDestroyCount, 1);
 }
+static void resourceFreeIsDeferredInFifoOrder(void **state)
+{
+	int destroyCount = 0;
+	testControl *tc = newTestControl(&destroyCount);
+	deferredFreeState freeState = { &destroyCount, 0 };
+
+	uiprivUserCallbackEnter(NULL);
+	uiControlDestroy(uiControl(tc));
+	assert_true(uiprivUserCallbackDeferFree(&freeState, freeAfterControl));
+	assert_true(uiprivUserCallbackDeferFree(&freeState, freeAfterControl));
+	uiprivUserCallbackLeave();
+	assert_int_equal(destroyCount, 0);
+	assert_int_equal(freeState.freeCount, 0);
+	uiprivControlDestroyFlushPending();
+	assert_int_equal(destroyCount, 1);
+	assert_int_equal(freeState.freeCount, 1);
+}
 static int controlSetup(void **state)
 {
 	uiInitOptions o = {0};
@@ -366,6 +397,7 @@ int controlRunUnitTests(void)
 		cmocka_unit_test(destroyedHandlerCannotQueueSelfAgain),
 		cmocka_unit_test(pendingControlIsHiddenAndSuppressesCallbacks),
 		cmocka_unit_test(pendingAncestorSuppressesChildCallbacks),
+		cmocka_unit_test(resourceFreeIsDeferredInFifoOrder),
 	};
 
 	return cmocka_run_group_tests_name("uiControl deferred destruction", tests,

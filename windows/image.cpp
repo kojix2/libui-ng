@@ -40,12 +40,21 @@ uiImage *uiNewImage(double width, double height)
 	return i;
 }
 
-void uiFreeImage(uiImage *i)
+static void freeImage(void *p)
 {
+	uiImage *i = (uiImage *) p;
+
 	for (IWICBitmap *b : *(i->bitmaps))
 		b->Release();
 	delete i->bitmaps;
 	uiprivFree(i);
+}
+
+void uiFreeImage(uiImage *i)
+{
+	if (uiprivUserCallbackDeferFree(i, freeImage))
+		return;
+	freeImage(i);
 }
 
 // Store images as premultiplied BGRA, the format expected by Direct2D and by

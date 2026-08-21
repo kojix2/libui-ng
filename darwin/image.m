@@ -23,10 +23,19 @@ uiImage *uiNewImage(double width, double height)
 	return i;
 }
 
-void uiFreeImage(uiImage *i)
+static void freeImage(void *p)
 {
+	uiImage *i = p;
+
 	[i->i release];
 	uiprivFree(i);
+}
+
+void uiFreeImage(uiImage *i)
+{
+	if (uiprivUserCallbackDeferFree(i, freeImage))
+		return;
+	freeImage(i);
 }
 
 void uiImageAppend(uiImage *i, void *pixels, int pixelWidth, int pixelHeight, int byteStride)

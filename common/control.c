@@ -2,10 +2,17 @@
 #include "../ui.h"
 #include "uipriv.h"
 
-typedef struct pendingControlDestroy pendingControlDestroy;
-struct pendingControlDestroy {
-	uiControl *c;
-	pendingControlDestroy *next;
+typedef enum pendingDestroyType {
+	pendingDestroyControl,
+	pendingDestroyResource,
+} pendingDestroyType;
+
+typedef struct pendingDestroy pendingDestroy;
+struct pendingDestroy {
+	pendingDestroyType type;
+	void *p;
+	void (*free)(void *);
+	pendingDestroy *next;
 };
 
 typedef struct controlDestroyedHandler controlDestroyedHandler;
@@ -26,8 +33,8 @@ static unsigned int userCallbackDepth;
 static int flushingPendingControlDestroys;
 static uintptr_t pendingControlDestroyFlushID;
 static uintptr_t nextControlDestroyFlushID;
-static pendingControlDestroy *pendingControlDestroys;
-static pendingControlDestroy **pendingControlDestroysTail = &pendingControlDestroys;
+static pendingDestroy *pendingDestroys;
+static pendingDestroy **pendingDestroysTail = &pendingDestroys;
 static controlDestroyedHandler *controlDestroyedHandlers;
 static freeingControl *freeingControls;
 
@@ -40,20 +47,20 @@ void uiprivControlDestroySetScheduleFuncForTests(void (*f)(uintptr_t))
 }
 #endif
 
-static pendingControlDestroy **findPendingControlDestroy(uiControl *c)
+static pendingDestroy **findPendingControlDestroy(uiControl *c)
 {
-	pendingControlDestroy **p;
+	pendingDestroy **p;
 
-	for (p = &pendingControlDestroys; *p != NULL; p = &((*p)->next))
-		if ((*p)->c == c)
+	for (p = &pendingDestroys; *p != NULL; p = &((*p)->next))
+		if ((*p)->type == pendingDestroyControl && (*p)->p == c)
 			return p;
 	return NULL;
 }
 
 static void removePendingControlDestroy(uiControl *c)
 {
-	pendingControlDestroy **p;
-	pendingControlDestroy *pending;
+	pendingDestroy **p;
+	pendingDestroy *pending;
 
 	p = findPendingControlDestroy(c);
 	if (p == NULL)
@@ -61,7 +68,7 @@ static void removePendingControlDestroy(uiControl *c)
 	pending = *p;
 	*p = pending->next;
 	if (pending->next == NULL)
-		pendingControlDestroysTail = p;
+		pendingDestroysTail = p;
 	uiprivFree(pending);
 }
 
@@ -100,27 +107,35 @@ static int controlIsBeingFreed(uiControl *c)
 
 static void flushPendingControlDestroys(void)
 {
-	pendingControlDestroy *pending;
-	uiControl *c;
+	pendingDestroy *pending;
 
 	if (flushingPendingControlDestroys)
 		return;
 	flushingPendingControlDestroys = 1;
-	while (pendingControlDestroys != NULL) {
-		pending = pendingControlDestroys;
-		pendingControlDestroys = pending->next;
-		if (pendingControlDestroys == NULL)
-			pendingControlDestroysTail = &pendingControlDestroys;
-		c = pending->c;
+	while (pendingDestroys != NULL) {
+		pending = pendingDestroys;
+		pendingDestroys = pending->next;
+		if (pendingDestroys == NULL)
+			pendingDestroysTail = &pendingDestroys;
+		if (pending->type == pendingDestroyControl) {
+			uiControl *c = pending->p;
+
+			uiprivFree(pending);
+			(*(c->Destroy))(c);
+			continue;
+		}
+		void (*free)(void *) = pending->free;
+		void *p = pending->p;
+
 		uiprivFree(pending);
-		(*(c->Destroy))(c);
+		(*free)(p);
 	}
 	flushingPendingControlDestroys = 0;
 }
 
 static void schedulePendingControlDestroys(void)
 {
-	if (pendingControlDestroys == NULL || flushingPendingControlDestroys ||
+	if (pendingDestroys == NULL || flushingPendingControlDestroys ||
 		pendingControlDestroyFlushID != 0)
 		return;
 	nextControlDestroyFlushID++;
@@ -178,8 +193,8 @@ void uiprivControlDestroyUninit(void)
 	if (userCallbackDepth != 0)
 		uiprivImplBug("uiUninit() reached with user callback depth %u", userCallbackDepth);
 	uiprivControlDestroyFlushPending();
-	if (pendingControlDestroys != NULL ||
-		pendingControlDestroysTail != &pendingControlDestroys ||
+	if (pendingDestroys != NULL ||
+		pendingDestroysTail != &pendingDestroys ||
 		flushingPendingControlDestroys || pendingControlDestroyFlushID != 0)
 		uiprivImplBug("uiUninit() reached with inconsistent deferred control destruction state");
 	// Do not reset the ID counter: a backend flush queued before uiUninit()
@@ -192,6 +207,25 @@ int uiprivControlDestroyPending(uiControl *c)
 		if (findPendingControlDestroy(c) != NULL || controlIsBeingFreed(c))
 			return 1;
 	return 0;
+}
+
+int uiprivUserCallbackDeferFree(void *p, void (*free)(void *))
+{
+	pendingDestroy *pending;
+
+	if (userCallbackDepth == 0)
+		return 0;
+	for (pending = pendingDestroys; pending != NULL; pending = pending->next)
+		if (pending->type == pendingDestroyResource &&
+			pending->p == p && pending->free == free)
+			return 1;
+	pending = uiprivNew(pendingDestroy);
+	pending->type = pendingDestroyResource;
+	pending->p = p;
+	pending->free = free;
+	*pendingDestroysTail = pending;
+	pendingDestroysTail = &(pending->next);
+	return 1;
 }
 
 void uiControlOnDestroyed(uiControl *c, void (*f)(uiControl *, void *), void *data)
@@ -228,14 +262,16 @@ void uiControlDestroy(uiControl *c)
 	if (c == NULL)
 		uiprivUserBug("uiControlDestroy() cannot be called with NULL");
 	if (userCallbackDepth != 0) {
-		pendingControlDestroy *pending;
+		pendingDestroy *pending;
 
 		if (uiprivControlDestroyPending(c))
 			return;
-		pending = uiprivNew(pendingControlDestroy);
-		pending->c = c;
-		*pendingControlDestroysTail = pending;
-		pendingControlDestroysTail = &(pending->next);
+		pending = uiprivNew(pendingDestroy);
+		pending->type = pendingDestroyControl;
+		pending->p = c;
+		pending->free = NULL;
+		*pendingDestroysTail = pending;
+		pendingDestroysTail = &(pending->next);
 		(*(c->Hide))(c);
 		return;
 	}

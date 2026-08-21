@@ -183,13 +183,32 @@ uiTableModel *uiNewTableModel(uiTableModelHandler *mh)
 	return m;
 }
 
-void uiFreeTableModel(uiTableModel *m)
+static void freeTableModel(void *p)
 {
+	uiTableModel *m = p;
+
 	if ([m->tables count] != 0)
 		uiprivUserBug("You cannot free a uiTableModel while uiTables are using it.");
 	[m->tables release];
 	[m->m release];
 	uiprivFree(m);
+}
+
+static void validateTableModelFreeRequest(uiTableModel *m)
+{
+	uiprivTableView *tv;
+
+	for (tv in m->tables)
+		if (!uiprivControlDestroyPending(uiControl([tv uiTable])))
+			uiprivUserBug("You cannot free a uiTableModel while uiTables are using it.");
+}
+
+void uiFreeTableModel(uiTableModel *m)
+{
+	validateTableModelFreeRequest(m);
+	if (uiprivUserCallbackDeferFree(m, freeTableModel))
+		return;
+	freeTableModel(m);
 }
 
 void uiTableModelRowInserted(uiTableModel *m, int newIndex)

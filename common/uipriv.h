@@ -44,6 +44,9 @@ extern int uiprivShouldQuit(void);
 // destruction. NULL always enters for callbacks not associated with a control.
 extern int uiprivUserCallbackEnter(uiControl *);
 extern void uiprivUserCallbackLeave(void);
+// Queues a non-control resource free in the same FIFO as control destruction.
+// Returns nonzero when queued; returns zero outside a user callback.
+extern int uiprivUserCallbackDeferFree(void *, void (*)(void *));
 // Returns nonzero when c or one of its ancestors is queued for destruction.
 extern int uiprivControlDestroyPending(uiControl *);
 extern void uiprivControlDestroyFlush(uintptr_t);

@@ -18,12 +18,29 @@ uiTableModel *uiNewTableModel(uiTableModelHandler *mh)
 	return m;
 }
 
-void uiFreeTableModel(uiTableModel *m)
+static void freeTableModel(void *p)
 {
+	uiTableModel *m = (uiTableModel *) p;
+
 	if (!m->tables->empty())
 		uiprivUserBug("You cannot free a uiTableModel while uiTables are using it.");
 	delete m->tables;
 	uiprivFree(m);
+}
+
+static void validateTableModelFreeRequest(uiTableModel *m)
+{
+	for (uiTable *t : *(m->tables))
+		if (!uiprivControlDestroyPending(uiControl(t)))
+			uiprivUserBug("You cannot free a uiTableModel while uiTables are using it.");
+}
+
+void uiFreeTableModel(uiTableModel *m)
+{
+	validateTableModelFreeRequest(m);
+	if (uiprivUserCallbackDeferFree(m, freeTableModel))
+		return;
+	freeTableModel(m);
 }
 
 static void shiftIndeterminateProgressRows(uiTable *t, int start, int delta)
