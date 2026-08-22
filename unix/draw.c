@@ -36,7 +36,13 @@ static cairo_pattern_t *mkbrush(uiDrawBrush *b)
 			b->X0, b->Y0, 0,
 			b->X1, b->Y1, b->OuterRadius);
 		break;
-//	case uiDrawBrushTypeImage:
+	case uiDrawBrushTypeImage:
+		// TODO implement image brushes after their public data and cross-platform semantics are defined.
+		uiprivUserBug("Image brushes are not implemented.");
+		return NULL;
+	default:
+		uiprivUserBug("Invalid brush type %d given to drawing operation.", b->Type);
+		return NULL;
 	}
 	if (cairo_pattern_status(pat) != CAIRO_STATUS_SUCCESS)
 		uiprivImplBug("error creating pattern in mkbrush(): %s",
