@@ -5,6 +5,38 @@ uiInitOptions uiprivOptions;
 
 static GHashTable *timers;
 
+struct queued {
+	void (*f)(void *);
+	void *data;
+	guint source;
+	gboolean canceled;
+	struct queued *next;
+};
+
+static GMutex queuedMutex;
+static struct queued *queuedCallbacks;
+static gboolean acceptQueuedCallbacks;
+
+static void cancelQueuedCallbacks(void)
+{
+	GArray *sources;
+	struct queued *q;
+	guint i;
+
+	sources = g_array_new(FALSE, FALSE, sizeof (guint));
+	g_mutex_lock(&queuedMutex);
+	acceptQueuedCallbacks = FALSE;
+	for (q = queuedCallbacks; q != NULL; q = q->next) {
+		q->canceled = TRUE;
+		g_array_append_val(sources, q->source);
+	}
+	g_mutex_unlock(&queuedMutex);
+
+	for (i = 0; i < sources->len; i++)
+		g_source_remove(g_array_index(sources, guint, i));
+	g_array_free(sources, TRUE);
+}
+
 const char *uiInit(uiInitOptions *o)
 {
 	GError *err = NULL;
@@ -19,6 +51,9 @@ const char *uiInit(uiInitOptions *o)
 	uiprivInitAlloc();
 	uiprivLoadFutures();
 	timers = g_hash_table_new(g_direct_hash, g_direct_equal);
+	g_mutex_lock(&queuedMutex);
+	acceptQueuedCallbacks = TRUE;
+	g_mutex_unlock(&queuedMutex);
 
 	// Run the event loop manually by default to ensure we can run uiMainStep()
 	// internally to make asynchronous GTK calls appear synchronous.
@@ -43,6 +78,7 @@ static void uninitTimer(gpointer key, gpointer value, gpointer data)
 
 void uiUninit(void)
 {
+	cancelQueuedCallbacks();
 	uiprivControlDestroyUninit();
 	g_hash_table_foreach(timers, uninitTimer, NULL);
 	g_hash_table_destroy(timers);
@@ -120,20 +156,41 @@ void uiQuit(void)
 	gdk_threads_add_idle(quit, NULL);
 }
 
-struct queued {
-	void (*f)(void *);
-	void *data;
-};
-
 static gboolean doqueued(gpointer data)
 {
 	struct queued *q = (struct queued *) data;
+	struct queued **link;
+	gboolean canceled;
 
-	uiprivUserCallbackEnter(NULL);
-	(*(q->f))(q->data);
-	uiprivUserCallbackLeave();
-	g_free(q);
+	g_mutex_lock(&queuedMutex);
+	for (link = &queuedCallbacks; *link != NULL; link = &((*link)->next))
+		if (*link == q) {
+			*link = q->next;
+			break;
+		}
+	canceled = q->canceled;
+	g_mutex_unlock(&queuedMutex);
+	if (!canceled) {
+		uiprivUserCallbackEnter(NULL);
+		(*(q->f))(q->data);
+		uiprivUserCallbackLeave();
+	}
 	return FALSE;
+}
+
+static void freequeued(gpointer data)
+{
+	struct queued *q = (struct queued *) data;
+	struct queued **link;
+
+	g_mutex_lock(&queuedMutex);
+	for (link = &queuedCallbacks; *link != NULL; link = &((*link)->next))
+		if (*link == q) {
+			*link = q->next;
+			break;
+		}
+	g_mutex_unlock(&queuedMutex);
+	g_free(q);
 }
 
 void uiQueueMain(void (*f)(void *data), void *data)
@@ -145,7 +202,17 @@ void uiQueueMain(void (*f)(void *data), void *data)
 	q = g_new0(struct queued, 1);
 	q->f = f;
 	q->data = data;
-	gdk_threads_add_idle(doqueued, q);
+	g_mutex_lock(&queuedMutex);
+	if (!acceptQueuedCallbacks) {
+		g_mutex_unlock(&queuedMutex);
+		g_free(q);
+		return;
+	}
+	q->next = queuedCallbacks;
+	queuedCallbacks = q;
+	q->source = gdk_threads_add_idle_full(G_PRIORITY_DEFAULT_IDLE,
+		doqueued, q, freequeued);
+	g_mutex_unlock(&queuedMutex);
 }
 
 static gboolean doTimer(gpointer data)

@@ -1,12 +1,35 @@
 // 6 april 2015
 #import "uipriv_darwin.h"
 #import "attrstr.h"
+#include <pthread.h>
 
 static BOOL canQuit = NO;
 static NSAutoreleasePool *globalPool;
 static uiprivApplicationClass *app;
 static uiprivAppDelegate *delegate;
 static NSMutableSet *timers;
+
+struct queued {
+	void (*f)(void *);
+	void *data;
+	BOOL canceled;
+	struct queued *next;
+};
+
+static pthread_mutex_t queuedMutex = PTHREAD_MUTEX_INITIALIZER;
+static struct queued *queuedCallbacks;
+static BOOL acceptQueuedCallbacks;
+
+static void cancelQueuedCallbacks(void)
+{
+	struct queued *q;
+
+	pthread_mutex_lock(&queuedMutex);
+	acceptQueuedCallbacks = NO;
+	for (q = queuedCallbacks; q != NULL; q = q->next)
+		q->canceled = YES;
+	pthread_mutex_unlock(&queuedMutex);
+}
 
 static BOOL (^isRunning)(void);
 static BOOL stepsIsRunning;
@@ -139,6 +162,9 @@ const char *uiInit(uiInitOptions *o)
 	}
 
 	globalPool = [[NSAutoreleasePool alloc] init];
+	pthread_mutex_lock(&queuedMutex);
+	acceptQueuedCallbacks = YES;
+	pthread_mutex_unlock(&queuedMutex);
 
 	return NULL;
 }
@@ -163,6 +189,7 @@ void uiUninit(void)
 {
 	if (!globalPool)
 		uiprivUserBug("You must call uiInit() first!");
+	cancelQueuedCallbacks();
 	uiprivControlDestroyUninit();
 	uiprivUninitTimers();
 	[globalPool release];
@@ -273,18 +300,25 @@ void uiprivScheduleControlDestroyFlush(uintptr_t id)
 
 // thanks to mikeash in irc.freenode.net/#macdev for suggesting the use of Grand Central Dispatch for this
 // LONGTERM will dispatch_get_main_queue() break after _CFRunLoopSetCurrent()?
-struct queued {
-	void (*f)(void *);
-	void *data;
-};
-
 static void doQueued(void *data)
 {
 	struct queued *q = data;
+	struct queued **link;
+	BOOL canceled;
 
-	uiprivUserCallbackEnter(NULL);
-	(*(q->f))(q->data);
-	uiprivUserCallbackLeave();
+	pthread_mutex_lock(&queuedMutex);
+	for (link = &queuedCallbacks; *link != NULL; link = &((*link)->next))
+		if (*link == q) {
+			*link = q->next;
+			break;
+		}
+	canceled = q->canceled;
+	pthread_mutex_unlock(&queuedMutex);
+	if (!canceled) {
+		uiprivUserCallbackEnter(NULL);
+		(*(q->f))(q->data);
+		uiprivUserCallbackLeave();
+	}
 	free(q);
 }
 
@@ -301,7 +335,16 @@ void uiQueueMain(void (*f)(void *data), void *data)
 	}
 	q->f = f;
 	q->data = data;
+	pthread_mutex_lock(&queuedMutex);
+	if (!acceptQueuedCallbacks) {
+		pthread_mutex_unlock(&queuedMutex);
+		free(q);
+		return;
+	}
+	q->next = queuedCallbacks;
+	queuedCallbacks = q;
 	dispatch_async_f(dispatch_get_main_queue(), q, doQueued);
+	pthread_mutex_unlock(&queuedMutex);
 }
 
 @interface uiprivTimerDelegate : NSObject {

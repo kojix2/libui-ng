@@ -19,6 +19,37 @@ static void initUninitTwice(void **state)
 	uiUninit();
 }
 
+#if !defined(_WIN32)
+static void queuedCallback(void *data)
+{
+	int *calls = data;
+
+	(*calls)++;
+}
+
+static void queuedCallbackAndQuit(void *data)
+{
+	queuedCallback(data);
+	uiQuit();
+}
+
+static void queuedCallbacksDoNotSurviveUninit(void **state)
+{
+	uiInitOptions o = {0};
+	int calls = 0;
+
+	assert_null(uiInit(&o));
+	uiQueueMain(queuedCallback, &calls);
+	uiUninit();
+
+	assert_null(uiInit(&o));
+	uiQueueMain(queuedCallbackAndQuit, &calls);
+	uiMain();
+	assert_int_equal(calls, 1);
+	uiUninit();
+}
+#endif
+
 #if !defined(_WIN32) && !defined(__APPLE__)
 static void mainStepsResetAfterQuit(void **state)
 {
@@ -87,6 +118,9 @@ int initRunUnitTests(void)
 	const struct CMUnitTest tests[] = {
 		cmocka_unit_test(initUninit),
 		cmocka_unit_test(initUninitTwice),
+#if !defined(_WIN32)
+		cmocka_unit_test(queuedCallbacksDoNotSurviveUninit),
+#endif
 #if !defined(_WIN32) && !defined(__APPLE__)
 		cmocka_unit_test(mainStepsResetAfterQuit),
 #endif
