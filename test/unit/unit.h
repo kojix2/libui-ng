@@ -10,6 +10,9 @@
 
 #include "../../ui.h"
 
+#define UNIT_TEST_NAMED(name, fn, setup, teardown) \
+	{ (name), (fn), (setup), (teardown), NULL }
+
 /**
  * Unit test run functions.
  */

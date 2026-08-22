@@ -3,7 +3,7 @@
 int menuTestSetup(void **state);
 int menuTestTeardown(void **state);
 
-static void menuNew(void **state)
+static void menuNewDoesNotCrash(void **state)
 {
 	uiMenu *m;
 
@@ -11,7 +11,7 @@ static void menuNew(void **state)
 	(void)m;
 }
 
-static void menuNewInitTwice(void **state)
+static void menuNewAcrossInitCyclesDoesNotCrash(void **state)
 {
 	uiMenu *m;
 
@@ -26,7 +26,7 @@ static void menuNewInitTwice(void **state)
 	(void)m;
 }
 
-static void menuNewEmptyString(void **_state)
+static void menuNewEmptyStringDoesNotCrash(void **_state)
 {
 	uiMenu *m;
 
@@ -34,7 +34,7 @@ static void menuNewEmptyString(void **_state)
 	(void)m;
 }
 
-static void menuAppendItem(void **_state)
+static void menuAppendItemDoesNotCrash(void **_state)
 {
 	uiMenu *m;
 
@@ -42,7 +42,7 @@ static void menuAppendItem(void **_state)
 	uiMenuAppendItem(m, "Item");
 }
 
-static void menuAppendItems(void **_state)
+static void menuAppendItemsDoesNotCrash(void **_state)
 {
 	uiMenu *m;
 
@@ -51,7 +51,7 @@ static void menuAppendItems(void **_state)
 	uiMenuAppendItem(m, "Item 2");
 }
 
-static void menuAppendCheckItem(void **_state)
+static void menuAppendCheckItemDoesNotCrash(void **_state)
 {
 	uiMenu *m;
 
@@ -59,7 +59,7 @@ static void menuAppendCheckItem(void **_state)
 	uiMenuAppendCheckItem(m, "Item");
 }
 
-static void menuAppendCheckItems(void **_state)
+static void menuAppendCheckItemsDoesNotCrash(void **_state)
 {
 	uiMenu *m;
 
@@ -68,7 +68,7 @@ static void menuAppendCheckItems(void **_state)
 	uiMenuAppendCheckItem(m, "Item 2");
 }
 
-static void menuAppendAboutItem(void **_state)
+static void menuAppendAboutItemDoesNotCrash(void **_state)
 {
 	uiMenu *m;
 
@@ -76,7 +76,7 @@ static void menuAppendAboutItem(void **_state)
 	uiMenuAppendAboutItem(m);
 }
 
-static void menuAppendPreferencesItem(void **_state)
+static void menuAppendPreferencesItemDoesNotCrash(void **_state)
 {
 	uiMenu *m;
 
@@ -84,7 +84,7 @@ static void menuAppendPreferencesItem(void **_state)
 	uiMenuAppendPreferencesItem(m);
 }
 
-static void menuAppendQuitItem(void **_state)
+static void menuAppendQuitItemDoesNotCrash(void **_state)
 {
 	uiMenu *m;
 
@@ -92,7 +92,7 @@ static void menuAppendQuitItem(void **_state)
 	uiMenuAppendQuitItem(m);
 }
 
-static void menuAppendSeparator(void **_state)
+static void menuAppendSeparatorDoesNotCrash(void **_state)
 {
 	uiMenu *m;
 
@@ -100,7 +100,7 @@ static void menuAppendSeparator(void **_state)
 	uiMenuAppendSeparator(m);
 }
 
-static void menuAppendFull(void **_state)
+static void menuAppendMixedItemsDoesNotCrash(void **_state)
 {
 	uiMenu *m;
 
@@ -113,7 +113,7 @@ static void menuAppendFull(void **_state)
 	uiMenuAppendQuitItem(m);
 }
 
-static void menuItemEnable(void **_state)
+static void menuItemEnableDoesNotCrash(void **_state)
 {
 	uiMenu *m;
 	uiMenuItem *i;
@@ -123,7 +123,7 @@ static void menuItemEnable(void **_state)
 	uiMenuItemEnable(i);
 }
 
-static void menuItemDisable(void **_state)
+static void menuItemDisableDoesNotCrash(void **_state)
 {
 	uiMenu *m;
 	uiMenuItem *i;
@@ -161,7 +161,7 @@ static void onClickedNoCall(uiMenuItem *i, uiWindow *w, void *data)
 	function_called();
 }
 
-static void menuItemOnClicked(void **_state)
+static void menuItemRegisterOnClickedDoesNotInvokeCallback(void **_state)
 {
 	uiMenu *m;
 	uiMenuItem *i;
@@ -200,23 +200,23 @@ int menuTestTeardown(void **_state)
 int menuRunUnitTests(void)
 {
 	const struct CMUnitTest tests[] = {
-		menuUnitTest(menuNew),
-		cmocka_unit_test(menuNewInitTwice),
-		menuUnitTest(menuNewEmptyString),
-		menuUnitTest(menuAppendItem),
-		menuUnitTest(menuAppendItems),
-		menuUnitTest(menuAppendCheckItem),
-		menuUnitTest(menuAppendCheckItems),
-		menuUnitTest(menuAppendAboutItem),
-		menuUnitTest(menuAppendPreferencesItem),
-		menuUnitTest(menuAppendQuitItem),
-		menuUnitTest(menuAppendSeparator),
-		menuUnitTest(menuAppendFull),
-		menuUnitTest(menuItemEnable),
-		menuUnitTest(menuItemDisable),
+		menuUnitTest(menuNewDoesNotCrash),
+		cmocka_unit_test(menuNewAcrossInitCyclesDoesNotCrash),
+		menuUnitTest(menuNewEmptyStringDoesNotCrash),
+		menuUnitTest(menuAppendItemDoesNotCrash),
+		menuUnitTest(menuAppendItemsDoesNotCrash),
+		menuUnitTest(menuAppendCheckItemDoesNotCrash),
+		menuUnitTest(menuAppendCheckItemsDoesNotCrash),
+		menuUnitTest(menuAppendAboutItemDoesNotCrash),
+		menuUnitTest(menuAppendPreferencesItemDoesNotCrash),
+		menuUnitTest(menuAppendQuitItemDoesNotCrash),
+		menuUnitTest(menuAppendSeparatorDoesNotCrash),
+		menuUnitTest(menuAppendMixedItemsDoesNotCrash),
+		menuUnitTest(menuItemEnableDoesNotCrash),
+		menuUnitTest(menuItemDisableDoesNotCrash),
 		menuUnitTest(menuItemCheckedDefaultFalse),
 		menuUnitTest(menuItemSetChecked),
-		menuUnitTest(menuItemOnClicked),
+		menuUnitTest(menuItemRegisterOnClickedDoesNotInvokeCallback),
 	};
 
 	return cmocka_run_group_tests_name("uiMenu", tests, unitTestsSetup, unitTestsTeardown);

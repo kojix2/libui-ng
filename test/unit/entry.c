@@ -102,13 +102,13 @@ static int searchEntryTestSetup(void **state)
 	return 0;
 }
 
-#define entryUnitTest(f) cmocka_unit_test_setup_teardown((f), \
+#define entryUnitTest(f) UNIT_TEST_NAMED("uiEntry/" #f, (f), \
 		entryTestSetup, unitTestTeardown)
 
-#define passwordEntryUnitTest(f) cmocka_unit_test_setup_teardown((f), \
+#define passwordEntryUnitTest(f) UNIT_TEST_NAMED("uiPasswordEntry/" #f, (f), \
 		passwordEntryTestSetup, unitTestTeardown)
 
-#define searchEntryUnitTest(f) cmocka_unit_test_setup_teardown((f), \
+#define searchEntryUnitTest(f) UNIT_TEST_NAMED("uiSearchEntry/" #f, (f), \
 		searchEntryTestSetup, unitTestTeardown)
 
 #define entryUnitTests(f) entryUnitTest(f), passwordEntryUnitTest(f), \

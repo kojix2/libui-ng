@@ -30,7 +30,7 @@ static void gridSetPadded(void **state)
 	assert_int_equal(uiGridPadded(grid), 0);
 }
 
-static void gridCoordinatesAndSpans(void **state)
+static void gridCoordinatesAndSpansDoNotCrash(void **state)
 {
 	uiGrid *grid = uiGridFromState(state);
 
@@ -42,7 +42,7 @@ static void gridCoordinatesAndSpans(void **state)
 		4, 3, 1, 1, 0, uiAlignStart, 0, uiAlignStart);
 }
 
-static void gridInsertAtAllDirections(void **state)
+static void gridInsertAtAllDirectionsDoesNotCrash(void **state)
 {
 	uiGrid *grid = uiGridFromState(state);
 	uiControl *center;
@@ -60,10 +60,9 @@ static void gridInsertAtAllDirections(void **state)
 		uiAtBottom, 1, 1, 0, uiAlignFill, 0, uiAlignFill);
 }
 
-static void gridVisibilityAndNesting(void **state)
+static void gridChildVisibilityChangesDoNotCrash(void **state)
 {
 	uiGrid *grid = uiGridFromState(state);
-	uiGrid *nested;
 	uiControl *child;
 
 	child = uiControl(uiNewButton("toggle"));
@@ -71,6 +70,12 @@ static void gridVisibilityAndNesting(void **state)
 		1, uiAlignFill, 1, uiAlignFill);
 	uiControlHide(child);
 	uiControlShow(child);
+}
+
+static void gridNestedGridDoesNotCrash(void **state)
+{
+	uiGrid *grid = uiGridFromState(state);
+	uiGrid *nested;
 
 	nested = uiNewGrid();
 	uiGridAppend(nested, uiControl(uiNewButton("nested")), 0, 0, 1, 1,
@@ -111,9 +116,10 @@ int gridRunUnitTests(void)
 	const struct CMUnitTest tests[] = {
 		gridUnitTest(gridNew),
 		gridUnitTest(gridSetPadded),
-		gridUnitTest(gridCoordinatesAndSpans),
-		gridUnitTest(gridInsertAtAllDirections),
-		gridUnitTest(gridVisibilityAndNesting),
+		gridUnitTest(gridCoordinatesAndSpansDoNotCrash),
+		gridUnitTest(gridInsertAtAllDirectionsDoesNotCrash),
+		gridUnitTest(gridChildVisibilityChangesDoNotCrash),
+		gridUnitTest(gridNestedGridDoesNotCrash),
 		gridUnitTest(gridDeleteDetachesAndUpdatesChildren),
 	};
 

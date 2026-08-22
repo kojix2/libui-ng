@@ -9,7 +9,7 @@ static void onChangedNoCall(uiDateTimePicker *d, void *data)
 	function_called();
 }
 
-static void dateTimePickerSetTimeNoCallback(void **state)
+static void setTimeDoesNotInvokeCallback(void **state)
 {
 	uiDateTimePicker **d = uiDateTimePickerPtrFromState(state);
 	struct tm time = { 0 };
@@ -65,11 +65,14 @@ static int timePickerTestSetup(void **state)
 int dateTimePickerRunUnitTests(void)
 {
 	const struct CMUnitTest tests[] = {
-		cmocka_unit_test_setup_teardown(dateTimePickerSetTimeNoCallback,
+		UNIT_TEST_NAMED("dateTimePickerSetTimeDoesNotInvokeCallback",
+			setTimeDoesNotInvokeCallback,
 			dateTimePickerTestSetup, unitTestTeardown),
-		cmocka_unit_test_setup_teardown(dateTimePickerSetTimeNoCallback,
+		UNIT_TEST_NAMED("datePickerSetTimeDoesNotInvokeCallback",
+			setTimeDoesNotInvokeCallback,
 			datePickerTestSetup, unitTestTeardown),
-		cmocka_unit_test_setup_teardown(dateTimePickerSetTimeNoCallback,
+		UNIT_TEST_NAMED("timePickerSetTimeDoesNotInvokeCallback",
+			setTimeDoesNotInvokeCallback,
 			timePickerTestSetup, unitTestTeardown),
 	};
 

@@ -28,18 +28,13 @@ static void comboboxSelectedDefault(void **state)
 static void comboboxAppend(void **state)
 {
 	uiCombobox **c = uiComboboxPtrFromState(state);
-	const char *item0 = "Item 0";
-	const char *item1 = "Item 1";
 
 	*c = uiNewCombobox();
 
-	uiComboboxAppend(*c, item0);
-	//TODO assert_string_equal(uiComboboxAt(*c, 0), item0);
+	uiComboboxAppend(*c, "Item 0");
 	assert_int_equal(uiComboboxNumItems(*c), 1);
 
-	uiComboboxAppend(*c, item1);
-	//TODO assert_string_equal(uiComboboxAt(*c, 0), item0);
-	//TODO assert_string_equal(uiComboboxAt(*c, 1), item1);
+	uiComboboxAppend(*c, "Item 1");
 	assert_int_equal(uiComboboxNumItems(*c), 2);
 
 	assert_int_equal(uiComboboxSelected(*c), -1);
@@ -54,8 +49,6 @@ static void comboboxAppendDuplicate(void **state)
 
 	uiComboboxAppend(*c, duplicate);
 	uiComboboxAppend(*c, duplicate);
-	//TODO assert_string_equal(uiComboboxAt(*c, 0), duplicate);
-	//TODO assert_string_equal(uiComboboxAt(*c, 1), duplicate);
 	assert_int_equal(uiComboboxNumItems(*c), 2);
 }
 
@@ -77,7 +70,7 @@ static void comboboxSetSelected(void **state)
 	assert_int_equal(uiComboboxSelected(*c), -1);
 }
 
-static void comboboxInsertAt(void **state)
+static void comboboxInsertAtPreservesSelectedItem(void **state)
 {
 	uiCombobox **c = uiComboboxPtrFromState(state);
 	const char *item0 = "Item 0";
@@ -88,30 +81,20 @@ static void comboboxInsertAt(void **state)
 	*c = uiNewCombobox();
 
 	uiComboboxInsertAt(*c, 0, item0);
-	//TODO assert_string_equal(uiComboboxAt(*c, 0), item0);
 	assert_int_equal(uiComboboxNumItems(*c), 1);
 	assert_int_equal(uiComboboxSelected(*c), -1);
 
 	uiComboboxSetSelected(*c, 0);
 
 	uiComboboxInsertAt(*c, 0, item1);
-	//TODO assert_string_equal(uiComboboxAt(*c, 0), item1);
-	//TODO assert_string_equal(uiComboboxAt(*c, 1), item0);
 	assert_int_equal(uiComboboxNumItems(*c), 2);
 	assert_int_equal(uiComboboxSelected(*c), 1);
 
 	uiComboboxInsertAt(*c, 1, item2);
-	//TODO assert_string_equal(uiComboboxAt(*c, 0), item1);
-	//TODO assert_string_equal(uiComboboxAt(*c, 1), item2);
-	//TODO assert_string_equal(uiComboboxAt(*c, 2), item0);
 	assert_int_equal(uiComboboxNumItems(*c), 3);
 	assert_int_equal(uiComboboxSelected(*c), 2);
 
 	uiComboboxInsertAt(*c, 3, item3);
-	//TODO assert_string_equal(uiComboboxAt(*c, 0), item1);
-	//TODO assert_string_equal(uiComboboxAt(*c, 1), item2);
-	//TODO assert_string_equal(uiComboboxAt(*c, 2), item0);
-	//TODO assert_string_equal(uiComboboxAt(*c, 3), item3);
 	assert_int_equal(uiComboboxNumItems(*c), 4);
 	assert_int_equal(uiComboboxSelected(*c), 2);
 }
@@ -125,8 +108,6 @@ static void comboboxInsertAtDuplicate(void **state)
 
 	uiComboboxInsertAt(*c, 0, duplicate);
 	uiComboboxInsertAt(*c, 1, duplicate);
-	//TODO assert_string_equal(uiComboboxAt(*c, 0), duplicate);
-	//TODO assert_string_equal(uiComboboxAt(*c, 1), duplicate);
 	assert_int_equal(uiComboboxNumItems(*c), 2);
 }
 
@@ -176,7 +157,7 @@ static void comboboxClearAppend(void **state)
 	assert_int_equal(uiComboboxNumItems(*c), 2);
 }
 
-static void comboboxDelete(void **state)
+static void comboboxDeleteUpdatesSelection(void **state)
 {
 	uiCombobox **c = uiComboboxPtrFromState(state);
 	const char *item0 = "Item 0";
@@ -190,13 +171,10 @@ static void comboboxDelete(void **state)
 	uiComboboxSetSelected(*c, 1);
 
 	uiComboboxDelete(*c, 0);
-	//TODO assert_string_equal(uiComboboxAt(*c, 0), item1);
-	//TODO assert_string_equal(uiComboboxAt(*c, 1), item2);
 	assert_int_equal(uiComboboxNumItems(*c), 2);
 	assert_int_equal(uiComboboxSelected(*c), 0);
 
 	uiComboboxDelete(*c, 0);
-	//TODO assert_string_equal(uiComboboxAt(*c, 0), item2);
 	assert_int_equal(uiComboboxNumItems(*c), 1);
 	assert_int_equal(uiComboboxSelected(*c), -1);
 
@@ -292,12 +270,12 @@ int comboboxRunUnitTests(void)
 		comboboxUnitTest(comboboxAppend),
 		comboboxUnitTest(comboboxAppendDuplicate),
 		comboboxUnitTest(comboboxSetSelected),
-		comboboxUnitTest(comboboxInsertAt),
+		comboboxUnitTest(comboboxInsertAtPreservesSelectedItem),
 		comboboxUnitTest(comboboxInsertAtDuplicate),
 		comboboxUnitTest(comboboxClearEmpty),
 		comboboxUnitTest(comboboxClear),
 		comboboxUnitTest(comboboxClearAppend),
-		comboboxUnitTest(comboboxDelete),
+		comboboxUnitTest(comboboxDeleteUpdatesSelection),
 		comboboxUnitTest(comboboxSetSelectedNoCallback),
 		comboboxUnitTest(comboboxInsertAtNoCallback),
 		comboboxUnitTest(comboboxClearNoCallback),
