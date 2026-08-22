@@ -290,7 +290,7 @@ static ID2D1Brush *makeBrush(uiDrawBrush *b, ID2D1RenderTarget *rt)
 // - in Save, we take another reference; in Restore we drop the refernece to the existing path geometry and transfer that saved ref to the new path geometry over to the context
 // uiDrawFreePath() doesn't destroy the path geometry, it just drops the reference count, so a clip can exist independent of its path
 
-static ID2D1Layer *applyClip(uiDrawContext *c)
+ID2D1Layer *uiprivApplyClip(uiDrawContext *c)
 {
 	ID2D1Layer *layer = NULL;
 	D2D1_LAYER_PARAMETERS params;
@@ -333,7 +333,7 @@ static ID2D1Layer *applyClip(uiDrawContext *c)
 	return layer;
 }
 
-static void unapplyClip(uiDrawContext *c, ID2D1Layer *layer)
+void uiprivUnapplyClip(uiDrawContext *c, ID2D1Layer *layer)
 {
 	if (layer == NULL)
 		return;
@@ -416,13 +416,13 @@ void uiDrawStroke(uiDrawContext *c, uiDrawPath *p, uiDrawBrush *b, uiDrawStrokeP
 	if (sp->NumDashes != 0)
 		uiprivFree(dashes);
 
-	cliplayer = applyClip(c);
+	cliplayer = uiprivApplyClip(c);
 	c->rt->DrawGeometry(
 		pathGeometry(p),
 		brush,
 		uiprivD2DFloat(sp->Thickness),
 		style);
-	unapplyClip(c, cliplayer);
+	uiprivUnapplyClip(c, cliplayer);
 
 	style->Release();
 	brush->Release();
@@ -436,12 +436,12 @@ void uiDrawFill(uiDrawContext *c, uiDrawPath *p, uiDrawBrush *b)
 	brush = makeBrush(b, c->rt);
 	if (brush == NULL)
 		return;
-	cliplayer = applyClip(c);
+	cliplayer = uiprivApplyClip(c);
 	c->rt->FillGeometry(
 		pathGeometry(p),
 		brush,
 		NULL);
-	unapplyClip(c, cliplayer);
+	uiprivUnapplyClip(c, cliplayer);
 	brush->Release();
 }
 

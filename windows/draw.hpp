@@ -31,6 +31,8 @@ struct uiDrawContext {
 	std::vector<struct drawState> *states;
 	ID2D1PathGeometry *currentClip;
 };
+extern ID2D1Layer *uiprivApplyClip(uiDrawContext *c);
+extern void uiprivUnapplyClip(uiDrawContext *c, ID2D1Layer *layer);
 
 // drawpath.cpp
 extern ID2D1PathGeometry *pathGeometry(uiDrawPath *p);
@@ -39,4 +41,3 @@ extern ID2D1PathGeometry *pathGeometry(uiDrawPath *p);
 extern void m2d(uiDrawMatrix *m, D2D1_MATRIX_3X2_F *d);
 
 #endif
-

@@ -158,6 +158,49 @@ static ID2D1SolidColorBrush *mustMakeSolidBrush(ID2D1RenderTarget *rt, double r,
 	return brush;
 }
 
+static HRESULT drawTextBackground(uiDrawContext *c, uiDrawTextLayout *tl,
+	const struct drawTextBackgroundParams *p, double x, double y)
+{
+	ID2D1SolidColorBrush *brush = NULL;
+	std::vector<DWRITE_HIT_TEST_METRICS> metrics;
+	UINT32 nmetrics = 0;
+	UINT32 unused;
+	D2D1_RECT_F rect;
+	HRESULT hr;
+
+	if (p->end <= p->start)
+		return S_OK;
+	hr = tl->layout->HitTestTextRange(
+		(UINT32) p->start, (UINT32) (p->end - p->start),
+		uiprivD2DFloat(x), uiprivD2DFloat(y),
+		NULL, 0, &nmetrics);
+	if (hr != E_NOT_SUFFICIENT_BUFFER && hr != S_OK)
+		return hr;
+	if (nmetrics == 0)
+		return S_OK;
+
+	metrics.resize(nmetrics);
+	hr = tl->layout->HitTestTextRange(
+		(UINT32) p->start, (UINT32) (p->end - p->start),
+		uiprivD2DFloat(x), uiprivD2DFloat(y),
+		metrics.data(), nmetrics, &unused);
+	if (hr != S_OK)
+		return hr;
+
+	hr = mkSolidBrush(c->rt, p->r, p->g, p->b, p->a, &brush);
+	if (hr != S_OK)
+		return hr;
+	for (UINT32 i = 0; i < unused; i++) {
+		rect.left = metrics[i].left;
+		rect.top = metrics[i].top;
+		rect.right = rect.left + metrics[i].width;
+		rect.bottom = rect.top + metrics[i].height;
+		c->rt->FillRectangle(&rect, brush);
+	}
+	brush->Release();
+	return S_OK;
+}
+
 // some of the stuff we want to do isn't possible with what DirectWrite provides itself; we need to do it ourselves
 
 drawingEffectsAttr::drawingEffectsAttr(void)
@@ -588,23 +631,24 @@ public:
 	}
 };
 
-// TODO apply uiDrawContext's current clip while drawing text.
 void uiDrawText(uiDrawContext *c, uiDrawTextLayout *tl, double x, double y)
 {
 	ID2D1SolidColorBrush *black = NULL;
+	ID2D1Layer *cliplayer = NULL;
 	textRenderer *renderer;
 	HRESULT hr;
-
-	/*
-	for (auto p : *(tl->backgroundParams)) {
-		// TODO draw attributed text backgrounds before drawing glyphs.
-	}
-	*/
 
 	// Text without an explicit foreground color is rendered as opaque black.
 	black = mustMakeSolidBrush(c->rt, 0.0, 0.0, 0.0, 1.0);
 	if (black == NULL)
 		return;
+
+	cliplayer = uiprivApplyClip(c);
+	for (auto p : *(tl->backgroundParams)) {
+		hr = drawTextBackground(c, tl, p, x, y);
+		if (hr != S_OK)
+			logHRESULT(L"error drawing attributed text background", hr);
+	}
 
 #define renderD2D 0
 #define renderOur 1
@@ -622,8 +666,10 @@ void uiDrawText(uiDrawContext *c, uiDrawTextLayout *tl, double x, double y)
 	// TODO get the actual color Charles Petzold uses and use that
 	black->Release();
 	black = mustMakeSolidBrush(c->rt, 1.0, 0.0, 0.0, 0.75);
-	if (black == NULL)
+	if (black == NULL) {
+		uiprivUnapplyClip(c, cliplayer);
 		return;
+	}
 #endif
 #if renderOur
 	renderer = new textRenderer(c->rt,
@@ -637,6 +683,7 @@ void uiDrawText(uiDrawContext *c, uiDrawTextLayout *tl, double x, double y)
 	renderer->Release();
 #endif
 
+	uiprivUnapplyClip(c, cliplayer);
 	black->Release();
 }
 
