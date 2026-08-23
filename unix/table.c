@@ -293,11 +293,13 @@ static void queueIndeterminateRow(gpointer key, gpointer value, gpointer data)
 	int row = *((int *) key);
 
 	path = gtk_tree_path_new_from_indices(row, -1);
+	// A NULL column only fills the vertical coordinates; redraw the full row width.
 	gtk_tree_view_get_background_area(t->tv, path, NULL, &rect);
 	gtk_tree_path_free(path);
 	gtk_tree_view_convert_bin_window_to_widget_coords(t->tv,
 		rect.x, rect.y, &x, &y);
-	gtk_widget_queue_draw_area(t->treeWidget, x, y, rect.width, rect.height);
+	gtk_widget_queue_draw_area(t->treeWidget, x, y,
+		gtk_widget_get_allocated_width(t->treeWidget) - x, rect.height);
 }
 
 static gboolean indeterminatePulse(gpointer data)
