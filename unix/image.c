@@ -108,74 +108,36 @@ void uiImageAppend(uiImage *i, void *pixels, int pixelWidth, int pixelHeight, in
 	g_ptr_array_add(i->images, cs);
 }
 
-struct matcher {
-	cairo_surface_t *best;
-	int distX;
-	int distY;
-	int targetX;
-	int targetY;
-	gboolean foundLarger;
-};
-
-// Prefer the closest representation that is at least as large as the target,
-// avoiding upscaling. If none is large enough, use the closest smaller one.
-// Representations must have the same aspect ratio, so comparing the distance
-// in both dimensions independently is sufficient.
-static void match(gpointer surface, gpointer data)
-{
-	cairo_surface_t *cs = (cairo_surface_t *) surface;
-	struct matcher *m = (struct matcher *) data;
-	int x, y;
-	int x2, y2;
-
-	x = cairo_image_surface_get_width(cs);
-	y = cairo_image_surface_get_height(cs);
-	if (m->best == NULL)
-		goto writeMatch;
-
-	if (x < m->targetX && y < m->targetY)
-		if (m->foundLarger)
-			// always prefer larger ones
-			return;
-	if (x >= m->targetX && y >= m->targetY && !m->foundLarger)
-		// we set foundLarger below
-		goto writeMatch;
-
-	x2 = abs(m->targetX - x);
-	y2 = abs(m->targetY - y);
-	if (x2 < m->distX && y2 < m->distY)
-		goto writeMatch;
-
-	return;
-
-writeMatch:
-	// must set this here too; otherwise the first image will never have this set
-	if (x >= m->targetX && y >= m->targetY && !m->foundLarger)
-		m->foundLarger = TRUE;
-	m->best = cs;
-	m->distX = abs(m->targetX - x);
-	m->distY = abs(m->targetY - y);
-}
-
 cairo_surface_t *uiprivImageAppropriateSurface(uiImage *i, GtkWidget *w)
 {
-	struct matcher m;
+	uiprivImageRepMatcher matcher;
+	cairo_surface_t *best;
+	guint n;
+	int targetWidth, targetHeight;
 	int scale;
 
-	m.best = NULL;
-	m.distX = G_MAXINT;
-	m.distY = G_MAXINT;
 	scale = gtk_widget_get_scale_factor(w);
 	if (scale <= 0) {
-		m.targetX = 0;
-		m.targetY = 0;
+		targetWidth = 0;
+		targetHeight = 0;
 	} else {
-		m.targetX = i->width > G_MAXINT / scale ?
+		targetWidth = i->width > G_MAXINT / scale ?
 			G_MAXINT : i->width * scale;
-		m.targetY = i->height > G_MAXINT / scale ?
+		targetHeight = i->height > G_MAXINT / scale ?
 			G_MAXINT : i->height * scale;
 	}
-	m.foundLarger = FALSE;
-	g_ptr_array_foreach(i->images, match, &m);
-	return m.best;
+
+	uiprivImageRepMatcherInit(&matcher, targetWidth, targetHeight);
+	best = NULL;
+	for (n = 0; n < i->images->len; n++) {
+		cairo_surface_t *surface;
+		int width, height;
+
+		surface = g_ptr_array_index(i->images, n);
+		width = cairo_image_surface_get_width(surface);
+		height = cairo_image_surface_get_height(surface);
+		if (uiprivImageRepMatcherAdd(&matcher, width, height))
+			best = surface;
+	}
+	return best;
 }

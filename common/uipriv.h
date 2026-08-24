@@ -77,6 +77,20 @@ extern int uiprivFromScancode(uintptr_t, uiAreaKeyEvent *);
 extern void uiprivFallbackSkew(uiDrawMatrix *, double, double, double, double);
 extern void uiprivFallbackTransformSize(uiDrawMatrix *, double *, double *);
 
+// imagerep.c
+typedef struct uiprivImageRepMatcher uiprivImageRepMatcher;
+struct uiprivImageRepMatcher {
+	int targetWidth;
+	int targetHeight;
+	int bestWidth;
+	int bestHeight;
+	int64_t bestDistance;
+	int bestIsLargeEnough;
+	int hasBest;
+};
+extern void uiprivImageRepMatcherInit(uiprivImageRepMatcher *, int, int);
+extern int uiprivImageRepMatcherAdd(uiprivImageRepMatcher *, int, int);
+
 // OS-specific text.* files
 extern int uiprivStricmp(const char *a, const char *b);
 

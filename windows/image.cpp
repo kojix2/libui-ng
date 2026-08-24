@@ -146,78 +146,35 @@ void uiImageAppend(uiImage *i, void *pixels, int pixelWidth, int pixelHeight, in
 	i->bitmaps->push_back(b);
 }
 
-struct matcher {
-	IWICBitmap *best;
-	int distX;
-	int distY;
-	int targetX;
-	int targetY;
-	bool foundLarger;
-};
-
-// Prefer the closest representation that is at least as large as the target,
-// avoiding upscaling. If none is large enough, use the closest smaller one.
-// Representations must have the same aspect ratio, so comparing the distance
-// in both dimensions independently is sufficient.
-static void match(IWICBitmap *b, struct matcher *m)
-{
-	UINT ux, uy;
-	int x, y;
-	int x2, y2;
-	HRESULT hr;
-
-	hr = b->GetSize(&ux, &uy);
-	if (hr != S_OK) {
-		logHRESULT(L"error calling GetSize() in match()", hr);
-		return;
-	}
-	x = ux;
-	y = uy;
-	if (m->best == NULL)
-		goto writeMatch;
-
-	if (x < m->targetX && y < m->targetY)
-		if (m->foundLarger)
-			// always prefer larger ones
-			return;
-	if (x >= m->targetX && y >= m->targetY && !m->foundLarger)
-		// we set foundLarger below
-		goto writeMatch;
-
-	x2 = abs(m->targetX - x);
-	y2 = abs(m->targetY - y);
-	if (x2 < m->distX && y2 < m->distY)
-		goto writeMatch;
-
-	return;
-
-writeMatch:
-	// must set this here too; otherwise the first image will never have this set
-	if (x >= m->targetX && y >= m->targetY && !m->foundLarger)
-		m->foundLarger = true;
-	m->best = b;
-	m->distX = abs(m->targetX - x);
-	m->distY = abs(m->targetY - y);
-}
-
 IWICBitmap *uiprivImageAppropriateForDC(uiImage *i, HDC dc)
 {
-	struct matcher m;
+	uiprivImageRepMatcher matcher;
+	IWICBitmap *best;
+	int targetWidth, targetHeight;
 	int target;
 
-	m.best = NULL;
-	m.distX = INT_MAX;
-	m.distY = INT_MAX;
 	// uiImage dimensions are in points at 96 DPI; select a representation
 	// using the corresponding pixel dimensions for this device context.
 	target = MulDiv((int) i->width, GetDeviceCaps(dc, LOGPIXELSX), 96);
-	m.targetX = target == -1 ? INT_MAX : target;
+	targetWidth = target == -1 ? INT_MAX : target;
 	target = MulDiv((int) i->height, GetDeviceCaps(dc, LOGPIXELSY), 96);
-	m.targetY = target == -1 ? INT_MAX : target;
-	m.foundLarger = false;
-	for (IWICBitmap *b : *(i->bitmaps))
-		match(b, &m);
-	return m.best;
+	targetHeight = target == -1 ? INT_MAX : target;
+
+	uiprivImageRepMatcherInit(&matcher, targetWidth, targetHeight);
+	best = NULL;
+	for (IWICBitmap *b : *(i->bitmaps)) {
+		UINT width, height;
+		HRESULT hr;
+
+		hr = b->GetSize(&width, &height);
+		if (hr != S_OK) {
+			logHRESULT(L"error calling GetSize() in uiprivImageAppropriateForDC()", hr);
+			continue;
+		}
+		if (uiprivImageRepMatcherAdd(&matcher, (int) width, (int) height))
+			best = b;
+	}
+	return best;
 }
 
 // TODO this needs to center images if the given size is not the same aspect ratio

@@ -56,3 +56,12 @@ utf_unit = executable('utf-unit', [
 	install: false)
 
 test('UTF Unit Tests', utf_unit)
+
+imagerep_unit = executable('imagerep-unit', [
+	'imagerep.c',
+	'../../common/imagerep.c',
+],
+	dependencies: cmocka_deps,
+	install: false)
+
+test('Image Representation Unit Tests', imagerep_unit)
