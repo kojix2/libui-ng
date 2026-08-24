@@ -3,11 +3,21 @@
 #include "../ui.h"
 #include "uipriv.h"
 
+int uiprivImageFinite(double value)
+{
+	return value >= -DBL_MAX && value <= DBL_MAX;
+}
+
+int uiprivImagePositiveFinite(double value)
+{
+	return value > 0 && value <= DBL_MAX;
+}
+
 int uiprivImageTargetPixelSize(double size)
 {
 	int pixels;
 
-	if (!(size > 0) || size > DBL_MAX)
+	if (!uiprivImagePositiveFinite(size))
 		return 0;
 	if (size >= INT_MAX)
 		return INT_MAX;
