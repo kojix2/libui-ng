@@ -44,8 +44,10 @@ int main(int argc, char **argv)
 		{ "image", imageRunUnitTests },
 		{ "grid", gridRunUnitTests },
 		{ "drawmatrix", drawMatrixRunUnitTests },
+		{ "drawimage", drawImageRunUnitTests },
 		{ "attrstr", attrstrRunUnitTests },
 		{ "table", tableRunUnitTests },
+		{ "imageview", imageViewRunUnitTests },
 	};
 
 	/* Preserve the full runner and its order; optional names select components. */

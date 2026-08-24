@@ -1,14 +1,16 @@
 // 6 september 2015
+#include <limits.h>
 #include "uipriv_unix.h"
 #include "draw.h"
 
-uiDrawContext *uiprivNewContext(cairo_t *cr, GtkStyleContext *style)
+uiDrawContext *uiprivNewContext(cairo_t *cr, GtkStyleContext *style, GtkWidget *widget)
 {
 	uiDrawContext *c;
 
 	c = uiprivNew(uiDrawContext);
 	c->cr = cr;
 	c->style = style;
+	c->widget = widget;
 	return c;
 }
 
@@ -150,5 +152,91 @@ void uiDrawSave(uiDrawContext *c)
 
 void uiDrawRestore(uiDrawContext *c)
 {
+	cairo_restore(c->cr);
+}
+
+static void imageTargetPixelSizeForContext(uiDrawContext *c,
+	double width, double height, int *pixelWidth, int *pixelHeight)
+{
+	double widthX, widthY, heightX, heightY;
+	int scale;
+
+	widthX = width;
+	widthY = 0;
+	heightX = 0;
+	heightY = height;
+	cairo_user_to_device_distance(c->cr, &widthX, &widthY);
+	cairo_user_to_device_distance(c->cr, &heightX, &heightY);
+	scale = 1;
+	if (c->widget != NULL)
+		scale = gtk_widget_get_scale_factor(c->widget);
+	*pixelWidth = uiprivImageTargetPixelSize(
+		(fabs(widthX) + fabs(heightX)) * scale);
+	*pixelHeight = uiprivImageTargetPixelSize(
+		(fabs(widthY) + fabs(heightY)) * scale);
+}
+
+void uiDrawImage(uiDrawContext *c, const uiImage *img, double x, double y, double width, double height)
+{
+	cairo_surface_t *surface;
+	cairo_pattern_t *pattern;
+	double scaleX, scaleY;
+	int surfaceWidth, surfaceHeight;
+	int targetWidth, targetHeight;
+
+	// Enhanced parameter validation
+	if (c == NULL || img == NULL ||
+		!uiprivImageFinite(x) || !uiprivImageFinite(y) ||
+		!uiprivImagePositiveFinite(width) ||
+		!uiprivImagePositiveFinite(height))
+		return;
+
+	imageTargetPixelSizeForContext(c, width, height, &targetWidth, &targetHeight);
+	if (targetWidth == 0 || targetHeight == 0)
+		return;
+	surface = uiprivImageAppropriateSurfaceForSize(img, targetWidth, targetHeight);
+	if (surface == NULL)
+		return;
+
+	// Validate surface status
+	if (cairo_surface_status(surface) != CAIRO_STATUS_SUCCESS)
+		return;
+	if (cairo_surface_get_type(surface) != CAIRO_SURFACE_TYPE_IMAGE)
+		return;
+
+	surfaceWidth = cairo_image_surface_get_width(surface);
+	surfaceHeight = cairo_image_surface_get_height(surface);
+	if (surfaceWidth <= 0 || surfaceHeight <= 0)
+		return;
+
+	// Calculate scaling factors
+	scaleX = width / (double)surfaceWidth;
+	scaleY = height / (double)surfaceHeight;
+
+	// Save current drawing state
+	cairo_save(c->cr);
+
+	// Create pattern with high-quality scaling filter
+	pattern = cairo_pattern_create_for_surface(surface);
+	if (cairo_pattern_status(pattern) != CAIRO_STATUS_SUCCESS) {
+		cairo_pattern_destroy(pattern);
+		cairo_restore(c->cr);
+		return;
+	}
+	cairo_pattern_set_filter(pattern, CAIRO_FILTER_BILINEAR);
+	cairo_pattern_set_extend(pattern, CAIRO_EXTEND_PAD);
+
+	// Apply transformation matrix
+	cairo_rectangle(c->cr, x, y, width, height);
+	cairo_clip(c->cr);
+	cairo_translate(c->cr, x, y);
+	cairo_scale(c->cr, scaleX, scaleY);
+
+	// Draw the image with pattern
+	cairo_set_source(c->cr, pattern);
+	cairo_paint(c->cr);
+
+	// Cleanup
+	cairo_pattern_destroy(pattern);
 	cairo_restore(c->cr);
 }
