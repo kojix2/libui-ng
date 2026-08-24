@@ -77,7 +77,15 @@ extern int uiprivFromScancode(uintptr_t, uiAreaKeyEvent *);
 extern void uiprivFallbackSkew(uiDrawMatrix *, double, double, double, double);
 extern void uiprivFallbackTransformSize(uiDrawMatrix *, double *, double *);
 
+// imageview.c
+extern int uiprivImageViewContentModeValid(uiImageViewContentMode mode);
+extern void uiprivImageViewComputeRect(double viewWidth, double viewHeight,
+	double imageWidth, double imageHeight, uiImageViewContentMode mode,
+	double *x, double *y, double *width, double *height);
+
 // imagerep.c
+extern int uiprivImageFinite(double value);
+extern int uiprivImagePositiveFinite(double value);
 extern int uiprivImageTargetPixelSize(double size);
 extern int uiprivImagePixelBufferSpan(int pixelWidth, int pixelHeight,
 	int byteStride, size_t *span);
@@ -91,8 +99,10 @@ struct uiprivImageRepMatcher {
 	int bestIsLargeEnough;
 	int hasBest;
 };
-extern void uiprivImageRepMatcherInit(uiprivImageRepMatcher *, int, int);
-extern int uiprivImageRepMatcherAdd(uiprivImageRepMatcher *, int, int);
+extern void uiprivImageRepMatcherInit(uiprivImageRepMatcher *m,
+	int targetWidth, int targetHeight);
+extern int uiprivImageRepMatcherAdd(uiprivImageRepMatcher *m,
+	int width, int height);
 extern void uiprivImageFitRect(int imageWidth, int imageHeight,
 	int boundsWidth, int boundsHeight,
 	int *x, int *y, int *width, int *height);

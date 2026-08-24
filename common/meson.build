@@ -8,6 +8,7 @@ libui_sources += [
 	'common/control.c',
 	'common/debug.c',
 	'common/imagerep.c',
+	'common/imageview.c',
 	'common/matrix.c',
 	'common/opentype.c',
 	'common/shouldquit.c',
@@ -18,3 +19,8 @@ libui_sources += [
 	'common/userbugs.c',
 	'common/utf.c',
 ]
+
+libui_test_internal_sources += files(
+	'imagerep.c',
+	'imageview.c',
+)

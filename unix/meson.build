@@ -46,6 +46,7 @@ libui_sources += [
 	'unix/toolbar.c',
 	'unix/util.c',
 	'unix/window.c',
+	'unix/imageview.c',
 ]
 
 libui_deps += [
