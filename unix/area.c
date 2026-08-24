@@ -119,7 +119,8 @@ static gboolean areaWidget_draw(GtkWidget *w, cairo_t *cr)
 		return FALSE;
 
 	dp.Context = uiprivNewContext(cr,
-		gtk_widget_get_style_context(a->widget));
+		gtk_widget_get_style_context(a->widget),
+		w);
 
 	loadAreaSize(a, &(dp.AreaWidth), &(dp.AreaHeight));
 

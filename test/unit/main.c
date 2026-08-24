@@ -87,9 +87,11 @@ int main(void)
 		{ imageRunUnitTests },
 		{ gridRunUnitTests },
 		{ drawMatrixRunUnitTests },
+		{ drawImageRunUnitTests },
 		{ attrstrRunUnitTests },
 		{ tableRunUnitTests },
 		{ toolbarRunUnitTests },
+		{ imageViewRunUnitTests },
 	};
 
 	for (i = 0; i < sizeof(unitTests)/sizeof(*unitTests); ++i) {
