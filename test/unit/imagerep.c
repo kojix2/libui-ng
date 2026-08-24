@@ -1,3 +1,4 @@
+#include <limits.h>
 #include <stdarg.h>
 #include <stddef.h>
 #include <setjmp.h>
@@ -68,12 +69,45 @@ static void imageRepSelectionIsIndependentOfAppendOrder(void **state)
 	assertImageSize(chooseRep(100, 400, reverseOrder, 2), 120, 360);
 }
 
+static void assertFitRect(int imageWidth, int imageHeight,
+	int boundsWidth, int boundsHeight,
+	int expectedX, int expectedY, int expectedWidth, int expectedHeight)
+{
+	int x, y, width, height;
+
+	uiprivImageFitRect(imageWidth, imageHeight, boundsWidth, boundsHeight,
+		&x, &y, &width, &height);
+	assert_int_equal(x, expectedX);
+	assert_int_equal(y, expectedY);
+	assert_int_equal(width, expectedWidth);
+	assert_int_equal(height, expectedHeight);
+}
+
+static void imageFitRectPreservesAspectRatioAndCenters(void **state)
+{
+	(void) state;
+	assertFitRect(32, 16, 16, 16, 0, 4, 16, 8);
+	assertFitRect(16, 32, 16, 16, 4, 0, 8, 16);
+	assertFitRect(16, 16, 16, 16, 0, 0, 16, 16);
+	assertFitRect(4, 2, 5, 5, 0, 1, 5, 2);
+}
+
+static void imageFitRectHandlesInvalidAndExtremeSizes(void **state)
+{
+	(void) state;
+	assertFitRect(0, 16, 16, 16, 0, 0, 0, 0);
+	assertFitRect(INT_MAX, 1, INT_MAX, INT_MAX,
+		0, (INT_MAX - 1) / 2, INT_MAX, 1);
+}
+
 int main(void)
 {
 	const struct CMUnitTest tests[] = {
 		cmocka_unit_test(imageRepPrefersClosestLargeEnoughRepresentation),
 		cmocka_unit_test(imageRepFallsBackToClosestSmallerRepresentation),
 		cmocka_unit_test(imageRepSelectionIsIndependentOfAppendOrder),
+		cmocka_unit_test(imageFitRectPreservesAspectRatioAndCenters),
+		cmocka_unit_test(imageFitRectHandlesInvalidAndExtremeSizes),
 	};
 
 	return cmocka_run_group_tests_name("Image representation", tests,

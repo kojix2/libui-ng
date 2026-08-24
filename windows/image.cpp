@@ -189,15 +189,16 @@ IWICBitmap *uiprivImageAppropriateForDC(uiImage *i, HDC dc)
 	return best;
 }
 
-// TODO this needs to center images if the given size is not the same aspect ratio
 HRESULT uiprivWICToGDI(IWICBitmap *b, HDC dc, int width, int height, HBITMAP *hb)
 {
 	UINT ux, uy;
 	int x, y;
+	int drawX, drawY, drawWidth, drawHeight;
 	IWICBitmapSource *src = NULL;
 	BITMAPINFO bmi;
 	VOID *bits;
 	BITMAP bmp;
+	uint64_t bitmapHeight, bufferSize, destinationOffset;
 	HRESULT hr;
 
 	hr = b->GetSize(&ux, &uy);
@@ -209,9 +210,13 @@ HRESULT uiprivWICToGDI(IWICBitmap *b, HDC dc, int width, int height, HBITMAP *hb
 		width = x;
 	if (height == 0)
 		height = y;
+	uiprivImageFitRect(x, y, width, height,
+		&drawX, &drawY, &drawWidth, &drawHeight);
+	if (drawWidth == 0 || drawHeight == 0)
+		return E_INVALIDARG;
 
 	// special case: don't invoke a scaler if the size is the same
-	if (width == x && height == y) {
+	if (drawWidth == x && drawHeight == y) {
 		b->AddRef();		// for the Release() later
 		src = b;
 	} else {
@@ -222,7 +227,7 @@ HRESULT uiprivWICToGDI(IWICBitmap *b, HDC dc, int width, int height, HBITMAP *hb
 		hr = uiprivWICFactory->CreateBitmapScaler(&scaler);
 		if (hr != S_OK)
 			return hr;
-		hr = scaler->Initialize(b, width, height,
+		hr = scaler->Initialize(b, drawWidth, drawHeight,
 			// according to https://stackoverflow.com/questions/4250738/is-stretchblt-halftone-bilinear-for-all-scaling, this is what StretchBlt(COLORONCOLOR) does (with COLORONCOLOR being what's supported by AlphaBlend())
 			WICBitmapInterpolationModeNearestNeighbor);
 		if (hr != S_OK) {
@@ -282,8 +287,24 @@ HRESULT uiprivWICToGDI(IWICBitmap *b, HDC dc, int width, int height, HBITMAP *hb
 		hr = E_FAIL;
 		goto fail;
 	}
+	if (bmp.bmWidthBytes <= 0 || bmp.bmHeight == 0) {
+		hr = E_FAIL;
+		goto fail;
+	}
+	bitmapHeight = bmp.bmHeight < 0 ?
+		(uint64_t) (-(int64_t) bmp.bmHeight) : (uint64_t) bmp.bmHeight;
+	bufferSize = (uint64_t) bmp.bmWidthBytes * bitmapHeight;
+	destinationOffset = (uint64_t) drawY * bmp.bmWidthBytes +
+		(uint64_t) drawX * 4;
+	if (bufferSize > UINT_MAX || destinationOffset >= bufferSize) {
+		hr = HRESULT_FROM_WIN32(ERROR_ARITHMETIC_OVERFLOW);
+		goto fail;
+	}
+	// Preserve transparent padding around the proportionally scaled image.
+	ZeroMemory(bits, (SIZE_T) bufferSize);
 	hr = src->CopyPixels(NULL, bmp.bmWidthBytes,
-		bmp.bmWidthBytes * bmp.bmHeight, (BYTE *) bits);
+		(UINT) (bufferSize - destinationOffset),
+		((BYTE *) bits) + destinationOffset);
 
 fail:
 	if (*hb != NULL && hr != S_OK) {

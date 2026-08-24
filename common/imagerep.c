@@ -56,3 +56,31 @@ int uiprivImageRepMatcherAdd(uiprivImageRepMatcher *m,
 	m->hasBest = 1;
 	return 1;
 }
+
+void uiprivImageFitRect(int imageWidth, int imageHeight,
+	int boundsWidth, int boundsHeight,
+	int *x, int *y, int *width, int *height)
+{
+	int64_t scaled;
+
+	*x = 0;
+	*y = 0;
+	*width = 0;
+	*height = 0;
+	if (imageWidth <= 0 || imageHeight <= 0 ||
+		boundsWidth <= 0 || boundsHeight <= 0)
+		return;
+
+	if ((int64_t) imageWidth * boundsHeight >
+		(int64_t) boundsWidth * imageHeight) {
+		*width = boundsWidth;
+		scaled = (int64_t) imageHeight * boundsWidth / imageWidth;
+		*height = scaled < 1 ? 1 : (int) scaled;
+	} else {
+		*height = boundsHeight;
+		scaled = (int64_t) imageWidth * boundsHeight / imageHeight;
+		*width = scaled < 1 ? 1 : (int) scaled;
+	}
+	*x = (boundsWidth - *width) / 2;
+	*y = (boundsHeight - *height) / 2;
+}

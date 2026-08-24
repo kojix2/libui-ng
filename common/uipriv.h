@@ -90,6 +90,9 @@ struct uiprivImageRepMatcher {
 };
 extern void uiprivImageRepMatcherInit(uiprivImageRepMatcher *, int, int);
 extern int uiprivImageRepMatcherAdd(uiprivImageRepMatcher *, int, int);
+extern void uiprivImageFitRect(int imageWidth, int imageHeight,
+	int boundsWidth, int boundsHeight,
+	int *x, int *y, int *width, int *height);
 
 // OS-specific text.* files
 extern int uiprivStricmp(const char *a, const char *b);
