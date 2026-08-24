@@ -1,6 +1,44 @@
+#include <float.h>
 #include <limits.h>
 #include "../ui.h"
 #include "uipriv.h"
+
+int uiprivImageTargetPixelSize(double size)
+{
+	int pixels;
+
+	if (!(size > 0) || size > DBL_MAX)
+		return 0;
+	if (size >= INT_MAX)
+		return INT_MAX;
+	if (size <= 1)
+		return 1;
+	pixels = (int) size;
+	if ((double) pixels < size)
+		pixels++;
+	return pixels;
+}
+
+int uiprivImagePixelBufferSpan(int pixelWidth, int pixelHeight,
+	int byteStride, size_t *span)
+{
+	uint64_t bytes;
+	uint64_t rowBytes;
+
+	if (span != NULL)
+		*span = 0;
+	if (pixelWidth <= 0 || pixelHeight <= 0 || byteStride <= 0)
+		return 0;
+	rowBytes = (uint64_t) pixelWidth * 4;
+	if ((uint64_t) byteStride < rowBytes)
+		return 0;
+	bytes = (uint64_t) byteStride * pixelHeight;
+	if (bytes > SIZE_MAX)
+		return 0;
+	if (span != NULL)
+		*span = (size_t) bytes;
+	return 1;
+}
 
 void uiprivImageRepMatcherInit(uiprivImageRepMatcher *m,
 	int targetWidth, int targetHeight)

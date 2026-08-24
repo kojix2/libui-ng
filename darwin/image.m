@@ -12,9 +12,9 @@ uiImage *uiNewImage(double width, double height)
 {
 	uiImage *i;
 
-	if (!(width > 0) || width > DBL_MAX ||
-		!(height > 0) || height > DBL_MAX) {
-		uiprivUserBug("uiNewImage() dimensions must be finite and positive.");
+	if (!(width > 0) || width > INT_MAX ||
+		!(height > 0) || height > INT_MAX) {
+		uiprivUserBug("uiNewImage() dimensions must be finite, positive, and no greater than INT_MAX.");
 		return NULL;
 	}
 	i = uiprivNew(uiImage);
@@ -70,6 +70,11 @@ void uiImageAppend(uiImage *i, const void *pixels, int pixelWidth, int pixelHeig
 		uiprivUserBug("You cannot append a uiImage representation with byte stride %d and pixel width %d.", byteStride, pixelWidth);
 		return;
 	}
+	if (!uiprivImagePixelBufferSpan(pixelWidth, pixelHeight,
+		byteStride, NULL)) {
+		uiprivUserBug("The uiImage representation pixel buffer is too large to address on this platform.");
+		return;
+	}
 
 	repCalibrated = [[NSBitmapImageRep alloc] initWithBitmapDataPlanes:NULL
 		pixelsWide:pixelWidth
@@ -95,6 +100,10 @@ void uiImageAppend(uiImage *i, const void *pixels, int pixelWidth, int pixelHeig
 		return;
 	}
 	realStride = [repCalibrated bytesPerRow];
+	if (realStride < pixelWidth * 4) {
+		[repCalibrated release];
+		return;
+	}
 	for (y = 0; y < pixelHeight; y++) {
 		for (x = 0; x < pixelWidth * 4; x += 4) {
 			union {
@@ -111,8 +120,10 @@ void uiImageAppend(uiImage *i, const void *pixels, int pixelWidth, int pixelHeig
 			data[x + 2] = v.v8[2];
 			data[x + 3] = v.v8[3];
 		}
-		pix += byteStride;
-		data += realStride;
+		if (y + 1 < pixelHeight) {
+			pix += byteStride;
+			data += realStride;
+		}
 	}
 
 	// we can't call the constructor with this, but we can retag (NOT convert)
@@ -127,5 +138,7 @@ void uiImageAppend(uiImage *i, const void *pixels, int pixelWidth, int pixelHeig
 
 NSImage *uiprivImageNSImage(uiImage *i)
 {
+	if (i == NULL)
+		return nil;
 	return i->i;
 }

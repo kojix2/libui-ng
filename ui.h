@@ -3213,6 +3213,8 @@ typedef struct uiImage uiImage;
  *
  * @param width Width in points.
  * @param height Height in points.
+ * @note Both dimensions must be finite, positive, and no greater than
+ *       `INT_MAX`.
  * @returns A new uiImage instance.
  * @memberof uiImage @static
  */
@@ -3361,7 +3363,8 @@ _UI_EXTERN const char *uiTableValueString(const uiTableValue *v);
  * Creates a new table value to store an image.
  *
  * @param img Image.\n
- *            Data is NOT copied and needs to kept alive.
+ *            Data is NOT copied and needs to kept alive. May be `NULL` to
+ *            represent an empty image cell.
  * @returns A new uiTableValue instance.
  * @warning Unlike other uiTableValue constructors, uiNewTableValueImage() does
  *          NOT copy the image to save time and space. Make sure the image

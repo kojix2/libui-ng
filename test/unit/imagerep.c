@@ -1,3 +1,4 @@
+#include <float.h>
 #include <limits.h>
 #include <stdarg.h>
 #include <stddef.h>
@@ -33,6 +34,35 @@ static void assertImageSize(struct imageSize actual, int width, int height)
 	assert_int_equal(actual.height, height);
 }
 
+static void imageTargetPixelSizeRoundsUpAndClamps(void **state)
+{
+	(void) state;
+	assert_int_equal(uiprivImageTargetPixelSize(0), 0);
+	assert_int_equal(uiprivImageTargetPixelSize(-1), 0);
+	assert_int_equal(uiprivImageTargetPixelSize(0.25), 1);
+	assert_int_equal(uiprivImageTargetPixelSize(1), 1);
+	assert_int_equal(uiprivImageTargetPixelSize(1.01), 2);
+	assert_int_equal(uiprivImageTargetPixelSize(16.5), 17);
+	assert_int_equal(uiprivImageTargetPixelSize(INT_MAX), INT_MAX);
+	assert_int_equal(uiprivImageTargetPixelSize(DBL_MAX), INT_MAX);
+}
+
+static void imagePixelBufferSpanValidatesDimensionsAndOverflow(void **state)
+{
+	size_t span;
+
+	(void) state;
+	assert_true(uiprivImagePixelBufferSpan(2, 3, 12, &span));
+	assert_int_equal(span, 36);
+	assert_false(uiprivImagePixelBufferSpan(0, 3, 12, &span));
+	assert_false(uiprivImagePixelBufferSpan(2, 0, 12, &span));
+	assert_false(uiprivImagePixelBufferSpan(2, 3, 7, &span));
+#if SIZE_MAX <= UINT32_MAX
+	assert_false(uiprivImagePixelBufferSpan(INT_MAX / 4, 3,
+		INT_MAX - 3, &span));
+#endif
+}
+
 static void imageRepPrefersClosestLargeEnoughRepresentation(void **state)
 {
 	const struct imageSize reps[] = {
@@ -41,6 +71,12 @@ static void imageRepPrefersClosestLargeEnoughRepresentation(void **state)
 
 	(void) state;
 	assertImageSize(chooseRep(48, 48, reps, 3), 64, 64);
+}
+
+static void imageRepHandlesNoRepresentations(void **state)
+{
+	(void) state;
+	assertImageSize(chooseRep(16, 16, NULL, 0), 0, 0);
 }
 
 static void imageRepFallsBackToClosestSmallerRepresentation(void **state)
@@ -103,6 +139,9 @@ static void imageFitRectHandlesInvalidAndExtremeSizes(void **state)
 int main(void)
 {
 	const struct CMUnitTest tests[] = {
+		cmocka_unit_test(imageTargetPixelSizeRoundsUpAndClamps),
+		cmocka_unit_test(imagePixelBufferSpanValidatesDimensionsAndOverflow),
+		cmocka_unit_test(imageRepHandlesNoRepresentations),
 		cmocka_unit_test(imageRepPrefersClosestLargeEnoughRepresentation),
 		cmocka_unit_test(imageRepFallsBackToClosestSmallerRepresentation),
 		cmocka_unit_test(imageRepSelectionIsIndependentOfAppendOrder),

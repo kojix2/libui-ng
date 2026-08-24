@@ -128,12 +128,14 @@ static void imageColumnDataFunc(GtkTreeViewColumn *c, GtkCellRenderer *r, GtkTre
 	struct imageColumnParams *p = (struct imageColumnParams *) data;
 	GValue value = G_VALUE_INIT;
 	uiImage *img;
+	cairo_surface_t *surface;
 
 	gtk_tree_model_get_value(m, iter, p->modelColumn, &value);
 	img = (uiImage *) g_value_get_pointer(&value);
-	g_object_set(r, "surface",
-		uiprivImageAppropriateSurface(img, p->t->treeWidget),
-		NULL);
+	surface = uiprivImageAppropriateSurfaceForTable(img, p->t->treeWidget);
+	g_object_set(r, "surface", surface, NULL);
+	if (surface != NULL)
+		cairo_surface_destroy(surface);
 	g_value_unset(&value);
 
 	applyBackgroundColor(p->t, m, iter, r);

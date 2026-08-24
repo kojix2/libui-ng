@@ -47,6 +47,8 @@ extern void uiprivFreeContext(uiDrawContext *);
 
 // image.c
 extern cairo_surface_t *uiprivImageAppropriateSurface(uiImage *i, GtkWidget *w);
+// Returns a newly referenced surface configured with the image's logical size.
+extern cairo_surface_t *uiprivImageAppropriateSurfaceForTable(uiImage *i, GtkWidget *w);
 
 // cellrendererbutton.c
 extern GtkCellRenderer *uiprivNewCellRendererButton(void);

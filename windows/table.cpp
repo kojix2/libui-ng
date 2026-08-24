@@ -157,6 +157,21 @@ static LRESULT CALLBACK tableSubProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
 	finishEdit = false;
 	abortEdit = false;
 	switch (uMsg) {
+#ifdef WM_DPICHANGED
+	case WM_DPICHANGED:
+#endif
+#ifdef WM_DPICHANGED_AFTERPARENT
+	case WM_DPICHANGED_AFTERPARENT:
+#endif
+	case WM_THEMECHANGED:
+	case WM_SETTINGCHANGE:
+		hr = uiprivUpdateImageListSize(t);
+		if (hr == S_OK) {
+			if (InvalidateRect(hwnd, NULL, TRUE) == 0)
+				logLastError(L"InvalidateRect() after table appearance change");
+		} else
+			logHRESULT(L"uiprivUpdateImageListSize() after table appearance change", hr);
+		break;
 	case WM_TIMER:
 		if (wParam == (WPARAM) (&(t->inDoubleClickTimer))) {
 			t->inDoubleClickTimer = FALSE;
@@ -750,7 +765,8 @@ static void uiTableDestroy(uiControl *c)
 	for (auto col : *(t->columns))
 		uiprivFree(col);
 	delete t->columns;
-	// t->imagelist will be automatically destroyed
+	if (t->imagelist != NULL)
+		ImageList_Destroy(t->imagelist);
 	delete t->indeterminatePositions;
 	uiFreeControl(uiControl(t));
 }

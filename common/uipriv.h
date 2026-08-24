@@ -78,6 +78,9 @@ extern void uiprivFallbackSkew(uiDrawMatrix *, double, double, double, double);
 extern void uiprivFallbackTransformSize(uiDrawMatrix *, double *, double *);
 
 // imagerep.c
+extern int uiprivImageTargetPixelSize(double size);
+extern int uiprivImagePixelBufferSpan(int pixelWidth, int pixelHeight,
+	int byteStride, size_t *span);
 typedef struct uiprivImageRepMatcher uiprivImageRepMatcher;
 struct uiprivImageRepMatcher {
 	int targetWidth;

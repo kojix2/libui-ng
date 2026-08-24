@@ -25,6 +25,30 @@ struct drawState {
 	BOOL freeTextBrush;
 };
 
+static int systemMetricForDC(HDC dc, int index, int dpiIndex)
+{
+	typedef int (WINAPI *getSystemMetricsForDpiFunc)(int, UINT);
+	getSystemMetricsForDpiFunc getForDpi;
+	FARPROC address;
+	HMODULE user32;
+	int dpi;
+
+	user32 = GetModuleHandleW(L"user32.dll");
+	getForDpi = NULL;
+	if (user32 != NULL) {
+		address = GetProcAddress(user32, "GetSystemMetricsForDpi");
+		if (address != NULL) {
+			static_assert(sizeof address == sizeof getForDpi,
+				"function pointer sizes must match");
+			memcpy(&getForDpi, &address, sizeof getForDpi);
+		}
+	}
+	dpi = GetDeviceCaps(dc, dpiIndex);
+	if (getForDpi != NULL && dpi > 0)
+		return getForDpi(index, (UINT) dpi);
+	return GetSystemMetrics(index);
+}
+
 static HRESULT drawBackgrounds(HRESULT hr, struct drawState *s)
 {
 	if (hr != S_OK)
@@ -80,6 +104,8 @@ static HRESULT drawImagePart(HRESULT hr, struct drawState *s)
 	value = uiprivTableModelCellValue(s->model, s->iItem, s->p->imageModelColumn);
 	wb = uiprivImageAppropriateForDC(uiTableValueImage(value), s->dc);
 	uiFreeTableValue(value);
+	if (wb == NULL)
+		return S_OK;
 
 	hr = uiprivWICToGDI(wb, s->dc, s->m->cxIcon, s->m->cyIcon, &b);
 	if (hr != S_OK)
@@ -128,9 +154,11 @@ static HRESULT drawUnthemedCheckbox(struct drawState *s, int checked, int enable
 	r = s->m->subitemIcon;
 	// this is what the actual list view LVS_EX_CHECKBOXES code does to size the checkboxes
 	// TODO reverify the initial size
-	r.right = r.left + GetSystemMetrics(SM_CXSMICON);
-	r.bottom = r.top + GetSystemMetrics(SM_CYSMICON);
-	if (InflateRect(&r, -GetSystemMetrics(SM_CXEDGE), -GetSystemMetrics(SM_CYEDGE)) == 0) {
+	r.right = r.left + systemMetricForDC(s->dc, SM_CXSMICON, LOGPIXELSX);
+	r.bottom = r.top + systemMetricForDC(s->dc, SM_CYSMICON, LOGPIXELSY);
+	if (InflateRect(&r,
+		-systemMetricForDC(s->dc, SM_CXEDGE, LOGPIXELSX),
+		-systemMetricForDC(s->dc, SM_CYEDGE, LOGPIXELSY)) == 0) {
 		logLastError(L"InflateRect()");
 		return E_FAIL;
 	}
@@ -757,7 +785,6 @@ fail:
 	return hr;
 }
 
-// TODO run again when the DPI or the theme changes
 HRESULT uiprivUpdateImageListSize(uiTable *t)
 {
 	HDC dc;
@@ -775,8 +802,8 @@ HRESULT uiprivUpdateImageListSize(uiTable *t)
 	theme = NULL;
 	imagelist = NULL;
 
-	cxList = GetSystemMetrics(SM_CXSMICON);
-	cyList = GetSystemMetrics(SM_CYSMICON);
+	cxList = systemMetricForDC(dc, SM_CXSMICON, LOGPIXELSX);
+	cyList = systemMetricForDC(dc, SM_CYSMICON, LOGPIXELSY);
 	sizeCheck.cx = cxList;
 	sizeCheck.cy = cyList;
 	theme = OpenThemeData(t->hwnd, L"button");

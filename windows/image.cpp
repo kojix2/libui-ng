@@ -73,6 +73,7 @@ void uiImageAppend(uiImage *i, const void *pixels, int pixelWidth, int pixelHeig
 	BYTE *dipp;
 	UINT size;
 	UINT realStride;
+	uint64_t destinationSize;
 	int x, y;
 	HRESULT hr;
 
@@ -98,6 +99,11 @@ void uiImageAppend(uiImage *i, const void *pixels, int pixelWidth, int pixelHeig
 	}
 	if (byteStride < pixelWidth * 4) {
 		uiprivUserBug("You cannot append a uiImage representation with byte stride %d and pixel width %d.", byteStride, pixelWidth);
+		return;
+	}
+	if (!uiprivImagePixelBufferSpan(pixelWidth, pixelHeight,
+		byteStride, NULL)) {
+		uiprivUserBug("The uiImage representation pixel buffer is too large to address on this platform.");
 		return;
 	}
 
@@ -135,6 +141,14 @@ void uiImageAppend(uiImage *i, const void *pixels, int pixelWidth, int pixelHeig
 		b->Release();
 		return;
 	}
+	destinationSize = (uint64_t) (pixelHeight - 1) * realStride +
+		(uint64_t) pixelWidth * 4;
+	if (realStride < (UINT) pixelWidth * 4 || destinationSize > size) {
+		logHRESULT(L"WIC returned an invalid buffer layout in uiImageAppend()", E_FAIL);
+		l->Release();
+		b->Release();
+		return;
+	}
 	for (y = 0; y < pixelHeight; y++) {
 		for (x = 0; x < pixelWidth * 4; x += 4) {
 			union {
@@ -151,8 +165,10 @@ void uiImageAppend(uiImage *i, const void *pixels, int pixelWidth, int pixelHeig
 			data[x + 2] = v.v8[2];
 			data[x + 3] = v.v8[3];
 		}
-		pix += byteStride;
-		data += realStride;
+		if (y + 1 < pixelHeight) {
+			pix += byteStride;
+			data += realStride;
+		}
 	}
 
 	l->Release();
@@ -164,14 +180,15 @@ IWICBitmap *uiprivImageAppropriateForDC(uiImage *i, HDC dc)
 	uiprivImageRepMatcher matcher;
 	IWICBitmap *best;
 	int targetWidth, targetHeight;
-	int target;
 
+	if (i == NULL)
+		return NULL;
 	// uiImage dimensions are in points at 96 DPI; select a representation
 	// using the corresponding pixel dimensions for this device context.
-	target = MulDiv((int) i->width, GetDeviceCaps(dc, LOGPIXELSX), 96);
-	targetWidth = target == -1 ? INT_MAX : target;
-	target = MulDiv((int) i->height, GetDeviceCaps(dc, LOGPIXELSY), 96);
-	targetHeight = target == -1 ? INT_MAX : target;
+	targetWidth = uiprivImageTargetPixelSize(i->width *
+		GetDeviceCaps(dc, LOGPIXELSX) / 96.0);
+	targetHeight = uiprivImageTargetPixelSize(i->height *
+		GetDeviceCaps(dc, LOGPIXELSY) / 96.0);
 
 	uiprivImageRepMatcherInit(&matcher, targetWidth, targetHeight);
 	best = NULL;
@@ -202,6 +219,11 @@ HRESULT uiprivWICToGDI(IWICBitmap *b, HDC dc, int width, int height, HBITMAP *hb
 	uint64_t bitmapHeight, bufferSize, destinationOffset;
 	HRESULT hr;
 
+	if (hb == NULL)
+		return E_POINTER;
+	*hb = NULL;
+	if (b == NULL)
+		return E_INVALIDARG;
 	hr = b->GetSize(&ux, &uy);
 	if (hr != S_OK)
 		return hr;

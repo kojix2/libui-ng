@@ -80,6 +80,11 @@ void uiImageAppend(uiImage *i, const void *pixels, int pixelWidth, int pixelHeig
 		uiprivUserBug("You cannot append a uiImage representation with byte stride %d and pixel width %d.", byteStride, pixelWidth);
 		return;
 	}
+	if (!uiprivImagePixelBufferSpan(pixelWidth, pixelHeight,
+		byteStride, NULL)) {
+		uiprivUserBug("The uiImage representation pixel buffer is too large to address on this platform.");
+		return;
+	}
 
 	// note that this is native-endian
 	cs = cairo_image_surface_create(CAIRO_FORMAT_ARGB32,
@@ -113,8 +118,10 @@ void uiImageAppend(uiImage *i, const void *pixels, int pixelWidth, int pixelHeig
 			data[x + 2] = v.v8[2];
 			data[x + 3] = v.v8[3];
 		}
-		pix += byteStride;
-		data += realStride;
+		if (y + 1 < pixelHeight) {
+			pix += byteStride;
+			data += realStride;
+		}
 	}
 
 	cairo_surface_mark_dirty(cs);
@@ -129,15 +136,15 @@ cairo_surface_t *uiprivImageAppropriateSurface(uiImage *i, GtkWidget *w)
 	int targetWidth, targetHeight;
 	int scale;
 
+	if (i == NULL)
+		return NULL;
 	scale = gtk_widget_get_scale_factor(w);
 	if (scale <= 0) {
 		targetWidth = 0;
 		targetHeight = 0;
 	} else {
-		targetWidth = i->width > G_MAXINT / scale ?
-			G_MAXINT : i->width * scale;
-		targetHeight = i->height > G_MAXINT / scale ?
-			G_MAXINT : i->height * scale;
+		targetWidth = uiprivImageTargetPixelSize(i->width * scale);
+		targetHeight = uiprivImageTargetPixelSize(i->height * scale);
 	}
 
 	uiprivImageRepMatcherInit(&matcher, targetWidth, targetHeight);
@@ -153,4 +160,28 @@ cairo_surface_t *uiprivImageAppropriateSurface(uiImage *i, GtkWidget *w)
 			best = surface;
 	}
 	return best;
+}
+
+cairo_surface_t *uiprivImageAppropriateSurfaceForTable(uiImage *i, GtkWidget *w)
+{
+	cairo_surface_t *best;
+	cairo_surface_t *surface;
+	int width, height;
+
+	best = uiprivImageAppropriateSurface(i, w);
+	if (best == NULL)
+		return NULL;
+	width = cairo_image_surface_get_width(best);
+	height = cairo_image_surface_get_height(best);
+	surface = cairo_surface_create_for_rectangle(best, 0, 0, width, height);
+	if (cairo_surface_status(surface) != CAIRO_STATUS_SUCCESS) {
+		cairo_surface_destroy(surface);
+		return NULL;
+	}
+	// GtkCellRendererPixbuf uses the device scale to obtain the logical size.
+	// Keep it on this table-only subsurface so drawing APIs can continue to use
+	// the representation's unmodified pixel coordinate system.
+	cairo_surface_set_device_scale(surface,
+		width / i->width, height / i->height);
+	return surface;
 }
