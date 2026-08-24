@@ -18,7 +18,9 @@ libui_unit_sources = [
 	'datetimepicker.c',
 	'grid.c',
 	'drawmatrix.c',
+	'drawimage.c',
 	'attrstr.c',
+	'imageview.c',
 	'window.c',
 ]
 libui_unit_sources += libui_test_internal_sources
@@ -65,3 +67,13 @@ imagerep_unit = executable('imagerep-unit', [
 	install: false)
 
 test('Image Representation Unit Tests', imagerep_unit)
+
+imageviewrect_unit = executable('imageviewrect-unit', [
+	'imageviewrect.c',
+	'../../common/imageview.c',
+	'../../common/imagerep.c',
+],
+	dependencies: [cmocka_deps, libui_binary_deps],
+	install: false)
+
+test('Image View Rectangle Unit Tests', imageviewrect_unit)
