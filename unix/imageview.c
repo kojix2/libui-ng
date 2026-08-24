@@ -1,0 +1,116 @@
+// uiImageView — GTK3 implementation (MVP, copy-owned)
+#include "uipriv_unix.h"
+
+#define uiImageViewSignature 0x49566965
+
+struct uiImageView {
+	uiUnixControl c;
+	GtkWidget *widget;          // actual widget exposed to libui
+	GtkWidget *area;            // GtkDrawingArea for custom draw
+	uiImageViewContentMode mode;
+	uiImage *image;             // owned copy for drawing (may be NULL)
+};
+
+uiUnixControlAllDefaultsExceptDestroy(uiImageView)
+
+static void uiImageViewDestroy(uiControl *c)
+{
+	uiImageView *v = uiImageView(c);
+	if (v->image) {
+		uiFreeImage(v->image);
+		v->image = NULL;
+	}
+	g_object_unref(v->widget);
+	uiFreeControl(uiControl(v));
+}
+
+static gboolean on_draw(GtkWidget *w, cairo_t *cr, gpointer data)
+{
+	uiImageView *v = uiImageView(data);
+	GtkAllocation a;
+	cairo_surface_t *surface;
+	double imgW, imgH;
+	double dx, dy, dw, dh;
+	int scale;
+	int surfaceW, surfaceH;
+	int targetW, targetH;
+	gtk_widget_get_allocation(w, &a);
+
+	if (v->image == NULL)
+		return FALSE;
+
+	uiprivImageSize(v->image, &imgW, &imgH);
+	uiprivImageViewComputeRect(a.width, a.height, imgW, imgH, v->mode,
+		&dx, &dy, &dw, &dh);
+	scale = gtk_widget_get_scale_factor(w);
+	targetW = uiprivImageTargetPixelSize(dw * scale);
+	targetH = uiprivImageTargetPixelSize(dh * scale);
+	if (targetW == 0 || targetH == 0)
+		return FALSE;
+	surface = uiprivImageAppropriateSurfaceForSize(v->image,
+		targetW, targetH);
+	if (surface == NULL)
+		return FALSE;
+
+	surfaceW = cairo_image_surface_get_width(surface);
+	surfaceH = cairo_image_surface_get_height(surface);
+	if (surfaceW <= 0 || surfaceH <= 0)
+		return FALSE;
+
+	cairo_save(cr);
+	cairo_translate(cr, dx, dy);
+	cairo_rectangle(cr, 0, 0, dw, dh);
+	cairo_clip(cr);
+	cairo_scale(cr, dw / surfaceW, dh / surfaceH);
+	cairo_set_source_surface(cr, surface, 0, 0);
+	cairo_pattern_set_filter(cairo_get_source(cr), CAIRO_FILTER_GOOD);
+	cairo_pattern_set_extend(cairo_get_source(cr), CAIRO_EXTEND_PAD);
+	cairo_paint(cr);
+	cairo_restore(cr);
+	return TRUE;
+}
+
+uiImageView *uiNewImageView(void)
+{
+	uiImageView *v;
+
+	uiUnixNewControl(uiImageView, v);
+
+	v->area = gtk_drawing_area_new();
+	v->widget = v->area;
+	v->mode = uiImageViewContentFit;
+	v->image = NULL;
+
+	gtk_widget_set_size_request(v->widget, 16, 16);
+
+	g_signal_connect(v->area, "draw", G_CALLBACK(on_draw), v);
+
+	return v;
+}
+
+void uiImageViewSetContentMode(uiImageView *v, uiImageViewContentMode mode)
+{
+	if (!uiprivImageViewContentModeValid(mode)) {
+		uiprivUserBug("Invalid uiImageView content mode %d.", mode);
+		return;
+	}
+	v->mode = mode;
+	gtk_widget_queue_draw(v->area);
+}
+
+void uiImageViewSetImage(uiImageView *v, const uiImage *image)
+{
+	if (v->image) {
+		uiFreeImage(v->image);
+		v->image = NULL;
+	}
+
+	if (image == NULL) {
+		gtk_widget_queue_draw(v->area);
+		return;
+	}
+
+	v->image = uiprivImageCopy(image);
+
+	gtk_widget_queue_draw(v->area);
+}
