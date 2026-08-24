@@ -46,6 +46,29 @@ void uiFreeImage(uiImage *i)
 	freeImage(i);
 }
 
+uiImage *uiprivImageCopy(const uiImage *i)
+{
+	uiImage *copy;
+	guint n;
+
+	if (i == NULL)
+		return NULL;
+
+	copy = uiNewImage(i->width, i->height);
+	for (n = 0; n < i->images->len; n++)
+		g_ptr_array_add(copy->images,
+			cairo_surface_reference(g_ptr_array_index(i->images, n)));
+	return copy;
+}
+
+void uiprivImageSize(const uiImage *i, double *width, double *height)
+{
+	if (width != NULL)
+		*width = i->width;
+	if (height != NULL)
+		*height = i->height;
+}
+
 void uiImageAppend(uiImage *i, const void *pixels, int pixelWidth, int pixelHeight, int byteStride)
 {
 	cairo_surface_t *cs;
@@ -128,11 +151,8 @@ void uiImageAppend(uiImage *i, const void *pixels, int pixelWidth, int pixelHeig
 	g_ptr_array_add(i->images, cs);
 }
 
-cairo_surface_t *uiprivImageAppropriateSurface(uiImage *i, GtkWidget *w)
+cairo_surface_t *uiprivImageAppropriateSurface(const uiImage *i, GtkWidget *w)
 {
-	uiprivImageRepMatcher matcher;
-	cairo_surface_t *best;
-	guint n;
 	int targetWidth, targetHeight;
 	int scale;
 
@@ -147,7 +167,18 @@ cairo_surface_t *uiprivImageAppropriateSurface(uiImage *i, GtkWidget *w)
 		targetHeight = uiprivImageTargetPixelSize(i->height * scale);
 	}
 
-	uiprivImageRepMatcherInit(&matcher, targetWidth, targetHeight);
+	return uiprivImageAppropriateSurfaceForSize(i,
+		targetWidth, targetHeight);
+}
+
+cairo_surface_t *uiprivImageAppropriateSurfaceForSize(const uiImage *i,
+	int pixelWidth, int pixelHeight)
+{
+	uiprivImageRepMatcher matcher;
+	cairo_surface_t *best;
+	guint n;
+
+	uiprivImageRepMatcherInit(&matcher, pixelWidth, pixelHeight);
 	best = NULL;
 	for (n = 0; n < i->images->len; n++) {
 		cairo_surface_t *surface;
@@ -162,7 +193,7 @@ cairo_surface_t *uiprivImageAppropriateSurface(uiImage *i, GtkWidget *w)
 	return best;
 }
 
-cairo_surface_t *uiprivImageAppropriateSurfaceForTable(uiImage *i, GtkWidget *w)
+cairo_surface_t *uiprivImageAppropriateSurfaceForTable(const uiImage *i, GtkWidget *w)
 {
 	cairo_surface_t *best;
 	cairo_surface_t *surface;
