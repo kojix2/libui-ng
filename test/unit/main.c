@@ -77,8 +77,10 @@ int main(void)
 		{ dateTimePickerRunUnitTests },
 		{ gridRunUnitTests },
 		{ drawMatrixRunUnitTests },
+		{ drawImageRunUnitTests },
 		{ attrstrRunUnitTests },
 		{ tableRunUnitTests },
+		{ imageViewRunUnitTests },
 	};
 
 	for (i = 0; i < sizeof(unitTests)/sizeof(*unitTests); ++i) {
