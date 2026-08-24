@@ -54,19 +54,31 @@ void uiImageAppend(uiImage *i, void *pixels, int pixelWidth, int pixelHeight, in
 	int realStride;
 	int x, y;
 
-	if (i == NULL)
+	if (i == NULL) {
 		uiprivUserBug("You cannot append a uiImage representation to NULL.");
-	if (pixels == NULL)
+		return;
+	}
+	if (pixels == NULL) {
 		uiprivUserBug("You cannot append a NULL pixel buffer to a uiImage.");
-	if (pixelWidth <= 0)
+		return;
+	}
+	if (pixelWidth <= 0) {
 		uiprivUserBug("You cannot append a uiImage representation with pixel width %d.", pixelWidth);
-	if (pixelHeight <= 0)
+		return;
+	}
+	if (pixelHeight <= 0) {
 		uiprivUserBug("You cannot append a uiImage representation with pixel height %d.", pixelHeight);
-	if (pixelWidth > INT_MAX / 4)
+		return;
+	}
+	if (pixelWidth > INT_MAX / 4) {
 		uiprivUserBug("You cannot append a uiImage representation with pixel width %d.", pixelWidth);
+		return;
+	}
 	minStride = (int64_t) pixelWidth * 4;
-	if (byteStride < minStride)
+	if (byteStride < minStride) {
 		uiprivUserBug("You cannot append a uiImage representation with byte stride %d and pixel width %d.", byteStride, pixelWidth);
+		return;
+	}
 
 	// note that this is native-endian
 	cs = cairo_image_surface_create(CAIRO_FORMAT_ARGB32,
