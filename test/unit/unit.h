@@ -36,7 +36,9 @@ int areaRunUnitTests(void);
 int imageRunUnitTests(void);
 int gridRunUnitTests(void);
 int drawMatrixRunUnitTests(void);
+int drawImageRunUnitTests(void);
 int attrstrRunUnitTests(void);
 int tableRunUnitTests(void);
+int imageViewRunUnitTests(void);
 
 #endif
