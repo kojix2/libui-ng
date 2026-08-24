@@ -1,5 +1,6 @@
 // 7 september 2015
 #include "uipriv_windows.hpp"
+#include <limits.h>
 #include "draw.hpp"
 
 ID2D1Factory *d2dfactory = NULL;
@@ -552,4 +553,85 @@ void uiDrawRestore(uiDrawContext *c)
 		c->currentClip->Release();
 	// no need to explicitly addref or release; just transfer the ref
 	c->currentClip = state.clip;
+}
+
+static void imageTargetPixelSizeForContext(uiDrawContext *c,
+	double width, double height, FLOAT dpiX, FLOAT dpiY,
+	int *pixelWidth, int *pixelHeight)
+{
+	D2D1_MATRIX_3X2_F transform;
+	double widthX, widthY, heightX, heightY;
+
+	c->rt->GetTransform(&transform);
+	widthX = width * transform._11 * dpiX / 96.0;
+	widthY = width * transform._12 * dpiY / 96.0;
+	heightX = height * transform._21 * dpiX / 96.0;
+	heightY = height * transform._22 * dpiY / 96.0;
+	*pixelWidth = uiprivImageTargetPixelSize(fabs(widthX) + fabs(heightX));
+	*pixelHeight = uiprivImageTargetPixelSize(fabs(widthY) + fabs(heightY));
+}
+
+
+void uiDrawImage(uiDrawContext *c, const uiImage *img, double x, double y, double width, double height)
+{
+	IWICBitmap *bitmap;
+	ID2D1Bitmap *d2dBitmap;
+	D2D1_RECT_F destRect;
+	ID2D1Layer *cliplayer;
+	FLOAT dpiX = 96.0f, dpiY = 96.0f;
+	int targetWidth, targetHeight;
+	double right, bottom;
+	HRESULT hr;
+
+	if (c == NULL || img == NULL ||
+		!uiprivImageFinite(x) || !uiprivImageFinite(y) ||
+		!uiprivImagePositiveFinite(width) ||
+		!uiprivImagePositiveFinite(height))
+		return;
+	right = x + width;
+	bottom = y + height;
+	if (!uiprivImageFinite(right) || !uiprivImageFinite(bottom) ||
+		fabs(x) > FLT_MAX || fabs(y) > FLT_MAX ||
+		fabs(right) > FLT_MAX || fabs(bottom) > FLT_MAX)
+		return;
+
+	// Get DPI directly from render target - much simpler and more reliable
+	// than trying to use GDI Interop which fails on non-GDI-compatible targets
+	c->rt->GetDpi(&dpiX, &dpiY);
+
+	imageTargetPixelSizeForContext(c, width, height, dpiX, dpiY,
+		&targetWidth, &targetHeight);
+	if (targetWidth == 0 || targetHeight == 0)
+		return;
+	bitmap = uiprivImageAppropriateForSize(img, targetWidth, targetHeight);
+
+	if (bitmap == NULL)
+		return;
+
+	// Create D2D bitmap from WIC bitmap
+	hr = c->rt->CreateBitmapFromWicBitmap(bitmap, NULL, &d2dBitmap);
+
+	if (FAILED(hr)) {
+		logHRESULT(L"error creating D2D bitmap from WIC bitmap", hr);
+		return;
+	}
+
+	destRect.left = (FLOAT) x;
+	destRect.top = (FLOAT) y;
+	destRect.right = (FLOAT) right;
+	destRect.bottom = (FLOAT) bottom;
+	if (!(destRect.right > destRect.left) ||
+		!(destRect.bottom > destRect.top)) {
+		d2dBitmap->Release();
+		return;
+	}
+
+	cliplayer = uiprivApplyClip(c);
+
+	c->rt->DrawBitmap(d2dBitmap, &destRect, 1.0f,
+	                  D2D1_BITMAP_INTERPOLATION_MODE_LINEAR, NULL);
+
+	uiprivUnapplyClip(c, cliplayer);
+
+	d2dBitmap->Release();
 }
