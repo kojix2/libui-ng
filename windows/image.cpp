@@ -61,12 +61,13 @@ void uiFreeImage(uiImage *i)
 // AlphaBlend() on little-endian Windows.
 #define formatForGDI GUID_WICPixelFormat32bppPBGRA
 
-void uiImageAppend(uiImage *i, void *pixels, int pixelWidth, int pixelHeight, int byteStride)
+void uiImageAppend(uiImage *i, const void *pixels, int pixelWidth, int pixelHeight, int byteStride)
 {
 	IWICBitmap *b = NULL;
 	WICRect r;
 	IWICBitmapLock *l = NULL;
-	uint8_t *pix, *data;
+	const uint8_t *pix;
+	uint8_t *data;
 	// MinGW-w64 does not declare the WICInProcPointer alias used by
 	// IWICBitmapLock::GetDataPointer(); BYTE * is the equivalent type.
 	BYTE *dipp;
@@ -118,7 +119,7 @@ void uiImageAppend(uiImage *i, void *pixels, int pixelWidth, int pixelHeight, in
 		return;
 	}
 
-	pix = (uint8_t *) pixels;
+	pix = (const uint8_t *) pixels;
 	hr = l->GetDataPointer(&size, &dipp);
 	if (hr != S_OK) {
 		logHRESULT(L"error calling GetDataPointer() in uiImageAppend()", hr);

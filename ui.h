@@ -3233,7 +3233,7 @@ _UI_EXTERN void uiFreeImage(uiImage *i);
  *
  * @param i uiImage instance.
  * @param pixels Byte array of premultiplied pixels in [R G B A] order.\n
- *               `((uint8_t *) pixels)[0]` equals the **R** of the first pixel,
+ *               `((const uint8_t *) pixels)[0]` equals the **R** of the first pixel,
  *               `[3]` the **A** of the first pixel.\n
  *               `pixels` must be at least `byteStride * pixelHeight` bytes long.\n
  *               Data is copied internally. Ownership is not transferred.
@@ -3241,10 +3241,9 @@ _UI_EXTERN void uiFreeImage(uiImage *i);
  * @param pixelHeight Height in pixels.
  * @param byteStride Number of bytes per row of the pixel array.
  * @todo see if we either need the stride or can provide a way to get the OS-preferred stride (in cairo we do)
- * @todo use const void * for const correctness
  * @memberof uiImage
  */
-_UI_EXTERN void uiImageAppend(uiImage *i, void *pixels, int pixelWidth, int pixelHeight, int byteStride);
+_UI_EXTERN void uiImageAppend(uiImage *i, const void *pixels, int pixelWidth, int pixelHeight, int byteStride);
 
 /**
  * @addtogroup table

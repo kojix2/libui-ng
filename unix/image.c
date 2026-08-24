@@ -46,10 +46,11 @@ void uiFreeImage(uiImage *i)
 	freeImage(i);
 }
 
-void uiImageAppend(uiImage *i, void *pixels, int pixelWidth, int pixelHeight, int byteStride)
+void uiImageAppend(uiImage *i, const void *pixels, int pixelWidth, int pixelHeight, int byteStride)
 {
 	cairo_surface_t *cs;
-	uint8_t *data, *pix;
+	uint8_t *data;
+	const uint8_t *pix;
 	int64_t minStride;
 	int realStride;
 	int x, y;
@@ -89,7 +90,7 @@ void uiImageAppend(uiImage *i, void *pixels, int pixelWidth, int pixelHeight, in
 	}
 	cairo_surface_flush(cs);
 
-	pix = (uint8_t *) pixels;
+	pix = (const uint8_t *) pixels;
 	data = (uint8_t *) cairo_image_surface_get_data(cs);
 	if (data == NULL) {
 		cairo_surface_destroy(cs);

@@ -38,11 +38,12 @@ void uiFreeImage(uiImage *i)
 	freeImage(i);
 }
 
-void uiImageAppend(uiImage *i, void *pixels, int pixelWidth, int pixelHeight, int byteStride)
+void uiImageAppend(uiImage *i, const void *pixels, int pixelWidth, int pixelHeight, int byteStride)
 {
 	NSBitmapImageRep *repCalibrated, *repsRGB;
 	int x, y;
-	uint8_t *pix, *data;
+	const uint8_t *pix;
+	uint8_t *data;
 	NSInteger realStride;
 
 	if (i == NULL) {
@@ -87,7 +88,7 @@ void uiImageAppend(uiImage *i, void *pixels, int pixelWidth, int pixelHeight, in
 	// Apple doesn't explicitly document this, but we apparently need to use native system endian for the data :|
 	// TODO split this into a utility routine?
 	// TODO find proper documentation
-	pix = (uint8_t *) pixels;
+	pix = (const uint8_t *) pixels;
 	data = (uint8_t *) [repCalibrated bitmapData];
 	if (data == NULL) {
 		[repCalibrated release];
