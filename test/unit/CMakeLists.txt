@@ -14,7 +14,8 @@ endif()
 set(unit_sources
 	main.c init.c slider.c spinbox.c label.c button.c combobox.c checkbox.c
 	radiobuttons.c tab.c entry.c menu.c progressbar.c datetimepicker.c grid.c
-	drawmatrix.c attrstr.c window.c box.c group.c editablecombobox.c multilineentry.c
+	drawmatrix.c drawimage.c attrstr.c imageview.c window.c box.c group.c
+	editablecombobox.c multilineentry.c
 	separator.c fontdescriptor.c fontbutton.c colorbutton.c form.c area.c image.c table.c
 )
 list(APPEND unit_sources table_fixture.c table_value.c table_width.c)
@@ -80,7 +81,6 @@ if(UNIX AND NOT APPLE)
 		target_link_libraries(${component}-gtk PRIVATE libui_test_support)
 	endforeach()
 endif()
-
 if(APPLE)
 	find_library(LIBUI_TEST_APPKIT_FRAMEWORK AppKit)
 	if(NOT LIBUI_TEST_APPKIT_FRAMEWORK)
@@ -97,3 +97,15 @@ if(APPLE)
 	target_link_libraries(alloc-darwin PRIVATE cmocka::cmocka
 		${LIBUI_TEST_APPKIT_FRAMEWORK})
 endif()
+
+add_executable(imageviewrect-unit
+	imageviewrect.c ../../common/imageview.c ../../common/imagerep.c
+)
+target_link_libraries(imageviewrect-unit PRIVATE cmocka::cmocka)
+if(UNIX)
+	target_link_libraries(imageviewrect-unit PRIVATE m)
+endif()
+target_include_directories(imageviewrect-unit PRIVATE ../.. ../../common)
+libui_apply_internal_options(imageviewrect-unit)
+add_test(NAME imageviewrect-unit COMMAND imageviewrect-unit)
+set_tests_properties(imageviewrect-unit PROPERTIES TIMEOUT 60)
