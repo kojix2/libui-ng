@@ -138,7 +138,7 @@ extern NSScrollView *uiprivMkScrollView(uiprivScrollViewCreateParams *p);
 extern NSTextField *uiprivNewLabel(NSString *str);
 
 // image.m
-extern NSImage *uiprivImageNSImage(uiImage *);
+extern NSImage *uiprivImageNSImage(const uiImage *);
 
 // winmoveresize.m
 extern void uiprivDoManualMove(NSWindow *w, NSEvent *initialEvent);

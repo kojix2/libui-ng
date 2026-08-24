@@ -2072,6 +2072,7 @@ typedef struct uiAreaMouseEvent uiAreaMouseEvent;
 typedef struct uiAreaKeyEvent uiAreaKeyEvent;
 
 typedef struct uiDrawContext uiDrawContext;
+typedef struct uiImage uiImage;
 
 struct uiAreaHandler {
 	void (*Draw)(uiAreaHandler *, uiArea *, uiAreaDrawParams *);
@@ -2795,6 +2796,27 @@ _UI_EXTERN void uiDrawTextLayoutExtents(uiDrawTextLayout *tl, double *width, dou
 
 // TODO number of lines visible for clipping rect, range visible for clipping rect?
 
+/**
+ * Draws an image on the drawing context.
+ *
+ * The image will be scaled to fit the specified width and height.
+ * The function automatically selects the most appropriate image
+ * representation based on the transformed destination size and the display's
+ * pixel density. This can select a higher-resolution representation when the
+ * image is drawn larger than its logical size.
+ *
+ * `img` is borrowed only for the duration of this call. Image data is not
+ * copied or retained by uiDrawImage().
+ *
+ * @param c Drawing context.
+ * @param img Image to draw. Must not be NULL and must remain valid for the
+ *            duration of this call.
+ * @param x X coordinate of the top-left corner.
+ * @param y Y coordinate of the top-left corner.
+ * @param width Width to draw the image. Must be positive.
+ * @param height Height to draw the image. Must be positive.
+ */
+_UI_EXTERN void uiDrawImage(uiDrawContext *c, const uiImage *img, double x, double y, double width, double height);
 
 /**
  * A button-like control that opens a font chooser when clicked.
@@ -3240,7 +3262,6 @@ _UI_EXTERN uiGrid *uiNewGrid(void);
  * @struct uiImage
  * @ingroup static
  */
-typedef struct uiImage uiImage;
 
 /**
  * Creates a new image container.
@@ -3369,6 +3390,61 @@ _UI_EXTERN int uiToolbarItemChecked(uiToolbarItem *item);
 
 /** Sets the checked state of a toggle item without invoking its callback. */
 _UI_EXTERN void uiToolbarItemSetChecked(uiToolbarItem *item, int checked);
+
+/**
+ * A control to display an image.
+ *
+ * Copy-owned semantics: SetImage() copies or retains an internal native image.
+ * Caller may free the source uiImage right after calling SetImage().
+ *
+ * @struct uiImageView
+ * @extends uiControl
+ * @ingroup static
+ */
+typedef struct uiImageView uiImageView;
+#define uiImageView(this) ((uiImageView *)(this))
+
+/**
+ * Content modes for image display.
+ *
+ * @enum uiImageViewContentMode
+ */
+_UI_ENUM(uiImageViewContentMode) {
+	uiImageViewContentCenter = 0, //!< 1:1 center, may clip or leave margins
+	uiImageViewContentFit,        //!< aspect-fit (letterbox)
+};
+
+/**
+ * Creates a new image view control.
+ *
+ * @returns A new uiImageView instance.
+ * @memberof uiImageView @static
+ */
+_UI_EXTERN uiImageView* uiNewImageView(void);
+
+/**
+ * Sets the image to display.
+ *
+ * Internally keeps its own native image for display.
+ * The caller may destroy the source uiImage after this call.
+ * Replacing the image frees the previous internal copy automatically.
+ *
+ * @param iv uiImageView instance.
+ * @param image Image to display, `NULL` to clear.
+ * @memberof uiImageView
+ */
+_UI_EXTERN void uiImageViewSetImage(uiImageView* iv, const uiImage* image);
+
+/**
+ * Sets the scaling/content mode.
+ *
+ * @param iv uiImageView instance.
+ * @param mode Content mode to set. [Default: `uiImageViewContentFit`]
+ *              Invalid values report a user bug and leave the current mode
+ *              unchanged.
+ * @memberof uiImageView
+ */
+_UI_EXTERN void uiImageViewSetContentMode(uiImageView* iv, uiImageViewContentMode mode);
 
 /**
  * @addtogroup table
