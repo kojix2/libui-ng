@@ -1,7 +1,8 @@
 set(unit_sources
 	main.c init.c slider.c spinbox.c label.c button.c combobox.c checkbox.c
 	radiobuttons.c tab.c entry.c menu.c progressbar.c datetimepicker.c grid.c
-	drawmatrix.c attrstr.c window.c box.c group.c editablecombobox.c multilineentry.c
+	drawmatrix.c drawimage.c attrstr.c imageview.c window.c box.c group.c
+	editablecombobox.c multilineentry.c
 	separator.c fontdescriptor.c fontbutton.c colorbutton.c form.c area.c image.c table.c
 	toolbar.c
 )
@@ -33,3 +34,15 @@ target_include_directories(imagerep-unit PRIVATE ../.. ../../common)
 libui_apply_internal_options(imagerep-unit)
 add_test(NAME imagerep-unit COMMAND imagerep-unit)
 set_tests_properties(imagerep-unit PROPERTIES TIMEOUT 60)
+
+add_executable(imageviewrect-unit
+	imageviewrect.c ../../common/imageview.c ../../common/imagerep.c
+)
+target_link_libraries(imageviewrect-unit PRIVATE cmocka::cmocka)
+if(UNIX)
+	target_link_libraries(imageviewrect-unit PRIVATE m)
+endif()
+target_include_directories(imageviewrect-unit PRIVATE ../.. ../../common)
+libui_apply_internal_options(imageviewrect-unit)
+add_test(NAME imageviewrect-unit COMMAND imageviewrect-unit)
+set_tests_properties(imageviewrect-unit PROPERTIES TIMEOUT 60)
