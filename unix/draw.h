@@ -4,6 +4,7 @@
 struct uiDrawContext {
 	cairo_t *cr;
 	GtkStyleContext *style;
+	GtkWidget *widget;
 };
 
 // drawpath.c
