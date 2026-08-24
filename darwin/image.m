@@ -136,7 +136,7 @@ void uiImageAppend(uiImage *i, const void *pixels, int pixelWidth, int pixelHeig
 	[repCalibrated release];
 }
 
-NSImage *uiprivImageNSImage(uiImage *i)
+NSImage *uiprivImageNSImage(const uiImage *i)
 {
 	if (i == NULL)
 		return nil;
