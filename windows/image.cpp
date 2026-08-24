@@ -57,6 +57,29 @@ void uiFreeImage(uiImage *i)
 	freeImage(i);
 }
 
+uiImage *uiprivImageCopy(const uiImage *i)
+{
+	uiImage *copy;
+
+	if (i == NULL)
+		return NULL;
+
+	copy = uiNewImage(i->width, i->height);
+	for (IWICBitmap *b : *(i->bitmaps)) {
+		b->AddRef();
+		copy->bitmaps->push_back(b);
+	}
+	return copy;
+}
+
+void uiprivImageSize(const uiImage *i, double *width, double *height)
+{
+	if (width != NULL)
+		*width = i->width;
+	if (height != NULL)
+		*height = i->height;
+}
+
 // Store images as premultiplied BGRA, the format expected by Direct2D and by
 // AlphaBlend() on little-endian Windows.
 #define formatForGDI GUID_WICPixelFormat32bppPBGRA
@@ -175,10 +198,8 @@ void uiImageAppend(uiImage *i, const void *pixels, int pixelWidth, int pixelHeig
 	i->bitmaps->push_back(b);
 }
 
-IWICBitmap *uiprivImageAppropriateForDC(uiImage *i, HDC dc)
+IWICBitmap *uiprivImageAppropriateForDC(const uiImage *i, HDC dc)
 {
-	uiprivImageRepMatcher matcher;
-	IWICBitmap *best;
 	int targetWidth, targetHeight;
 
 	if (i == NULL)
@@ -190,19 +211,31 @@ IWICBitmap *uiprivImageAppropriateForDC(uiImage *i, HDC dc)
 	targetHeight = uiprivImageTargetPixelSize(i->height *
 		GetDeviceCaps(dc, LOGPIXELSY) / 96.0);
 
-	uiprivImageRepMatcherInit(&matcher, targetWidth, targetHeight);
+	return uiprivImageAppropriateForSize(i,
+		targetWidth, targetHeight);
+}
+
+IWICBitmap *uiprivImageAppropriateForSize(const uiImage *i,
+	int pixelWidth, int pixelHeight)
+{
+	uiprivImageRepMatcher matcher;
+	IWICBitmap *best;
+
+	if (i == NULL)
+		return NULL;
+	uiprivImageRepMatcherInit(&matcher, pixelWidth, pixelHeight);
 	best = NULL;
-	for (IWICBitmap *b : *(i->bitmaps)) {
+	for (IWICBitmap *bitmap : *(i->bitmaps)) {
 		UINT width, height;
 		HRESULT hr;
 
-		hr = b->GetSize(&width, &height);
+		hr = bitmap->GetSize(&width, &height);
 		if (hr != S_OK) {
-			logHRESULT(L"error calling GetSize() in uiprivImageAppropriateForDC()", hr);
+			logHRESULT(L"error calling GetSize() in uiprivImageAppropriateForSize()", hr);
 			continue;
 		}
 		if (uiprivImageRepMatcherAdd(&matcher, (int) width, (int) height))
-			best = b;
+			best = bitmap;
 	}
 	return best;
 }
