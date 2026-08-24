@@ -8,7 +8,7 @@ target_sources(libui_ui PRIVATE
 	combobox.cpp container.cpp control.cpp d2dscratch.cpp datetimepicker.cpp debug.cpp
 	draw.cpp drawmatrix.cpp drawpath.cpp drawtext.cpp dwrite.cpp editablecombo.cpp
 	entry.cpp events.cpp fontbutton.cpp fontdialog.cpp fontmatch.cpp form.cpp
-	graphemes.cpp grid.cpp group.cpp image.cpp init.cpp label.cpp main.cpp menu.cpp
+	graphemes.cpp grid.cpp group.cpp image.cpp imageview.cpp init.cpp label.cpp main.cpp menu.cpp
 	multilineentry.cpp opentype.cpp parent.cpp progressbar.cpp radiobuttons.cpp
 	separator.cpp sizing.cpp slider.cpp spinbox.cpp stddialogs.cpp tab.cpp table.cpp
 	tabledispinfo.cpp tabledraw.cpp tableediting.cpp tablemetrics.cpp tabpage.cpp
