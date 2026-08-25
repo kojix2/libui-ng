@@ -22,6 +22,7 @@ libui_sources += [
 	'common/table.c',
 	'common/tablemodel.c',
 	'common/tablevalue.c',
+	'common/toolbar.c',
 	'common/userbugs.c',
 	'common/utf.c',
 	libui_version_source,
