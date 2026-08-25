@@ -17,6 +17,7 @@ set(unit_sources
 	drawmatrix.c drawimage.c attrstr.c imageview.c window.c box.c group.c
 	editablecombobox.c multilineentry.c
 	separator.c fontdescriptor.c fontbutton.c colorbutton.c form.c area.c image.c table.c tooltip.c
+	toolbar.c
 )
 list(APPEND unit_sources table_fixture.c table_value.c table_width.c)
 if(NOT BUILD_SHARED_LIBS)
@@ -104,6 +105,13 @@ if(APPLE)
 	set_tests_properties(alloc-darwin PROPERTIES LABELS "backend;fault;darwin")
 	target_link_libraries(alloc-darwin PRIVATE cmocka::cmocka
 		${LIBUI_TEST_APPKIT_FRAMEWORK})
+
+	add_executable(toolbar-darwin toolbar_darwin.m)
+	target_link_libraries(toolbar-darwin PRIVATE libui::ui cmocka::cmocka
+		${LIBUI_TEST_APPKIT_FRAMEWORK})
+	libui_apply_internal_options(toolbar-darwin)
+	add_test(NAME toolbar-darwin COMMAND toolbar-darwin)
+	set_tests_properties(toolbar-darwin PROPERTIES TIMEOUT 60)
 endif()
 
 add_executable(imageviewrect-unit

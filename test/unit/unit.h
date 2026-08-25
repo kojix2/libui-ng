@@ -39,6 +39,7 @@ int drawMatrixRunUnitTests(void);
 int drawImageRunUnitTests(void);
 int attrstrRunUnitTests(void);
 int tableRunUnitTests(void);
+int toolbarRunUnitTests(void);
 int imageViewRunUnitTests(void);
 int tooltipRunUnitTests(void);
 
