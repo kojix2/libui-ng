@@ -3959,14 +3959,18 @@ _UI_EXTERN int uiTableColumnWidth(uiTable *t, int column);
 /**
  * Sets the table column width.
  *
- * Setting the width to `-1` will restore automatic column sizing matching
- * either the width of the content or column header (which ever one is bigger).
- * @note Darwin currently only resizes to the column header width on `-1`.
+ * Setting the width to `-1` resizes the column once to fit the widest current
+ * cell content or the column header, whichever is wider. Later model changes
+ * do not automatically resize the column; pass `-1` again to recalculate it.
+ *
+ * Automatic sizing inspects the current model and can therefore take time
+ * proportional to the number of rows and call the model's `CellValue`
+ * callback.
  *
  * @param t uiTable instance.
  * @param column Column index.
- * @param width Column width to set in pixels, `-1` to restore automatic
- *              column sizing.
+ * @param width Column width to set in pixels, `-1` to size once to the
+ *              current contents and header.
  * @memberof uiTable
  */
 _UI_EXTERN void uiTableColumnSetWidth(uiTable *t, int column, int width);

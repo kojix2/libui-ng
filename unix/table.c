@@ -881,7 +881,55 @@ int uiTableColumnWidth(uiTable *t, int column)
 
 void uiTableColumnSetWidth(uiTable *t, int column, int width)
 {
-	GtkTreeViewColumn *c = gtk_tree_view_get_column(t->tv, column);
+	GtkTreeViewColumn *c;
+
+	if (column < 0 || column >= gtk_tree_view_get_n_columns(t->tv))
+		return;
+	c = gtk_tree_view_get_column(t->tv, column);
+	if (width == -1) {
+		GtkCellArea *area;
+		GtkCellAreaContext *context;
+		GtkTreeIter iter;
+		GtkTreeModel *model;
+		GtkWidget *button;
+		gboolean valid;
+		gint contentWidth;
+		gint focusLineWidth;
+		gint headerWidth;
+		gint horizontalSeparator;
+
+		area = gtk_cell_layout_get_area(GTK_CELL_LAYOUT(c));
+		context = gtk_cell_area_create_context(area);
+		model = GTK_TREE_MODEL(t->model);
+		valid = gtk_tree_model_get_iter_first(model, &iter);
+		while (valid) {
+			gtk_tree_view_column_cell_set_cell_data(c, model, &iter, FALSE, FALSE);
+			gtk_cell_area_get_preferred_width(area, context,
+				GTK_WIDGET(t->tv), NULL, NULL);
+			valid = gtk_tree_model_iter_next(model, &iter);
+		}
+		gtk_cell_area_context_get_preferred_width(context, NULL, &contentWidth);
+		g_object_unref(context);
+		focusLineWidth = 0;
+		horizontalSeparator = 0;
+		gtk_widget_style_get(GTK_WIDGET(t->tv),
+			"focus-line-width", &focusLineWidth,
+			"horizontal-separator", &horizontalSeparator,
+			NULL);
+		// GtkCellArea measures renderers only. Include the surrounding space
+		// GtkTreeView reserves so the widest value is not ellipsized by a theme.
+		contentWidth += 2 * focusLineWidth + horizontalSeparator;
+
+		headerWidth = 0;
+		button = gtk_tree_view_column_get_button(c);
+		if (button != NULL)
+			gtk_widget_get_preferred_width(button, NULL, &headerWidth);
+		width = MAX(contentWidth, headerWidth);
+		if (width < 0)
+			width = 0;
+	}
+
+	gtk_tree_view_column_set_sizing(c, GTK_TREE_VIEW_COLUMN_FIXED);
 	gtk_tree_view_column_set_fixed_width(c, width);
 }
 

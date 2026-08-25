@@ -1,6 +1,10 @@
 // 3 june 2018
 #import "uipriv_darwin.h"
 #import "table.h"
+#include <math.h>
+
+// Space AppKit normally leaves between header text and the sort indicator.
+#define tableHeaderIndicatorSpacing 4
 
 // TODO verify that a newly created table initially shows its first row on all supported macOS versions.
 
@@ -484,13 +488,54 @@ int uiTableColumnWidth(uiTable *t, int column)
 	return [tc width];
 }
 
+static CGFloat tableColumnContentWidth(uiTable *t, uiprivTableColumn *tc)
+{
+	uiprivTableCellView *cv;
+	CGFloat width;
+	NSInteger row;
+	NSInteger n;
+
+	cv = [tc uiprivMakeCellView];
+	[cv addConstraint:[NSLayoutConstraint constraintWithItem:cv
+		attribute:NSLayoutAttributeHeight
+		relatedBy:NSLayoutRelationEqual
+		toItem:nil
+		attribute:NSLayoutAttributeNotAnAttribute
+		multiplier:1
+		constant:[t->tv rowHeight]]];
+
+	width = [cv uiprivFittingWidth];
+	n = uiprivTableModelNumRows(t->m);
+	for (row = 0; [tc uiprivWidthVariesByRow] && row < n; row++) {
+		CGFloat rowWidth;
+
+		[cv uiprivUpdate:row];
+		rowWidth = [cv uiprivFittingWidth];
+		if (rowWidth > width)
+			width = rowWidth;
+	}
+
+	return width;
+}
+
 void uiTableColumnSetWidth(uiTable *t, int column, int width)
 {
-	NSTableColumn *tc = [t->tv tableColumnWithIdentifier:[@(column) stringValue]];
+	uiprivTableColumn *tc;
 
-	if (width == -1)
-		// TODO include the widest cell content, not only the header, without making large models prohibitively expensive.
-		[tc sizeToFit];
-	else
-		[tc setWidth: width];
+	if (column < 0 || column >= (int) [[t->tv tableColumns] count])
+		return;
+	tc = (uiprivTableColumn *) [t->tv tableColumnWithIdentifier:[@(column) stringValue]];
+	if (width == -1) {
+		CGFloat contentWidth;
+		CGFloat headerWidth;
+		NSImage *indicator;
+
+		contentWidth = tableColumnContentWidth(t, tc);
+		headerWidth = [[tc headerCell] cellSize].width;
+		indicator = [t->tv indicatorImageInTableColumn:tc];
+		if (indicator != nil)
+			headerWidth += [indicator size].width + tableHeaderIndicatorSpacing;
+		width = (int) ceil(MAX(contentWidth, headerWidth));
+	}
+	[tc setWidth:width];
 }

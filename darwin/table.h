@@ -28,7 +28,9 @@ struct uiTable {
 // tablecolumn.m
 @interface uiprivTableCellView : NSTableCellView
 - (void)uiprivUpdate:(NSInteger)row;
+- (CGFloat)uiprivFittingWidth;
 @end
 @interface uiprivTableColumn : NSTableColumn
 - (uiprivTableCellView *)uiprivMakeCellView;
+- (BOOL)uiprivWidthVariesByRow;
 @end

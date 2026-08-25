@@ -10,6 +10,7 @@
 // these aren't provided by IB; let's just choose one
 #define progressBarColumnLeading imageColumnLeading
 #define progressBarColumnTrailing progressBarColumnLeading
+#define progressBarColumnMinimumWidth 80
 #define buttonColumnLeading imageColumnLeading
 #define buttonColumnTrailing buttonColumnLeading
 
@@ -20,6 +21,11 @@
 	[self doesNotRecognizeSelector:_cmd];
 }
 
+- (CGFloat)uiprivFittingWidth
+{
+	return [self fittingSize].width;
+}
+
 @end
 
 @implementation uiprivTableColumn
@@ -28,6 +34,11 @@
 {
 	[self doesNotRecognizeSelector:_cmd];
 	return nil;			// appease compiler
+}
+
+- (BOOL)uiprivWidthVariesByRow
+{
+	return YES;
 }
 
 @end
@@ -284,6 +295,19 @@ struct textColumnCreateParams {
 	}
 }
 
+- (CGFloat)uiprivFittingWidth
+{
+	if (self->tf != nil)
+		return [self fittingSize].width;
+	// Centering alone does not make the parent fitting size contain its child,
+	// so account for fixed-size image and checkbox cells explicitly.
+	if (self->iv != nil)
+		return [self->t->tv rowHeight] + 2 * imageColumnLeading;
+	if (self->cb != nil)
+		return [self->cb fittingSize].width + 2 * imageColumnLeading;
+	return [self fittingSize].width;
+}
+
 - (IBAction)uiprivOnTextFieldAction:(id)sender
 {
 	NSInteger row;
@@ -331,6 +355,12 @@ struct textColumnCreateParams {
 	cv = [[[uiprivTextImageCheckboxTableCellView alloc] initWithFrame:NSZeroRect params:&(self->params)] autorelease];
 	[cv setIdentifier:[self identifier]];
 	return cv;
+}
+
+- (BOOL)uiprivWidthVariesByRow
+{
+	// Images are constrained to the row height and checkboxes have a fixed size.
+	return self->params.makeTextField;
 }
 
 @end
@@ -417,6 +447,17 @@ struct textColumnCreateParams {
 	}
 }
 
+- (CGFloat)uiprivFittingWidth
+{
+	CGFloat width;
+
+	// Bar-style progress indicators have no useful intrinsic width. Preserve a
+	// compact but usable control when the column header is empty or very short.
+	width = [self->p fittingSize].width;
+	return MAX(width, progressBarColumnMinimumWidth) +
+		progressBarColumnLeading + progressBarColumnTrailing;
+}
+
 @end
 
 @interface uiprivProgressBarTableColumn : uiprivTableColumn {
@@ -445,6 +486,13 @@ struct textColumnCreateParams {
 	cv = [[[uiprivProgressBarTableCellView alloc] initWithFrame:NSZeroRect model:self->m modelColumn:self->modelColumn] autorelease];
 	[cv setIdentifier:[self identifier]];
 	return cv;
+}
+
+- (BOOL)uiprivWidthVariesByRow
+{
+	// Progress indicators have the same fitting width for every value. Avoid
+	// updating a temporary view, which would start indeterminate animation.
+	return NO;
 }
 
 @end

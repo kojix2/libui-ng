@@ -1,5 +1,6 @@
 #include "uipriv_windows.hpp"
 #include "table.hpp"
+#include <strsafe.h>
 
 // Known limitations and follow-up work:
 // - tooltips don't work properly on columns with icons (the listview always thinks there's enough room for a short label because it's not taking the icon into account); is this a bug in our LVN_GETDISPINFO handler or something else?
@@ -762,8 +763,10 @@ static void uiTableDestroy(uiControl *c)
 		}
 	}
 	// free the columns
-	for (auto col : *(t->columns))
+	for (auto col : *(t->columns)) {
+		uiprivFree(col->name);
 		uiprivFree(col);
+	}
 	delete t->columns;
 	if (t->imagelist != NULL)
 		ImageList_Destroy(t->imagelist);
@@ -810,10 +813,10 @@ static uiprivTableColumnParams *appendColumn(uiTable *t, const char *name, int c
 	lvc.pszText = wstr;
 	if (SendMessageW(t->hwnd, LVM_INSERTCOLUMNW, t->nColumns, (LPARAM) (&lvc)) == (LRESULT) (-1))
 		logLastError(L"error calling LVM_INSERTCOLUMNW in appendColumn()");
-	uiprivFree(wstr);
 	t->nColumns++;
 
 	p = uiprivNew(uiprivTableColumnParams);
+	p->name = wstr;
 	p->textModelColumn = -1;
 	p->textEditableModelColumn = -1;
 	p->textParams = uiprivDefaultTextColumnOptionalParams;
@@ -1024,10 +1027,175 @@ int uiTableColumnWidth(uiTable *t, int column)
 	return (int) SendMessageW(t->hwnd, LVM_GETCOLUMNWIDTH, (WPARAM) column, 0);
 }
 
+static int tableTextWidth(HDC dc, const WCHAR *text)
+{
+	SIZE size;
+
+	if (text == NULL || text[0] == L'\0')
+		return 0;
+	if (GetTextExtentPoint32W(dc, text, (int) wcslen(text), &size) == 0) {
+		logLastError(L"GetTextExtentPoint32W() while sizing a table column");
+		return 0;
+	}
+	return size.cx;
+}
+
+static int tableColumnContentWidth(uiTable *t, int column)
+{
+	uiprivTableColumnParams *p;
+	HFONT font;
+	HGDIOBJ prevFont;
+	HDC dc;
+	HWND header;
+	int bitmapMargin;
+	int iconHeight;
+	int iconWidth;
+	int maxWidth;
+	int n;
+	int row;
+
+	p = (*(t->columns))[column];
+	header = (HWND) SendMessageW(t->hwnd, LVM_GETHEADER, 0, 0);
+	bitmapMargin = header == NULL ? 0 : (int) SendMessageW(header, HDM_GETBITMAPMARGIN, 0, 0);
+	iconWidth = 0;
+	iconHeight = 0;
+	if (t->imagelist != NULL)
+		ImageList_GetIconSize(t->imagelist, &iconWidth, &iconHeight);
+
+	dc = GetDC(t->hwnd);
+	if (dc == NULL) {
+		logLastError(L"GetDC() while sizing a table column");
+		return 0;
+	}
+	font = (HFONT) SendMessageW(t->hwnd, WM_GETFONT, 0, 0);
+	if (font == NULL)
+		font = hMessageFont;
+	prevFont = font == NULL ? NULL : SelectObject(dc, font);
+
+	maxWidth = 0;
+	n = uiprivTableModelNumRows(t->model);
+	for (row = 0; row < n; row++) {
+		WCHAR progressText[32];
+		WCHAR *text;
+		uiTableValue *value;
+		int hasImage;
+		int modelColumn;
+		int width;
+
+		text = NULL;
+		modelColumn = p->textModelColumn;
+		if (modelColumn == -1)
+			modelColumn = p->buttonModelColumn;
+		if (modelColumn != -1) {
+			value = uiprivTableModelCellValue(t->model, row, modelColumn);
+			text = toUTF16(uiTableValueString(value));
+			uiFreeTableValue(value);
+		} else if (p->progressBarModelColumn != -1) {
+			int progress;
+
+			value = uiprivTableModelCellValue(t->model, row, p->progressBarModelColumn);
+			progress = uiTableValueInt(value);
+			uiFreeTableValue(value);
+			if (progress == -1)
+				StringCchCopyW(progressText, ARRAYSIZE(progressText), L"Indeterminate");
+			else
+				StringCchPrintfW(progressText, ARRAYSIZE(progressText), L"%d%%", progress);
+			text = progressText;
+		}
+
+		hasImage = p->imageModelColumn != -1 || p->checkboxModelColumn != -1;
+		// The list view does not expose cell padding. Its header bitmap margin
+		// tracks the current native metrics, so use two margins as a conservative
+		// approximation for the cell's left and right inset.
+		width = 2 * bitmapMargin;
+		if (hasImage)
+			width += iconWidth;
+		if (text != NULL) {
+			if (hasImage)
+				width += bitmapMargin;
+			width += tableTextWidth(dc, text);
+		}
+		// Approximate the native push-button chrome: two edge widths plus the
+		// extra horizontal breathing room used by table button cells.
+		if (p->buttonModelColumn != -1)
+			width += 2 * GetSystemMetrics(SM_CXEDGE) + 8;
+		if (width > maxWidth)
+			maxWidth = width;
+
+		if (text != NULL && text != progressText)
+			uiprivFree(text);
+	}
+
+	if (prevFont != NULL)
+		SelectObject(dc, prevFont);
+	ReleaseDC(t->hwnd, dc);
+	return maxWidth;
+}
+
+static int tableColumnHeaderWidth(uiTable *t, int column)
+{
+	HWND header;
+	HDC dc;
+	HFONT font;
+	HGDIOBJ prevFont;
+	HDITEMW item;
+	int margin;
+	int width;
+
+	header = (HWND) SendMessageW(t->hwnd, LVM_GETHEADER, 0, 0);
+	if (header == NULL)
+		return 0;
+	dc = GetDC(header);
+	if (dc == NULL)
+		return 0;
+	font = (HFONT) SendMessageW(header, WM_GETFONT, 0, 0);
+	if (font == NULL)
+		font = hMessageFont;
+	prevFont = font == NULL ? NULL : SelectObject(dc, font);
+
+	margin = (int) SendMessageW(header, HDM_GETBITMAPMARGIN, 0, 0);
+	width = tableTextWidth(dc, (*(t->columns))[column]->name) + 2 * margin;
+	ZeroMemory(&item, sizeof (HDITEMW));
+	item.mask = HDI_FORMAT;
+	if (SendMessageW(header, HDM_GETITEMW, (WPARAM) column, (LPARAM) &item) != 0)
+		if ((item.fmt & (HDF_SORTUP | HDF_SORTDOWN)) != 0)
+			width += GetSystemMetrics(SM_CXSMICON) + margin;
+
+	if (prevFont != NULL)
+		SelectObject(dc, prevFont);
+	ReleaseDC(header, dc);
+	return width;
+}
+
 void uiTableColumnSetWidth(uiTable *t, int column, int width)
 {
-	if (width == -1)
-		width = LVSCW_AUTOSIZE_USEHEADER;
+	if (column < 0 || (size_t) column >= t->columns->size())
+		return;
+	if (width == -1) {
+		int contentWidth;
+		int headerWidth;
+		int nativeContentWidth;
+
+		// Native autosizing preserves list-view padding and layout details, but
+		// Windows does not document whether an owner-data list queries every row.
+		// Keep the explicit model scan below to guarantee that all current rows
+		// participate; both passes remain O(number of rows).
+		SendMessageW(t->hwnd, LVM_SETCOLUMNWIDTH,
+			(WPARAM) column, (LPARAM) LVSCW_AUTOSIZE);
+		nativeContentWidth = uiTableColumnWidth(t, column);
+		contentWidth = tableColumnContentWidth(t, column);
+		if (nativeContentWidth > contentWidth)
+			contentWidth = nativeContentWidth;
+
+		if ((WPARAM) column + 1 < t->nColumns) {
+			SendMessageW(t->hwnd, LVM_SETCOLUMNWIDTH,
+				(WPARAM) column, (LPARAM) LVSCW_AUTOSIZE_USEHEADER);
+			headerWidth = uiTableColumnWidth(t, column);
+		} else
+			headerWidth = tableColumnHeaderWidth(t, column);
+
+		width = contentWidth > headerWidth ? contentWidth : headerWidth;
+	}
 
 	SendMessageW(t->hwnd, LVM_SETCOLUMNWIDTH, (WPARAM) column, (LPARAM) width);
 }

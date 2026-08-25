@@ -10,6 +10,7 @@ struct uiTableModel {
 };
 typedef struct uiprivTableColumnParams uiprivTableColumnParams;
 struct uiprivTableColumnParams {
+	WCHAR *name;
 	int textModelColumn;
 	int textEditableModelColumn;
 	uiTableTextColumnOptionalParams textParams;

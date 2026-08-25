@@ -20,6 +20,7 @@ libui_unit_sources = [
 	'drawmatrix.c',
 	'attrstr.c',
 	'window.c',
+	'table.c',
 ]
 libui_unit_sources += libui_test_internal_sources
 
