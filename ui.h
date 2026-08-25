@@ -15,6 +15,7 @@
  * @defgroup dialogWindow Dialog windows
  * @defgroup menu Menus
  * @defgroup table Tables
+ * @defgroup toolbar Toolbars
  */
 
 #ifndef __LIBUI_UI_H__
@@ -3291,6 +3292,117 @@ _UI_EXTERN void uiFreeImage(uiImage *i);
  * @memberof uiImage
  */
 _UI_EXTERN void uiImageAppend(uiImage *i, const void *pixels, int pixelWidth, int pixelHeight, int byteStride);
+
+
+/**
+ * A native window toolbar.
+ *
+ * A toolbar is not a uiControl and can only be attached with
+ * uiWindowSetToolbar(). It may be attached to at most one window at a time.
+ *
+ * @struct uiToolbar
+ * @ingroup toolbar
+ */
+typedef struct uiToolbar uiToolbar;
+
+/**
+ * A button owned by a uiToolbar.
+ *
+ * Item pointers are borrowed and remain valid until their toolbar is freed.
+ * There is no independent item constructor or destructor.
+ *
+ * @struct uiToolbarItem
+ * @ingroup toolbar
+ */
+typedef struct uiToolbarItem uiToolbarItem;
+
+/**
+ * Controls how icons and text are arranged in a uiToolbar.
+ *
+ * @enum uiToolbarDisplayMode
+ * @ingroup toolbar
+ */
+_UI_ENUM(uiToolbarDisplayMode) {
+	uiToolbarDisplayModeIconOnly = 0,              //!< Show icons, falling back to text for items without one.
+	uiToolbarDisplayModeIconAndTextHorizontal = 1, //!< Show icons and text side by side.
+	uiToolbarDisplayModeIconAndTextVertical = 2,   //!< Show icons above text.
+	uiToolbarDisplayModeTextOnly = 3,              //!< Show text only.
+};
+
+/** Creates an empty toolbar. Items may only be appended before first attachment. */
+_UI_EXTERN uiToolbar *uiNewToolbar(void);
+
+/** Frees an unattached toolbar and all of its items. */
+_UI_EXTERN void uiFreeToolbar(uiToolbar *t);
+
+/**
+ * Returns the requested toolbar display mode.
+ *
+ * The default is uiToolbarDisplayModeIconAndTextVertical. On macOS,
+ * uiToolbarDisplayModeIconAndTextHorizontal is displayed vertically.
+ */
+_UI_EXTERN uiToolbarDisplayMode uiToolbarGetDisplayMode(uiToolbar *t);
+
+/**
+ * Sets the toolbar display mode.
+ *
+ * This may only be called before the toolbar is first attached to a window.
+ * On macOS, uiToolbarDisplayModeIconAndTextHorizontal is displayed as
+ * uiToolbarDisplayModeIconAndTextVertical. The requested mode is still
+ * returned by uiToolbarGetDisplayMode().
+ */
+_UI_EXTERN void uiToolbarSetDisplayMode(uiToolbar *t, uiToolbarDisplayMode mode);
+
+/** Attaches a toolbar to a window, or detaches the current toolbar if @p t is `NULL`. */
+_UI_EXTERN void uiWindowSetToolbar(uiWindow *w, uiToolbar *t);
+
+/** Returns the toolbar attached to a window, or `NULL`. The returned object is borrowed. */
+_UI_EXTERN uiToolbar *uiWindowToolbar(uiWindow *w);
+
+/** Appends a push button and returns a borrowed item handle. */
+_UI_EXTERN uiToolbarItem *uiToolbarAppendButton(uiToolbar *t, const char *text, uiImage *icon);
+
+/** Appends a two-state toggle button and returns a borrowed item handle. */
+_UI_EXTERN uiToolbarItem *uiToolbarAppendToggleButton(uiToolbar *t, const char *text, uiImage *icon);
+
+/** Appends a visual separator. */
+_UI_EXTERN void uiToolbarAppendSeparator(uiToolbar *t);
+
+/** Returns a copy of the item's UTF-8 label. Free it with uiFreeText(). */
+_UI_EXTERN char *uiToolbarItemText(uiToolbarItem *item);
+
+/** Sets the item's label. The string is copied. */
+_UI_EXTERN void uiToolbarItemSetText(uiToolbarItem *item, const char *text);
+
+/** Sets the item's borrowed image. The image must outlive the toolbar. */
+_UI_EXTERN void uiToolbarItemSetIcon(uiToolbarItem *item, uiImage *icon);
+
+/** Returns a copy of the item's UTF-8 tooltip. Free it with uiFreeText(). */
+_UI_EXTERN char *uiToolbarItemTooltip(uiToolbarItem *item);
+
+/** Sets the item's tooltip. An empty string disables the tooltip. */
+_UI_EXTERN void uiToolbarItemSetTooltip(uiToolbarItem *item, const char *tooltip);
+
+/** Returns whether the item accepts user input. */
+_UI_EXTERN int uiToolbarItemEnabled(uiToolbarItem *item);
+
+/** Enables an item. */
+_UI_EXTERN void uiToolbarItemEnable(uiToolbarItem *item);
+
+/** Disables an item. */
+_UI_EXTERN void uiToolbarItemDisable(uiToolbarItem *item);
+
+/** Registers the item's clicked callback. Only one callback is stored.
+ * The callback must not be `NULL`.
+ */
+_UI_EXTERN void uiToolbarItemOnClicked(uiToolbarItem *item,
+	void (*f)(uiToolbarItem *sender, void *senderData), void *data);
+
+/** Returns the checked state of a toggle item. */
+_UI_EXTERN int uiToolbarItemChecked(uiToolbarItem *item);
+
+/** Sets the checked state of a toggle item without invoking its callback. */
+_UI_EXTERN void uiToolbarItemSetChecked(uiToolbarItem *item, int checked);
 
 /**
  * @addtogroup table

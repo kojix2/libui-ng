@@ -47,6 +47,7 @@ int gridRunUnitTests(void);
 int drawMatrixRunUnitTests(void);
 int attrstrRunUnitTests(void);
 int tableRunUnitTests(void);
+int toolbarRunUnitTests(void);
 
 /**
  * Helper for general setup/teardown of controls embedded in a window.
