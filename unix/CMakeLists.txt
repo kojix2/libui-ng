@@ -7,7 +7,7 @@ target_sources(libui_ui PRIVATE
 	drawpath.c drawtext.c editablecombo.c entry.c fontbutton.c fontmatch.c form.c
 	future.c graphemes.c grid.c group.c image.c label.c main.c menu.c multilineentry.c
 	opentype.c progressbar.c radiobuttons.c separator.c slider.c spinbox.c stddialogs.c
-	tab.c table.c tablemodel.c text.c util.c window.c
+	tab.c table.c tablemodel.c text.c toolbar.c util.c window.c
 )
 target_compile_definitions(libui_ui PRIVATE _POSIX_C_SOURCE=200809L)
 
