@@ -11,8 +11,8 @@ target_sources(libui_ui PRIVATE
 	editablecombo.m entry.m event.m fontbutton.m fontmatch.m fonttraits.m
 	fontvariation.m form.m graphemes.m grid.m group.m image.m label.m main.m menu.m
 	multilineentry.m opentype.m progressbar.m radiobuttons.m scrollview.m separator.m
-	slider.m spinbox.m stddialogs.m tab.m table.m tablecolumn.m text.m undocumented.m
-	util.m window.m winmoveresize.m nstextfield.m
+	slider.m spinbox.m stddialogs.m tab.m table.m tablecolumn.m text.m toolbar.m
+	undocumented.m util.m window.m winmoveresize.m nstextfield.m
 )
 target_link_libraries(libui_ui PRIVATE
 	$<BUILD_INTERFACE:${LIBUI_FOUNDATION_FRAMEWORK}>
