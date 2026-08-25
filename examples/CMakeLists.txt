@@ -3,7 +3,7 @@ set(libui_examples
 	form-layout grid-layout tabs group control-destroy combobox editable-combobox
 	radio-buttons spinbox slider progressbar separator date-picker time-picker
 	color-button font-button menu menu-checkbox open-file open-folder save-file
-	message-box error-message-box timer queue-main should-quit
+	message-box error-message-box timer queue-main should-quit toolbar
 )
 
 foreach(name IN LISTS libui_examples)
