@@ -1,5 +1,6 @@
 // 11 june 2015
 #include "uipriv_unix.h"
+#include "../common/toolbar.h"
 
 struct uiWindow {
 	uiUnixControl c;
@@ -15,6 +16,7 @@ struct uiWindow {
 	GtkContainer *childHolderContainer;
 
 	GtkWidget *menubar;
+	uiToolbar *toolbar;
 
 	uiControl *child;
 	int margined;
@@ -173,6 +175,10 @@ static void uiWindowDestroy(uiControl *c)
 		uiControlDestroy(w->child);
 	}
 	// now destroy the menus, if any
+	if (w->toolbar != NULL) {
+		uiprivToolbarDetach(w->toolbar, w);
+		w->toolbar = NULL;
+	}
 	if (w->menubar != NULL)
 		uiprivFreeMenubar(w->menubar);
 	gtk_widget_destroy(w->childHolderWidget);
@@ -313,6 +319,32 @@ void uiWindowSetChild(uiWindow *w, uiControl *child)
 		uiControlSetParent(w->child, uiControl(w));
 		uiUnixControlSetContainer(uiUnixControl(w->child), w->childHolderContainer, FALSE);
 	}
+}
+
+void uiWindowSetToolbar(uiWindow *w, uiToolbar *t)
+{
+	GtkWidget *widget;
+
+	if (w->toolbar == t)
+		return;
+	if (!uiprivToolbarCanAttach(t, w))
+		return;
+	if (w->toolbar != NULL)
+		uiprivToolbarDetach(w->toolbar, w);
+	w->toolbar = t;
+	if (t == NULL)
+		return;
+	uiprivToolbarAttach(t, w);
+	widget = uiprivToolbarWidget(t);
+	gtk_box_pack_start(GTK_BOX(w->vboxWidget), widget, FALSE, FALSE, 0);
+	gtk_box_reorder_child(GTK_BOX(w->vboxWidget), widget,
+		w->menubar == NULL ? 0 : 1);
+	gtk_widget_show(widget);
+}
+
+uiToolbar *uiWindowToolbar(uiWindow *w)
+{
+	return w->toolbar;
 }
 
 int uiWindowMargined(uiWindow *w)

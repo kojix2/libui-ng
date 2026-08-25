@@ -1,5 +1,6 @@
 // 15 august 2015
 #import "uipriv_darwin.h"
+#include "../common/toolbar.h"
 
 #define defaultStyleMask (NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskResizable)
 
@@ -7,6 +8,7 @@ struct uiWindow {
 	uiDarwinControl c;
 	NSWindow *window;
 	uiControl *child;
+	uiToolbar *toolbar;
 	int margined;
 	int (*onClosing)(uiWindow *, void *);
 	void *onClosingData;
@@ -165,6 +167,10 @@ static void uiWindowDestroy(uiControl *c)
 
 	// hide the window
 	[w->window orderOut:w->window];
+	if (w->toolbar != NULL) {
+		uiprivToolbarDetach(w->toolbar, w);
+		w->toolbar = NULL;
+	}
 	removeConstraints(w);
 	if (w->child != NULL) {
 		uiControlSetParent(w->child, NULL);
@@ -408,6 +414,24 @@ void uiWindowSetChild(uiWindow *w, uiControl *child)
 		uiDarwinControlSyncEnableState(uiDarwinControl(w->child), uiControlEnabledToUser(uiControl(w)));
 	}
 	windowRelayout(w);
+}
+
+void uiWindowSetToolbar(uiWindow *w, uiToolbar *t)
+{
+	if (w->toolbar == t)
+		return;
+	if (!uiprivToolbarCanAttach(t, w))
+		return;
+	if (w->toolbar != NULL)
+		uiprivToolbarDetach(w->toolbar, w);
+	w->toolbar = t;
+	if (t != NULL)
+		uiprivToolbarAttach(t, w);
+}
+
+uiToolbar *uiWindowToolbar(uiWindow *w)
+{
+	return w->toolbar;
 }
 
 int uiWindowMargined(uiWindow *w)
