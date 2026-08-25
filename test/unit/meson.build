@@ -21,8 +21,10 @@ libui_unit_sources = [
 	'attrstr.c',
 	'window.c',
 	'table.c',
+	'toolbar.c',
 ]
 libui_unit_sources += libui_test_internal_sources
+libui_unit_deps = [libui_binary_deps, cmocka_deps]
 
 if libui_mode == 'static'
 	# These tests exercise intentionally hidden common-layer helpers directly.
@@ -30,6 +32,10 @@ if libui_mode == 'static'
 endif
 
 if libui_OS == 'windows'
+	foreach lib : ['user32', 'comctl32']
+		libui_unit_deps += meson.get_compiler('c').find_library(lib,
+			required: true)
+	endforeach
 	libui_unit_manifest = 'unit.manifest'
 	if libui_mode == 'static'
 		libui_unit_manifest = 'unit.static.manifest'
@@ -42,7 +48,7 @@ if libui_OS == 'windows'
 endif
 
 unit = executable('unit', libui_unit_sources,
-	dependencies: [libui_binary_deps, cmocka_deps],
+	dependencies: libui_unit_deps,
 	link_with: libui_libui,
 	win_subsystem: 'console',
 	install: false)

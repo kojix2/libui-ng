@@ -30,6 +30,9 @@ libui_examples = {
 	'window': {
 		'sources':		['window.c'],
 	},
+	'toolbar': {
+		'sources':		['toolbar.c'],
+	},
 	'button': {
 		'sources':		['button.c'],
 	},
