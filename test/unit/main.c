@@ -47,6 +47,7 @@ int main(int argc, char **argv)
 		{ "drawimage", drawImageRunUnitTests },
 		{ "attrstr", attrstrRunUnitTests },
 		{ "table", tableRunUnitTests },
+		{ "toolbar", toolbarRunUnitTests },
 		{ "imageview", imageViewRunUnitTests },
 		{ "tooltip", tooltipRunUnitTests },
 	};
