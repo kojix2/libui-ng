@@ -3,6 +3,7 @@ set(unit_sources
 	radiobuttons.c tab.c entry.c menu.c progressbar.c datetimepicker.c grid.c
 	drawmatrix.c attrstr.c window.c box.c group.c editablecombobox.c multilineentry.c
 	separator.c fontdescriptor.c fontbutton.c colorbutton.c form.c area.c image.c table.c
+	toolbar.c
 )
 if(NOT BUILD_SHARED_LIBS)
 	list(APPEND unit_sources control.c)
@@ -12,6 +13,9 @@ if(WIN32)
 endif()
 add_executable(unit ${unit_sources})
 target_link_libraries(unit PRIVATE libui::ui cmocka::cmocka)
+if(WIN32)
+	target_link_libraries(unit PRIVATE user32 comctl32)
+endif()
 libui_apply_internal_options(unit)
 add_test(NAME unit COMMAND unit)
 set_tests_properties(unit PROPERTIES TIMEOUT 180)
