@@ -125,6 +125,11 @@ extern void ensureMinimumWindowSize(uiWindow *);
 extern void disableAllWindowsExcept(uiWindow *which);
 extern void enableAllWindowsExcept(uiWindow *which);
 
+// toolbar.cpp
+extern BOOL uiprivToolbarWindowsCommand(uiToolbar *, UINT);
+extern BOOL uiprivToolbarWindowsNotify(uiToolbar *, NMHDR *, LRESULT *);
+extern int uiprivToolbarWindowsLayout(uiToolbar *, int);
+
 // container.cpp
 #define containerClass L"libui_uiContainerClass"
 extern ATOM initContainer(HICON, HCURSOR);
