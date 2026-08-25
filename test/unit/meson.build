@@ -31,6 +31,7 @@ libui_unit_sources = [
 	'area.c',
 	'image.c',
 	'table.c',
+	'toolbar.c',
 ]
 libui_unit_sources += libui_test_internal_sources
 

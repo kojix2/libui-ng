@@ -1,5 +1,6 @@
 // 27 april 2015
 #include "uipriv_windows.hpp"
+#include "../common/toolbar.h"
 
 #define windowClass L"libui_uiWindowClass"
 
@@ -8,6 +9,7 @@ struct uiWindow {
 	HWND hwnd;
 	HMENU menubar;
 	uiControl *child;
+	uiToolbar *toolbar;
 	BOOL shownOnce;
 	int visible;
 	int margined;
@@ -70,13 +72,18 @@ static void windowRelayout(uiWindow *w)
 	int mx, my;
 	HWND child;
 
-	if (w->child == NULL)
-		return;
 	x = 0;
 	y = 0;
 	uiWindowsEnsureGetClientRect(w->hwnd, &r);
 	width = r.right - r.left;
 	height = r.bottom - r.top;
+	if (w->toolbar != NULL) {
+		int toolbarHeight = uiprivToolbarWindowsLayout(w->toolbar, width);
+		y += toolbarHeight;
+		height -= toolbarHeight;
+	}
+	if (w->child == NULL)
+		return;
 	windowMargins(w, &mx, &my);
 	x += mx;
 	y += my;
@@ -129,10 +136,19 @@ static LRESULT CALLBACK windowWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARA
 		return lResult;
 	switch (uMsg) {
 	case WM_COMMAND:
+		if (w->toolbar != NULL && (HWND) lParam == (HWND) w->toolbar->native)
+			if (uiprivToolbarWindowsCommand(w->toolbar, LOWORD(wParam)))
+				return 0;
 		if (!isMenuCommand(wParam, lParam))
 			break;
 		runMenuEvent(LOWORD(wParam), uiWindow(w));
 		return 0;
+	case WM_NOTIFY:
+		if (w->toolbar != NULL &&
+			((NMHDR *) lParam)->hwndFrom == (HWND) w->toolbar->native)
+			if (uiprivToolbarWindowsNotify(w->toolbar, (NMHDR *) lParam, &lResult))
+				return lResult;
+		break;
 	case WM_WINDOWPOSCHANGED:
 		if (!uiprivUserCallbackEnter(uiControl(w)))
 			return 0;
@@ -233,6 +249,10 @@ static void uiWindowDestroy(uiControl *c)
 	// first hide ourselves
 	ShowWindow(w->hwnd, SW_HIDE);
 	// now destroy the child
+	if (w->toolbar != NULL) {
+		uiprivToolbarDetach(w->toolbar, w);
+		w->toolbar = NULL;
+	}
 	if (w->child != NULL) {
 		uiControlSetParent(w->child, NULL);
 		uiControlDestroy(w->child);
@@ -313,6 +333,8 @@ static void uiWindowMinimumSize(uiWindowsControl *c, int *width, int *height)
 	*height = 0;
 	if (w->child != NULL)
 		uiWindowsControlMinimumSize(uiWindowsControl(w->child), width, height);
+	if (w->toolbar != NULL)
+		*height += uiprivToolbarWindowsLayout(w->toolbar, *width);
 	windowMargins(w, &mx, &my);
 	*width += 2 * mx;
 	*height += 2 * my;
@@ -506,6 +528,26 @@ void uiWindowSetChild(uiWindow *w, uiControl *child)
 		uiWindowsControlAssignSoleControlIDZOrder(uiWindowsControl(w->child));
 		windowRelayout(w);
 	}
+}
+
+void uiWindowSetToolbar(uiWindow *w, uiToolbar *t)
+{
+	if (w->toolbar == t)
+		return;
+	if (!uiprivToolbarCanAttach(t, w))
+		return;
+	if (w->toolbar != NULL)
+		uiprivToolbarDetach(w->toolbar, w);
+	w->toolbar = t;
+	if (t != NULL)
+		uiprivToolbarAttach(t, w);
+	windowRelayout(w);
+	uiWindowsControlMinimumSizeChanged(uiWindowsControl(w));
+}
+
+uiToolbar *uiWindowToolbar(uiWindow *w)
+{
+	return w->toolbar;
 }
 
 int uiWindowMargined(uiWindow *w)
