@@ -881,6 +881,7 @@ int uiTableColumnWidth(uiTable *t, int column)
 
 void uiTableColumnSetWidth(uiTable *t, int column, int width)
 {
+	GtkAllocation allocation;
 	GtkTreeViewColumn *c;
 
 	if (column < 0 || column >= gtk_tree_view_get_n_columns(t->tv))
@@ -931,6 +932,13 @@ void uiTableColumnSetWidth(uiTable *t, int column, int width)
 
 	gtk_tree_view_column_set_sizing(c, GTK_TREE_VIEW_COLUMN_FIXED);
 	gtk_tree_view_column_set_fixed_width(c, width);
+	// gtk_tree_view_column_set_fixed_width() only queues a resize. Complete the
+	// current allocation synchronously so uiTableColumnWidth() does not keep
+	// returning the previous width until a later frame-clock cycle.
+	if (gtk_widget_get_realized(t->treeWidget)) {
+		gtk_widget_get_allocation(t->treeWidget, &allocation);
+		gtk_widget_size_allocate(t->treeWidget, &allocation);
+	}
 }
 
 uiTableSelectionMode uiTableGetSelectionMode(uiTable *t)

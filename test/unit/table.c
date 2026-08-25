@@ -174,21 +174,26 @@ static void autoWidthIncludesSortIndicator(void **data)
 	struct tableTestState *state = *data;
 	int plainWidth;
 	int sortedWidth;
+	int targetColumn;
 
 	state->numRows = 0;
 	makeTable(state, "H");
+	targetColumn = 0;
+#ifdef _WIN32
 	// Exercise the final-column path too; Windows cannot use
 	// LVSCW_AUTOSIZE_USEHEADER here because it would fill the remaining view.
 	uiTableAppendTextColumn(state->table, "H", 0,
 		uiTableModelColumnNeverEditable, NULL);
-	uiTableColumnSetWidth(state->table, 2, -1);
+	targetColumn = 2;
+#endif
+	uiTableColumnSetWidth(state->table, targetColumn, -1);
 	settleTableLayout();
-	plainWidth = uiTableColumnWidth(state->table, 2);
+	plainWidth = uiTableColumnWidth(state->table, targetColumn);
 
-	uiTableHeaderSetSortIndicator(state->table, 2, uiSortIndicatorAscending);
-	uiTableColumnSetWidth(state->table, 2, -1);
+	uiTableHeaderSetSortIndicator(state->table, targetColumn, uiSortIndicatorAscending);
+	uiTableColumnSetWidth(state->table, targetColumn, -1);
 	settleTableLayout();
-	sortedWidth = uiTableColumnWidth(state->table, 2);
+	sortedWidth = uiTableColumnWidth(state->table, targetColumn);
 	assert_true(sortedWidth > plainWidth);
 }
 
