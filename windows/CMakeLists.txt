@@ -12,7 +12,7 @@ target_sources(libui_ui PRIVATE
 	multilineentry.cpp opentype.cpp parent.cpp progressbar.cpp radiobuttons.cpp
 	separator.cpp sizing.cpp slider.cpp spinbox.cpp stddialogs.cpp tab.cpp table.cpp
 	tabledispinfo.cpp tabledraw.cpp tableediting.cpp tablemetrics.cpp tabpage.cpp
-	text.cpp utf16.cpp utilwin.cpp window.cpp winpublic.cpp winutil.cpp
+	text.cpp toolbar.cpp utf16.cpp utilwin.cpp window.cpp winpublic.cpp winutil.cpp
 )
 if(BUILD_SHARED_LIBS)
 	target_sources(libui_ui PRIVATE resources.rc)
