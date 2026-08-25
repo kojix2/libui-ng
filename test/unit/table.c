@@ -95,7 +95,7 @@ static void settleTableLayout(void)
 		uiMainStep(0);
 }
 
-static void makeTable(struct tableTestState *state, const char *header)
+static void makeTextTable(struct tableTestState *state, const char *header, int editable)
 {
 	uiTableParams params = {0};
 
@@ -103,7 +103,7 @@ static void makeTable(struct tableTestState *state, const char *header)
 	params.RowBackgroundColorModelColumn = -1;
 	state->table = uiNewTable(&params);
 	uiTableAppendTextColumn(state->table, header, 0,
-		uiTableModelColumnNeverEditable, NULL);
+		editable, NULL);
 	// Keep the measured column away from the trailing-column expansion rules.
 	uiTableAppendTextColumn(state->table, "Filler", 0,
 		uiTableModelColumnNeverEditable, NULL);
@@ -111,6 +111,11 @@ static void makeTable(struct tableTestState *state, const char *header)
 	uiControlShow(uiControl(state->window));
 	uiMainSteps();
 	settleTableLayout();
+}
+
+static void makeTable(struct tableTestState *state, const char *header)
+{
+	makeTextTable(state, header, uiTableModelColumnNeverEditable);
 }
 
 static void autoWidthUsesCurrentContentOnce(void **data)
@@ -146,6 +151,30 @@ static void autoWidthUsesCurrentContentOnce(void **data)
 	settleTableLayout();
 	fixedWidth = uiTableColumnWidth(state->table, 0);
 	assert_true(fixedWidth < longWidth);
+}
+
+static void autoWidthUsesEditableContent(void **data)
+{
+	struct tableTestState *state = *data;
+	int longWidth;
+	int shortWidth;
+
+	state->rows[0] = "x";
+	state->rows[1] = "yy";
+	state->numRows = 2;
+	makeTextTable(state, "H", uiTableModelColumnAlwaysEditable);
+
+	uiTableColumnSetWidth(state->table, 0, -1);
+	settleTableLayout();
+	shortWidth = uiTableColumnWidth(state->table, 0);
+
+	state->rows[1] = "This is a much longer editable cell value used to test automatic table column sizing";
+	uiTableModelRowChanged(state->model, 1);
+	uiTableColumnSetWidth(state->table, 0, -1);
+	settleTableLayout();
+	longWidth = uiTableColumnWidth(state->table, 0);
+
+	assert_true(longWidth > shortWidth);
 }
 
 static void autoWidthIncludesHeaderForEmptyModel(void **data)
@@ -277,6 +306,8 @@ int tableRunUnitTests(void)
 {
 	const struct CMUnitTest tests[] = {
 		cmocka_unit_test_setup_teardown(autoWidthUsesCurrentContentOnce,
+			tableTestSetup, tableTestTeardown),
+		cmocka_unit_test_setup_teardown(autoWidthUsesEditableContent,
 			tableTestSetup, tableTestTeardown),
 		cmocka_unit_test_setup_teardown(autoWidthIncludesHeaderForEmptyModel,
 			tableTestSetup, tableTestTeardown),

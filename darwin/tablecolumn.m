@@ -297,8 +297,21 @@ struct textColumnCreateParams {
 
 - (CGFloat)uiprivFittingWidth
 {
-	if (self->tf != nil)
-		return [self fittingSize].width;
+	if (self->tf != nil) {
+		BOOL editable;
+		CGFloat width;
+
+		// Editable NSTextFields have no useful intrinsic horizontal size and
+		// collapse to their padding. This is an offscreen measurement view, so
+		// temporarily use the label behavior to include the current text.
+		editable = [self->tf isEditable];
+		if (editable)
+			[self->tf setEditable:NO];
+		width = [self fittingSize].width;
+		if (editable)
+			[self->tf setEditable:YES];
+		return width;
+	}
 	// Centering alone does not make the parent fitting size contain its child,
 	// so account for fixed-size image and checkbox cells explicitly.
 	if (self->iv != nil)
