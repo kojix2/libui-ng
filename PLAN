@@ -1,0 +1,295 @@
+# uiToolbar 設計・実装計画
+
+## 1. 目的
+
+libui-ng に、macOS / Windows / GTK 3 のネイティブな見た目と操作感を保つ、最小限のウィンドウツールバー API を追加する。
+
+初版で共通化する機能は次に限定する。
+
+- 通常ボタン
+- 2 状態のトグルボタン
+- 区切り線
+- 固定スペース
+- 可変スペース
+- UTF-8 の短いラベル
+- `uiImage` アイコン
+- tooltip
+- enabled / disabled
+- clicked callback
+- toggle の checked 状態の取得・設定
+
+各プラットフォーム固有の高度な機能は抽象化せず、既定ではアイコンの下にラベルを表示する。その他のレイアウト、寸法、装飾は可能な限り OS の既定値に任せる。
+
+## 2. 初版の非目標
+
+- Ribbon、Rebar、GTK HeaderBar
+- macOS のユーザーによる toolbar customization と設定保存
+- タイトルバーへの特殊な統合や unified title/toolbar の詳細設定
+- ユーザーが制御できる表示モード（icon only / text only / icon and text）
+- ドロップダウン、メニュー、検索欄などの複合 item
+- item の挿入、削除、並べ替え、非表示化
+- 複数段表示、縦向き toolbar
+- 完全に同一な overflow 動作
+- `uiControl` を任意に toolbar 内へ埋め込む機能
+- システムアイコン名や symbolic/template image の新しい抽象化
+
+## 3. 最初に固定する設計判断
+
+### 3.1 toolbar は通常の `uiControl` にしない
+
+macOS の `NSToolbar` は `NSView` ではなく `NSWindow` に装着するオブジェクトである。一方、Windows の `ToolbarWindow32` と GTK の `GtkToolbar` はウィジェットである。この差を公開 API に漏らさないため、`uiToolbar` は `uiControl` を継承せず、`uiWindowSetToolbar()` でのみウィンドウに装着する。
+
+これにより、`uiBoxAppend()` などへ toolbar を渡せるように見えて実際には動かない、という不正な API を避ける。
+
+### 3.2 item は toolbar 所有の借用ハンドルにする
+
+`uiToolbarItem` は公開上 opaque な型とするが、独立した constructor / destructor は設けない。ボタンを append したときだけ借用ポインタを返し、実体、文字列、ネイティブ item、callback data は `uiToolbar` が所有する。
+
+- `uiToolbarItem *` は親 toolbar が解放されるまで有効。
+- item を別 toolbar へ移動できない。
+- separator / space は後から変更する状態がないためハンドルを返さない。
+- 初版は append-only とし、装着後の item 追加も禁止する。装着後に許可するのは既存ボタンの状態・文字列・tooltip の変更だけとする。
+
+この方式は TableColumn のように親が要素の寿命を一括管理しつつ、ボタンごとの callback と toggle 状態を扱える。
+
+### 3.3 toolbar 自体の所有権
+
+`uiToolbar` は明示的に `uiFreeToolbar()` で解放する。`uiWindow` は toolbar を借用し、同時に装着できるウィンドウは 1 個だけとする。
+
+- `uiWindowSetToolbar(w, t)` で装着する。
+- `uiWindowSetToolbar(w, NULL)` で取り外す。
+- toolbar が付いたウィンドウを破棄した場合は自動的に関連を解除するが、toolbar 自体は解放しない。
+- ウィンドウに装着中の toolbar を `uiFreeToolbar()` するのは user bug とする。
+- 既に別のウィンドウに装着中の toolbar を設定するのも user bug とする。
+
+この規則は `uiTableModel` の「使用中は解放不可」に近く、暗黙の所有権移動を避ける。ドキュメントとテストで明示する。
+
+### 3.4 `uiImage` の所有権
+
+初版では toolbar は渡された `uiImage` を借用し、コピーも解放もしない。高 DPI や appearance 変更時に適切な representation を再選択する必要があるため、画像はその item を含む toolbar より長く生存しなければならない。
+
+同じ画像を複数 item で共有でき、`NULL` は「アイコンなし」とする。画像寿命の誤用を減らせる別方式が実装スパイクで見つかった場合のみ、この判断を API 確定前に再検討する。
+
+## 4. 提案公開 API
+
+`ui.h` の Window 節と Image 節の間の適切な位置に、Doxygen コメント付きで次の API を追加する。最終的な配置は Window 節に attachment API、Toolbar 節に残りを置く。
+
+```c
+typedef struct uiToolbar uiToolbar;
+typedef struct uiToolbarItem uiToolbarItem;
+
+uiToolbar *uiNewToolbar(void);
+void uiFreeToolbar(uiToolbar *t);
+
+void uiWindowSetToolbar(uiWindow *w, uiToolbar *t);
+uiToolbar *uiWindowToolbar(uiWindow *w);
+
+uiToolbarItem *uiToolbarAppendButton(uiToolbar *t,
+    const char *text, uiImage *icon);
+uiToolbarItem *uiToolbarAppendToggleButton(uiToolbar *t,
+    const char *text, uiImage *icon);
+void uiToolbarAppendSeparator(uiToolbar *t);
+void uiToolbarAppendSpace(uiToolbar *t);
+void uiToolbarAppendFlexibleSpace(uiToolbar *t);
+
+char *uiToolbarItemText(uiToolbarItem *item);
+void uiToolbarItemSetText(uiToolbarItem *item, const char *text);
+void uiToolbarItemSetIcon(uiToolbarItem *item, uiImage *icon);
+
+char *uiToolbarItemTooltip(uiToolbarItem *item);
+void uiToolbarItemSetTooltip(uiToolbarItem *item, const char *tooltip);
+
+int uiToolbarItemEnabled(uiToolbarItem *item);
+void uiToolbarItemEnable(uiToolbarItem *item);
+void uiToolbarItemDisable(uiToolbarItem *item);
+
+void uiToolbarItemOnClicked(uiToolbarItem *item,
+    void (*f)(uiToolbarItem *sender, void *senderData), void *data);
+
+int uiToolbarItemChecked(uiToolbarItem *item);
+void uiToolbarItemSetChecked(uiToolbarItem *item, int checked);
+```
+
+API の規則:
+
+- `text` は有効な NUL 終端 UTF-8。内部にコピーする。空文字列は許可する。
+- `tooltip` は有効な NUL 終端 UTF-8。内部にコピーする。空文字列は tooltip なしとして扱う。
+- getter が返す文字列は caller が `uiFreeText()` する。
+- `OnClicked()` は libui-ng の他の callback と同じく 1 個だけ登録でき、再登録で置き換える。
+- toggle はユーザー操作で native checked 状態を先に更新してから callback を呼ぶ。callback 内で `SetChecked()` して状態を上書きできる。
+- 通常ボタンに `Checked()` / `SetChecked()` を呼ぶことは user bug とする。
+- programmatic な `SetChecked()`、`SetText()`、`SetTooltip()`、enable/disable は callback を発火しない。
+- callback 実行は `uiprivUserCallbackEnter()` / `uiprivUserCallbackLeave()` の規則に従い、callback 中の window destroy や toolbar free 要求を安全に処理する。装着中の free は拒否する。
+- 同じ pointer 値を安定した item identity とし、公開 API で native command ID や配列 index を見せない。
+
+`uiToolbarItemSetIcon()` を初版へ含めるかは画像更新スパイクで最終判断する。高 DPI image list の安全な再構築が大きく複雑化する場合は append 時指定だけを初版とし、API 追加を第 2 段階へ送る。
+
+## 5. 共通内部モデル
+
+`common/toolbar.h` と `common/toolbar.c` に、プラットフォーム共通の検証と item metadata を置く。既存の platform control 構造を無理に共有せず、最低限次を共通化する。
+
+- item kind: button / toggle / separator / fixed space / flexible space
+- append 順で安定した内部 ID
+- コピー済み text / tooltip
+- 借用中の `uiImage *`
+- enabled / checked
+- callback / callback data
+- owning toolbar と attached window
+- construction sealed フラグ
+- 型検証、NULL 検証、attachment 検証
+
+ネイティブイベントから内部 ID または native item pointer を `uiToolbarItem *` に逆引きし、共通 helper を通して callback を呼ぶ。Windows の command ID はプロセス内で衝突しない範囲から割り当て、解放時に回収できる設計にする。メニュー command と toolbar command の判定を `WM_COMMAND` の `lParam` と ID の両方で明確に分離する。
+
+## 6. プラットフォーム別実装
+
+### 6.1 macOS (`darwin/toolbar.m`, `darwin/window.m`)
+
+- `NSToolbar` と `NSToolbarItem` を使用し、`NSWindow.toolbar` に装着する。
+- append 時に一意な item identifier を生成し、delegate の default/allowed identifier 配列を append 順で構築する。
+- 初版では customization と autosave を無効にする。
+- display mode は icon and label に固定する。
+- fixed/flexible space は AppKit の標準 identifier を使用する。
+- 通常ボタンは標準 `NSToolbarItem` の target/action、label、image、toolTip、enabled を優先して実装する。
+- toggle は macOS 10.12 の deployment target でも動く必要がある。標準 item だけで checked 表現を安定して実装できない場合は、`NSButton` を custom view にした実装を候補にする。ただし寸法、アクセシビリティ、label 表示、overflow の差をスパイクで評価してから決定する。
+- `uiImage` は既存の `uiprivImageNSImage()` を再利用する。template image 化は自動で行わない。
+- toolbar の有無によって既存 child の Auto Layout 制約が壊れないこと、fullscreen / borderless / resize callback に回帰がないことを確認する。
+
+### 6.2 Windows (`windows/toolbar.cpp`, `windows/window.cpp`)
+
+- `TOOLBARCLASSNAMEW` (`ToolbarWindow32`) を window の child HWND として生成する。
+- 作成後に `TB_BUTTONSTRUCTSIZE`、item 追加後に `TB_AUTOSIZE` を送る。
+- 既定では list style を使用せず、アイコンの下に text を表示する。
+- button は `BTNS_BUTTON | BTNS_AUTOSIZE`、toggle は `BTNS_CHECK | BTNS_AUTOSIZE`、separator/space は `BTNS_SEP` を基本とする。
+- 文字列は UTF-16 に変換し、toolbar が参照している期間のバッファ寿命を保証する。
+- tooltip は `TBSTYLE_TOOLTIPS` と `TTN_GETDISPINFOW` または `TBN_GETINFOTIPW` で内部文字列を返す。
+- `WM_COMMAND` を window procedure から toolbar dispatcher に渡し、command ID から item を特定する。toggle の checked 状態は callback 前に `TB_GETSTATE` から同期する。
+- fixed space は OS 既定に近い幅の `BTNS_SEP` とする。
+- Windows toolbar に native flexible-space item はないため、可変 separator の幅を window resize 時に再計算する。複数 flexible space がある場合は余剰幅を均等配分し、負の幅にはせず、通常 item の最小幅を優先する。
+- toolbar 高さを `windowRelayout()` で child 領域から差し引き、minimum size 計算にも加える。DPI / font / theme 変更時は再計測して再配置する。
+- 既存 WIC representation 選択 helper を使って DPI に合う bitmap を選び、32-bit alpha 対応 image list を構築する。複数 item、アイコンなし item、DPI 変更、同じ画像の共有をテストする。
+
+### 6.3 GTK 3 (`unix/toolbar.c`, `unix/window.c`)
+
+- `GtkToolbar`、`GtkToolButton`、`GtkToggleToolButton`、`GtkSeparatorToolItem` を使用する。
+- `uiWindow` 内の既存 vertical box で menubar の後、child holder の前に toolbar を置く。
+- fixed space は非描画・非 expand の separator、flexible space は非描画・expand の separator とする。
+- text、tooltip、sensitive、active は各 GTK property / API に直接対応させる。
+- アイコンは既存の `uiprivImageAppropriateSurface()` を基に現在の scale factor に適した `GtkImage` を作り、scale-factor / style 更新時に再選択する。
+- `GtkToolbar` は `GTK_TOOLBAR_BOTH` を使用し、アイコンの下に text を表示する。
+- overflow は GTK の既定動作に任せる。ただしボタンが overflow menu に現れても callback、enabled、checked が同じ状態を使うことを確認する。separator と flexible space の proxy は作らない。
+
+## 7. サイズとレイアウトの契約
+
+toolbar 追加で `uiWindowContentSize()` の意味をプラットフォーム間でさらに不揃いにしないことを優先する。実装前スパイクで、現在の menubar を含む実測値も含めて次を確認し、テスト可能な契約を Doxygen に記す。
+
+推奨契約は「要求・返却する content size は toolbar 以外のアプリケーション content 領域」とする。これを採用する場合:
+
+- `uiWindowSetContentSize(w, width, height)` 後、child holder が原則その寸法になる。
+- toolbar の装着・取り外しだけで child content の希望寸法を変えない。必要なら outer window を調整する。
+- resize callback は toolbar 高さの theme/DPI 変更だけでは発火させず、アプリケーション content の寸法が変わったときに発火する。
+- minimum width は toolbar item 全体の幅に固定しない。狭い場合は各 OS の clipping/overflow を許す。
+- minimum height には toolbar の自然高を加味し、既存 child の minimum height を侵食しない。
+
+既存 API との互換性上この契約が困難な backend では、現在の `uiWindowContentSize()` の意味を維持し、その差を明文化する。判断は目視だけでなく寸法を記録する小さなテストプログラムで行う。
+
+## 8. 実装順序
+
+### Phase 0: API とネイティブ挙動のスパイク
+
+1. 3 backend で button / toggle / fixed space / flexible space を 1 ウィンドウに表示する最小コードを作る。
+2. macOS 10.12 互換 toggle の見た目と callback、Windows の flexible-space 再計算を検証する。
+3. text-only、icon-only、text+icon、空 toolbar、複数 flexible space、狭い window を比較する。
+4. content size、toolbar 自然高、DPI/scale 変更時の値を記録する。
+5. 上記結果に基づき、公開 API、所有権、content size 契約、`SetIcon()` の初版採否を確定する。
+
+スパイクコードは API 確定後に削除するか、再利用できる部分だけ正式実装へ移す。
+
+### Phase 1: 公開 API と共通状態
+
+1. `ui.h` に完全な Doxygen、ownership、callback、thread/main-loop 前提を追加する。
+2. `common/toolbar.*` に item 配列、文字列、状態、検証、callback dispatch を実装する。
+3. `uiWindow` に toolbar association と attach/detach の backend hook を追加する。
+4. Meson source list と Doxygen group を更新する。
+
+### Phase 2: backend 実装
+
+1. GTK 3 版を実装し、共通状態と callback 契約を早期に固める。
+2. macOS 版を実装し、window attachment と deployment target を検証する。
+3. Windows 版を実装し、command routing、layout、image list、DPI 対応を完成させる。
+
+順序は開発ホストでの実行可能性に応じて入れ替えてよいが、未実装 backend を stub で成功扱いにはしない。
+
+### Phase 3: テストとサンプル
+
+1. `test/unit/toolbar.c` に共通状態と user-bug validation の単体テストを追加する。
+2. `test/page*.c` に対話テストページを追加する。
+3. `examples/toolbar.c` に最小の実用例を追加する。
+4. 3 OS で目視 QA を実施し、スクリーンショットと確認項目を記録する。
+5. AddressSanitizer/Valgrind 相当、Windows debug runtime、macOS Zombies の利用可能な範囲で attach/detach と callback 中破棄を確認する。
+
+### Phase 4: 文書とリリース準備
+
+1. README/API ドキュメントと CHANGELOG を更新する。
+2. 非目標と platform 差（特に overflow と flexible space）を明記する。
+3. ABI/API review を行い、公開後に変更しにくい ownership と callback signature を再確認する。
+
+## 9. テスト項目
+
+### 自動テスト
+
+- append 順と item kind が保持される。
+- text / tooltip がコピーされ、getter の ownership が正しい。
+- enabled と checked の初期値は `TRUE` / `FALSE`。
+- setter は callback を発火しない。
+- button click は 1 回だけ callback を呼ぶ。
+- toggle click は callback 内から新しい checked 値を読める。
+- callback の再登録で古い callback/data が使われない。
+- 通常 button への checked API、装着後 append、二重装着、装着中 free を user bug として検出する。
+- detach 後に別 window へ attach できる。
+- window destroy 後に toolbar を安全に free できる。
+- NULL icon、空 text、空 tooltip を扱える。
+
+### 手動・プラットフォーム QA
+
+- text-only / icon-only / text+icon の自然な表示
+- キーボードフォーカス、Space/Enter 操作、アクセシビリティ名
+- disabled の見た目と操作不能性
+- toggle の押下表示と programmatic 更新
+- separator、fixed space、1 個および複数の flexible space
+- window を最小幅から十分な幅まで連続 resize
+- overflow が起きたときの到達可能性（OS が提供する場合）
+- 100%/150%/200% 相当 DPI、Retina、GTK scale factor
+- light/dark mode、theme 変更
+- toolbar 付き window の fullscreen、borderless、maximize/minimize
+- toolbar の attach/detach 前後の content size と minimum size
+- callback 内で window を破棄するケース
+- 複数 window / 複数 toolbar 間で状態や command ID が混線しないこと
+
+## 10. 完了条件
+
+- `ui.h` の API と ownership が 3 backend で同じ意味を持つ。
+- button、toggle、separator、space、flexible space が macOS / Windows / GTK 3 で実装される。
+- text、icon、tooltip、enabled、checked、clicked callback が仕様どおり動く。
+- toolbar は `uiWindowSetToolbar()` 以外の container API に依存しない。
+- 既存の window child、menubar、content size、minimum size、destroy 処理に回帰がない。
+- unit test、既存 test suite、サンプル build が全対象環境で成功する。
+- sanitizer/debug runtime で既知の leak、use-after-free、二重解放がない。
+- platform 固有の差と初版の非目標が API 文書に記載される。
+
+## 11. 主なリスクと判断ゲート
+
+1. **macOS toggle の表現**: deployment target 10.12 で自然な toggle item を作れるか。custom view が必要なら、その外観と accessibility を API freeze 前に承認する。
+2. **Windows flexible space**: 複数 spring、極端に狭い幅、DPI 変更で安定するか。安定しなければ初版から flexible space を外すのではなく、挙動を「残余幅を 0 以上で均等配分」と限定する。
+3. **画像更新**: Windows image list の再構築コストと lifetime が大きければ `uiToolbarItemSetIcon()` を第 2 段階へ送る。
+4. **content size 互換性**: toolbar 装着で既存 API の寸法意味を変えないか。Phase 0 の実測結果なしに実装を固定しない。
+5. **overflow 差**: 初版では完全共通化しない。アイテムが消えて操作不能になる backend があれば、最低限の到達手段または明確な clipping 契約を定める。
+
+## 12. 公式 API 参照
+
+- Apple: https://developer.apple.com/documentation/appkit/nstoolbaritem
+- Apple flexible space: https://developer.apple.com/documentation/appkit/nstoolbaritem/identifier/flexiblespace
+- Microsoft toolbar overview: https://learn.microsoft.com/en-us/windows/win32/controls/toolbar-controls-overview
+- Microsoft toolbar creation: https://learn.microsoft.com/en-us/windows/win32/controls/create-toolbars
+- Microsoft `TBBUTTON`: https://learn.microsoft.com/en-us/windows/win32/api/commctrl/ns-commctrl-tbbutton
+- GTK 3 `GtkToolbar`: https://docs.gtk.org/gtk3/class.Toolbar.html
+- GTK 3 `GtkSeparatorToolItem`: https://docs.gtk.org/gtk3/class.SeparatorToolItem.html
