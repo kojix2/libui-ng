@@ -493,6 +493,37 @@ static void imageViewDefaultMinimumCanBeOverriddenAndRestored(void **state)
 	uiControlDestroy(uiControl(imageView));
 }
 
+static void toolbarReappliesModeAfterNativeChange(void **state)
+{
+	(void) state;
+	uiWindow *window = uiNewWindow("Toolbar modes", 320, 200, 0);
+	uiToolbar *toolbar = uiNewToolbar();
+	uiToolbarAppendButton(toolbar, "Action", NULL);
+	uiToolbarItem *toggle = uiToolbarAppendToggleButton(toolbar, "Pinned", NULL);
+	uiToolbarItemSetChecked(toggle, 1);
+	uiWindowSetToolbar(window, toolbar);
+	NSToolbar *native = [(NSWindow *) uiControlHandle(uiControl(window)) toolbar];
+	assert_int_equal([[native items] count], 2);
+	NSToolbarItem *button = [[native items] objectAtIndex:0];
+	NSToolbarItem *check = [[native items] objectAtIndex:1];
+	uiToolbarSetDisplayMode(toolbar, uiToolbarDisplayModeIconAndTextVertical);
+	[native setDisplayMode:NSToolbarDisplayModeIconOnly];
+	uiToolbarSetDisplayMode(toolbar, uiToolbarDisplayModeIconAndTextVertical);
+	assert_int_equal([native displayMode], NSToolbarDisplayModeIconAndLabel);
+	assert_null([button view]);
+	for (int i = 0; i < 4; i++) {
+		uiToolbarSetDisplayMode(toolbar, uiToolbarDisplayModeIconOnly);
+		assert_non_null([button view]);
+		uiToolbarSetDisplayMode(toolbar, uiToolbarDisplayModeTextOnly);
+		assert_null([button view]);
+		assert_true([[button label] isEqualToString:@"Action"]);
+		assert_int_equal([(NSButton *) [check view] state], NSOnState);
+	}
+	uiWindowSetToolbar(window, NULL);
+	uiFreeToolbar(toolbar);
+	uiControlDestroy(uiControl(window));
+}
+
 int main(void)
 {
 	const struct CMUnitTest tests[] = {
@@ -505,6 +536,7 @@ int main(void)
 		cmocka_unit_test(gridRebuildsWithCompositeChildren),
 		cmocka_unit_test(singleChildConstraintsFollowVisibility),
 		cmocka_unit_test(imageViewDefaultMinimumCanBeOverriddenAndRestored),
+		cmocka_unit_test(toolbarReappliesModeAfterNativeChange),
 	};
 	NSAutoreleasePool *pool;
 	uiInitOptions options = {0};
