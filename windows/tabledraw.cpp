@@ -419,6 +419,12 @@ static HRESULT drawProgressBarPart(HRESULT hr, struct drawState *s)
 		// TODO this should really start the progressbar scrolling into view instead of already on screen when first set
 		rFill[1] = rFill[0];		// save in case we need it
 		barWidth = rFill[0].right - rFill[0].left;
+		if (barWidth <= 0) {
+			// A very narrow column can collapse after removing the border.
+			// There is no interior to animate in that case.
+			hr = S_OK;
+			goto fail;
+		}
 		pieceWidth = barWidth / indeterminateSegments;
 		rFill[0].left += indeterminatePos % barWidth;
 		if ((rFill[0].left + pieceWidth) >= rFill[0].right) {
