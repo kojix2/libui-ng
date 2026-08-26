@@ -361,6 +361,9 @@ static uiForEach processAttribute(const uiAttributedString *s, const uiAttribute
 			// TODO incorrect if a solid color
 			us = kCTUnderlineStyleThick;
 			break;
+		default:
+			us = kCTUnderlineStyleNone;
+			break;
 		}
 		num = CFNumberCreate(NULL, kCFNumberSInt32Type, &us);
 		CFAttributedStringSetAttribute(p->mas, range, kCTUnderlineStyleAttributeName, num);
