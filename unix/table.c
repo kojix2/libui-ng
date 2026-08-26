@@ -880,7 +880,11 @@ uiTable *uiNewTable(uiTableParams *p)
 
 int uiTableColumnWidth(uiTable *t, int column)
 {
-	GtkTreeViewColumn *c = gtk_tree_view_get_column(t->tv, column);
+	GtkTreeViewColumn *c;
+
+	if (column < 0 || (guint) column >= gtk_tree_view_get_n_columns(t->tv))
+		return 0;
+	c = gtk_tree_view_get_column(t->tv, column);
 	return gtk_tree_view_column_get_width(c);
 }
 
@@ -889,7 +893,7 @@ void uiTableColumnSetWidth(uiTable *t, int column, int width)
 	GtkAllocation allocation;
 	GtkTreeViewColumn *c;
 
-	if (column < 0 || column >= gtk_tree_view_get_n_columns(t->tv))
+	if (column < 0 || (guint) column >= gtk_tree_view_get_n_columns(t->tv))
 		return;
 	c = gtk_tree_view_get_column(t->tv, column);
 	if (width == -1) {
