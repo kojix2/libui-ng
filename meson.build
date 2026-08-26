@@ -14,7 +14,7 @@ project('libui', ['c', 'cpp'],
 		'b_staticpic=true',				# use PIC even for static libraries
 		'c_std=c99',					# strict C99
 		'c_winlibs=',					# we define our own Windows libraries
-		'cpp_std=c++11',				# strict C++11
+		'cpp_std=c++14',				# strict C++14
 		'cpp_eh=sc',					# shut the compiler up in some cases
 		'cpp_winlibs=',					# likewise as with c_winlibs
 	],
@@ -30,7 +30,7 @@ libui_forced_options = {
 	'b_staticpic':   'true',  # use PIC even for static libraries
 	'c_std':         'c99',   # strict C99
 	'c_winlibs':     '[]',    # we define our own Windows libraries
-	'cpp_std':       'c++11', # strict C++11
+	'cpp_std':       'c++14', # strict C++14
 	'cpp_eh':        'sc',    # shut the compiler up in some cases
 	'cpp_winlibs':   '[]',    # likewise as with c_winlibs
 }
