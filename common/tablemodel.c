@@ -54,12 +54,18 @@ uiTableValue *uiprivTableModelCellValue(uiTableModel *m, int row, int column)
 void uiprivTableModelSetCellValue(uiTableModel *m, int row, int column, const uiTableValue *value)
 {
 	uiTableModelHandler *mh;
+	int n;
 
 	mh = uiprivTableModelHandler(m);
 	uiprivUserCallbackEnter(NULL);
 	(*(mh->SetCellValue))(mh, m, row, column, value);
 
-	uiTableModelRowChanged(m, row);
+	// The handler may delete the edited row and notify the model while handling
+	// the edit. Do not emit a change notification for a row that no longer
+	// exists.
+	n = uiprivTableModelNumRows(m);
+	if (row >= 0 && row < n)
+		uiTableModelRowChanged(m, row);
 	uiprivUserCallbackLeave();
 }
 

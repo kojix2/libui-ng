@@ -12,6 +12,16 @@ static void uiTableModel_init(uiTableModel *m)
 	m->tables = g_ptr_array_new();
 }
 
+static void invalidateIters(uiTableModel *m)
+{
+	gint old;
+
+	old = m->stamp;
+	do {
+		m->stamp = g_random_int();
+	} while (m->stamp == 0 || m->stamp == old);
+}
+
 static void uiTableModel_finalize(GObject *obj)
 {
 	uiTableModel *m = uiTableModel(obj);
@@ -94,6 +104,8 @@ static void uiTableModel_get_value(GtkTreeModel *mm, GtkTreeIter *iter, gint col
 	g_return_if_fail(iter->stamp == m->stamp);
 
 	row = GPOINTER_TO_INT(iter->user_data);
+	g_return_if_fail(row >= 0);
+	g_return_if_fail(row < uiprivTableModelNumRows(m));
 	tvalue = uiprivTableModelCellValue(m, row, column);
 	switch (uiprivTableModelColumnType(m, column)) {
 	case uiTableValueTypeString:
@@ -231,9 +243,7 @@ uiTableModel *uiNewTableModel(uiTableModelHandler *mh)
 	uiTableModel *m;
 
 	m = uiTableModel(g_object_new(uiTableModelType, NULL));
-	while ((m->stamp = g_random_int()) == 0) {
-		//iter of 0 means invalid
-	}
+	invalidateIters(m);
 	m->mh = mh;
 	return m;
 }
@@ -274,6 +284,7 @@ void uiTableModelRowInserted(uiTableModel *m, int newIndex)
 	for (i = 0; i < m->tables->len; i++)
 		uiprivTableRowInserted(uiTable(g_ptr_array_index(m->tables, i)), newIndex);
 
+	invalidateIters(m);
 	path = gtk_tree_path_new_from_indices(newIndex, -1);
 	iter.stamp = m->stamp;
 	iter.user_data = GINT_TO_POINTER(newIndex);
@@ -286,6 +297,7 @@ void uiTableModelRowChanged(uiTableModel *m, int index)
 	GtkTreePath *path;
 	GtkTreeIter iter;
 
+	invalidateIters(m);
 	path = gtk_tree_path_new_from_indices(index, -1);
 	iter.stamp = m->stamp;
 	iter.user_data = GINT_TO_POINTER(index);
@@ -301,6 +313,7 @@ void uiTableModelRowDeleted(uiTableModel *m, int oldIndex)
 	for (i = 0; i < m->tables->len; i++)
 		uiprivTableRowDeleted(uiTable(g_ptr_array_index(m->tables, i)), oldIndex);
 
+	invalidateIters(m);
 	path = gtk_tree_path_new_from_indices(oldIndex, -1);
 	gtk_tree_model_row_deleted(GTK_TREE_MODEL(m), path);
 	gtk_tree_path_free(path);

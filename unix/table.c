@@ -65,16 +65,27 @@ static void applyBackgroundColor(uiTable *t, GtkTreeModel *m, GtkTreeIter *iter,
 			r, "cell-background-rgba", "cell-background-set");
 }
 
-static void onEdited(uiTableModel *m, int column, const char *pathstr, const uiTableValue *tvalue, GtkTreeIter *iter)
+static gboolean iterFromPath(uiTableModel *m, const char *pathstr, GtkTreeIter *iter)
 {
 	GtkTreePath *path;
-	int row;
+	gboolean valid;
 
 	path = gtk_tree_path_new_from_string(pathstr);
-	row = gtk_tree_path_get_indices(path)[0];
-	if (iter != NULL)
-		gtk_tree_model_get_iter(GTK_TREE_MODEL(m), iter, path);
+	if (path == NULL)
+		return FALSE;
+	valid = gtk_tree_model_get_iter(GTK_TREE_MODEL(m), iter, path);
 	gtk_tree_path_free(path);
+	return valid;
+}
+
+static void onEdited(uiTableModel *m, int column, const char *pathstr, const uiTableValue *tvalue)
+{
+	GtkTreeIter iter;
+	int row;
+
+	if (!iterFromPath(m, pathstr, &iter))
+		return;
+	row = GPOINTER_TO_INT(iter.user_data);
 	uiprivTableModelSetCellValue(m, row, column, tvalue);
 }
 
@@ -109,13 +120,10 @@ static void textColumnEdited(GtkCellRendererText *r, gchar *path, gchar *newText
 {
 	struct textColumnParams *p = (struct textColumnParams *) data;
 	uiTableValue *tvalue;
-	GtkTreeIter iter;
 
 	tvalue = uiNewTableValueString(newText);
-	onEdited(p->t->model, p->modelColumn, path, tvalue, &iter);
+	onEdited(p->t->model, p->modelColumn, path, tvalue);
 	uiFreeTableValue(tvalue);
-	// Refresh the renderer because the model callback may not emit a change.
-	textColumnDataFunc(NULL, GTK_CELL_RENDERER(r), GTK_TREE_MODEL(p->t->model), &iter, data);
 }
 
 struct imageColumnParams {
@@ -169,21 +177,18 @@ static void checkboxColumnToggled(GtkCellRendererToggle *r, gchar *pathstr, gpoi
 	GValue value = G_VALUE_INIT;
 	int v;
 	uiTableValue *tvalue;
-	GtkTreePath *path;
 	GtkTreeIter iter;
+	int row;
 
-	path = gtk_tree_path_new_from_string(pathstr);
-	gtk_tree_model_get_iter(GTK_TREE_MODEL(p->t->model), &iter, path);
-	gtk_tree_path_free(path);
+	if (!iterFromPath(p->t->model, pathstr, &iter))
+		return;
+	row = GPOINTER_TO_INT(iter.user_data);
 	gtk_tree_model_get_value(GTK_TREE_MODEL(p->t->model), &iter, p->modelColumn, &value);
 	v = g_value_get_int(&value);
 	g_value_unset(&value);
 	tvalue = uiNewTableValueInt(!v);
-	onEdited(p->t->model, p->modelColumn, pathstr, tvalue, NULL);
+	uiprivTableModelSetCellValue(p->t->model, row, p->modelColumn, tvalue);
 	uiFreeTableValue(tvalue);
-	// Re-fetch the authoritative value because the model callback may
-	// normalize it without emitting a change.
-	checkboxColumnDataFunc(NULL, GTK_CELL_RENDERER(r), GTK_TREE_MODEL(p->t->model), &iter, data);
 }
 
 struct progressBarColumnParams {
@@ -394,7 +399,7 @@ static void buttonColumnClicked(GtkCellRenderer *r, gchar *pathstr, gpointer dat
 {
 	struct buttonColumnParams *p = (struct buttonColumnParams *) data;
 
-	onEdited(p->t->model, p->modelColumn, pathstr, NULL, NULL);
+	onEdited(p->t->model, p->modelColumn, pathstr, NULL);
 }
 
 uiSortIndicator uiTableHeaderSortIndicator(uiTable *t, int lcol)
