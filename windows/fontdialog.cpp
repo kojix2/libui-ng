@@ -61,15 +61,26 @@ static LRESULT cbGetItemData(HWND cb, WPARAM item)
 	LRESULT data;
 
 	data = SendMessageW(cb, CB_GETITEMDATA, item, 0);
-	if (data == (LRESULT) CB_ERR)
+	if (data == (LRESULT) CB_ERR) {
 		logLastError(L"error getting combobox item data for font dialog");
+		return 0;
+	}
 	return data;
 }
 
-static void cbSetItemData(HWND cb, WPARAM item, LPARAM data)
+static BOOL cbSetItemData(HWND cb, WPARAM item, LPARAM data)
 {
-	if (SendMessageW(cb, CB_SETITEMDATA, item, data) == (LRESULT) CB_ERR)
+	if (SendMessageW(cb, CB_SETITEMDATA, item, data) == (LRESULT) CB_ERR) {
 		logLastError(L"error setting combobox item data");
+		return FALSE;
+	}
+	return TRUE;
+}
+
+static void cbDeleteString(HWND cb, WPARAM item)
+{
+	if (SendMessageW(cb, CB_DELETESTRING, item, 0) == (LRESULT) CB_ERR)
+		logLastError(L"error deleting item from combobox");
 }
 
 static BOOL cbGetCurSel(HWND cb, LRESULT *sel)
@@ -108,7 +119,8 @@ static void cbWipeAndReleaseData(HWND cb)
 	n = cbGetCount(cb);
 	for (i = 0; i < n; i++) {
 		obj = (IUnknown *) cbGetItemData(cb, (WPARAM) i);
-		obj->Release();
+		if (obj != NULL)
+			obj->Release();
 	}
 	SendMessageW(cb, CB_RESETCONTENT, 0, 0);
 }
@@ -195,9 +207,10 @@ static void styleChanged(struct fontDialog *f)
 	selected = cbGetCurSel(f->styleCombobox, &pos);
 	if (!selected)		// on deselect, do nothing
 		return;
+	font = (IDWriteFont *) cbGetItemData(f->styleCombobox, (WPARAM) pos);
+	if (font == NULL)
+		return;
 	f->curStyle = pos;
-
-	font = (IDWriteFont *) cbGetItemData(f->styleCombobox, (WPARAM) (f->curStyle));
 	// these are for the nearest match when changing the family; see below
 	f->weight = font->GetWeight();
 	f->style = font->GetStyle();
@@ -233,6 +246,8 @@ static void familyChanged(struct fontDialog *f)
 	f->curFamily = pos;
 
 	family = (IDWriteFontFamily *) cbGetItemData(f->familyCombobox, (WPARAM) (f->curFamily));
+	if (family == NULL)
+		return;
 
 	// for the nearest style match
 	// when we select a new family, we want the nearest style to the previously selected one to be chosen
@@ -269,7 +284,15 @@ static void familyChanged(struct fontDialog *f)
 		label = fontStyleName(f->fc, font);
 		pos = cbAddString(f->styleCombobox, label);
 		uiprivFree(label);
-		cbSetItemData(f->styleCombobox, (WPARAM) pos, (LPARAM) font);
+		if (pos == (LRESULT) CB_ERR || pos == (LRESULT) CB_ERRSPACE) {
+			font->Release();
+			continue;
+		}
+		if (!cbSetItemData(f->styleCombobox, (WPARAM) pos, (LPARAM) font)) {
+			font->Release();
+			cbDeleteString(f->styleCombobox, (WPARAM) pos);
+			continue;
+		}
 		if (font->GetWeight() == weight &&
 			font->GetStyle() == style &&
 			font->GetStretch() == stretch)
@@ -510,7 +533,14 @@ static struct fontDialog *beginFontDialog(HWND hwnd, LPARAM lParam)
 		wname = uiprivFontCollectionFamilyName(f->fc, family);
 		pos = cbAddString(f->familyCombobox, wname);
 		uiprivFree(wname);
-		cbSetItemData(f->familyCombobox, (WPARAM) pos, (LPARAM) family);
+		if (pos == (LRESULT) CB_ERR || pos == (LRESULT) CB_ERRSPACE) {
+			family->Release();
+			continue;
+		}
+		if (!cbSetItemData(f->familyCombobox, (WPARAM) pos, (LPARAM) family)) {
+			family->Release();
+			cbDeleteString(f->familyCombobox, (WPARAM) pos);
+		}
 	}
 
 	for (i = 0; defaultSizes[i].text != NULL; i++)
@@ -539,6 +569,9 @@ static void endFontDialog(struct fontDialog *f, INT_PTR code)
 static INT_PTR tryFinishDialog(struct fontDialog *f, WPARAM wParam)
 {
 	IDWriteFontFamily *family = NULL;
+	IDWriteFont *font = NULL;
+	WCHAR *familyName;
+	WCHAR *styleName;
 
 	// cancelling
 	if (LOWORD(wParam) != IDOK) {
@@ -547,14 +580,20 @@ static INT_PTR tryFinishDialog(struct fontDialog *f, WPARAM wParam)
 	}
 
 	// OK
-	uiprivDestroyFontDialogParams(f->params);
-	f->params->font = (IDWriteFont *) cbGetItemData(f->styleCombobox, f->curStyle);
-	// we need to save font from being destroyed with the combobox
-	f->params->font->AddRef();
-	f->params->size = f->curSize;
+	font = (IDWriteFont *) cbGetItemData(f->styleCombobox, f->curStyle);
+	if (font == NULL)
+		return TRUE;
 	family = (IDWriteFontFamily *) cbGetItemData(f->familyCombobox, f->curFamily);
-	f->params->familyName = uiprivFontCollectionFamilyName(f->fc, family);
-	f->params->styleName = fontStyleName(f->fc, f->params->font);
+	if (family == NULL)
+		return TRUE;
+	familyName = uiprivFontCollectionFamilyName(f->fc, family);
+	styleName = fontStyleName(f->fc, font);
+	font->AddRef();
+	uiprivDestroyFontDialogParams(f->params);
+	f->params->font = font;
+	f->params->size = f->curSize;
+	f->params->familyName = familyName;
+	f->params->styleName = styleName;
 	endFontDialog(f, 2);
 	return TRUE;
 }
