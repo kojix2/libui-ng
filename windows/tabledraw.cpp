@@ -249,6 +249,7 @@ static HRESULT drawCheckboxPart(HRESULT hr, struct drawState *s)
 static HRESULT drawTextPart(HRESULT hr, struct drawState *s)
 {
 	COLORREF prevText;
+	int drawResult;
 	int prevMode;
 	uiTableValue *value;
 	WCHAR *wstr;
@@ -279,11 +280,9 @@ static HRESULT drawTextPart(HRESULT hr, struct drawState *s)
 	// guessing, the Windows 2000 source leak, various custom
 	// draw examples on the web, etc.
 	// TODO find the real correct flags
-	if (DrawTextW(s->dc, wstr, -1, &(s->m->realTextRect), DT_LEFT | DT_VCENTER | DT_END_ELLIPSIS | DT_SINGLELINE | DT_NOPREFIX | DT_EDITCONTROL) == 0) {
-		uiprivFree(wstr);
+	drawResult = DrawTextW(s->dc, wstr, -1, &(s->m->realTextRect), DT_LEFT | DT_VCENTER | DT_END_ELLIPSIS | DT_SINGLELINE | DT_NOPREFIX | DT_EDITCONTROL);
+	if (drawResult == 0)
 		logLastError(L"DrawTextW()");
-		return E_FAIL;
-	}
 	uiprivFree(wstr);
 
 	// These setters return the state being replaced. The current state is
@@ -296,6 +295,8 @@ static HRESULT drawTextPart(HRESULT hr, struct drawState *s)
 		logLastError(L"SetTextColor() prev");
 		return E_FAIL;
 	}
+	if (drawResult == 0)
+		return E_FAIL;
 	return S_OK;
 }
 
@@ -565,12 +566,13 @@ static HRESULT drawButtonPart(HRESULT hr, struct drawState *s)
 		if (DrawTextW(s->dc, wstr, -1, &r, DT_CENTER | DT_VCENTER | DT_END_ELLIPSIS | DT_SINGLELINE | DT_NOPREFIX) == 0) {
 			logLastError(L"DrawTextW()");
 			hr = E_FAIL;
-			goto fail;
 		}
 		if (SetBkMode(s->dc, prevBkMode) == 0)
 			logLastError(L"SetBkMode() prev");
 		if (SelectObject(s->dc, prevColor) == NULL)
 			logLastError(L"SelectObject() prev button text brush");
+		if (hr != S_OK)
+			goto fail;
 	}
 
 	hr = S_OK;
