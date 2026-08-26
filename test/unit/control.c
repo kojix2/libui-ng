@@ -20,6 +20,12 @@ struct deferredFreeState {
 	int freeCount;
 };
 
+typedef struct reregisterDestroyedState reregisterDestroyedState;
+struct reregisterDestroyedState {
+	int firstCount;
+	int secondCount;
+};
+
 static void freeAfterControl(void *p)
 {
 	deferredFreeState *s = p;
@@ -33,6 +39,14 @@ static void countDestroyed(uiControl *c, void *data)
 	int *count = data;
 
 	(*count)++;
+}
+
+static void reregisterWhenDestroyed(uiControl *c, void *data)
+{
+	reregisterDestroyedState *s = data;
+
+	s->firstCount++;
+	uiControlOnDestroyed(c, countDestroyed, &(s->secondCount));
 }
 
 static void destroyAgainWhenDestroyed(uiControl *c, void *data)
@@ -314,6 +328,20 @@ static void destroyedHandlerCannotQueueSelfAgain(void **state)
 	assert_int_equal(destroyCount, 1);
 }
 
+static void destroyedHandlerCannotReregister(void **state)
+{
+	int destroyCount = 0;
+	reregisterDestroyedState handlerState = { 0, 0 };
+	testControl *tc = newTestControl(&destroyCount);
+
+	uiControlOnDestroyed(uiControl(tc), reregisterWhenDestroyed,
+		&handlerState);
+	uiControlDestroy(uiControl(tc));
+	assert_int_equal(destroyCount, 1);
+	assert_int_equal(handlerState.firstCount, 1);
+	assert_int_equal(handlerState.secondCount, 0);
+}
+
 static void pendingControlIsHiddenAndSuppressesCallbacks(void **state)
 {
 	int destroyCount = 0;
@@ -395,6 +423,7 @@ int controlRunUnitTests(void)
 		cmocka_unit_test(parentDestroyNotifiesForChild),
 		cmocka_unit_test(destroyedHandlerCanBeReplacedAndRemoved),
 		cmocka_unit_test(destroyedHandlerCannotQueueSelfAgain),
+		cmocka_unit_test(destroyedHandlerCannotReregister),
 		cmocka_unit_test(pendingControlIsHiddenAndSuppressesCallbacks),
 		cmocka_unit_test(pendingAncestorSuppressesChildCallbacks),
 		cmocka_unit_test(resourceFreeIsDeferredInFifoOrder),

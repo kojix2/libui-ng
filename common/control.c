@@ -365,6 +365,12 @@ void uiFreeControl(uiControl *c)
 		(*f)(c, data);
 		uiprivUserCallbackLeave();
 		freeingControls = freeing.next;
+		// A destroyed handler may try to register another handler for the
+		// control that is about to be freed. Such a handler can never run;
+		// remove it so it does not retain a dangling control pointer.
+		handler = removeControlDestroyedHandler(c);
+		if (handler != NULL)
+			uiprivFree(handler);
 	}
 	uiprivFree(c);
 }
