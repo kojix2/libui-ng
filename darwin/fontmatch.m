@@ -347,6 +347,18 @@ static CTFontDescriptorRef matchStyle(CTFontDescriptorRef against, uiFontDescrip
 	CTFontDescriptorRef out;
 	uiprivFontStyleData *d;
 	NSDictionary *axisDict;
+	uiTextItalic targetItalic;
+
+	switch (styles->Italic) {
+	case uiTextItalicNormal:
+	case uiTextItalicOblique:
+	case uiTextItalicItalic:
+		targetItalic = styles->Italic;
+		break;
+	default:
+		targetItalic = uiTextItalicNormal;
+		break;
+	}
 
 	matching = CTFontDescriptorCreateMatchingFontDescriptors(against, NULL);
 	if (matching == NULL)
@@ -386,7 +398,7 @@ static CTFontDescriptorRef matchStyle(CTFontDescriptorRef against, uiFontDescrip
 		}
 		fillDescStyleFields(d, axisDict, &fields);
 		closeness[i].weight = fields.Weight - styles->Weight;
-		closeness[i].italic = italicClosenesses[styles->Italic][fields.Italic];
+		closeness[i].italic = italicClosenesses[targetItalic][fields.Italic];
 		closeness[i].stretch = fields.Stretch - styles->Stretch;
 		{
 			double weight, italic, stretch;
