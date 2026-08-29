@@ -157,6 +157,22 @@ static void comboboxClearAppend(void **state)
 	assert_int_equal(uiComboboxNumItems(*c), 2);
 }
 
+static void comboboxItemsPreserveEnabledState(void **state)
+{
+	uiCombobox **c = uiComboboxPtrFromState(state);
+
+	*c = uiNewCombobox();
+	assert_true(uiControlEnabled(uiControl(*c)));
+
+	uiControlDisable(uiControl(*c));
+	uiComboboxAppend(*c, "Item 0");
+	assert_false(uiControlEnabled(uiControl(*c)));
+
+	uiControlEnable(uiControl(*c));
+	uiComboboxClear(*c);
+	assert_true(uiControlEnabled(uiControl(*c)));
+}
+
 static void comboboxDeleteUpdatesSelection(void **state)
 {
 	uiCombobox **c = uiComboboxPtrFromState(state);
@@ -275,6 +291,7 @@ int comboboxRunUnitTests(void)
 		comboboxUnitTest(comboboxClearEmpty),
 		comboboxUnitTest(comboboxClear),
 		comboboxUnitTest(comboboxClearAppend),
+		comboboxUnitTest(comboboxItemsPreserveEnabledState),
 		comboboxUnitTest(comboboxDeleteUpdatesSelection),
 		comboboxUnitTest(comboboxSetSelectedNoCallback),
 		comboboxUnitTest(comboboxInsertAtNoCallback),

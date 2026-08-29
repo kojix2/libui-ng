@@ -49,7 +49,33 @@ struct uiCombobox {
 
 @end
 
-uiDarwinControlAllDefaultsExceptDestroy(uiCombobox, pb)
+uiDarwinControlDefaultHandle(uiCombobox, pb)
+uiDarwinControlDefaultParent(uiCombobox, pb)
+uiDarwinControlDefaultSetParent(uiCombobox, pb)
+uiDarwinControlDefaultToplevel(uiCombobox, pb)
+uiDarwinControlDefaultVisible(uiCombobox, pb)
+uiDarwinControlDefaultShow(uiCombobox, pb)
+uiDarwinControlDefaultHide(uiCombobox, pb)
+uiDarwinControlDefaultEnabled(uiCombobox, pb)
+uiDarwinControlDefaultEnable(uiCombobox, pb)
+uiDarwinControlDefaultDisable(uiCombobox, pb)
+
+static void uiComboboxSyncEnableState(uiDarwinControl *dc, int enabled)
+{
+	uiCombobox *c = uiCombobox(dc);
+
+	if (uiDarwinShouldStopSyncEnableState(dc, enabled))
+		return;
+	[c->pb setEnabled:(enabled && uiComboboxNumItems(c) != 0)];
+}
+
+uiDarwinControlDefaultSetSuperview(uiCombobox, pb)
+uiDarwinControlDefaultHugsTrailingEdge(uiCombobox, pb)
+uiDarwinControlDefaultHugsBottom(uiCombobox, pb)
+uiDarwinControlDefaultChildEdgeHuggingChanged(uiCombobox, pb)
+uiDarwinControlDefaultHuggingPriority(uiCombobox, pb)
+uiDarwinControlDefaultSetHuggingPriority(uiCombobox, pb)
+uiDarwinControlDefaultChildVisibilityChanged(uiCombobox, pb)
 
 static void uiComboboxDestroy(uiControl *cc)
 {
@@ -62,10 +88,16 @@ static void uiComboboxDestroy(uiControl *cc)
 	uiFreeControl(uiControl(c));
 }
 
+static void syncEnabled(uiCombobox *c)
+{
+	uiDarwinControlSyncEnableState(uiDarwinControl(c),
+		uiControlEnabledToUser(uiControl(c)));
+}
+
 void uiComboboxAppend(uiCombobox *c, const char *text)
 {
 	[c->pbac addObject:uiprivToNSString(text)];
-	uiControlEnable(uiControl(c));
+	syncEnabled(c);
 }
 
 void uiComboboxInsertAt(uiCombobox *c, int n, const char *text)
@@ -73,7 +105,7 @@ void uiComboboxInsertAt(uiCombobox *c, int n, const char *text)
 	int selected = uiComboboxSelected(c);
 
 	[c->pbac insertObject:uiprivToNSString(text) atArrangedObjectIndex:n];
-	uiControlEnable(uiControl(c));
+	syncEnabled(c);
 
 	if (n <= selected)
 		uiComboboxSetSelected(c, selected+1);
@@ -89,10 +121,9 @@ void uiComboboxDelete(uiCombobox *c, int n)
 
 	if (n < selected)
 		uiComboboxSetSelected(c, selected-1);
-	if (uiComboboxNumItems(c) == 0) {
-		uiControlDisable(uiControl(c));
+	if (uiComboboxNumItems(c) == 0)
 		uiComboboxSetSelected(c, -1);
-	}
+	syncEnabled(c);
 }
 
 void uiComboboxClear(uiCombobox *c)
@@ -103,7 +134,7 @@ void uiComboboxClear(uiCombobox *c)
 			return TRUE;
 	}]];
 	uiComboboxSetSelected(c, -1);
-	uiControlDisable(uiControl(c));
+	syncEnabled(c);
 }
 
 int uiComboboxNumItems(uiCombobox *c)
@@ -159,7 +190,7 @@ uiCombobox *uiNewCombobox(void)
 
 	uiComboboxOnSelected(c, defaultOnSelected, NULL);
 	uiComboboxSetSelected(c, -1);
-	uiControlDisable(uiControl(c));
+	syncEnabled(c);
 
 	return c;
 }
