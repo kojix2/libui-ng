@@ -2058,6 +2058,12 @@ _UI_EXTERN void uiMsgBox(uiWindow *parent, const char *title, const char *descri
  */
 _UI_EXTERN void uiMsgBoxError(uiWindow *parent, const char *title, const char *description);
 
+/**
+ * Custom drawing control that receives drawing and input events through a
+ * uiAreaHandler.
+ *
+ * @struct uiArea
+ */
 typedef struct uiArea uiArea;
 typedef struct uiAreaHandler uiAreaHandler;
 typedef struct uiAreaDrawParams uiAreaDrawParams;
@@ -2095,11 +2101,41 @@ _UI_ENUM(uiWindowResizeEdge) {
 };
 
 #define uiArea(this) ((uiArea *) (this))
-// TODO give a better name
-// TODO document the types of width and height
+
+/**
+ * Changes the size of a scrolling area's drawing space.
+ *
+ * @param a Scrolling uiArea instance created with uiNewScrollingArea().
+ * @param width Width in drawing space units.
+ * @param height Height in drawing space units.
+ * @warning Calling this function on a non-scrolling uiArea is a user error.
+ * @memberof uiArea
+ */
 _UI_EXTERN void uiAreaSetSize(uiArea *a, int width, int height);
-// TODO uiAreaQueueRedraw()
+
+/**
+ * Queues the entire area for redraw.
+ *
+ * @param a uiArea instance.
+ * @memberof uiArea
+ */
 _UI_EXTERN void uiAreaQueueRedrawAll(uiArea *a);
+
+/**
+ * Scrolls the minimum distance needed to make a rectangle visible.
+ *
+ * Negative width and height values extend the rectangle in the opposite
+ * direction. For example, `(110, 100, -100, -80)` describes the same
+ * rectangle as `(10, 20, 100, 80)`.
+ *
+ * @param a Scrolling uiArea instance created with uiNewScrollingArea().
+ * @param x Rectangle origin in drawing space coordinates.
+ * @param y Rectangle origin in drawing space coordinates.
+ * @param width Rectangle width in drawing space units.
+ * @param height Rectangle height in drawing space units.
+ * @warning Calling this function on a non-scrolling uiArea is a user error.
+ * @memberof uiArea
+ */
 _UI_EXTERN void uiAreaScrollTo(uiArea *a, double x, double y, double width, double height);
 // These functions can only be called within MouseEvent callbacks with Down != 0.
 // TODO should these be allowed on scrolling areas?
