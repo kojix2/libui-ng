@@ -50,11 +50,13 @@ static gboolean onReleased(GtkWidget *w, GdkEventButton *event, gpointer data)
 {
 	uiSlider *s = uiSlider(data);
 
+	if (event->button != GDK_BUTTON_PRIMARY)
+		return GDK_EVENT_PROPAGATE;
 	if (!uiprivUserCallbackEnter(uiControl(s)))
-		return FALSE;
+		return GDK_EVENT_PROPAGATE;
 	(*(s->onReleased))(s, s->onReleasedData);
 	uiprivUserCallbackLeave();
-	return FALSE;
+	return GDK_EVENT_PROPAGATE;
 }
 
 static void defaultOnReleased(uiSlider *s, void *data)
