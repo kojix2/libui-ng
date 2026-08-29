@@ -447,7 +447,18 @@ void uiAreaScrollTo(uiArea *a, double x, double y, double width, double height)
 
 	if (!a->scrolling)
 		uiprivUserBug("You cannot call uiAreaScrollTo() on a non-scrolling uiArea. (area: %p)", a);
-	rect = NSStandardizeRect(NSMakeRect(x, y, width, height));
+	rect = NSMakeRect(x, y, width, height);
+	// NSStandardizeRect() is no longer declared by recent macOS SDKs.
+	// Standardize the rectangle here so negative dimensions retain the same
+	// behavior on every backend.
+	if (rect.size.width < 0) {
+		rect.origin.x += rect.size.width;
+		rect.size.width = -rect.size.width;
+	}
+	if (rect.size.height < 0) {
+		rect.origin.y += rect.size.height;
+		rect.size.height = -rect.size.height;
+	}
 	[a->area scrollRectToVisible:rect];
 	// don't worry about the return value; it just says whether scrolling was needed
 }
