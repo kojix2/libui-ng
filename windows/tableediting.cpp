@@ -75,7 +75,6 @@ static LRESULT CALLBACK editSubProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
 	switch (uMsg) {
 	case WM_KEYDOWN:
 		switch (wParam) {
-		// TODO handle VK_TAB and VK_SHIFT+VK_TAB
 		case VK_RETURN:
 			uiprivTableFinishEditingText(t);
 			return 0;		// yes, the real list view just returns here
@@ -86,6 +85,10 @@ static LRESULT CALLBACK editSubProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
 		break;
 	// the real list view also forces these flags
 	case WM_GETDLGCODE:
+		// Let the dialog manager move focus out of the table editor on Tab.
+		// Losing focus commits the edit through EN_KILLFOCUS.
+		if (wParam == VK_TAB)
+			return DLGC_HASSETSEL;
 		return DLGC_HASSETSEL | DLGC_WANTALLKEYS;
 	case WM_NCDESTROY:
 		if (RemoveWindowSubclass(hwnd, editSubProc, uIDSubclass) == FALSE)
