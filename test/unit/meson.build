@@ -20,6 +20,16 @@ libui_unit_sources = [
 	'drawmatrix.c',
 	'attrstr.c',
 	'window.c',
+	'box.c',
+	'group.c',
+	'editablecombobox.c',
+	'multilineentry.c',
+	'separator.c',
+	'fontbutton.c',
+	'colorbutton.c',
+	'form.c',
+	'area.c',
+	'image.c',
 	'table.c',
 ]
 libui_unit_sources += libui_test_internal_sources

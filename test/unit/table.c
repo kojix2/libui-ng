@@ -12,7 +12,7 @@ struct tableTestState {
 
 static int tableNumColumns(uiTableModelHandler *mh, uiTableModel *m)
 {
-	return 4;
+	return 5;
 }
 
 static uiTableValueType tableColumnType(uiTableModelHandler *mh, uiTableModel *m, int column)
@@ -21,6 +21,8 @@ static uiTableValueType tableColumnType(uiTableModelHandler *mh, uiTableModel *m
 		return uiTableValueTypeImage;
 	if (column == 2 || column == 3)
 		return uiTableValueTypeInt;
+	if (column == 4)
+		return uiTableValueTypeColor;
 	return uiTableValueTypeString;
 }
 
@@ -41,6 +43,8 @@ static uiTableValue *tableCellValue(uiTableModelHandler *mh, uiTableModel *m, in
 		return uiNewTableValueInt(1);
 	if (column == 3)
 		return uiNewTableValueInt(50);
+	if (column == 4)
+		return uiNewTableValueColor(0.2, 0.4, 0.6, 0.8);
 	return uiNewTableValueString(state->rows[row]);
 }
 
@@ -116,6 +120,224 @@ static void makeTextTable(struct tableTestState *state, const char *header, int 
 static void makeTable(struct tableTestState *state, const char *header)
 {
 	makeTextTable(state, header, uiTableModelColumnNeverEditable);
+}
+
+static void attachAndShowTable(struct tableTestState *state)
+{
+	uiWindowSetChild(state->window, uiControl(state->table));
+	uiControlShow(uiControl(state->window));
+	uiMainSteps();
+	settleTableLayout();
+}
+
+static void makeBareTable(struct tableTestState *state)
+{
+	uiTableParams params = {0};
+
+	params.Model = state->model;
+	params.RowBackgroundColorModelColumn = -1;
+	state->table = uiNewTable(&params);
+}
+
+static void tableValueRoundTrips(void **data)
+{
+	struct tableTestState *state = *data;
+	uiTableValue *value;
+	double r, g, b, a;
+
+	value = uiNewTableValueString("value");
+	assert_int_equal(uiTableValueGetType(value), uiTableValueTypeString);
+	assert_string_equal(uiTableValueString(value), "value");
+	uiFreeTableValue(value);
+
+	value = uiNewTableValueImage(state->image);
+	assert_int_equal(uiTableValueGetType(value), uiTableValueTypeImage);
+	assert_ptr_equal(uiTableValueImage(value), state->image);
+	uiFreeTableValue(value);
+
+	value = uiNewTableValueInt(42);
+	assert_int_equal(uiTableValueGetType(value), uiTableValueTypeInt);
+	assert_int_equal(uiTableValueInt(value), 42);
+	uiFreeTableValue(value);
+
+	value = uiNewTableValueColor(0.1, 0.2, 0.3, 0.4);
+	assert_int_equal(uiTableValueGetType(value), uiTableValueTypeColor);
+	uiTableValueColor(value, &r, &g, &b, &a);
+	assert_true(r == 0.1);
+	assert_true(g == 0.2);
+	assert_true(b == 0.3);
+	assert_true(a == 0.4);
+	uiFreeTableValue(value);
+}
+
+static void tableAllColumnTypes(void **data)
+{
+	struct tableTestState *state = *data;
+	uiTableParams params = {0};
+	uiTableTextColumnOptionalParams textParams = {0};
+
+	state->rows[0] = "First";
+	state->rows[1] = "Second";
+	state->numRows = 2;
+	params.Model = state->model;
+	params.RowBackgroundColorModelColumn = 4;
+	state->table = uiNewTable(&params);
+	textParams.ColorModelColumn = 4;
+
+	uiTableAppendTextColumn(state->table, "Text", 0, 2, &textParams);
+	uiTableAppendImageColumn(state->table, "Image", 1);
+	uiTableAppendImageTextColumn(state->table, "Image/Text", 1, 0, 2,
+		&textParams);
+	uiTableAppendCheckboxColumn(state->table, "Checkbox", 2, 2);
+	uiTableAppendCheckboxTextColumn(state->table, "Checkbox/Text",
+		2, 2, 0, 2, &textParams);
+	uiTableAppendProgressBarColumn(state->table, "Progress", 3);
+	uiTableAppendButtonColumn(state->table, "Button", 0, 2);
+	attachAndShowTable(state);
+}
+
+static void tableHeaderAndSortIndicator(void **data)
+{
+	struct tableTestState *state = *data;
+
+	state->numRows = 0;
+	makeBareTable(state);
+	uiTableAppendTextColumn(state->table, "Text", 0,
+		uiTableModelColumnNeverEditable, NULL);
+	uiWindowSetChild(state->window, uiControl(state->table));
+	assert_int_equal(uiTableHeaderVisible(state->table), 1);
+	uiTableHeaderSetVisible(state->table, 0);
+	assert_int_equal(uiTableHeaderVisible(state->table), 0);
+	uiTableHeaderSetVisible(state->table, 1);
+	assert_int_equal(uiTableHeaderVisible(state->table), 1);
+
+	assert_int_equal(uiTableHeaderSortIndicator(state->table, 0),
+		uiSortIndicatorNone);
+	uiTableHeaderSetSortIndicator(state->table, 0,
+		uiSortIndicatorAscending);
+	assert_int_equal(uiTableHeaderSortIndicator(state->table, 0),
+		uiSortIndicatorAscending);
+	uiTableHeaderSetSortIndicator(state->table, 0,
+		uiSortIndicatorDescending);
+	assert_int_equal(uiTableHeaderSortIndicator(state->table, 0),
+		uiSortIndicatorDescending);
+	uiTableHeaderSetSortIndicator(state->table, 0, uiSortIndicatorNone);
+	assert_int_equal(uiTableHeaderSortIndicator(state->table, 0),
+		uiSortIndicatorNone);
+}
+
+static void tableSelectionModesAndValues(void **data)
+{
+	struct tableTestState *state = *data;
+	uiTableSelection selection;
+	uiTableSelection *actual;
+	int rows[] = { 0, 1 };
+
+	state->rows[0] = "First";
+	state->rows[1] = "Second";
+	state->numRows = 2;
+	makeBareTable(state);
+	uiTableAppendTextColumn(state->table, "Text", 0,
+		uiTableModelColumnNeverEditable, NULL);
+	attachAndShowTable(state);
+
+	assert_int_equal(uiTableGetSelectionMode(state->table),
+		uiTableSelectionModeZeroOrOne);
+	uiTableSetSelectionMode(state->table, uiTableSelectionModeNone);
+	assert_int_equal(uiTableGetSelectionMode(state->table),
+		uiTableSelectionModeNone);
+	uiTableSetSelectionMode(state->table, uiTableSelectionModeOne);
+	assert_int_equal(uiTableGetSelectionMode(state->table),
+		uiTableSelectionModeOne);
+	uiTableSetSelectionMode(state->table, uiTableSelectionModeZeroOrMany);
+	assert_int_equal(uiTableGetSelectionMode(state->table),
+		uiTableSelectionModeZeroOrMany);
+
+	selection.NumRows = 2;
+	selection.Rows = rows;
+	uiTableSetSelection(state->table, &selection);
+	actual = uiTableGetSelection(state->table);
+	assert_int_equal(actual->NumRows, 2);
+	assert_int_equal(actual->Rows[0], 0);
+	assert_int_equal(actual->Rows[1], 1);
+	uiFreeTableSelection(actual);
+
+	uiTableSetSelectionMode(state->table, uiTableSelectionModeZeroOrOne);
+	actual = uiTableGetSelection(state->table);
+	assert_int_equal(actual->NumRows, 0);
+	uiFreeTableSelection(actual);
+
+	selection.NumRows = 1;
+	selection.Rows = rows + 1;
+	uiTableSetSelection(state->table, &selection);
+	actual = uiTableGetSelection(state->table);
+	assert_int_equal(actual->NumRows, 1);
+	assert_int_equal(actual->Rows[0], 1);
+	uiFreeTableSelection(actual);
+
+	selection.NumRows = 0;
+	selection.Rows = NULL;
+	uiTableSetSelection(state->table, &selection);
+	actual = uiTableGetSelection(state->table);
+	assert_int_equal(actual->NumRows, 0);
+	assert_null(actual->Rows);
+	uiFreeTableSelection(actual);
+}
+
+static void tableCallbackNoCall(uiTable *table, void *data)
+{
+	function_called();
+}
+
+static void tableRowCallbackNoCall(uiTable *table, int row, void *data)
+{
+	function_called();
+}
+
+static void tableHeaderCallbackNoCall(uiTable *table, int column, void *data)
+{
+	function_called();
+}
+
+static void tableProgrammaticChangesDoNotCallback(void **data)
+{
+	struct tableTestState *state = *data;
+	uiTableSelection selection = {0};
+
+	state->rows[0] = "First";
+	state->numRows = 1;
+	makeBareTable(state);
+	uiTableAppendTextColumn(state->table, "Text", 0,
+		uiTableModelColumnNeverEditable, NULL);
+	uiWindowSetChild(state->window, uiControl(state->table));
+	uiTableOnRowClicked(state->table, tableRowCallbackNoCall, NULL);
+	uiTableOnRowDoubleClicked(state->table, tableRowCallbackNoCall, NULL);
+	uiTableHeaderOnClicked(state->table, tableHeaderCallbackNoCall, NULL);
+	uiTableOnSelectionChanged(state->table, tableCallbackNoCall, NULL);
+	uiTableSetSelection(state->table, &selection);
+	uiTableSetSelectionMode(state->table, uiTableSelectionModeNone);
+	uiTableHeaderSetSortIndicator(state->table, 0,
+		uiSortIndicatorAscending);
+}
+
+static void tableModelNotifications(void **data)
+{
+	struct tableTestState *state = *data;
+
+	state->rows[0] = "First";
+	state->rows[1] = "Second";
+	state->numRows = 1;
+	makeBareTable(state);
+	uiTableAppendTextColumn(state->table, "Text", 0,
+		uiTableModelColumnNeverEditable, NULL);
+	attachAndShowTable(state);
+
+	state->numRows = 2;
+	uiTableModelRowInserted(state->model, 1);
+	uiTableModelRowChanged(state->model, 0);
+	state->numRows = 1;
+	uiTableModelRowDeleted(state->model, 1);
+	settleTableLayout();
 }
 
 static void autoWidthUsesCurrentContentOnce(void **data)
@@ -305,6 +527,18 @@ static void autoWidthDoesNotExpandLastWindowsColumn(void **data)
 int tableRunUnitTests(void)
 {
 	const struct CMUnitTest tests[] = {
+		cmocka_unit_test_setup_teardown(tableValueRoundTrips,
+			tableTestSetup, tableTestTeardown),
+		cmocka_unit_test_setup_teardown(tableAllColumnTypes,
+			tableTestSetup, tableTestTeardown),
+		cmocka_unit_test_setup_teardown(tableHeaderAndSortIndicator,
+			tableTestSetup, tableTestTeardown),
+		cmocka_unit_test_setup_teardown(tableSelectionModesAndValues,
+			tableTestSetup, tableTestTeardown),
+		cmocka_unit_test_setup_teardown(tableProgrammaticChangesDoNotCallback,
+			tableTestSetup, tableTestTeardown),
+		cmocka_unit_test_setup_teardown(tableModelNotifications,
+			tableTestSetup, tableTestTeardown),
 		cmocka_unit_test_setup_teardown(autoWidthUsesCurrentContentOnce,
 			tableTestSetup, tableTestTeardown),
 		cmocka_unit_test_setup_teardown(autoWidthUsesEditableContent,
@@ -325,5 +559,5 @@ int tableRunUnitTests(void)
 #endif
 	};
 
-	return cmocka_run_group_tests_name("uiTable column width", tests, NULL, NULL);
+	return cmocka_run_group_tests_name("uiTable", tests, NULL, NULL);
 }
