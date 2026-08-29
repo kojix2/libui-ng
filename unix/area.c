@@ -333,9 +333,22 @@ static gboolean areaWidget_leave_notify_event(GtkWidget *w, GdkEventCrossing *e)
 	return onCrossing(areaWidget(w), 1);
 }
 
-// note: there is no equivalent to WM_CAPTURECHANGED on GTK+; there literally is no way to break a grab like that (at least not on X11 and Wayland)
-// even if I invoke the task switcher and switch processes, the mouse grab will still be held until I let go of all buttons
-// therefore, no DragBroken()
+static gboolean areaWidget_grab_broken_event(GtkWidget *w, GdkEventGrabBroken *e)
+{
+	areaWidget *aw = areaWidget(w);
+	uiArea *a = aw->a;
+
+	// Button presses create implicit pointer grabs. Keyboard and explicit
+	// grabs do not represent the mouse capture described by uiAreaMouseEvent.
+	if (e->keyboard || !e->implicit)
+		return GDK_EVENT_PROPAGATE;
+	if (!uiprivUserCallbackEnter(uiControl(a)))
+		return GDK_EVENT_PROPAGATE;
+	(*(a->ah->DragBroken))(a->ah, a);
+	uiprivClickCounterReset(a->cc);
+	uiprivUserCallbackLeave();
+	return GDK_EVENT_PROPAGATE;
+}
 
 // we use GDK_KEY_Print as a sentinel because libui will never support the print screen key; that key belongs to the user
 
@@ -499,6 +512,7 @@ static void areaWidget_class_init(areaWidgetClass *class)
 	GTK_WIDGET_CLASS(class)->motion_notify_event = areaWidget_motion_notify_event;
 	GTK_WIDGET_CLASS(class)->enter_notify_event = areaWidget_enter_notify_event;
 	GTK_WIDGET_CLASS(class)->leave_notify_event = areaWidget_leave_notify_event;
+	GTK_WIDGET_CLASS(class)->grab_broken_event = areaWidget_grab_broken_event;
 	GTK_WIDGET_CLASS(class)->key_press_event = areaWidget_key_press_event;
 	GTK_WIDGET_CLASS(class)->key_release_event = areaWidget_key_release_event;
 

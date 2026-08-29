@@ -443,9 +443,12 @@ void uiAreaQueueRedrawAll(uiArea *a)
 
 void uiAreaScrollTo(uiArea *a, double x, double y, double width, double height)
 {
+	NSRect rect;
+
 	if (!a->scrolling)
 		uiprivUserBug("You cannot call uiAreaScrollTo() on a non-scrolling uiArea. (area: %p)", a);
-	[a->area scrollRectToVisible:NSMakeRect(x, y, width, height)];
+	rect = NSStandardizeRect(NSMakeRect(x, y, width, height));
+	[a->area scrollRectToVisible:rect];
 	// don't worry about the return value; it just says whether scrolling was needed
 }
 

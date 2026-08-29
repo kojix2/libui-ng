@@ -51,8 +51,14 @@ if libui_OS == 'windows'
 	]
 endif
 
+libui_unit_deps = [libui_binary_deps, cmocka_deps]
+if libui_OS != 'windows' and libui_OS != 'darwin' and libui_mode != 'static'
+	# Unix-only uiArea tests emit a native GTK event through the public handle.
+	libui_unit_deps += libui_deps
+endif
+
 unit = executable('unit', libui_unit_sources,
-	dependencies: [libui_binary_deps, cmocka_deps],
+	dependencies: libui_unit_deps,
 	link_with: libui_libui,
 	win_subsystem: 'console',
 	install: false)
