@@ -1,0 +1,60 @@
+name: Take example screenshot
+description: Capture one window for each example on the current platform
+
+inputs:
+  os:
+    description: ubuntu, windows, or macos
+    required: true
+  app-names:
+    description: Space-separated names of executables in builddir/meson-out
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Take screenshots on Ubuntu
+      if: inputs.os == 'ubuntu'
+      shell: bash
+      run: |
+        set -euo pipefail
+        chmod +x "${{ github.action_path }}/ubuntu-screenshot.sh"
+        export DISPLAY=:99
+        export NO_AT_BRIDGE=1
+        Xvfb :99 -screen 0 1280x800x24 -ac +extension GLX +render -noreset &
+        xvfb_pid=$!
+        openbox >/tmp/libui-openbox.log 2>&1 &
+        wm_pid=$!
+        cleanup() {
+          kill "$wm_pid" 2>/dev/null || true
+          kill "$xvfb_pid" 2>/dev/null || true
+          wait "$wm_pid" 2>/dev/null || true
+          wait "$xvfb_pid" 2>/dev/null || true
+        }
+        trap cleanup EXIT
+        sleep 3
+        for app in ${{ inputs.app-names }}; do
+          "${{ github.action_path }}/ubuntu-screenshot.sh" \
+            "builddir/meson-out/$app" "$app-ubuntu.png"
+        done
+
+    - name: Take screenshots on Windows
+      if: inputs.os == 'windows'
+      shell: pwsh
+      run: |
+        $apps = "${{ inputs.app-names }}" -split '\s+'
+        foreach ($app in $apps) {
+          & "${{ github.action_path }}/windows-screenshot.ps1" `
+            -AppPath "builddir/meson-out/$app.exe" `
+            -OutputFile "$app-windows.png"
+        }
+
+    - name: Take screenshots on macOS
+      if: inputs.os == 'macos'
+      shell: bash
+      run: |
+        set -euo pipefail
+        chmod +x "${{ github.action_path }}/macos-screenshot.sh"
+        for app in ${{ inputs.app-names }}; do
+          "${{ github.action_path }}/macos-screenshot.sh" \
+            "builddir/meson-out/$app" "$app-macos.png"
+        done

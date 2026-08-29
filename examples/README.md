@@ -8,6 +8,8 @@ Subdirectories are larger demos that combine several concepts:
 
 ## Single-file examples
 
+See the [cross-platform example screenshots](../doc/screenshots.md).
+
 | File | Concept |
 | --- | --- |
 | `hello-world.c` | Create a window with a label. |

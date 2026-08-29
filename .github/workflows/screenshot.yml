@@ -1,0 +1,147 @@
+name: Example screenshots
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - '.github/actions/screenshot/**'
+      - '.github/workflows/screenshot.yml'
+      - 'common/**'
+      - 'darwin/**'
+      - 'examples/*.c'
+      - 'examples/meson.build'
+      - 'examples/example.manifest'
+      - 'examples/example.static.manifest'
+      - 'examples/resources.rc'
+      - 'meson.build'
+      - 'meson_options.txt'
+      - 'ui.h'
+      - 'ui_*.h'
+      - 'unix/**'
+      - 'windows/**'
+  workflow_dispatch:
+
+concurrency:
+  group: example-screenshots
+  cancel-in-progress: true
+
+env:
+  WIDGET_EXAMPLES: >-
+    button label checkbox entry multiline-entry combobox editable-combobox
+    radio-buttons spinbox slider progressbar separator date-picker time-picker
+    color-button font-button
+
+jobs:
+  screenshot:
+    name: ${{ matrix.os }} screenshots
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu
+            runner: ubuntu-latest
+          - os: windows
+            runner: windows-latest
+          - os: macos
+            runner: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Install Meson and Linux dependencies
+        if: matrix.os == 'ubuntu'
+        run: |
+          python3 -m pip install --upgrade pip setuptools wheel
+          pip3 install meson ninja
+          sudo apt-get update -y
+          sudo apt-get install -y libgtk-3-dev xvfb imagemagick openbox wmctrl
+
+      - name: Install Meson and macOS dependencies
+        if: matrix.os == 'macos'
+        run: brew install meson ninja
+
+      - name: Install Meson on Windows
+        if: matrix.os == 'windows'
+        run: |
+          python -m pip install --upgrade pip
+          pip install meson ninja
+
+      - name: Setup Windows Developer Command Prompt
+        if: matrix.os == 'windows'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Configure build (Unix)
+        if: matrix.os != 'windows'
+        shell: bash
+        run: meson setup builddir --buildtype=release --default-library=static -Dtests=false
+
+      - name: Configure build (Windows)
+        if: matrix.os == 'windows'
+        shell: cmd
+        run: meson setup builddir --buildtype=release --default-library=static -Dtests=false -Db_vscrt=mt
+
+      - name: Build widget examples (Unix)
+        if: matrix.os != 'windows'
+        shell: bash
+        run: |
+          for app in $WIDGET_EXAMPLES; do
+            ninja -C builddir "meson-out/$app"
+          done
+
+      - name: Build widget examples (Windows)
+        if: matrix.os == 'windows'
+        shell: pwsh
+        run: |
+          $apps = $env:WIDGET_EXAMPLES -split '\s+'
+          foreach ($app in $apps) {
+            ninja -C builddir "meson-out/$app.exe"
+          }
+
+      - name: Take screenshots
+        uses: ./.github/actions/screenshot
+        with:
+          os: ${{ matrix.os }}
+          app-names: ${{ env.WIDGET_EXAMPLES }}
+
+      - name: Upload screenshots
+        uses: actions/upload-artifact@v7
+        with:
+          name: screenshots-${{ matrix.os }}
+          path: '*.png'
+          if-no-files-found: error
+          retention-days: 30
+
+  push_screenshots:
+    name: Update screenshots branch
+    needs: screenshot
+    if: github.ref == 'refs/heads/dev'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Prepare orphan branch
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git checkout --orphan screenshots
+          git rm -rfq .
+
+      - name: Download screenshots
+        uses: actions/download-artifact@v8
+        with:
+          pattern: screenshots-*
+          merge-multiple: true
+
+      - name: Commit screenshots
+        run: |
+          git add -- '*.png'
+          git commit -qm 'Update example screenshots [skip ci]'
+          git push -f origin screenshots
