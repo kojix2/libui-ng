@@ -22,6 +22,7 @@ runs:
         export NO_AT_BRIDGE=1
         Xvfb :99 -screen 0 1280x800x24 -ac +extension GLX +render -noreset &
         xvfb_pid=$!
+        sleep 3
         openbox >/tmp/libui-openbox.log 2>&1 &
         wm_pid=$!
         cleanup() {
@@ -31,7 +32,7 @@ runs:
           wait "$xvfb_pid" 2>/dev/null || true
         }
         trap cleanup EXIT
-        sleep 3
+        sleep 2
         for app in ${{ inputs.app-names }}; do
           "${{ github.action_path }}/ubuntu-screenshot.sh" \
             "builddir/meson-out/$app" "$app-ubuntu.png"

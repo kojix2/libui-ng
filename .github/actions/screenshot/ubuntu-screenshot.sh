@@ -25,7 +25,7 @@ for attempt in $(seq 1 30); do
     exit 1
   fi
 
-  WINDOW_ID=$(wmctrl -lp 2>/dev/null | awk -v pid="$APP_PID" '$3 == pid { print $1; exit }')
+  WINDOW_ID=$(wmctrl -lp 2>/dev/null | awk -v pid="$APP_PID" '$3 == pid { print $1; exit }' || true)
   if [[ -n "$WINDOW_ID" ]]; then
     break
   fi
