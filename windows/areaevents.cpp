@@ -413,6 +413,7 @@ BOOL areaDoEvents(uiArea *a, UINT uMsg, WPARAM wParam, LPARAM lParam, LRESULT *l
 		if (a->capturing) {
 			a->capturing = FALSE;
 			(*(a->ah->DragBroken))(a->ah, a);
+			uiprivClickCounterReset(&(a->cc));
 		}
 		*lResult = 0;
 		break;
