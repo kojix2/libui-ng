@@ -2,8 +2,6 @@
 #include "uipriv_windows.hpp"
 #include "area.hpp"
 
-// TODO decide whether wheel messages for non-scrolling areas should be passed to the parent
-
 struct scrollParams {
 	int *pos;
 	int pagesize;
@@ -212,6 +210,9 @@ static void vwheelscroll(uiArea *a, WPARAM wParam, LPARAM lParam)
 
 BOOL areaDoScroll(uiArea *a, UINT uMsg, WPARAM wParam, LPARAM lParam, LRESULT *lResult)
 {
+	if (!a->scrolling)
+		return FALSE;
+
 	switch (uMsg) {
 	case WM_HSCROLL:
 		hscroll(a, wParam, lParam);
