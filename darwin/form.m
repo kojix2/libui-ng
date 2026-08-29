@@ -80,6 +80,14 @@ struct uiForm {
 		self->verticalExpansion = NO;
 		self->nativeRowSpacing = [self rowSpacing];
 		self->nativeColumnSpacing = [self columnSpacing];
+		// NSGridView can report zero as its native spacing, but uiForm's
+		// padded setting promises OS-appropriate space between controls.
+		// Keep native nonzero values while retaining the established Darwin
+		// padding as a fallback.
+		if (self->nativeRowSpacing <= 0)
+			self->nativeRowSpacing = uiDarwinPaddingAmount(NULL);
+		if (self->nativeColumnSpacing <= 0)
+			self->nativeColumnSpacing = uiDarwinPaddingAmount(NULL);
 		// rowSpacing would also insert a gap before the trailing spacer row.
 		// Preserve AppKit's native value and apply it only between visible
 		// content rows as topPadding in updateRows.

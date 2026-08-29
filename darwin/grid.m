@@ -369,6 +369,12 @@ static NSView *newCellView(gridChild *child)
 	[self->nativeGrid setTranslatesAutoresizingMaskIntoConstraints:NO];
 	self->nativeRowSpacing = [self->nativeGrid rowSpacing];
 	self->nativeColumnSpacing = [self->nativeGrid columnSpacing];
+	// A zero NSGridView default is a neutral grid value, not useful padding.
+	// Prefer native nonzero spacing and otherwise use the standard Darwin gap.
+	if (self->nativeRowSpacing <= 0)
+		self->nativeRowSpacing = uiDarwinPaddingAmount(NULL);
+	if (self->nativeColumnSpacing <= 0)
+		self->nativeColumnSpacing = uiDarwinPaddingAmount(NULL);
 	[self->nativeGrid setRowSpacing:self->padded ? self->nativeRowSpacing : 0];
 	[self->nativeGrid setColumnSpacing:self->padded ? self->nativeColumnSpacing : 0];
 	[self addSubview:self->nativeGrid];
