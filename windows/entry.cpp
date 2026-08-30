@@ -124,16 +124,100 @@ uiEntry *uiNewPasswordEntry(void)
 	return finishNewEntry(ES_PASSWORD);
 }
 
+// reserved left margin equals the control's client height, so the icon area is always a square
+static int searchEntryIconAreaWidth(HWND hwnd)
+{
+	RECT rc;
+
+	GetClientRect(hwnd, &rc);
+	return rc.bottom - rc.top;
+}
+
+static void searchEntryDrawIcon(HWND hwnd, HDC dc)
+{
+	HPEN pen, oldpen;
+	HGDIOBJ oldbrush;
+	int area, r, cx, cy, penWidth;
+	int hx1, hy1, hx2, hy2;
+	BOOL releaseDC;
+
+	area = searchEntryIconAreaWidth(hwnd);
+	// proportions follow Feather icons' "search" glyph (circle cx=11 cy=11 r=8,
+	// handle from (16.65,16.65) to (21,21), viewBox 24x24) scaled to the icon box
+	r = (area * 8) / 24;
+	if (r < 3)
+		return;
+	cx = (area * 11) / 24;
+	cy = cx;
+	hx1 = (area * 1665) / 2400;
+	hy1 = hx1;
+	hx2 = (area * 21) / 24;
+	hy2 = hx2;
+	penWidth = area / 16;
+	if (penWidth < 1)
+		penWidth = 1;
+
+	releaseDC = FALSE;
+	if (dc == NULL) {
+		dc = GetDC(hwnd);
+		if (dc == NULL)
+			return;
+		releaseDC = TRUE;
+	}
+	pen = CreatePen(PS_SOLID, penWidth, GetSysColor(COLOR_GRAYTEXT));
+	oldpen = (HPEN) SelectObject(dc, pen);
+	oldbrush = SelectObject(dc, GetStockObject(HOLLOW_BRUSH));
+
+	// magnifying glass: a circle with a short diagonal handle
+	Ellipse(dc, cx - r, cy - r, cx + r, cy + r);
+	MoveToEx(dc, hx1, hy1, NULL);
+	LineTo(dc, hx2, hy2);
+
+	SelectObject(dc, oldbrush);
+	SelectObject(dc, oldpen);
+	DeleteObject(pen);
+	if (releaseDC)
+		ReleaseDC(hwnd, dc);
+}
+
+static LRESULT CALLBACK searchEntrySubclassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+{
+	LRESULT lResult;
+
+	if (uMsg == WM_NCDESTROY) {
+		if (RemoveWindowSubclass(hwnd, searchEntrySubclassProc, uIdSubclass) == FALSE)
+			logLastError(L"RemoveWindowSubclass()");
+		return DefSubclassProc(hwnd, uMsg, wParam, lParam);
+	}
+
+	lResult = DefSubclassProc(hwnd, uMsg, wParam, lParam);
+	if (uMsg == WM_SIZE)
+		SendMessageW(hwnd, EM_SETMARGINS, EC_LEFTMARGIN, MAKELPARAM(searchEntryIconAreaWidth(hwnd), 0));
+	// The edit control draws typed text directly instead of always going through WM_PAINT,
+	// so redraw the icon after every message rather than only on WM_PAINT. WM_PRINTCLIENT
+	// supplies the target DC explicitly; drawing to the window DC there would omit the icon
+	// from the printed/offscreen result and unnecessarily alter the visible window. The
+	// default WM_PRINT handler delegates client drawing through WM_PRINTCLIENT.
+	if (uMsg == WM_PRINTCLIENT)
+		searchEntryDrawIcon(hwnd, (HDC) wParam);
+	else if (uMsg != WM_PRINT)
+		searchEntryDrawIcon(hwnd, NULL);
+	return lResult;
+}
+
 uiEntry *uiNewSearchEntry(void)
 {
 	uiEntry *e;
-	HRESULT hr;
 
 	e = finishNewEntry(0);
 
-	hr = SetWindowTheme(e->hwnd, L"SearchBoxEditComposited", NULL);
-	if (hr != S_OK)
-		logHRESULT(L"error applying search box theme", hr);
+	// "SearchBoxEditComposited" is meant for edits hosted on an Explorer-themed
+	// toolbar; applied to a plain edit it strips the border/background instead.
+	if (SetWindowSubclass(e->hwnd, searchEntrySubclassProc, 0, 0) == FALSE) {
+		logLastError(L"SetWindowSubclass()");
+		// Leave this as an ordinary entry rather than reserving an empty icon area.
+	} else
+		SendMessageW(e->hwnd, EM_SETMARGINS, EC_LEFTMARGIN, MAKELPARAM(searchEntryIconAreaWidth(e->hwnd), 0));
 
 	return e;
 }
