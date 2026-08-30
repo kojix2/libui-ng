@@ -24,6 +24,7 @@ static void boxRelayout(uiBox *b)
 	int nStretchy;
 	int stretchywid, stretchyht;
 	int minimumWidth, minimumHeight;
+	int childy, childheight;
 	int nVisible;
 
 	if (b->controls->size() == 0)
@@ -98,7 +99,18 @@ static void boxRelayout(uiBox *b)
 	for (const struct boxChild &bc : *(b->controls)) {
 		if (!uiControlVisible(bc.c))
 			continue;
-		uiWindowsEnsureMoveWindowDuringResize((HWND) uiControlHandle(bc.c), x, y, bc.width, bc.height);
+		childy = y;
+		childheight = bc.height;
+		// Keep labels at their natural height in a horizontal box and center
+		// the complete text block instead of stretching their top-aligned HWND.
+		if (!b->vertical && bc.c->TypeSignature == uiLabelSignature) {
+			uiWindowsControlMinimumSize(uiWindowsControl(bc.c), &minimumWidth, &minimumHeight);
+			if (minimumHeight < childheight) {
+				childy += (childheight - minimumHeight) / 2;
+				childheight = minimumHeight;
+			}
+		}
+		uiWindowsEnsureMoveWindowDuringResize((HWND) uiControlHandle(bc.c), x, childy, bc.width, childheight);
 		if (b->vertical)
 			y += bc.height + ypadding;
 		else

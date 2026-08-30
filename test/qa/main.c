@@ -36,6 +36,7 @@ struct controlTestCase entryTestCases[] = {
 
 struct controlTestCase labelTestCases[] = {
 	QA_TEST("1. Multi Line", labelMultiLine),
+	QA_TEST("2. Vertical Alignment", labelVerticalAlignment),
 	{NULL, NULL, NULL}
 };
 

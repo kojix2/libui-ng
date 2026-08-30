@@ -21,6 +21,7 @@ QA_DECLARE_TEST(entryLongText);
 QA_DECLARE_TEST(entryOverflowText);
 
 QA_DECLARE_TEST(labelMultiLine);
+QA_DECLARE_TEST(labelVerticalAlignment);
 
 QA_DECLARE_TEST(radioButtonsOnSelected);
 

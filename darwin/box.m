@@ -83,7 +83,7 @@ struct uiBox {
 			self->secondaryOrientation = NSLayoutConstraintOrientationHorizontal;
 		} else {
 			[self setOrientation:NSUserInterfaceLayoutOrientationHorizontal];
-			[self setAlignment:NSLayoutAttributeTop];
+			[self setAlignment:NSLayoutAttributeCenterY];
 			self->primarySize = NSLayoutAttributeWidth;
 			self->secondarySize = NSLayoutAttributeHeight;
 			self->primaryOrientation = NSLayoutConstraintOrientationHorizontal;
@@ -101,7 +101,8 @@ struct uiBox {
 		[self removeConstraints:self->stretchyConstraints];
 	[self->stretchyConstraints release];
 	for (bc in self->children) {
-		[self removeConstraint:bc.secondaryConstraint];
+		if (bc.secondaryConstraint != nil)
+			[self removeConstraint:bc.secondaryConstraint];
 		bc.secondaryConstraint = nil;
 		uiControlSetParent(bc.c, NULL);
 		uiDarwinControlSetSuperview(uiDarwinControl(bc.c), nil);
@@ -171,15 +172,22 @@ struct uiBox {
 
 	priority = bc.stretchy ? NSLayoutPriorityDefaultLow : NSLayoutPriorityRequired;
 	uiDarwinControlSetHuggingPriority(uiDarwinControl(bc.c), priority, self->primaryOrientation);
-	uiDarwinControlSetHuggingPriority(uiDarwinControl(bc.c), NSLayoutPriorityDefaultLow, self->secondaryOrientation);
-
-	constraint = uiprivMkConstraint([bc view], self->secondarySize,
-		NSLayoutRelationEqual,
-		self, self->secondarySize,
-		1, 0,
-		@"uiBox secondary fill constraint");
-	[self addConstraint:constraint];
-	bc.secondaryConstraint = constraint;
+	if (!self->vertical && bc.c->TypeSignature == uiLabelSignature) {
+		// Let the stack view center the label at its intrinsic height. This
+		// centers the complete text block, including multiline labels.
+		uiDarwinControlSetHuggingPriority(uiDarwinControl(bc.c),
+			NSLayoutPriorityRequired, self->secondaryOrientation);
+	} else {
+		uiDarwinControlSetHuggingPriority(uiDarwinControl(bc.c),
+			NSLayoutPriorityDefaultLow, self->secondaryOrientation);
+		constraint = uiprivMkConstraint([bc view], self->secondarySize,
+			NSLayoutRelationEqual,
+			self, self->secondarySize,
+			1, 0,
+			@"uiBox secondary fill constraint");
+		[self addConstraint:constraint];
+		bc.secondaryConstraint = constraint;
+	}
 
 	[self->children addObject:bc];
 	[self updateLayout];
@@ -195,7 +203,8 @@ struct uiBox {
 		[self removeConstraints:self->stretchyConstraints];
 		[self->stretchyConstraints removeAllObjects];
 	}
-	[self removeConstraint:bc.secondaryConstraint];
+	if (bc.secondaryConstraint != nil)
+		[self removeConstraint:bc.secondaryConstraint];
 	bc.secondaryConstraint = nil;
 
 	uiControlSetParent(bc.c, NULL);

@@ -622,6 +622,8 @@ _UI_EXTERN uiButton *uiNewButton(const char *text);
  *
  * The contained controls are arranged to be displayed either horizontally or
  * vertically next to each other.
+ * Controls fill the box in the perpendicular direction, except that labels in
+ * a horizontal box keep their natural height and are vertically centered.
  *
  * @struct uiBox
  * @extends uiControl

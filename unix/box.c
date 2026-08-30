@@ -74,10 +74,14 @@ void uiBoxAppend(uiBox *b, uiControl *c, int stretchy)
 			gtk_widget_set_vexpand(widget, FALSE);
 		else
 			gtk_widget_set_hexpand(widget, FALSE);
-	// and make them fill the opposite direction
+	// Fill the opposite direction, except that labels in a horizontal box keep
+	// their natural height and center the complete text block.
 	if (b->vertical) {
 		gtk_widget_set_hexpand(widget, TRUE);
 		gtk_widget_set_halign(widget, GTK_ALIGN_FILL);
+	} else if (c->TypeSignature == uiLabelSignature) {
+		gtk_widget_set_vexpand(widget, FALSE);
+		gtk_widget_set_valign(widget, GTK_ALIGN_CENTER);
 	} else {
 		gtk_widget_set_vexpand(widget, TRUE);
 		gtk_widget_set_valign(widget, GTK_ALIGN_FILL);
