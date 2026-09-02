@@ -429,7 +429,8 @@ static void fontDialogDrawSampleText(struct fontDialog *f, ID2D1RenderTarget *rt
 	if (hr != S_OK) {
 		logHRESULT(L"error creating IDWriteTextFormat", hr);
 		uiprivFree(family);
-		uiprivFree(allocatedSample);
+		if (allocatedSample != NULL)
+			uiprivFree(allocatedSample);
 		black->Release();
 		return;
 	}
@@ -448,7 +449,8 @@ static void fontDialogDrawSampleText(struct fontDialog *f, ID2D1RenderTarget *rt
 		DWRITE_MEASURING_MODE_NATURAL);
 
 	format->Release();
-	uiprivFree(allocatedSample);
+	if (allocatedSample != NULL)
+		uiprivFree(allocatedSample);
 	black->Release();
 }
 
