@@ -1,5 +1,13 @@
 # 23 march 2019
 
+libui_version_source = vcs_tag(
+	input: 'version.c.in',
+	output: 'version.c',
+	fallback: 'unknown',
+	command: ['git', 'describe', '--tags', '--always', '--dirty',
+		'--abbrev=8', '--match=commit-*'],
+)
+
 libui_sources += [
 	'common/attribute.c',
 	'common/attrlist.c',
@@ -16,4 +24,5 @@ libui_sources += [
 	'common/tablevalue.c',
 	'common/userbugs.c',
 	'common/utf.c',
+	libui_version_source,
 ]

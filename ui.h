@@ -61,6 +61,13 @@ struct uiInitOptions {
 	size_t Size;
 };
 
+/**
+ * Returns the build's `commit-*` tag or Git hash, or `unknown`.
+ *
+ * The returned string is owned by libui and must not be freed.
+ */
+_UI_EXTERN const char *uiVersion(void);
+
 _UI_EXTERN const char *uiInit(uiInitOptions *options);
 _UI_EXTERN void uiUninit(void);
 _UI_EXTERN void uiFreeInitError(const char *err);

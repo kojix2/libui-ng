@@ -1,5 +1,14 @@
 #include "unit.h"
 
+static void versionIsAvailableWithoutInitialization(void **state)
+{
+	const char *version = uiVersion();
+
+	assert_non_null(version);
+	assert_true(version[0] != '\0');
+	assert_ptr_equal(uiVersion(), version);
+}
+
 static void initUninit(void **state)
 {
 	uiInitOptions o = {0};
@@ -116,6 +125,7 @@ static void timerRepeatThenStop(void **state)
 int initRunUnitTests(void)
 {
 	const struct CMUnitTest tests[] = {
+		cmocka_unit_test(versionIsAvailableWithoutInitialization),
 		cmocka_unit_test(initUninit),
 		cmocka_unit_test(initUninitTwice),
 #if !defined(_WIN32)
