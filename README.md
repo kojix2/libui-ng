@@ -20,9 +20,12 @@ Upstream projects:
 
 ## Branches
 
-- `pre-build`: build branch for release binaries. Tags use `commit-xxxxxxx`.
-- `dev`: development branch with additional fixes and experimental APIs
-  (`uiToolbar`, `uiImageView`, `uiDrawImage`). Tags use
+- `pre-build`: build branch for release binaries, with downstream fixes and
+  compatible API additions (`uiVersion`, `uiControlOnDestroyed`, `uiTabSelected`,
+  `uiTabSetSelected`, `uiTabOnSelected`, and `uiGridDelete`). `uiControlDestroy`
+  is also safe to call from user callbacks. Tags use `commit-xxxxxxx`.
+- `dev`: development branch based on `pre-build`, with additional fixes and
+  experimental APIs (`uiToolbar`, `uiImageView`, `uiDrawImage`). Tags use
   `commit-xxxxxxx-experimental`.
 
 Pre-build branches may be rebased or force-pushed. Use release tags when you
