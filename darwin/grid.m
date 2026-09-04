@@ -637,12 +637,12 @@ static NSView *newCellView(gridChild *child)
 
 - (BOOL)hugsTrailing
 {
-	return !self->horizontalExpansion;
+	return self->horizontalExpansion;
 }
 
 - (BOOL)hugsBottom
 {
-	return !self->verticalExpansion;
+	return self->verticalExpansion;
 }
 
 @end
@@ -707,11 +707,11 @@ static void uiGridChildVisibilityChanged(uiDarwinControl *c)
 	uiGrid *g = uiGrid(c);
 	BOOL oldHorizontalExpansion, oldVerticalExpansion;
 
-	oldHorizontalExpansion = ![g->view hugsTrailing];
-	oldVerticalExpansion = ![g->view hugsBottom];
+	oldHorizontalExpansion = [g->view hugsTrailing];
+	oldVerticalExpansion = [g->view hugsBottom];
 	[g->view rebuild];
-	if (oldHorizontalExpansion != ![g->view hugsTrailing] ||
-		oldVerticalExpansion != ![g->view hugsBottom])
+	if (oldHorizontalExpansion != [g->view hugsTrailing] ||
+		oldVerticalExpansion != [g->view hugsBottom])
 		uiDarwinNotifyEdgeHuggingChanged(uiDarwinControl(g));
 }
 
