@@ -4,7 +4,7 @@ libui_version_source = vcs_tag(
 	input: 'version.c.in',
 	output: 'version.c',
 	fallback: 'unknown',
-	command: ['git', 'describe', '--tags', '--always', '--dirty',
+	command: ['git', 'describe', '--tags', '--always',
 		'--abbrev=8', '--match=commit-*'],
 )
 
