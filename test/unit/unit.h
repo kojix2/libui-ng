@@ -38,6 +38,7 @@ int menuRunUnitTests(void);
 int progressBarRunUnitTests(void);
 int dateTimePickerRunUnitTests(void);
 int separatorRunUnitTests(void);
+int fontDescriptorRunUnitTests(void);
 int fontButtonRunUnitTests(void);
 int colorButtonRunUnitTests(void);
 int formRunUnitTests(void);

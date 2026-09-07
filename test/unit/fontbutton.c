@@ -27,6 +27,15 @@ static void fontButtonFont(void **state)
 	uiFontButtonFont(button, &font);
 	assert_non_null(font.Family);
 	assert_true(font.Size > 0);
+	uiFreeFontDescriptor(&font);
+}
+
+static void fontButtonLegacyFreeAlias(void **state)
+{
+	uiFontButton *button = uiFontButtonFromState(state);
+	uiFontDescriptor font;
+
+	uiFontButtonFont(button, &font);
 	uiFreeFontButtonFont(&font);
 }
 
@@ -53,6 +62,7 @@ int fontButtonRunUnitTests(void)
 	const struct CMUnitTest tests[] = {
 		fontButtonUnitTest(fontButtonNew),
 		fontButtonUnitTest(fontButtonFont),
+		fontButtonUnitTest(fontButtonLegacyFreeAlias),
 		fontButtonUnitTest(fontButtonRegisterCallback),
 	};
 

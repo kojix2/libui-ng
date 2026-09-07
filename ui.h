@@ -2730,7 +2730,30 @@ struct uiFontDescriptor {
 	uiTextStretch Stretch;
 };
 
+/**
+ * Loads the platform's default control font.
+ *
+ * The returned descriptor owns resources allocated by libui. Release those
+ * resources with uiFreeFontDescriptor().
+ *
+ * @param[out] f Font descriptor to fill.
+ */
 _UI_EXTERN void uiLoadControlFont(uiFontDescriptor *f);
+
+/**
+ * Frees resources owned by a uiFontDescriptor filled by libui.
+ *
+ * This is the common release function for descriptors returned by
+ * uiLoadControlFont(), uiFontButtonFont(), and any future libui function that
+ * documents an owned uiFontDescriptor result. After calling this function,
+ * the contents of @p desc are undefined, but the structure can be reused as
+ * the output of another descriptor-producing function.
+ *
+ * Calling this function with a descriptor not filled by such a function, or
+ * with a descriptor that has already been freed, results in undefined behavior.
+ *
+ * @param desc Font descriptor whose owned resources are to be freed.
+ */
 _UI_EXTERN void uiFreeFontDescriptor(uiFontDescriptor *desc);
 
 // uiDrawTextLayout is a concrete representation of a
@@ -2822,8 +2845,9 @@ typedef struct uiFontButton uiFontButton;
  *
  * @param b uiFontButton instance.
  * @param[out] desc Font descriptor. [Default: OS-dependent].
- * @note Make sure to call `uiFreeFontButtonFont()` to free all allocated
- *       resources within @p desc.
+ * @note Call uiFreeFontDescriptor() to free all allocated resources within
+ *       @p desc. uiFreeFontButtonFont() remains available as a compatibility
+ *       alias.
  * @memberof uiFontButton
  */
 _UI_EXTERN void uiFontButtonFont(uiFontButton *b, uiFontDescriptor *desc);
@@ -2854,13 +2878,10 @@ _UI_EXTERN void uiFontButtonOnChanged(uiFontButton *b,
 _UI_EXTERN uiFontButton *uiNewFontButton(void);
 
 /**
- * Frees a uiFontDescriptor previously filled by uiFontButtonFont().
+ * Compatibility alias for uiFreeFontDescriptor().
  *
- * After calling this function the contents of @p desc should be assumed undefined,
- * however you can safely reuse @p desc.
- *
- * Calling this function on a uiFontDescriptor not previously filled by
- * uiFontButtonFont() results in undefined behavior.
+ * This function has the same behavior and preconditions as
+ * uiFreeFontDescriptor(). It is retained for source and binary compatibility.
  *
  * @param desc Font descriptor to free.
  * @memberof uiFontButton

@@ -80,6 +80,7 @@ int main(void)
 		{ progressBarRunUnitTests },
 		{ dateTimePickerRunUnitTests },
 		{ separatorRunUnitTests },
+		{ fontDescriptorRunUnitTests },
 		{ fontButtonRunUnitTests },
 		{ colorButtonRunUnitTests },
 		{ formRunUnitTests },

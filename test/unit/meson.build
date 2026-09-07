@@ -25,6 +25,7 @@ libui_unit_sources = [
 	'editablecombobox.c',
 	'multilineentry.c',
 	'separator.c',
+	'fontdescriptor.c',
 	'fontbutton.c',
 	'colorbutton.c',
 	'form.c',
