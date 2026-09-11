@@ -81,6 +81,13 @@ function(libui_apply_internal_options target)
 			target_link_options(${target} PRIVATE -static -static-libgcc -static-libstdc++)
 		endif()
 	endif()
+	if(WIN32 AND BUILD_SHARED_LIBS AND NOT "${target}" STREQUAL "libui_ui")
+		add_custom_command(TARGET ${target} POST_BUILD
+			COMMAND ${CMAKE_COMMAND} -E copy_if_different
+				$<TARGET_FILE:libui_ui> $<TARGET_FILE_DIR:${target}>
+			VERBATIM
+		)
+	endif()
 endfunction()
 
 add_library(libui_ui)

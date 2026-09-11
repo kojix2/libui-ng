@@ -91,7 +91,7 @@ jobs:
       - name: Build and test
         run: |
           cmake --build builddir --verbose
-          ctest --test-dir builddir --output-on-failure
+          ctest --test-dir builddir --output-on-failure --timeout 180
       - name: Visual Studio generator smoke test
         if: matrix.arch == 'x64' && matrix.libtype == 'shared' && matrix.buildtype == 'Release'
         shell: pwsh
@@ -130,7 +130,7 @@ jobs:
         run: |
           cmake -S . -B builddir -G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.buildtype }} -DBUILD_SHARED_LIBS=OFF -DLIBUI_FETCH_TEST_DEPS=ON
           cmake --build builddir --verbose
-          ctest --test-dir builddir --output-on-failure
+          ctest --test-dir builddir --output-on-failure --timeout 180
           cmake --build builddir --target stage-legacy
       - uses: actions/upload-artifact@v7
         with:
@@ -156,7 +156,7 @@ jobs:
         run: |
           cmake -S . -B builddir -G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.buildtype }} -DBUILD_SHARED_LIBS=${{ matrix.libtype == 'shared' && 'ON' || 'OFF' }} -DLIBUI_FETCH_TEST_DEPS=ON -DCMAKE_OSX_DEPLOYMENT_TARGET=${{ matrix.deployment }}
           cmake --build builddir --verbose
-          ctest --test-dir builddir --output-on-failure
+          ctest --test-dir builddir --output-on-failure --timeout 180
           cmake --build builddir --target stage-legacy
       - name: Xcode generator smoke test
         if: matrix.arch == 'arm64' && matrix.libtype == 'shared' && matrix.buildtype == 'Release'
