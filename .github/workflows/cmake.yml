@@ -96,7 +96,10 @@ jobs:
         if: matrix.arch == 'x64' && matrix.libtype == 'shared' && matrix.buildtype == 'Release'
         shell: pwsh
         run: |
-          cmake -S . -B build-vs -G "Visual Studio 17 2022" -A x64 -DBUILD_SHARED_LIBS=ON -DLIBUI_BUILD_TESTS=OFF -DLIBUI_BUILD_EXAMPLES=OFF
+          # The windows-latest image can advance to a newer Visual Studio release.
+          # Let CMake select the installed Visual Studio generator instead of
+          # pinning a generator that may no longer exist on the runner.
+          cmake -S . -B build-vs -A x64 -DBUILD_SHARED_LIBS=ON -DLIBUI_BUILD_TESTS=OFF -DLIBUI_BUILD_EXAMPLES=OFF
           cmake --build build-vs --config Release
       - run: cmake --build builddir --target stage-legacy
       - uses: actions/upload-artifact@v7
