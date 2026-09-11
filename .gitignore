@@ -1,1 +1,8 @@
 subprojects/
+/CMakeCache.txt
+/CMakeFiles/
+/artifacts/
+/cmake_install.cmake
+/generated/
+/install_manifest.txt
+/legacy-stage/
