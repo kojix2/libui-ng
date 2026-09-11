@@ -8,6 +8,10 @@ on:
     branches: [main]
   workflow_dispatch:
 
+concurrency:
+  group: cmake-migration-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   cmake-linux:
     strategy:

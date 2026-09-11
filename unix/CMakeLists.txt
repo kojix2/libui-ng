@@ -9,6 +9,7 @@ target_sources(libui_ui PRIVATE
 	opentype.c progressbar.c radiobuttons.c separator.c slider.c spinbox.c stddialogs.c
 	tab.c table.c tablemodel.c text.c util.c window.c
 )
+target_compile_definitions(libui_ui PRIVATE _POSIX_C_SOURCE=200809L)
 
 # GTK types are part of ui_unix.h, so GTK's usage requirements are public.
 target_link_libraries(libui_ui PUBLIC PkgConfig::GTK3)
