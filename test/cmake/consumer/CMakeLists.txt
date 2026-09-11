@@ -1,0 +1,42 @@
+cmake_minimum_required(VERSION 3.15)
+project(libui_consumer LANGUAGES C)
+
+if(WIN32)
+	enable_language(CXX)
+endif()
+
+set(LIBUI_SOURCE_MODE installed CACHE STRING "installed, add_subdirectory, or fetchcontent")
+set_property(CACHE LIBUI_SOURCE_MODE PROPERTY STRINGS installed add_subdirectory fetchcontent)
+
+if(LIBUI_SOURCE_MODE STREQUAL "installed")
+	find_package(libui-ng CONFIG REQUIRED)
+elseif(LIBUI_SOURCE_MODE STREQUAL "add_subdirectory")
+	if(NOT LIBUI_SOURCE_DIR)
+		message(FATAL_ERROR "LIBUI_SOURCE_DIR is required")
+	endif()
+	add_subdirectory("${LIBUI_SOURCE_DIR}" libui-ng)
+elseif(LIBUI_SOURCE_MODE STREQUAL "fetchcontent")
+	if(NOT LIBUI_SOURCE_DIR)
+		message(FATAL_ERROR "LIBUI_SOURCE_DIR is required")
+	endif()
+	include(FetchContent)
+	FetchContent_Declare(libui_ng SOURCE_DIR "${LIBUI_SOURCE_DIR}")
+	FetchContent_MakeAvailable(libui_ng)
+else()
+	message(FATAL_ERROR "Unknown LIBUI_SOURCE_MODE: ${LIBUI_SOURCE_MODE}")
+endif()
+
+if(TARGET tester OR TARGET qa OR TARGET unit)
+	message(FATAL_ERROR "Nested libui-ng unexpectedly enabled its tests")
+endif()
+
+add_library(dummy_extension STATIC extension.c)
+target_link_libraries(dummy_extension PUBLIC libui::ui)
+
+add_executable(consumer main.c)
+target_link_libraries(consumer PRIVATE dummy_extension)
+
+if(UNIX AND NOT APPLE)
+	add_executable(unix-platform-consumer unix-platform.c)
+	target_link_libraries(unix-platform-consumer PRIVATE libui::ui)
+endif()

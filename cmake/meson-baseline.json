@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "libraryTarget": "libui",
+  "sourceInventory": {
+    "format": "sha256 of the authoritative Meson source-list file",
+    "common/meson.build": "9f5d0e93201241fad06fae9a9b31981225296c81f3b47907df28245cc8ab08e4",
+    "unix/meson.build": "d985ee733319c77ca565146255053d323559704aa2d0f8edc886e87d7e834fac",
+    "darwin/meson.build": "4b9860bb9763461233dfa20746e11b5c05c0e631d281d6746b724e784c29a978",
+    "windows/meson.build": "fea8ddc469103d124585d6e2f588f502f6ad89485363cce27d38b726035ced45",
+    "test/meson.build": "2d77ca3425ade854b2298194f7948798086295e12d57b540dfe887236f84b12b",
+    "test/unit/meson.build": "2fda9fc3e6b3e24ad481885994ce4d01f9715259404eed2107a629592a4d95e1",
+    "test/qa/meson.build": "fb2d6398f1db6781dee04a84751207c20df0b5db0d8066f7bc8d7f1042f30107",
+    "examples/meson.build": "165f910a524a7990e09f1b4f6e0965f073dbaf077a7e46ae30235a1f61f19552"
+  },
+  "publicHeaders": {
+    "common": ["ui.h"],
+    "linux": ["ui_unix.h"],
+    "macos": ["ui_darwin.h"],
+    "windows": ["ui_windows.h"]
+  },
+  "buildTargets": {
+    "automaticTests": ["unit", "utf-unit", "imagerep-unit"],
+    "manualOrBuildOnly": ["tester", "qa"],
+    "examples": [
+      "hello-world", "window", "button", "label", "checkbox", "entry",
+      "multiline-entry", "box-layout", "form-layout", "grid-layout", "tabs",
+      "group", "control-destroy", "combobox", "editable-combobox",
+      "radio-buttons", "spinbox", "slider", "progressbar", "separator",
+      "date-picker", "time-picker", "color-button", "font-button", "menu",
+      "menu-checkbox", "open-file", "open-folder", "save-file", "message-box",
+      "error-message-box", "timer", "queue-main", "should-quit",
+      "controlgallery", "histogram", "drawtext", "datetime", "cpp-multithread"
+    ]
+  },
+  "linuxSharedExportedSymbolCount": 305,
+  "directDependencies": {
+    "linux": ["gtk+-3.0 >= 3.18", "m when separate from libc", "dl when separate from libc"],
+    "macos": ["Foundation", "AppKit", "objc"],
+    "windows": ["user32", "kernel32", "gdi32", "comctl32", "uxtheme", "d2d1", "dwrite", "ole32", "uuid", "windowscodecs"]
+  },
+  "windowsManifests": {
+    "sharedLibrary": "windows/libui.manifest",
+    "tester": ["test/test.manifest", "test/test.static.manifest"],
+    "unit": ["test/unit/unit.manifest", "test/unit/unit.static.manifest"],
+    "qa": ["test/qa/qa.manifest", "test/qa/qa.static.manifest"],
+    "examples": ["examples/example.manifest", "examples/example.static.manifest"]
+  },
+  "versionFunction": "uiVersion",
+  "legacyRelease": {
+    "staticLibrary": "builddir/meson-out/libui.a",
+    "msvcDebugPdbDirectory": "builddir/meson-out/libui.a.p",
+    "headersAtArchiveRoot": true,
+    "logEntries": ["builddir/meson-logs/meson-setup.txt", "builddir/meson-logs/meson-log.txt", "builddir/meson-logs/testlog.txt"]
+  },
+  "uingContract": {
+    "verifiedRepositoryCommit": "de7adcbcc455332f2b55ce9c2ab6f135c521b495",
+    "pinnedLibuiTag": "commit-e497003b-experimental",
+    "requiredStaticEntry": "builddir/meson-out/libui.a",
+    "requiredMsvcDebugPdbDirectory": "builddir/meson-out/libui.a.p",
+    "assetFamilies": [
+      "Ubuntu-{x64,arm64}-static-{debug,release}.zip",
+      "macOS-{x64,arm64}-static-{debug,release}.zip",
+      "Windows-{x86,x64}-msvc-static-{debug,release}.zip",
+      "Windows-x64-{mingw,ucrt}-static-{debug,release}.zip"
+    ]
+  },
+  "comparisonPolicy": "ABI, runtime behavior, and release contract; not byte-for-byte identity"
+}
