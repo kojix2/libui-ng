@@ -202,6 +202,12 @@ if(LIBUI_BUILD_EXAMPLES)
 		histogram drawtext datetime cpp-multithread
 	)
 endif()
+if(MSVC)
+	set(LIBUI_COMPILE_PDB_PATH
+		"${CMAKE_CURRENT_BINARY_DIR}/pdb/$<CONFIG>/libui.pdb")
+else()
+	set(LIBUI_COMPILE_PDB_PATH "")
+endif()
 add_custom_target(stage-legacy
 	COMMAND ${CMAKE_COMMAND}
 		-DLIBUI_ARTIFACT=$<TARGET_FILE:libui_ui>
@@ -215,7 +221,7 @@ add_custom_target(stage-legacy
 		-DLIBUI_PLATFORM_HEADER=${LIBUI_PLATFORM_HEADER}
 		-DLIBUI_EXPECT_TESTS=${LIBUI_BUILD_TESTS}
 		-DLIBUI_EXPECT_EXAMPLES=${LIBUI_BUILD_EXAMPLES}
-		-DLIBUI_COMPILE_PDB=$<$<BOOL:${MSVC}>:$<TARGET_COMPILE_PDB_FILE:libui_ui>>
+		-DLIBUI_COMPILE_PDB=${LIBUI_COMPILE_PDB_PATH}
 		-P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/StageLegacyRelease.cmake
 	DEPENDS libui_ui ${LIBUI_LEGACY_RUNTIME_TARGETS}
 	VERBATIM
