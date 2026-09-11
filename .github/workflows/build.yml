@@ -2,7 +2,7 @@ name: Pre-build + Release
 
 on:
   push:
-    branches: [main, pre-build, dev]
+    branches: [main, pre-build, dev, cmake-migration]
     tags:
       - "commit-*"
   pull_request:

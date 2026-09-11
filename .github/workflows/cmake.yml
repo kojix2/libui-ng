@@ -1,0 +1,230 @@
+name: CMake migration
+
+on:
+  push:
+    branches: [main, pre-build, dev, cmake-migration]
+    tags: ["commit-*"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  cmake-linux:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm]
+        libtype: [static, shared]
+        buildtype: [Release, Debug]
+        include:
+          - {os: ubuntu-latest, arch: x64}
+          - {os: ubuntu-24.04-arm, arch: arm64}
+    runs-on: ${{ matrix.os }}
+    name: Ubuntu-${{ matrix.arch }}-${{ matrix.libtype }}-${{ matrix.buildtype }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y cmake ninja-build libgtk-3-dev libcmocka-dev xvfb
+      - name: Configure
+        run: >-
+          cmake -S . -B builddir -G Ninja
+          -DCMAKE_BUILD_TYPE=${{ matrix.buildtype }}
+          -DBUILD_SHARED_LIBS=${{ matrix.libtype == 'shared' && 'ON' || 'OFF' }}
+          -DLIBUI_FETCH_TEST_DEPS=ON
+      - name: Build and test
+        run: |
+          cmake --build builddir --verbose
+          xvfb-run ctest --test-dir builddir --output-on-failure
+      - name: Test nested consumer
+        run: |
+          cmake -S test/cmake/consumer -B consumer-add -G Ninja -DLIBUI_SOURCE_MODE=add_subdirectory -DLIBUI_SOURCE_DIR="$PWD" -DBUILD_SHARED_LIBS=${{ matrix.libtype == 'shared' && 'ON' || 'OFF' }}
+          cmake --build consumer-add
+      - name: Test FetchContent consumer
+        if: matrix.arch == 'x64' && matrix.libtype == 'static' && matrix.buildtype == 'Release'
+        run: |
+          cmake -S test/cmake/consumer -B consumer-fetch -G Ninja -DLIBUI_SOURCE_MODE=fetchcontent -DLIBUI_SOURCE_DIR="$PWD" -DBUILD_SHARED_LIBS=OFF
+          cmake --build consumer-fetch
+      - name: Test relocated install consumer
+        if: matrix.arch == 'x64' && matrix.buildtype == 'Release'
+        run: |
+          cmake --install builddir --prefix "$RUNNER_TEMP/libui-prefix-one-${{ matrix.libtype }}"
+          if grep -R -I -F "$GITHUB_WORKSPACE" "$RUNNER_TEMP/libui-prefix-one-${{ matrix.libtype }}"; then exit 1; fi
+          mv "$RUNNER_TEMP/libui-prefix-one-${{ matrix.libtype }}" "$RUNNER_TEMP/libui-prefix-two-${{ matrix.libtype }}"
+          cmake -S test/cmake/consumer -B consumer-installed -G Ninja -DLIBUI_SOURCE_MODE=installed -DCMAKE_PREFIX_PATH="$RUNNER_TEMP/libui-prefix-two-${{ matrix.libtype }}"
+          cmake --build consumer-installed
+          ./consumer-installed/consumer
+      - run: cmake --build builddir --target stage-legacy
+      - uses: actions/upload-artifact@v7
+        with:
+          name: Ubuntu-${{ matrix.arch }}-${{ matrix.libtype }}-${{ matrix.buildtype }}
+          path: builddir/legacy-stage/
+
+  cmake-windows:
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86, x64]
+        libtype: [static, shared]
+        buildtype: [Release, Debug]
+    runs-on: windows-latest
+    name: Windows-${{ matrix.arch }}-msvc-${{ matrix.libtype }}-${{ matrix.buildtype }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: TheMrMilchmann/setup-msvc-dev@v4
+        with:
+          arch: ${{ matrix.arch }}
+      - name: Configure
+        shell: pwsh
+        run: |
+          $shared = if ('${{ matrix.libtype }}' -eq 'shared') { 'ON' } else { 'OFF' }
+          cmake -S . -B builddir -G Ninja `
+            -DCMAKE_BUILD_TYPE=${{ matrix.buildtype }} `
+            -DBUILD_SHARED_LIBS=$shared `
+            -DLIBUI_FETCH_TEST_DEPS=ON `
+            '-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded$<$<CONFIG:Debug>:Debug>'
+      - name: Build and test
+        run: |
+          cmake --build builddir --verbose
+          ctest --test-dir builddir --output-on-failure
+      - name: Visual Studio generator smoke test
+        if: matrix.arch == 'x64' && matrix.libtype == 'shared' && matrix.buildtype == 'Release'
+        shell: pwsh
+        run: |
+          cmake -S . -B build-vs -G "Visual Studio 17 2022" -A x64 -DBUILD_SHARED_LIBS=ON -DLIBUI_BUILD_TESTS=OFF -DLIBUI_BUILD_EXAMPLES=OFF
+          cmake --build build-vs --config Release
+      - run: cmake --build builddir --target stage-legacy
+      - uses: actions/upload-artifact@v7
+        with:
+          name: Windows-${{ matrix.arch }}-msvc-${{ matrix.libtype }}-${{ matrix.buildtype }}
+          path: builddir/legacy-stage/
+
+  cmake-msys2:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {system: MINGW64, flavor: mingw, buildtype: Release}
+          - {system: MINGW64, flavor: mingw, buildtype: Debug}
+          - {system: UCRT64, flavor: ucrt, buildtype: Release}
+          - {system: UCRT64, flavor: ucrt, buildtype: Debug}
+    runs-on: windows-latest
+    name: Windows-x64-${{ matrix.flavor }}-static-${{ matrix.buildtype }}
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: msys2/setup-msys2@v2
+        with:
+          update: true
+          install: base-devel git
+          pacboy: toolchain:p cmake:p ninja:p
+          msystem: ${{ matrix.system }}
+      - uses: actions/checkout@v6
+      - name: Configure, build, and test
+        run: |
+          cmake -S . -B builddir -G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.buildtype }} -DBUILD_SHARED_LIBS=OFF -DLIBUI_FETCH_TEST_DEPS=ON
+          cmake --build builddir --verbose
+          ctest --test-dir builddir --output-on-failure
+          cmake --build builddir --target stage-legacy
+      - uses: actions/upload-artifact@v7
+        with:
+          name: Windows-x64-${{ matrix.flavor }}-static-${{ matrix.buildtype }}
+          path: builddir/legacy-stage/
+
+  cmake-macos:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15-intel, macos-latest]
+        libtype: [static, shared]
+        buildtype: [Release, Debug]
+        include:
+          - {os: macos-15-intel, arch: x64, deployment: "10.12"}
+          - {os: macos-latest, arch: arm64, deployment: "11.0"}
+    runs-on: ${{ matrix.os }}
+    name: macOS-${{ matrix.arch }}-${{ matrix.libtype }}-${{ matrix.buildtype }}
+    steps:
+      - uses: actions/checkout@v6
+      - run: brew install cmake ninja cmocka
+      - name: Configure, build, and test
+        run: |
+          cmake -S . -B builddir -G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.buildtype }} -DBUILD_SHARED_LIBS=${{ matrix.libtype == 'shared' && 'ON' || 'OFF' }} -DLIBUI_FETCH_TEST_DEPS=ON -DCMAKE_OSX_DEPLOYMENT_TARGET=${{ matrix.deployment }}
+          cmake --build builddir --verbose
+          ctest --test-dir builddir --output-on-failure
+          cmake --build builddir --target stage-legacy
+      - name: Xcode generator smoke test
+        if: matrix.arch == 'arm64' && matrix.libtype == 'shared' && matrix.buildtype == 'Release'
+        run: |
+          cmake -S . -B build-xcode -G Xcode -DBUILD_SHARED_LIBS=ON -DLIBUI_BUILD_TESTS=OFF -DLIBUI_BUILD_EXAMPLES=OFF -DCMAKE_OSX_DEPLOYMENT_TARGET=${{ matrix.deployment }}
+          cmake --build build-xcode --config Release
+      - uses: actions/upload-artifact@v7
+        with:
+          name: macOS-${{ matrix.arch }}-${{ matrix.libtype }}-${{ matrix.buildtype }}
+          path: builddir/legacy-stage/
+
+  cmake-minimum:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - run: sudo apt-get update -y && sudo apt-get install -y ninja-build libgtk-3-dev
+      - uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.15.x'
+      - run: |
+          cmake -S . -B build-min -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DLIBUI_BUILD_TESTS=OFF -DLIBUI_BUILD_EXAMPLES=OFF
+          cmake --build build-min
+
+  portability:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        distro: [debian, fedora, alpine]
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build static release in ${{ matrix.distro }}
+        run: |
+          case '${{ matrix.distro }}' in
+            debian)
+              image=debian:stable
+              install='apt-get update && apt-get install -y cmake ninja-build gcc pkg-config libgtk-3-dev'
+              ;;
+            fedora)
+              image=fedora:latest
+              install='dnf -y install cmake ninja-build gcc pkgconf-pkg-config gtk3-devel'
+              ;;
+            alpine)
+              image=alpine:latest
+              install='apk add --no-cache cmake ninja gcc musl-dev pkgconf gtk+3.0-dev'
+              ;;
+          esac
+          docker run --rm -v "$PWD:/src:ro" "$image" sh -c "$install && cmake -S /src -B /tmp/build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DLIBUI_BUILD_TESTS=OFF -DLIBUI_BUILD_EXAMPLES=OFF && cmake --build /tmp/build"
+
+  cmake-clang:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - run: sudo apt-get update -y && sudo apt-get install -y clang cmake ninja-build libgtk-3-dev
+      - run: |
+          CC=clang cmake -S . -B build-clang -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DLIBUI_BUILD_TESTS=OFF -DLIBUI_BUILD_EXAMPLES=OFF
+          cmake --build build-clang
+
+  cmake-meson-parity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y cmake meson ninja-build gcc pkg-config libgtk-3-dev
+      - name: Compare Linux shared exports
+        run: |
+          meson setup meson-parity --buildtype=release --default-library=shared -Dtests=false -Dexamples=false
+          meson compile -C meson-parity
+          cmake -S . -B cmake-parity -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DLIBUI_BUILD_TESTS=OFF -DLIBUI_BUILD_EXAMPLES=OFF
+          cmake --build cmake-parity
+          nm -D --defined-only meson-parity/meson-out/libui.so | awk '{ print $3 }' | sort -u > /tmp/meson-symbols
+          nm -D --defined-only cmake-parity/libui.so | awk '{ print $3 }' | sort -u > /tmp/cmake-symbols
+          diff -u /tmp/meson-symbols /tmp/cmake-symbols
