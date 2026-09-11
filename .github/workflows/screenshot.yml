@@ -9,12 +9,12 @@ on:
       - 'common/**'
       - 'darwin/**'
       - 'examples/*.c'
-      - 'examples/meson.build'
+      - 'examples/CMakeLists.txt'
       - 'examples/example.manifest'
       - 'examples/example.static.manifest'
       - 'examples/resources.rc'
-      - 'meson.build'
-      - 'meson_options.txt'
+      - 'CMakeLists.txt'
+      - 'cmake/**'
       - 'ui.h'
       - 'ui_*.h'
       - 'unix/**'
@@ -50,23 +50,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
-      - name: Install Meson and Linux dependencies
+      - name: Install CMake and Linux dependencies
         if: matrix.os == 'ubuntu'
         run: |
-          python3 -m pip install --upgrade pip setuptools wheel
-          pip3 install meson ninja
           sudo apt-get update -y
-          sudo apt-get install -y libgtk-3-dev xvfb imagemagick openbox wmctrl
+          sudo apt-get install -y cmake ninja-build libgtk-3-dev xvfb imagemagick openbox wmctrl
 
-      - name: Install Meson and macOS dependencies
+      - name: Install CMake and macOS dependencies
         if: matrix.os == 'macos'
-        run: brew install meson ninja
-
-      - name: Install Meson on Windows
-        if: matrix.os == 'windows'
-        run: |
-          python -m pip install --upgrade pip
-          pip install meson ninja
+        run: brew install cmake ninja
 
       - name: Setup Windows Developer Command Prompt
         if: matrix.os == 'windows'
@@ -77,19 +69,24 @@ jobs:
       - name: Configure build (Unix)
         if: matrix.os != 'windows'
         shell: bash
-        run: meson setup builddir --buildtype=release --default-library=static -Dtests=false
+        run: cmake -S . -B builddir -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DLIBUI_BUILD_TESTS=OFF
 
       - name: Configure build (Windows)
         if: matrix.os == 'windows'
-        shell: cmd
-        run: meson setup builddir --buildtype=release --default-library=static -Dtests=false -Db_vscrt=mt
+        shell: pwsh
+        run: >-
+          cmake -S . -B builddir -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DBUILD_SHARED_LIBS=OFF
+          -DLIBUI_BUILD_TESTS=OFF
+          '-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded$<$<CONFIG:Debug>:Debug>'
 
       - name: Build widget examples (Unix)
         if: matrix.os != 'windows'
         shell: bash
         run: |
           for app in $WIDGET_EXAMPLES; do
-            ninja -C builddir "meson-out/$app"
+            cmake --build builddir --target "$app"
           done
 
       - name: Build widget examples (Windows)
@@ -98,7 +95,7 @@ jobs:
         run: |
           $apps = $env:WIDGET_EXAMPLES -split '\s+'
           foreach ($app in $apps) {
-            ninja -C builddir "meson-out/$app.exe"
+            cmake --build builddir --target $app
           }
 
       - name: Take screenshots

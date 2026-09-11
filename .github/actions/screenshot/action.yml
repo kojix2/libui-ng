@@ -6,7 +6,7 @@ inputs:
     description: ubuntu, windows, or macos
     required: true
   app-names:
-    description: Space-separated names of executables in builddir/meson-out
+    description: Space-separated names of CMake example targets
     required: true
 
 runs:
@@ -35,7 +35,7 @@ runs:
         sleep 2
         for app in ${{ inputs.app-names }}; do
           "${{ github.action_path }}/ubuntu-screenshot.sh" \
-            "builddir/meson-out/$app" "$app-ubuntu.png"
+            "builddir/artifacts/Release/$app" "$app-ubuntu.png"
         done
 
     - name: Take screenshots on Windows
@@ -45,7 +45,7 @@ runs:
         $apps = "${{ inputs.app-names }}" -split '\s+'
         foreach ($app in $apps) {
           & "${{ github.action_path }}/windows-screenshot.ps1" `
-            -AppPath "builddir/meson-out/$app.exe" `
+            -AppPath "builddir/artifacts/Release/$app.exe" `
             -OutputFile "$app-windows.png"
         }
 
@@ -57,5 +57,5 @@ runs:
         chmod +x "${{ github.action_path }}/macos-screenshot.sh"
         for app in ${{ inputs.app-names }}; do
           "${{ github.action_path }}/macos-screenshot.sh" \
-            "builddir/meson-out/$app" "$app-macos.png"
+            "builddir/artifacts/Release/$app" "$app-macos.png"
         done
