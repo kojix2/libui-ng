@@ -58,13 +58,18 @@ GTK+ versions are harder to drop because we are limited by Linux distribution pa
 
 As for language compatibility, libui-ng is written in C99. We have no intention of changing this.
 
-As for build system compatibility, libui-ng requires Meson 0.58.0 or newer. If you wish to bump the version, file an issue pleading your case (but see below).
+As for build system compatibility, libui-ng requires CMake 3.15 or newer.
+macOS requires CMake 3.16 or newer, and native Apple Silicon builds require
+CMake 3.19.2 or newer. If you wish to bump the version, file an issue pleading
+your case (but see below).
 
 **If you do plead your case**, keep in mind that "it's old" is not a sufficient reason to drop things. If you can prove that **virtually no one** uses the minimum version anymore, then that is stronger evidence. The best evidence, however, is that not upgrading will hold libui-ng back in some significant way — but beware that there are some things we won't add to libui-ng itself.
 
+Visual Studio 2013 is no longer supported; use Visual Studio 2017 or newer.
+
 ### Windows-specific notes
 
-The Windows backend of libui-ng is written in C++ using C++11.
+The Windows backend of libui-ng is compiled as C++14.
 
 Despite using C++, please refrain from using the following:
 

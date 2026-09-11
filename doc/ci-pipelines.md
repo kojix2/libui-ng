@@ -6,7 +6,7 @@ Build automation is defined in `.github/workflows/build.yml`.
 
 - GitHub Actions matrix syntax: https://docs.github.com/en/actions/using-jobs/using-a-matrix-for-your-jobs
 - GitHub-hosted runners: https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners
-- Meson CI notes: https://mesonbuild.com/Continuous-Integration.html
+- CMake CI guidance: https://cmake.org/cmake/help/latest/guide/tutorial/Testing%20and%20CTest.html
 
 ## Triggers
 
@@ -19,14 +19,21 @@ The build workflow runs on:
 
 ## Build Matrix
 
-The workflow currently runs 28 build configurations before any tag-only release
-packaging:
+The workflow currently runs 28 release configurations before any tag-only
+packaging, plus minimum-CMake, Linux distribution, Clang, and Meson/CMake parity
+checks:
 
 - Ubuntu: 8 builds
 - Windows MSVC: 8 builds
 - Windows MinGW: 2 builds
 - Windows UCRT: 2 builds
 - macOS: 8 builds
+
+Unix Makefiles are exercised by the minimum-CMake job. One MSVC configuration
+also performs a Visual Studio generator smoke test, and one Apple Silicon
+configuration performs an Xcode generator smoke test. Release Linux consumers
+cover both static and shared relocated installs; the static configuration also
+covers `FetchContent`.
 
 ### Ubuntu
 
@@ -35,7 +42,7 @@ packaging:
 - Library types: `static`, `shared`
 - Build types: `release`, `debug`
 - Extra packages: `libgtk-3-dev`, `xvfb`
-- Tests: `xvfb-run meson test -C builddir --verbose`
+- Tests: `xvfb-run ctest --test-dir builddir --output-on-failure`
 
 ### Windows MSVC
 
@@ -44,8 +51,8 @@ packaging:
 - Library types: `static`, `shared`
 - Build types: `release`, `debug`
 - Toolchain setup: `TheMrMilchmann/setup-msvc-dev`
-- Meson setup also passes `-Db_vscrt=mt`
-- Tests: `meson test -C builddir --verbose`
+- MSVC builds select the corresponding static CRT with `CMAKE_MSVC_RUNTIME_LIBRARY`
+- Tests: `ctest --test-dir builddir --output-on-failure`
 
 ### Windows MinGW
 
@@ -54,7 +61,7 @@ packaging:
 - Architecture: `x64`
 - Library type: `static`
 - Build types: `release`, `debug`
-- Tests: `meson test -C builddir --verbose`
+- Tests: `ctest --test-dir builddir --output-on-failure`
 
 ### Windows UCRT
 
@@ -63,7 +70,7 @@ packaging:
 - Architecture: `x64`
 - Library type: `static`
 - Build types: `release`, `debug`
-- Tests: `meson test -C builddir --verbose`
+- Tests: `ctest --test-dir builddir --output-on-failure`
 
 ### macOS
 
@@ -71,12 +78,13 @@ packaging:
 - Reported architectures: `x64`, `arm64`
 - Library types: `static`, `shared`
 - Build types: `release`, `debug`
-- Tests: `meson test -C builddir --verbose`
+- Tests: `ctest --test-dir builddir --output-on-failure`
 
 ## Release Packaging
 
-When the workflow runs for a tag, the `release` job waits for all build jobs,
-downloads their artifacts, zips each platform artifact directory, and publishes
-a GitHub Release with `softprops/action-gh-release`.
+Every build invokes the `stage-legacy` target to produce the release-compatible
+`builddir/meson-out` archive layout without changing CMake's native library
+layout. When the workflow runs for a tag, the `release` job waits for all build
+jobs, zips each staged artifact directory, and publishes a GitHub Release.
 
 Tags whose names contain `experimental` are published as prereleases.

@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- CMake is now the primary build system and provides the `libui::ui` target for source and installed-package consumers.
+- The minimum supported Microsoft toolchain is now Visual Studio 2017; Visual Studio 2013 support has ended.
 - uiControlDestroy() now safely defers destruction requested from user callbacks.
 - uiFreeFontDescriptor() is now the common release function for all font descriptors filled by libui; uiFreeFontButtonFont() remains a compatibility alias.
 

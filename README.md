@@ -42,9 +42,10 @@ Build automation is defined in `.github/workflows/build.yml`.
 
 ## Build Requirements
 
-- Meson 0.58.0 or newer
-- Ninja, or another Meson backend
-- Windows: Microsoft Visual Studio 2013 or newer, or MinGW-w64
+- CMake 3.15 or newer; macOS requires 3.16 or newer, and native Apple Silicon
+  builds require 3.19.2 or newer
+- Ninja is recommended; Unix Makefiles, Visual Studio, and Xcode generators are also supported
+- Windows: Microsoft Visual Studio 2017 or newer, or MinGW-w64
 - Unix: GTK+ development packages
 - macOS: tools required to build Cocoa programs
 
@@ -53,46 +54,69 @@ MinGW-w64 builds currently support static libraries only.
 ## Build
 
 ```sh
-meson setup build
-ninja -C build
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
+cmake --build build
 ```
 
-Build output is written to `build/meson-out/`.
+With a multi-configuration generator such as Visual Studio or Xcode, select the
+configuration at build and test time instead:
+
+```sh
+cmake -S . -B build
+cmake --build build --config Release
+ctest --test-dir build -C Release --output-on-failure
+```
 
 Common options:
 
-- `-Dtests=true|false`
-- `-Dexamples=true|false`
-- `--buildtype=debug|release|debugoptimized`
-- `--default-library=shared|static`
-- `--wrap-mode=forcefallback|nofallback|nodownload`
+- `-DLIBUI_BUILD_TESTS=ON|OFF`
+- `-DLIBUI_BUILD_EXAMPLES=ON|OFF`
+- `-DLIBUI_FETCH_TEST_DEPS=ON|OFF`
+- `-DCMAKE_BUILD_TYPE=Debug|Release` with single-configuration generators
+- `-DBUILD_SHARED_LIBS=ON|OFF`
 
 Example:
 
 ```sh
-meson setup build --buildtype=release --default-library=shared
-ninja -C build
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON
+cmake --build build
 ```
 
 ## Test
 
 ```sh
-meson test -C build
+ctest --test-dir build --output-on-failure
 ```
 
 Manual QA tests are under `test/qa`.
+Linux GUI tests can be run headlessly with
+`xvfb-run ctest --test-dir build --output-on-failure`.
+
+When tests are enabled, CMake first looks for cmocka 1.1.8 or newer. A top-level
+build fetches the pinned 1.1.8 source if needed; nested builds never access the
+network unless `LIBUI_FETCH_TEST_DEPS=ON` is explicitly requested.
 
 ## Install
 
 ```sh
-ninja -C build install
+cmake --install build
 ```
 
 Set the install prefix during setup:
 
 ```sh
-meson setup build --prefix=/usr/local
+cmake -S . -B build -DCMAKE_INSTALL_PREFIX=/usr/local
 ```
+
+Installed CMake packages can be consumed with:
+
+```cmake
+find_package(libui-ng CONFIG REQUIRED)
+target_link_libraries(myapp PRIVATE libui::ui)
+```
+
+The same `libui::ui` target is available through `add_subdirectory()` and
+`FetchContent_MakeAvailable()`.
 
 ## Documentation and Examples
 
