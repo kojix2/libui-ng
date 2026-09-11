@@ -32,7 +32,14 @@ if(NOT TARGET cmocka::cmocka)
 			URL_HASH SHA256=58435b558766d7f4c729ba163bdf3aec38bed3bc766dab684e3526ed0aa7c780
 		)
 	endif()
+	# Keep the test-only dependency static even when libui itself is shared.
+	# libui_ui's type has already been selected, so temporarily changing this
+	# directory variable affects only cmocka's add_library() call.
+	set(_libui_saved_build_shared_libs "${BUILD_SHARED_LIBS}")
+	set(BUILD_SHARED_LIBS OFF)
 	add_subdirectory("${cmocka_SOURCE_DIR}" "${cmocka_BINARY_DIR}" EXCLUDE_FROM_ALL)
+	set(BUILD_SHARED_LIBS "${_libui_saved_build_shared_libs}")
+	unset(_libui_saved_build_shared_libs)
 endif()
 
 set(tester_sources
