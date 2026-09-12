@@ -88,12 +88,16 @@ jobs:
       - name: Configure
         shell: pwsh
         run: |
-          $shared = if ('${{ matrix.libtype }}' -eq 'shared') { 'ON' } else { 'OFF' }
+          $shared = '${{ matrix.libtype == 'shared' && 'ON' || 'OFF' }}'
           cmake -S . -B builddir -G Ninja `
             -DCMAKE_BUILD_TYPE=${{ matrix.buildtype }} `
-            -DBUILD_SHARED_LIBS=$shared `
+            "-DBUILD_SHARED_LIBS:BOOL=$shared" `
             -DLIBUI_FETCH_TEST_DEPS=ON `
             '-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded$<$<CONFIG:Debug>:Debug>'
+          $configured = (Select-String -Path builddir/CMakeCache.txt -Pattern '^BUILD_SHARED_LIBS:BOOL=').Line.Split('=', 2)[1]
+          if ($configured -ne $shared) {
+            throw "Expected BUILD_SHARED_LIBS=$shared, but CMake configured $configured"
+          }
       - name: Build and test
         run: |
           cmake --build builddir --verbose
@@ -247,6 +251,7 @@ jobs:
         run: |
           for archive in zips/*.zip; do
             name=$(basename "$archive")
+            echo "Validating $name"
             entries=$(unzip -Z1 "$archive")
             grep -qx 'ui.h' <<<"$entries"
             grep -qx 'builddir/meson-logs/meson-setup.txt' <<<"$entries"
