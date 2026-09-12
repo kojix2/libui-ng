@@ -12,7 +12,7 @@ Primary build and release automation is defined in `.github/workflows/cmake.yml`
 
 The build workflow runs on:
 
-- Pushes to `main`, `pre-build`, and `dev`
+- Pushes to `main`, `pre-build`, `dev`, and `cmake-migration`
 - Tags matching `commit-*`
 - Pull requests targeting `main`
 - Manual `workflow_dispatch`
@@ -39,7 +39,7 @@ covers `FetchContent`.
 - Runners: `ubuntu-latest`, `ubuntu-24.04-arm`
 - Reported architectures: `x64`, `arm64`
 - Library types: `static`, `shared`
-- Build types: `release`, `debug`
+- Build types: `Release`, `Debug`
 - Extra packages: `libgtk-3-dev`, `xvfb`
 - Tests: `xvfb-run ctest --test-dir builddir --output-on-failure`
 
@@ -48,7 +48,7 @@ covers `FetchContent`.
 - Runner: `windows-latest`
 - Architectures: `x86`, `x64`
 - Library types: `static`, `shared`
-- Build types: `release`, `debug`
+- Build types: `Release`, `Debug`
 - Toolchain setup: `TheMrMilchmann/setup-msvc-dev`
 - MSVC builds select the corresponding static CRT with `CMAKE_MSVC_RUNTIME_LIBRARY`
 - Tests: `ctest --test-dir builddir --output-on-failure`
@@ -59,7 +59,7 @@ covers `FetchContent`.
 - MSYS2 environment: `MINGW64`
 - Architecture: `x64`
 - Library type: `static`
-- Build types: `release`, `debug`
+- Build types: `Release`, `Debug`
 - Tests: `ctest --test-dir builddir --output-on-failure`
 
 ### Windows UCRT
@@ -68,7 +68,7 @@ covers `FetchContent`.
 - MSYS2 environment: `UCRT64`
 - Architecture: `x64`
 - Library type: `static`
-- Build types: `release`, `debug`
+- Build types: `Release`, `Debug`
 - Tests: `ctest --test-dir builddir --output-on-failure`
 
 ### macOS
@@ -76,19 +76,22 @@ covers `FetchContent`.
 - Runners: `macos-15-intel`, `macos-latest`
 - Reported architectures: `x64`, `arm64`
 - Library types: `static`, `shared`
-- Build types: `release`, `debug`
+- Build types: `Release`, `Debug`
 - Tests: `ctest --test-dir builddir --output-on-failure`
 
 ## Release Packaging
 
-Every build invokes the `stage-legacy` target to produce the release-compatible
-`builddir/meson-out` archive layout without changing CMake's native library
-layout. When the workflow runs for a tag, the `release` job waits for all build
-jobs, zips each staged artifact directory, validates every ZIP against the
-legacy archive contract, and uses the pinned UIng downloader to extract and
-link the Linux x64 static artifacts before publishing a GitHub Release.
+Every matrix build runs CPack's ZIP generator against the project's CMake
+install rules. Each resulting binary SDK is a relocatable install prefix with
+headers in `include/`, native libraries in `lib/`, Windows runtime DLLs in
+`bin/`, and exported CMake package files in `lib/cmake/libui-ng/`. Tests,
+examples, build trees, and CI logs are not included in the SDK.
 
-The same packaging and UIng validation runs on the `cmake-migration` branch
-without publishing a release.
+When the workflow runs for a tag, the `release` job waits for all 28 packages,
+checks their names against `cmake/release-archives.txt`, validates their
+contents, rejects legacy/build-tree paths, and
+tests relocated CMake, direct C, Crystal, and Ruby Fiddle consumers before
+publishing a GitHub Release. The same packaging and consumer validation runs on the
+`cmake-migration` branch without publishing a release.
 
 Tags whose names contain `experimental` are published as prereleases.

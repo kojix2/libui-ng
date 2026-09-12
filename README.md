@@ -118,6 +118,28 @@ target_link_libraries(myapp PRIVATE libui::ui)
 The same `libui::ui` target is available through `add_subdirectory()` and
 `FetchContent_MakeAvailable()`.
 
+## Binary SDKs
+
+Release ZIP files are relocatable CMake install trees. They contain public
+headers under `include/`, native libraries under `lib/` (and DLLs under `bin/`
+on Windows), license metadata, and the installed `libui-ng` CMake package.
+Static and shared SDKs are published separately for each supported platform,
+architecture, and Debug/Release configuration.
+The complete set of release asset names is recorded in
+[`cmake/release-archives.txt`](cmake/release-archives.txt).
+
+After extracting an SDK, CMake consumers can set its root as a prefix:
+
+```sh
+cmake -S app -B app-build -DCMAKE_PREFIX_PATH=/path/to/libui-ng-sdk
+```
+
+Non-CMake consumers, including Crystal and Ruby extensions, can use
+`include/`, `lib/`, and `bin/` directly. Library filenames remain native to the
+toolchain: MSVC uses `.lib`, MinGW and Unix static builds use `.a`, Windows
+shared builds provide a `.dll` and import library, and Unix/macOS shared builds
+provide `.so`/`.dylib` files.
+
 ## Documentation and Examples
 
 - API documentation: https://kojix2.github.io/libui-ng/

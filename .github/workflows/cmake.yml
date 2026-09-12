@@ -19,12 +19,14 @@ jobs:
       matrix:
         os: [ubuntu-latest, ubuntu-24.04-arm]
         libtype: [static, shared]
-        buildtype: [release, debug]
+        buildtype: [Release, Debug]
         include:
           - {os: ubuntu-latest, arch: x64}
           - {os: ubuntu-24.04-arm, arch: arm64}
+          - {buildtype: Release, buildlabel: release}
+          - {buildtype: Debug, buildlabel: debug}
     runs-on: ${{ matrix.os }}
-    name: Ubuntu-${{ matrix.arch }}-${{ matrix.libtype }}-${{ matrix.buildtype }}
+    name: Ubuntu-${{ matrix.arch }}-${{ matrix.libtype }}-${{ matrix.buildlabel }}
     steps:
       - uses: actions/checkout@v6
       - name: Install dependencies
@@ -46,12 +48,12 @@ jobs:
           cmake -S test/cmake/consumer -B consumer-add -G Ninja -DLIBUI_SOURCE_MODE=add_subdirectory -DLIBUI_SOURCE_DIR="$PWD" -DBUILD_SHARED_LIBS=${{ matrix.libtype == 'shared' && 'ON' || 'OFF' }}
           cmake --build consumer-add
       - name: Test FetchContent consumer
-        if: matrix.arch == 'x64' && matrix.libtype == 'static' && matrix.buildtype == 'release'
+        if: matrix.arch == 'x64' && matrix.libtype == 'static' && matrix.buildtype == 'Release'
         run: |
           cmake -S test/cmake/consumer -B consumer-fetch -G Ninja -DLIBUI_SOURCE_MODE=fetchcontent -DLIBUI_SOURCE_DIR="$PWD" -DBUILD_SHARED_LIBS=OFF
           cmake --build consumer-fetch
       - name: Test relocated install consumer
-        if: matrix.arch == 'x64' && matrix.buildtype == 'release'
+        if: matrix.arch == 'x64' && matrix.buildtype == 'Release'
         run: |
           cmake --install builddir --prefix "$RUNNER_TEMP/libui-prefix-one-${{ matrix.libtype }}"
           if grep -R -I -F "$GITHUB_WORKSPACE" "$RUNNER_TEMP/libui-prefix-one-${{ matrix.libtype }}"; then exit 1; fi
@@ -59,17 +61,16 @@ jobs:
           cmake -S test/cmake/consumer -B consumer-installed -G Ninja -DLIBUI_SOURCE_MODE=installed -DCMAKE_PREFIX_PATH="$RUNNER_TEMP/libui-prefix-two-${{ matrix.libtype }}"
           cmake --build consumer-installed
           ./consumer-installed/consumer
-      - run: cmake --build builddir --target stage-legacy
-      - name: Verify relocated shared runtime
-        if: matrix.libtype == 'shared'
-        run: |
-          executable=builddir/legacy-stage/builddir/meson-out/hello-world
-          library=builddir/legacy-stage/builddir/meson-out/libui.so
-          test "$(readlink -f "$(ldd "$executable" | awk '/libui\.so/ { print $3; exit }')")" = "$(readlink -f "$library")"
+      - name: Package binary SDK
+        run: >-
+          cpack -G ZIP -C ${{ matrix.buildtype }}
+          --config builddir/CPackConfig.cmake -B packages
+          -D CPACK_PACKAGE_FILE_NAME=libui-ng-ubuntu-${{ matrix.arch }}-${{ matrix.libtype }}-${{ matrix.buildlabel }}
       - uses: actions/upload-artifact@v7
         with:
-          name: Ubuntu-${{ matrix.arch }}-${{ matrix.libtype }}-${{ matrix.buildtype }}
-          path: builddir/legacy-stage/
+          name: libui-ng-ubuntu-${{ matrix.arch }}-${{ matrix.libtype }}-${{ matrix.buildlabel }}
+          path: packages/*.zip
+          if-no-files-found: error
 
   cmake-windows:
     strategy:
@@ -77,9 +78,12 @@ jobs:
       matrix:
         arch: [x86, x64]
         libtype: [static, shared]
-        buildtype: [release, debug]
+        buildtype: [Release, Debug]
+        include:
+          - {buildtype: Release, buildlabel: release}
+          - {buildtype: Debug, buildlabel: debug}
     runs-on: windows-latest
-    name: Windows-${{ matrix.arch }}-msvc-${{ matrix.libtype }}-${{ matrix.buildtype }}
+    name: Windows-${{ matrix.arch }}-msvc-${{ matrix.libtype }}-${{ matrix.buildlabel }}
     steps:
       - uses: actions/checkout@v6
       - uses: TheMrMilchmann/setup-msvc-dev@v4
@@ -103,7 +107,7 @@ jobs:
           cmake --build builddir --verbose
           ctest --test-dir builddir --output-on-failure --timeout 180
       - name: Visual Studio generator smoke test
-        if: matrix.arch == 'x64' && matrix.libtype == 'shared' && matrix.buildtype == 'release'
+        if: matrix.arch == 'x64' && matrix.libtype == 'shared' && matrix.buildtype == 'Release'
         shell: pwsh
         run: |
           # The windows-latest image can advance to a newer Visual Studio release.
@@ -111,23 +115,29 @@ jobs:
           # pinning a generator that may no longer exist on the runner.
           cmake -S . -B build-vs -A x64 -DBUILD_SHARED_LIBS=ON -DLIBUI_BUILD_TESTS=OFF -DLIBUI_BUILD_EXAMPLES=OFF
           cmake --build build-vs --config Release
-      - run: cmake --build builddir --target stage-legacy
+      - name: Package binary SDK
+        shell: pwsh
+        run: >-
+          cpack -G ZIP -C ${{ matrix.buildtype }}
+          --config builddir/CPackConfig.cmake -B packages
+          -D CPACK_PACKAGE_FILE_NAME=libui-ng-windows-${{ matrix.arch }}-msvc-${{ matrix.libtype }}-${{ matrix.buildlabel }}
       - uses: actions/upload-artifact@v7
         with:
-          name: Windows-${{ matrix.arch }}-msvc-${{ matrix.libtype }}-${{ matrix.buildtype }}
-          path: builddir/legacy-stage/
+          name: libui-ng-windows-${{ matrix.arch }}-msvc-${{ matrix.libtype }}-${{ matrix.buildlabel }}
+          path: packages/*.zip
+          if-no-files-found: error
 
   cmake-msys2:
     strategy:
       fail-fast: false
       matrix:
         include:
-          - {system: MINGW64, flavor: mingw, buildtype: release}
-          - {system: MINGW64, flavor: mingw, buildtype: debug}
-          - {system: UCRT64, flavor: ucrt, buildtype: release}
-          - {system: UCRT64, flavor: ucrt, buildtype: debug}
+          - {system: MINGW64, flavor: mingw, buildtype: Release, buildlabel: release}
+          - {system: MINGW64, flavor: mingw, buildtype: Debug, buildlabel: debug}
+          - {system: UCRT64, flavor: ucrt, buildtype: Release, buildlabel: release}
+          - {system: UCRT64, flavor: ucrt, buildtype: Debug, buildlabel: debug}
     runs-on: windows-latest
-    name: Windows-x64-${{ matrix.flavor }}-static-${{ matrix.buildtype }}
+    name: Windows-x64-${{ matrix.flavor }}-static-${{ matrix.buildlabel }}
     defaults:
       run:
         shell: msys2 {0}
@@ -144,11 +154,12 @@ jobs:
           cmake -S . -B builddir -G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.buildtype }} -DBUILD_SHARED_LIBS=OFF -DLIBUI_FETCH_TEST_DEPS=ON
           cmake --build builddir --verbose
           ctest --test-dir builddir --output-on-failure --timeout 180
-          cmake --build builddir --target stage-legacy
+          cpack -G ZIP -C ${{ matrix.buildtype }} --config builddir/CPackConfig.cmake -B packages -D CPACK_PACKAGE_FILE_NAME=libui-ng-windows-x64-${{ matrix.flavor }}-static-${{ matrix.buildlabel }}
       - uses: actions/upload-artifact@v7
         with:
-          name: Windows-x64-${{ matrix.flavor }}-static-${{ matrix.buildtype }}
-          path: builddir/legacy-stage/
+          name: libui-ng-windows-x64-${{ matrix.flavor }}-static-${{ matrix.buildlabel }}
+          path: packages/*.zip
+          if-no-files-found: error
 
   cmake-macos:
     strategy:
@@ -156,12 +167,14 @@ jobs:
       matrix:
         os: [macos-15-intel, macos-latest]
         libtype: [static, shared]
-        buildtype: [release, debug]
+        buildtype: [Release, Debug]
         include:
           - {os: macos-15-intel, arch: x64, deployment: "10.12"}
           - {os: macos-latest, arch: arm64, deployment: "11.0"}
+          - {buildtype: Release, buildlabel: release}
+          - {buildtype: Debug, buildlabel: debug}
     runs-on: ${{ matrix.os }}
-    name: macOS-${{ matrix.arch }}-${{ matrix.libtype }}-${{ matrix.buildtype }}
+    name: macOS-${{ matrix.arch }}-${{ matrix.libtype }}-${{ matrix.buildlabel }}
     steps:
       - uses: actions/checkout@v6
       - run: brew install cmake ninja cmocka
@@ -170,16 +183,17 @@ jobs:
           cmake -S . -B builddir -G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.buildtype }} -DBUILD_SHARED_LIBS=${{ matrix.libtype == 'shared' && 'ON' || 'OFF' }} -DLIBUI_FETCH_TEST_DEPS=ON -DCMAKE_OSX_DEPLOYMENT_TARGET=${{ matrix.deployment }}
           cmake --build builddir --verbose
           ctest --test-dir builddir --output-on-failure --timeout 180
-          cmake --build builddir --target stage-legacy
+          cpack -G ZIP -C ${{ matrix.buildtype }} --config builddir/CPackConfig.cmake -B packages -D CPACK_PACKAGE_FILE_NAME=libui-ng-macos-${{ matrix.arch }}-${{ matrix.libtype }}-${{ matrix.buildlabel }}
       - name: Xcode generator smoke test
-        if: matrix.arch == 'arm64' && matrix.libtype == 'shared' && matrix.buildtype == 'release'
+        if: matrix.arch == 'arm64' && matrix.libtype == 'shared' && matrix.buildtype == 'Release'
         run: |
           cmake -S . -B build-xcode -G Xcode -DBUILD_SHARED_LIBS=ON -DLIBUI_BUILD_TESTS=OFF -DLIBUI_BUILD_EXAMPLES=OFF -DCMAKE_OSX_DEPLOYMENT_TARGET=${{ matrix.deployment }}
           cmake --build build-xcode --config Release
       - uses: actions/upload-artifact@v7
         with:
-          name: macOS-${{ matrix.arch }}-${{ matrix.libtype }}-${{ matrix.buildtype }}
-          path: builddir/legacy-stage/
+          name: libui-ng-macos-${{ matrix.arch }}-${{ matrix.libtype }}-${{ matrix.buildlabel }}
+          path: packages/*.zip
+          if-no-files-found: error
 
   cmake-minimum:
     runs-on: ubuntu-latest
@@ -239,65 +253,80 @@ jobs:
       - uses: actions/download-artifact@v8
         with:
           path: dist
-      - name: Create legacy-compatible ZIP files
+      - name: Collect CPack ZIP files
         run: |
           mkdir -p zips
-          find dist -mindepth 1 -maxdepth 1 -type d -print0 | while IFS= read -r -d '' dir; do
-            artifact=$(basename "$dir")
-            (cd "$dir" && zip -qr "$GITHUB_WORKSPACE/zips/$artifact.zip" .)
-          done
-          test "$(find zips -maxdepth 1 -name '*.zip' | wc -l)" -eq 28
+          find dist -type f -name '*.zip' -exec cp '{}' zips/ \;
+          find zips -maxdepth 1 -type f -name '*.zip' -printf '%f\n' | sort > actual-release-archives.txt
+          diff -u cmake/release-archives.txt actual-release-archives.txt
       - name: Validate release archive contract
         run: |
           for archive in zips/*.zip; do
             name=$(basename "$archive")
             echo "Validating $name"
             entries=$(unzip -Z1 "$archive")
-            grep -qx 'ui.h' <<<"$entries"
-            grep -qx 'builddir/meson-logs/meson-setup.txt' <<<"$entries"
-            grep -qx 'builddir/meson-logs/meson-log.txt' <<<"$entries"
-            grep -qx 'builddir/meson-logs/testlog.txt' <<<"$entries"
+            grep -qx 'include/ui.h' <<<"$entries"
+            grep -qx 'lib/cmake/libui-ng/libui-ngConfig.cmake' <<<"$entries"
+            grep -qx 'lib/cmake/libui-ng/libui-ngTargets.cmake' <<<"$entries"
+            grep -q '^lib/cmake/libui-ng/libui-ngTargets-.*\.cmake$' <<<"$entries"
+            grep -qx 'share/doc/libui-ng/LICENSE.md' <<<"$entries"
+            if grep -E '(^|/)(builddir|meson-out|meson-logs)(/|$)|\.a\.p/' <<<"$entries"; then
+              echo "Legacy build-tree entry found in $name"
+              exit 1
+            fi
+            if unzip -p "$archive" | grep -a -F "$GITHUB_WORKSPACE"; then
+              echo "Source or build path found in $name"
+              exit 1
+            fi
             case "$name" in
-              Ubuntu-*) grep -qx 'ui_unix.h' <<<"$entries" ;;
-              macOS-*) grep -qx 'ui_darwin.h' <<<"$entries" ;;
-              Windows-*) grep -qx 'ui_windows.h' <<<"$entries" ;;
+              libui-ng-ubuntu-*) grep -qx 'include/ui_unix.h' <<<"$entries" ;;
+              libui-ng-macos-*) grep -qx 'include/ui_darwin.h' <<<"$entries" ;;
+              libui-ng-windows-*) grep -qx 'include/ui_windows.h' <<<"$entries" ;;
               *) echo "Unexpected release asset: $name"; exit 1 ;;
             esac
             case "$name" in
-              *-static-*) grep -qx 'builddir/meson-out/libui.a' <<<"$entries" ;;
-              Ubuntu-*-shared-*) grep -qx 'builddir/meson-out/libui.so' <<<"$entries" ;;
-              macOS-*-shared-*) grep -qx 'builddir/meson-out/libui.dylib' <<<"$entries" ;;
-              Windows-*-shared-*) grep -qx 'builddir/meson-out/libui.dll' <<<"$entries" ;;
+              libui-ng-windows-*-msvc-static-*) grep -qx 'lib/libui.lib' <<<"$entries" ;;
+              *-static-*) grep -qx 'lib/libui.a' <<<"$entries" ;;
+              libui-ng-ubuntu-*-shared-*) grep -qx 'lib/libui.so' <<<"$entries" ;;
+              libui-ng-macos-*-shared-*) grep -qx 'lib/libui.dylib' <<<"$entries" ;;
+              libui-ng-windows-*-msvc-shared-*)
+                grep -qx 'bin/libui.dll' <<<"$entries"
+                grep -qx 'lib/ui.lib' <<<"$entries"
+                ;;
+              *) echo "Unexpected linkage in release asset: $name"; exit 1 ;;
             esac
-            if [[ "$name" == Windows-*-msvc-static-debug.zip ]]; then
-              grep -q '^builddir/meson-out/libui\.a\.p/.*\.pdb$' <<<"$entries"
+            if [[ "$name" == libui-ng-windows-*-msvc-static-debug.zip ]]; then
+              grep -qx 'lib/libui.pdb' <<<"$entries"
+            elif [[ "$name" == libui-ng-windows-*-msvc-shared-debug.zip ]]; then
+              grep -qx 'bin/libui.pdb' <<<"$entries"
+              grep -qx 'lib/libui.pdb' <<<"$entries"
             fi
           done
-      - uses: crystal-lang/install-crystal@v1
-      - uses: actions/checkout@v6
-        with:
-          repository: kojix2/uing
-          ref: de7adcbcc455332f2b55ce9c2ab6f135c521b495
-          path: uing
-      - name: Validate ZIP files with UIng
-        env:
-          LIBUI_RELEASE_DIR: ${{ github.workspace }}/zips
+      - name: Validate relocated CMake and direct C consumers
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y libgtk-3-dev
-          release_sha=$(sha256sum zips/Ubuntu-x64-static-release.zip | cut -d' ' -f1)
-          debug_sha=$(sha256sum zips/Ubuntu-x64-static-debug.zip | cut -d' ' -f1)
-          sed -i -E "s#(\"Ubuntu-x64-static-release.zip\"[[:space:]]*=>[[:space:]]*\")[0-9a-f]+#\1$release_sha#" uing/download.cr
-          sed -i -E "s#(\"Ubuntu-x64-static-debug.zip\"[[:space:]]*=>[[:space:]]*\")[0-9a-f]+#\1$debug_sha#" uing/download.cr
-          sed -i 's|https://github.com/kojix2/libui-ng/releases/download/commit-|file://#{ENV["LIBUI_RELEASE_DIR"]}/|' uing/download.cr
-          uing_commit=$(sed -n 's/^COMMIT_HASH = "\(.*\)"/\1/p' uing/download.cr)
-          mkdir -p "zips/$uing_commit"
-          cp zips/Ubuntu-x64-static-release.zip zips/Ubuntu-x64-static-debug.zip "zips/$uing_commit/"
-          cd uing
-          crystal run download.cr
-          test -f libui/release/libui.a
-          test -f libui/debug/libui.a
-          crystal build examples/gallery/basic_button.cr -o /tmp/uing-basic-button
+          sudo apt-get install -y cmake ninja-build gcc libgtk-3-dev
+          mkdir /tmp/libui-prefix-one
+          unzip -q zips/libui-ng-ubuntu-x64-static-release.zip -d /tmp/libui-prefix-one
+          mv /tmp/libui-prefix-one /tmp/libui-prefix-two
+          cmake -S test/cmake/consumer -B /tmp/libui-consumer -G Ninja -DLIBUI_SOURCE_MODE=installed -DCMAKE_PREFIX_PATH=/tmp/libui-prefix-two
+          cmake --build /tmp/libui-consumer
+          /tmp/libui-consumer/consumer
+          cc test/cmake/consumer/main.c test/cmake/consumer/extension.c -I/tmp/libui-prefix-two/include /tmp/libui-prefix-two/lib/libui.a $(pkg-config --cflags --libs gtk+-3.0) -lm -ldl -o /tmp/libui-direct-consumer
+          /tmp/libui-direct-consumer
+      - uses: crystal-lang/install-crystal@v1
+      - name: Validate Crystal and Ruby consumers
+        run: |
+          mkdir /tmp/libui-shared-prefix-one
+          unzip -q zips/libui-ng-ubuntu-x64-shared-release.zip -d /tmp/libui-shared-prefix-one
+          mv /tmp/libui-shared-prefix-one /tmp/libui-shared-prefix-two
+          CRYSTAL_CACHE_DIR=/tmp/crystal-cache crystal build test/bindings/crystal_smoke.cr -o /tmp/libui-crystal-static --link-flags "/tmp/libui-prefix-two/lib/libui.a $(pkg-config --libs gtk+-3.0) -lm -ldl"
+          /tmp/libui-crystal-static
+          cc test/cmake/consumer/main.c test/cmake/consumer/extension.c -I/tmp/libui-shared-prefix-two/include -L/tmp/libui-shared-prefix-two/lib -lui $(pkg-config --cflags --libs gtk+-3.0) -Wl,-rpath,/tmp/libui-shared-prefix-two/lib -o /tmp/libui-direct-shared
+          /tmp/libui-direct-shared
+          CRYSTAL_CACHE_DIR=/tmp/crystal-cache crystal build test/bindings/crystal_smoke.cr -o /tmp/libui-crystal-shared --link-flags "-L/tmp/libui-shared-prefix-two/lib -lui"
+          LD_LIBRARY_PATH=/tmp/libui-shared-prefix-two/lib /tmp/libui-crystal-shared
+          ruby test/bindings/ruby_fiddle_smoke.rb /tmp/libui-shared-prefix-two/lib/libui.so
       - name: Publish GitHub Release
         if: github.ref_type == 'tag'
         uses: softprops/action-gh-release@v3

@@ -178,19 +178,36 @@ endif()
 
 install(TARGETS libui_ui
 	EXPORT libui-ngTargets
-	RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+	RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT Runtime
+	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT Runtime
+		NAMELINK_COMPONENT Development
+	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT Development
 	INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
-install(FILES ui.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(FILES ui.h
+	DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+	COMPONENT Development
+)
 if(WIN32)
-	install(FILES ui_windows.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+	install(FILES ui_windows.h
+		DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+		COMPONENT Development
+	)
 elseif(APPLE)
-	install(FILES ui_darwin.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+	install(FILES ui_darwin.h
+		DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+		COMPONENT Development
+	)
 else()
-	install(FILES ui_unix.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+	install(FILES ui_unix.h
+		DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+		COMPONENT Development
+	)
 endif()
+install(FILES LICENSE.md
+	DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/doc/libui-ng
+	COMPONENT Development
+)
 
 set(LIBUI_INSTALL_CMAKEDIR "${CMAKE_INSTALL_LIBDIR}/cmake/libui-ng")
 configure_package_config_file(
@@ -200,57 +217,37 @@ configure_package_config_file(
 )
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/libui-ngConfig.cmake"
 	DESTINATION "${LIBUI_INSTALL_CMAKEDIR}"
+	COMPONENT Development
 )
 install(EXPORT libui-ngTargets
 	FILE libui-ngTargets.cmake
 	NAMESPACE libui::
 	DESTINATION "${LIBUI_INSTALL_CMAKEDIR}"
+	COMPONENT Development
 )
 
-set(LIBUI_LEGACY_STAGE_DIR "${CMAKE_CURRENT_BINARY_DIR}/legacy-stage" CACHE PATH
-	"Directory used by the stage-legacy target")
-if(WIN32)
-	set(LIBUI_PLATFORM_HEADER ui_windows.h)
-elseif(APPLE)
-	set(LIBUI_PLATFORM_HEADER ui_darwin.h)
-else()
-	set(LIBUI_PLATFORM_HEADER ui_unix.h)
-endif()
-set(LIBUI_LEGACY_RUNTIME_TARGETS)
-if(LIBUI_BUILD_TESTS)
-	list(APPEND LIBUI_LEGACY_RUNTIME_TARGETS tester qa unit utf-unit imagerep-unit)
-endif()
-if(LIBUI_BUILD_EXAMPLES)
-	list(APPEND LIBUI_LEGACY_RUNTIME_TARGETS
-		hello-world window button label checkbox entry multiline-entry box-layout
-		form-layout grid-layout tabs group control-destroy combobox editable-combobox
-		radio-buttons spinbox slider progressbar separator date-picker time-picker
-		color-button font-button menu menu-checkbox open-file open-folder save-file
-		message-box error-message-box timer queue-main should-quit controlgallery
-		histogram drawtext datetime cpp-multithread
-	)
-endif()
 if(MSVC)
-	set(LIBUI_COMPILE_PDB_PATH
-		"${CMAKE_CURRENT_BINARY_DIR}/pdb/$<CONFIG>/libui.pdb")
-else()
-	set(LIBUI_COMPILE_PDB_PATH "")
+	install(FILES "${CMAKE_CURRENT_BINARY_DIR}/pdb/$<CONFIG>/libui.pdb"
+		DESTINATION ${CMAKE_INSTALL_LIBDIR}
+		COMPONENT DebugSymbols
+		OPTIONAL
+	)
+	if(BUILD_SHARED_LIBS)
+		install(FILES "$<TARGET_PDB_FILE:libui_ui>"
+			DESTINATION ${CMAKE_INSTALL_BINDIR}
+			COMPONENT DebugSymbols
+			OPTIONAL
+		)
+	endif()
 endif()
-add_custom_target(stage-legacy
-	COMMAND ${CMAKE_COMMAND}
-		-DLIBUI_ARTIFACT=$<TARGET_FILE:libui_ui>
-		-DLIBUI_LINKER_ARTIFACT=$<TARGET_LINKER_FILE:libui_ui>
-		-DLIBUI_STAGE_DIR=${LIBUI_LEGACY_STAGE_DIR}
-		-DLIBUI_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}
-		-DLIBUI_RUNTIME_DIR=${CMAKE_BINARY_DIR}/artifacts/$<CONFIG>
-		-DLIBUI_CONFIG=$<CONFIG>
-		-DLIBUI_STATIC=$<NOT:$<BOOL:${BUILD_SHARED_LIBS}>>
-		-DLIBUI_MSVC=${MSVC}
-		-DLIBUI_PLATFORM_HEADER=${LIBUI_PLATFORM_HEADER}
-		-DLIBUI_EXPECT_TESTS=${LIBUI_BUILD_TESTS}
-		-DLIBUI_EXPECT_EXAMPLES=${LIBUI_BUILD_EXAMPLES}
-		-DLIBUI_COMPILE_PDB=${LIBUI_COMPILE_PDB_PATH}
-		-P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/StageLegacyRelease.cmake
-	DEPENDS libui_ui ${LIBUI_LEGACY_RUNTIME_TARGETS}
-	VERBATIM
-)
+
+if(LIBUI_TOP_LEVEL)
+	set(CPACK_GENERATOR ZIP)
+	set(CPACK_PACKAGE_NAME libui-ng)
+	set(CPACK_PACKAGE_VENDOR libui-ng)
+	set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Simple and portable GUI library")
+	set(CPACK_PACKAGE_VERSION unversioned)
+	set(CPACK_INCLUDE_TOPLEVEL_DIRECTORY OFF)
+	set(CPACK_VERBATIM_VARIABLES ON)
+	include(CPack)
+endif()
