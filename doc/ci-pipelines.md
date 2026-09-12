@@ -1,8 +1,6 @@
 # Continuous Integration
 
 Primary build and release automation is defined in `.github/workflows/cmake.yml`.
-`.github/workflows/build.yml` temporarily retains the Meson compatibility
-matrix, but it no longer runs for tags or publishes releases.
 
 ## References
 
@@ -21,9 +19,8 @@ The build workflow runs on:
 
 ## Build Matrix
 
-The workflow currently runs 28 release configurations before any tag-only
-packaging, plus minimum-CMake, Linux distribution, Clang, and Meson/CMake parity
-checks:
+The workflow currently runs 28 release configurations before packaging, plus
+minimum-CMake, Linux distribution, and Clang checks:
 
 - Ubuntu: 8 builds
 - Windows MSVC: 8 builds
@@ -90,5 +87,8 @@ layout. When the workflow runs for a tag, the `release` job waits for all build
 jobs, zips each staged artifact directory, validates every ZIP against the
 legacy archive contract, and uses the pinned UIng downloader to extract and
 link the Linux x64 static artifacts before publishing a GitHub Release.
+
+The same packaging and UIng validation runs on the `cmake-migration` branch
+without publishing a release.
 
 Tags whose names contain `experimental` are published as prereleases.

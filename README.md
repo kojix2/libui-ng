@@ -33,8 +33,6 @@ need a stable reference. Build details and included changes are tracked by the
 tags attached to each release.
 
 Primary build and release automation is defined in `.github/workflows/cmake.yml`.
-The Meson workflow remains temporarily as a compatibility comparison while the
-CMake migration stabilizes.
 
 ## Runtime Requirements
 

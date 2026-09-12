@@ -224,27 +224,9 @@ jobs:
           CC=clang cmake -S . -B build-clang -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DLIBUI_BUILD_TESTS=OFF -DLIBUI_BUILD_EXAMPLES=OFF
           cmake --build build-clang
 
-  cmake-meson-parity:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - name: Install build dependencies
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install -y cmake meson ninja-build gcc pkg-config libgtk-3-dev
-      - name: Compare Linux shared exports
-        run: |
-          meson setup meson-parity --buildtype=release --default-library=shared -Dtests=false -Dexamples=false
-          meson compile -C meson-parity
-          cmake -S . -B cmake-parity -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DLIBUI_BUILD_TESTS=OFF -DLIBUI_BUILD_EXAMPLES=OFF
-          cmake --build cmake-parity
-          nm -D --defined-only meson-parity/meson-out/libui.so | awk '{ print $3 }' | sort -u > /tmp/meson-symbols
-          nm -D --defined-only cmake-parity/libui.so | awk '{ print $3 }' | sort -u > /tmp/cmake-symbols
-          diff -u /tmp/meson-symbols /tmp/cmake-symbols
-
   release:
     needs: [cmake-linux, cmake-windows, cmake-msys2, cmake-macos]
-    if: github.ref_type == 'tag'
+    if: github.ref_type == 'tag' || github.ref_name == 'cmake-migration'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -312,6 +294,7 @@ jobs:
           test -f libui/debug/libui.a
           crystal build examples/gallery/basic_button.cr -o /tmp/uing-basic-button
       - name: Publish GitHub Release
+        if: github.ref_type == 'tag'
         uses: softprops/action-gh-release@v3
         with:
           name: ${{ github.ref_name }}
