@@ -2,7 +2,7 @@ name: Build + Release
 
 on:
   push:
-    branches: [main, pre-build, dev, cmake-migration]
+    branches: [main, pre-build, dev]
     tags: ["commit-*"]
   pull_request:
     branches: [main]
@@ -244,7 +244,7 @@ jobs:
 
   release:
     needs: [cmake-linux, cmake-windows, cmake-msys2, cmake-macos]
-    if: github.ref_type == 'tag' || github.ref_name == 'cmake-migration'
+    if: github.ref_type == 'tag' || github.ref_name == 'pre-build'
     runs-on: ubuntu-latest
     permissions:
       contents: write

@@ -12,7 +12,7 @@ Primary build and release automation is defined in `.github/workflows/cmake.yml`
 
 The build workflow runs on:
 
-- Pushes to `main`, `pre-build`, `dev`, and `cmake-migration`
+- Pushes to `main`, `pre-build`, and `dev`
 - Tags matching `commit-*`
 - Pull requests targeting `main`
 - Manual `workflow_dispatch`
@@ -91,7 +91,7 @@ When the workflow runs for a tag, the `release` job waits for all 28 packages,
 checks their names against `cmake/release-archives.txt`, validates their
 contents, rejects legacy/build-tree paths, and
 tests relocated CMake, direct C, Crystal, and Ruby Fiddle consumers before
-publishing a GitHub Release. The same packaging and consumer validation runs on the
-`cmake-migration` branch without publishing a release.
+publishing a GitHub Release. The same packaging and consumer validation runs on
+the `pre-build` branch without publishing a release.
 
 Tags whose names contain `experimental` are published as prereleases.
