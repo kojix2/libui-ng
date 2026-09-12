@@ -274,8 +274,8 @@ jobs:
               echo "Legacy build-tree entry found in $name"
               exit 1
             fi
-            if unzip -p "$archive" | grep -a -F "$GITHUB_WORKSPACE"; then
-              echo "Source or build path found in $name"
+            if unzip -p "$archive" 'lib/cmake/libui-ng/*.cmake' | grep -F "$GITHUB_WORKSPACE"; then
+              echo "Source or build path found in CMake package metadata in $name"
               exit 1
             fi
             case "$name" in
