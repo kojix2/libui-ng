@@ -19,11 +19,11 @@ The build workflow runs on:
 
 ## Build Matrix
 
-The workflow currently runs 28 release configurations before packaging, plus
+The workflow currently runs 32 release configurations before packaging, plus
 minimum-CMake, Linux distribution, and Clang checks:
 
 - Ubuntu: 8 builds
-- Windows MSVC: 8 builds
+- Windows MSVC: 12 builds
 - Windows MinGW: 2 builds
 - Windows UCRT: 2 builds
 - macOS: 8 builds
@@ -50,10 +50,11 @@ covers `FetchContent`.
 - Library types: `static`, `shared`
 - Build types: `Release`, `Debug`
 - Toolchain setup: `TheMrMilchmann/setup-msvc-dev`
-- MSVC release packages use the dynamic release CRT (`/MD`) for both Release
-  and Debug builds. This keeps the prebuilt libraries compatible with language
-  bindings that use the release CRT; Debug packages still retain debug symbols
-  and Debug build settings, but do not use the Debug CRT (`/MDd`).
+- Static MSVC packages are published with both the dynamic release CRT (`/MD`)
+  and static release CRT (`/MT`). Shared packages use `/MD`. Asset names include
+  `md` or `mt` so consumers can select the CRT that matches their application.
+  Debug packages retain debug symbols and Debug build settings, but deliberately
+  use the release CRT instead of `/MDd` or `/MTd` for language-binding compatibility.
 - Tests: `ctest --test-dir builddir --output-on-failure`
 
 ### Windows MinGW

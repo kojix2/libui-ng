@@ -125,6 +125,9 @@ headers under `include/`, native libraries under `lib/` (and DLLs under `bin/`
 on Windows), license metadata, and the installed `libui-ng` CMake package.
 Static and shared SDKs are published separately for each supported platform,
 architecture, and Debug/Release configuration.
+MSVC static SDKs are additionally published in `md` (`/MD`) and `mt` (`/MT`)
+variants; MSVC shared SDKs use `md`. Select the variant that matches the CRT
+linkage of the consuming application.
 The complete set of release asset names is recorded in
 [`cmake/release-archives.txt`](cmake/release-archives.txt).
 

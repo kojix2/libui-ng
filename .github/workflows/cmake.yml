@@ -77,13 +77,16 @@ jobs:
       fail-fast: false
       matrix:
         arch: [x86, x64]
-        libtype: [static, shared]
         buildtype: [Release, Debug]
+        linkage:
+          - {libtype: shared, crt: md, runtime: MultiThreadedDLL}
+          - {libtype: static, crt: md, runtime: MultiThreadedDLL}
+          - {libtype: static, crt: mt, runtime: MultiThreaded}
         include:
           - {buildtype: Release, buildlabel: release}
           - {buildtype: Debug, buildlabel: debug}
     runs-on: windows-latest
-    name: Windows-${{ matrix.arch }}-msvc-${{ matrix.libtype }}-${{ matrix.buildlabel }}
+    name: Windows-${{ matrix.arch }}-msvc-${{ matrix.linkage.libtype }}-${{ matrix.linkage.crt }}-${{ matrix.buildlabel }}
     steps:
       - uses: actions/checkout@v6
       - uses: TheMrMilchmann/setup-msvc-dev@v4
@@ -92,12 +95,12 @@ jobs:
       - name: Configure
         shell: pwsh
         run: |
-          $shared = '${{ matrix.libtype == 'shared' && 'ON' || 'OFF' }}'
+          $shared = '${{ matrix.linkage.libtype == 'shared' && 'ON' || 'OFF' }}'
           cmake -S . -B builddir -G Ninja `
             -DCMAKE_BUILD_TYPE=${{ matrix.buildtype }} `
             "-DBUILD_SHARED_LIBS:BOOL=$shared" `
             -DLIBUI_FETCH_TEST_DEPS=ON `
-            -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL
+            -DCMAKE_MSVC_RUNTIME_LIBRARY=${{ matrix.linkage.runtime }}
           $configured = (Select-String -Path builddir/CMakeCache.txt -Pattern '^BUILD_SHARED_LIBS:BOOL=').Line.Split('=', 2)[1]
           if ($configured -ne $shared) {
             throw "Expected BUILD_SHARED_LIBS=$shared, but CMake configured $configured"
@@ -107,7 +110,7 @@ jobs:
           cmake --build builddir --verbose
           ctest --test-dir builddir --output-on-failure --timeout 180
       - name: Visual Studio generator smoke test
-        if: matrix.arch == 'x64' && matrix.libtype == 'shared' && matrix.buildtype == 'Release'
+        if: matrix.arch == 'x64' && matrix.linkage.libtype == 'shared' && matrix.buildtype == 'Release'
         shell: pwsh
         run: |
           # The windows-latest image can advance to a newer Visual Studio release.
@@ -120,10 +123,10 @@ jobs:
         run: >-
           cpack -G ZIP -C ${{ matrix.buildtype }}
           --config builddir/CPackConfig.cmake -B packages
-          -D CPACK_PACKAGE_FILE_NAME=libui-ng-windows-${{ matrix.arch }}-msvc-${{ matrix.libtype }}-${{ matrix.buildlabel }}
+          -D CPACK_PACKAGE_FILE_NAME=libui-ng-windows-${{ matrix.arch }}-msvc-${{ matrix.linkage.libtype }}-${{ matrix.linkage.crt }}-${{ matrix.buildlabel }}
       - uses: actions/upload-artifact@v7
         with:
-          name: libui-ng-windows-${{ matrix.arch }}-msvc-${{ matrix.libtype }}-${{ matrix.buildlabel }}
+          name: libui-ng-windows-${{ matrix.arch }}-msvc-${{ matrix.linkage.libtype }}-${{ matrix.linkage.crt }}-${{ matrix.buildlabel }}
           path: packages/*.zip
           if-no-files-found: error
 
@@ -295,9 +298,9 @@ jobs:
                 ;;
               *) echo "Unexpected linkage in release asset: $name"; exit 1 ;;
             esac
-            if [[ "$name" == libui-ng-windows-*-msvc-static-debug.zip ]]; then
+            if [[ "$name" == libui-ng-windows-*-msvc-static-*-debug.zip ]]; then
               grep -qx 'lib/libui.pdb' <<<"$entries"
-            elif [[ "$name" == libui-ng-windows-*-msvc-shared-debug.zip ]]; then
+            elif [[ "$name" == libui-ng-windows-*-msvc-shared-*-debug.zip ]]; then
               grep -qx 'bin/libui.pdb' <<<"$entries"
               grep -qx 'lib/libui.pdb' <<<"$entries"
             fi
