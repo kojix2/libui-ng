@@ -1,4 +1,4 @@
-name: CMake migration
+name: Build + Release
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: cmake-migration-${{ github.ref }}
+  group: build-release-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -19,7 +19,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, ubuntu-24.04-arm]
         libtype: [static, shared]
-        buildtype: [Release, Debug]
+        buildtype: [release, debug]
         include:
           - {os: ubuntu-latest, arch: x64}
           - {os: ubuntu-24.04-arm, arch: arm64}
@@ -46,12 +46,12 @@ jobs:
           cmake -S test/cmake/consumer -B consumer-add -G Ninja -DLIBUI_SOURCE_MODE=add_subdirectory -DLIBUI_SOURCE_DIR="$PWD" -DBUILD_SHARED_LIBS=${{ matrix.libtype == 'shared' && 'ON' || 'OFF' }}
           cmake --build consumer-add
       - name: Test FetchContent consumer
-        if: matrix.arch == 'x64' && matrix.libtype == 'static' && matrix.buildtype == 'Release'
+        if: matrix.arch == 'x64' && matrix.libtype == 'static' && matrix.buildtype == 'release'
         run: |
           cmake -S test/cmake/consumer -B consumer-fetch -G Ninja -DLIBUI_SOURCE_MODE=fetchcontent -DLIBUI_SOURCE_DIR="$PWD" -DBUILD_SHARED_LIBS=OFF
           cmake --build consumer-fetch
       - name: Test relocated install consumer
-        if: matrix.arch == 'x64' && matrix.buildtype == 'Release'
+        if: matrix.arch == 'x64' && matrix.buildtype == 'release'
         run: |
           cmake --install builddir --prefix "$RUNNER_TEMP/libui-prefix-one-${{ matrix.libtype }}"
           if grep -R -I -F "$GITHUB_WORKSPACE" "$RUNNER_TEMP/libui-prefix-one-${{ matrix.libtype }}"; then exit 1; fi
@@ -60,6 +60,12 @@ jobs:
           cmake --build consumer-installed
           ./consumer-installed/consumer
       - run: cmake --build builddir --target stage-legacy
+      - name: Verify relocated shared runtime
+        if: matrix.libtype == 'shared'
+        run: |
+          executable=builddir/legacy-stage/builddir/meson-out/hello-world
+          library=builddir/legacy-stage/builddir/meson-out/libui.so
+          test "$(readlink -f "$(ldd "$executable" | awk '/libui\.so/ { print $3; exit }')")" = "$(readlink -f "$library")"
       - uses: actions/upload-artifact@v7
         with:
           name: Ubuntu-${{ matrix.arch }}-${{ matrix.libtype }}-${{ matrix.buildtype }}
@@ -71,7 +77,7 @@ jobs:
       matrix:
         arch: [x86, x64]
         libtype: [static, shared]
-        buildtype: [Release, Debug]
+        buildtype: [release, debug]
     runs-on: windows-latest
     name: Windows-${{ matrix.arch }}-msvc-${{ matrix.libtype }}-${{ matrix.buildtype }}
     steps:
@@ -93,7 +99,7 @@ jobs:
           cmake --build builddir --verbose
           ctest --test-dir builddir --output-on-failure --timeout 180
       - name: Visual Studio generator smoke test
-        if: matrix.arch == 'x64' && matrix.libtype == 'shared' && matrix.buildtype == 'Release'
+        if: matrix.arch == 'x64' && matrix.libtype == 'shared' && matrix.buildtype == 'release'
         shell: pwsh
         run: |
           # The windows-latest image can advance to a newer Visual Studio release.
@@ -112,10 +118,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {system: MINGW64, flavor: mingw, buildtype: Release}
-          - {system: MINGW64, flavor: mingw, buildtype: Debug}
-          - {system: UCRT64, flavor: ucrt, buildtype: Release}
-          - {system: UCRT64, flavor: ucrt, buildtype: Debug}
+          - {system: MINGW64, flavor: mingw, buildtype: release}
+          - {system: MINGW64, flavor: mingw, buildtype: debug}
+          - {system: UCRT64, flavor: ucrt, buildtype: release}
+          - {system: UCRT64, flavor: ucrt, buildtype: debug}
     runs-on: windows-latest
     name: Windows-x64-${{ matrix.flavor }}-static-${{ matrix.buildtype }}
     defaults:
@@ -146,7 +152,7 @@ jobs:
       matrix:
         os: [macos-15-intel, macos-latest]
         libtype: [static, shared]
-        buildtype: [Release, Debug]
+        buildtype: [release, debug]
         include:
           - {os: macos-15-intel, arch: x64, deployment: "10.12"}
           - {os: macos-latest, arch: arm64, deployment: "11.0"}
@@ -162,7 +168,7 @@ jobs:
           ctest --test-dir builddir --output-on-failure --timeout 180
           cmake --build builddir --target stage-legacy
       - name: Xcode generator smoke test
-        if: matrix.arch == 'arm64' && matrix.libtype == 'shared' && matrix.buildtype == 'Release'
+        if: matrix.arch == 'arm64' && matrix.libtype == 'shared' && matrix.buildtype == 'release'
         run: |
           cmake -S . -B build-xcode -G Xcode -DBUILD_SHARED_LIBS=ON -DLIBUI_BUILD_TESTS=OFF -DLIBUI_BUILD_EXAMPLES=OFF -DCMAKE_OSX_DEPLOYMENT_TARGET=${{ matrix.deployment }}
           cmake --build build-xcode --config Release
@@ -235,3 +241,80 @@ jobs:
           nm -D --defined-only meson-parity/meson-out/libui.so | awk '{ print $3 }' | sort -u > /tmp/meson-symbols
           nm -D --defined-only cmake-parity/libui.so | awk '{ print $3 }' | sort -u > /tmp/cmake-symbols
           diff -u /tmp/meson-symbols /tmp/cmake-symbols
+
+  release:
+    needs: [cmake-linux, cmake-windows, cmake-msys2, cmake-macos]
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+      - name: Create legacy-compatible ZIP files
+        run: |
+          mkdir -p zips
+          find dist -mindepth 1 -maxdepth 1 -type d -print0 | while IFS= read -r -d '' dir; do
+            artifact=$(basename "$dir")
+            (cd "$dir" && zip -qr "$GITHUB_WORKSPACE/zips/$artifact.zip" .)
+          done
+          test "$(find zips -maxdepth 1 -name '*.zip' | wc -l)" -eq 28
+      - name: Validate release archive contract
+        run: |
+          for archive in zips/*.zip; do
+            name=$(basename "$archive")
+            entries=$(unzip -Z1 "$archive")
+            grep -qx 'ui.h' <<<"$entries"
+            grep -qx 'builddir/meson-logs/meson-setup.txt' <<<"$entries"
+            grep -qx 'builddir/meson-logs/meson-log.txt' <<<"$entries"
+            grep -qx 'builddir/meson-logs/testlog.txt' <<<"$entries"
+            case "$name" in
+              Ubuntu-*) grep -qx 'ui_unix.h' <<<"$entries" ;;
+              macOS-*) grep -qx 'ui_darwin.h' <<<"$entries" ;;
+              Windows-*) grep -qx 'ui_windows.h' <<<"$entries" ;;
+              *) echo "Unexpected release asset: $name"; exit 1 ;;
+            esac
+            case "$name" in
+              *-static-*) grep -qx 'builddir/meson-out/libui.a' <<<"$entries" ;;
+              Ubuntu-*-shared-*) grep -qx 'builddir/meson-out/libui.so' <<<"$entries" ;;
+              macOS-*-shared-*) grep -qx 'builddir/meson-out/libui.dylib' <<<"$entries" ;;
+              Windows-*-shared-*) grep -qx 'builddir/meson-out/libui.dll' <<<"$entries" ;;
+            esac
+            if [[ "$name" == Windows-*-msvc-static-debug.zip ]]; then
+              grep -q '^builddir/meson-out/libui\.a\.p/.*\.pdb$' <<<"$entries"
+            fi
+          done
+      - uses: crystal-lang/install-crystal@v1
+      - uses: actions/checkout@v6
+        with:
+          repository: kojix2/uing
+          ref: de7adcbcc455332f2b55ce9c2ab6f135c521b495
+          path: uing
+      - name: Validate ZIP files with UIng
+        env:
+          LIBUI_RELEASE_DIR: ${{ github.workspace }}/zips
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y libgtk-3-dev
+          release_sha=$(sha256sum zips/Ubuntu-x64-static-release.zip | cut -d' ' -f1)
+          debug_sha=$(sha256sum zips/Ubuntu-x64-static-debug.zip | cut -d' ' -f1)
+          sed -i -E "s#(\"Ubuntu-x64-static-release.zip\"[[:space:]]*=>[[:space:]]*\")[0-9a-f]+#\1$release_sha#" uing/download.cr
+          sed -i -E "s#(\"Ubuntu-x64-static-debug.zip\"[[:space:]]*=>[[:space:]]*\")[0-9a-f]+#\1$debug_sha#" uing/download.cr
+          sed -i 's|https://github.com/kojix2/libui-ng/releases/download/commit-|file://#{ENV["LIBUI_RELEASE_DIR"]}/|' uing/download.cr
+          uing_commit=$(sed -n 's/^COMMIT_HASH = "\(.*\)"/\1/p' uing/download.cr)
+          mkdir -p "zips/$uing_commit"
+          cp zips/Ubuntu-x64-static-release.zip zips/Ubuntu-x64-static-debug.zip "zips/$uing_commit/"
+          cd uing
+          crystal run download.cr
+          test -f libui/release/libui.a
+          test -f libui/debug/libui.a
+          crystal build examples/gallery/basic_button.cr -o /tmp/uing-basic-button
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          name: ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          prerelease: ${{ contains(github.ref_name, 'experimental') }}
+          files: zips/*.zip

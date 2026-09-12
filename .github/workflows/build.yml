@@ -1,10 +1,8 @@
-name: Pre-build + Release
+name: Meson compatibility
 
 on:
   push:
     branches: [main, pre-build, dev]
-    tags:
-      - "commit-*"
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -216,70 +214,3 @@ jobs:
             ui_darwin.h
             ui.h
             builddir/meson-logs/*.txt
-
-  # ------------------ Release Job ------------------
-  release:
-    needs:
-      [
-        meson-linux,
-        meson-windows,
-        meson-windows-mingw,
-        meson-windows-ucrt,
-        meson-macos,
-      ]
-    if: github.ref_type == 'tag'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Download All Artifacts
-        uses: actions/download-artifact@v8
-        with:
-          path: dist
-
-      - name: Create ZIP files for each platform
-        run: |
-          # Create directory for zip files
-          mkdir -p zips
-
-          # Create zip for Ubuntu builds
-          find dist/Ubuntu-* -type d -maxdepth 0 | while read dir; do
-            platform_name=$(basename "$dir")
-            (cd "dist/$platform_name" && zip -r "../../zips/$platform_name.zip" .)
-          done
-
-          # Create zip for Windows builds
-          find dist/Windows-* -type d -maxdepth 0 | while read dir; do
-            platform_name=$(basename "$dir")
-            (cd "dist/$platform_name" && zip -r "../../zips/$platform_name.zip" .)
-          done
-
-          # Create zip for macOS builds
-          find dist/macOS-* -type d -maxdepth 0 | while read dir; do
-            platform_name=$(basename "$dir")
-            (cd "dist/$platform_name" && zip -r "../../zips/$platform_name.zip" .)
-          done
-
-          # List created zip files
-          ls -la zips/
-
-      - name: Check if experimental release
-        id: check_experimental
-        run: |
-          if [[ "${{ github.ref_name }}" == *"experimental"* ]]; then
-            echo "is_experimental=true" >> $GITHUB_OUTPUT
-            echo "release_name=${{ github.ref_name }}" >> $GITHUB_OUTPUT
-          else
-            echo "is_experimental=false" >> $GITHUB_OUTPUT
-            echo "release_name=${{ github.ref_name }}" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v3
-        with:
-          name: ${{ steps.check_experimental.outputs.release_name }}
-          tag_name: ${{ github.ref_name }}
-          prerelease: ${{ steps.check_experimental.outputs.is_experimental }}
-          files: |
-            zips/*.zip

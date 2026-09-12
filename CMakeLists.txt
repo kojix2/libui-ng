@@ -81,12 +81,22 @@ function(libui_apply_internal_options target)
 			target_link_options(${target} PRIVATE -static -static-libgcc -static-libstdc++)
 		endif()
 	endif()
-	if(WIN32 AND BUILD_SHARED_LIBS AND NOT "${target}" STREQUAL "libui_ui")
-		add_custom_command(TARGET ${target} POST_BUILD
-			COMMAND ${CMAKE_COMMAND} -E copy_if_different
-				$<TARGET_FILE:libui_ui> $<TARGET_FILE_DIR:${target}>
-			VERBATIM
-		)
+	if(BUILD_SHARED_LIBS AND NOT "${target}" STREQUAL "libui_ui")
+		if(APPLE)
+			set(_libui_executable_rpath "@executable_path/")
+		elseif(UNIX)
+			set(_libui_executable_rpath "$ORIGIN")
+		endif()
+		if(DEFINED _libui_executable_rpath)
+			# Runtime artifacts are staged next to libui.  Use that same
+			# relocatable layout in the build tree so copied release artifacts
+			# never retain an absolute path to the CI build directory.
+			set_target_properties(${target} PROPERTIES
+				BUILD_WITH_INSTALL_RPATH TRUE
+				INSTALL_RPATH "${_libui_executable_rpath}"
+			)
+			unset(_libui_executable_rpath)
+		endif()
 	endif()
 endfunction()
 
@@ -120,6 +130,17 @@ if(NOT BUILD_SHARED_LIBS)
 	target_compile_definitions(libui_ui PUBLIC _UI_STATIC)
 endif()
 libui_apply_internal_options(libui_ui)
+if(BUILD_SHARED_LIBS AND NOT WIN32)
+	# Executables use a relative RPATH and share one runtime output directory.
+	# Copy the library once, before any dependent executable is linked.
+	add_custom_command(TARGET libui_ui POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E make_directory
+			"${CMAKE_BINARY_DIR}/artifacts/$<CONFIG>"
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different
+			$<TARGET_FILE:libui_ui> "${CMAKE_BINARY_DIR}/artifacts/$<CONFIG>"
+		VERBATIM
+	)
+endif()
 
 set(LIBUI_GENERATED_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
 set(LIBUI_VERSION_SOURCE "${LIBUI_GENERATED_DIR}/version.c")

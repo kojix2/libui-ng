@@ -1,6 +1,8 @@
 # Continuous Integration
 
-Build automation is defined in `.github/workflows/build.yml`.
+Primary build and release automation is defined in `.github/workflows/cmake.yml`.
+`.github/workflows/build.yml` temporarily retains the Meson compatibility
+matrix, but it no longer runs for tags or publishes releases.
 
 ## References
 
@@ -85,6 +87,8 @@ covers `FetchContent`.
 Every build invokes the `stage-legacy` target to produce the release-compatible
 `builddir/meson-out` archive layout without changing CMake's native library
 layout. When the workflow runs for a tag, the `release` job waits for all build
-jobs, zips each staged artifact directory, and publishes a GitHub Release.
+jobs, zips each staged artifact directory, validates every ZIP against the
+legacy archive contract, and uses the pinned UIng downloader to extract and
+link the Linux x64 static artifacts before publishing a GitHub Release.
 
 Tags whose names contain `experimental` are published as prereleases.
