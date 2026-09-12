@@ -50,7 +50,10 @@ covers `FetchContent`.
 - Library types: `static`, `shared`
 - Build types: `Release`, `Debug`
 - Toolchain setup: `TheMrMilchmann/setup-msvc-dev`
-- MSVC builds select the corresponding static CRT with `CMAKE_MSVC_RUNTIME_LIBRARY`
+- MSVC release packages use the dynamic release CRT (`/MD`) for both Release
+  and Debug builds. This keeps the prebuilt libraries compatible with language
+  bindings that use the release CRT; Debug packages still retain debug symbols
+  and Debug build settings, but do not use the Debug CRT (`/MDd`).
 - Tests: `ctest --test-dir builddir --output-on-failure`
 
 ### Windows MinGW
