@@ -35,6 +35,7 @@ target_link_libraries(dummy_extension PUBLIC libui::ui)
 
 add_executable(consumer main.c)
 target_link_libraries(consumer PRIVATE dummy_extension)
+libui_configure_application(consumer)
 
 if(UNIX AND NOT APPLE)
 	add_executable(unix-platform-consumer unix-platform.c)

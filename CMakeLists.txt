@@ -42,7 +42,6 @@ include(CMakePackageConfigHelpers)
 
 function(libui_apply_internal_options target)
 	set_target_properties(${target} PROPERTIES
-		RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/artifacts/$<CONFIG>"
 		C_STANDARD 99
 		C_STANDARD_REQUIRED ON
 		C_EXTENSIONS OFF
@@ -50,6 +49,14 @@ function(libui_apply_internal_options target)
 		CXX_STANDARD_REQUIRED ON
 		CXX_EXTENSIONS OFF
 	)
+	# Keep the repository's release artifacts together, but do not override a
+	# parent project's output layout when libui is used through add_subdirectory
+	# or FetchContent.
+	if(LIBUI_TOP_LEVEL)
+		set_target_properties(${target} PROPERTIES
+			RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/artifacts/$<CONFIG>"
+		)
+	endif()
 	target_compile_options(${target} PRIVATE
 		$<$<COMPILE_LANG_AND_ID:C,GNU,Clang,AppleClang>:-Wall>
 		$<$<COMPILE_LANG_AND_ID:C,GNU,Clang,AppleClang>:-Wextra>
@@ -69,6 +76,7 @@ function(libui_apply_internal_options target)
 		$<$<CXX_COMPILER_ID:MSVC>:/W4>
 		$<$<CXX_COMPILER_ID:MSVC>:/wd4100>
 		$<$<CXX_COMPILER_ID:MSVC>:/bigobj>
+		$<$<CXX_COMPILER_ID:MSVC>:/utf-8>
 		$<$<AND:$<CXX_COMPILER_ID:MSVC>,$<CONFIG:Debug>>:/RTC1>
 	)
 	if(COMMAND target_link_options)
@@ -81,7 +89,8 @@ function(libui_apply_internal_options target)
 			target_link_options(${target} PRIVATE -static -static-libgcc -static-libstdc++)
 		endif()
 	endif()
-	if(BUILD_SHARED_LIBS AND NOT "${target}" STREQUAL "libui_ui")
+	if(LIBUI_TOP_LEVEL AND BUILD_SHARED_LIBS AND
+			NOT "${target}" STREQUAL "libui_ui")
 		if(APPLE)
 			set(_libui_executable_rpath "@executable_path/")
 		elseif(UNIX)
@@ -102,6 +111,8 @@ endfunction()
 
 add_library(libui_ui)
 add_library(libui::ui ALIAS libui_ui)
+
+include(cmake/libui-ngApplication.cmake)
 
 set_target_properties(libui_ui PROPERTIES
 	OUTPUT_NAME ui
@@ -130,7 +141,7 @@ if(NOT BUILD_SHARED_LIBS)
 	target_compile_definitions(libui_ui PUBLIC _UI_STATIC)
 endif()
 libui_apply_internal_options(libui_ui)
-if(BUILD_SHARED_LIBS AND NOT WIN32)
+if(LIBUI_TOP_LEVEL AND BUILD_SHARED_LIBS AND NOT WIN32)
 	# Executables use a relative RPATH and share one runtime output directory.
 	# Copy the library once, before any dependent executable is linked.
 	add_custom_command(TARGET libui_ui POST_BUILD
@@ -216,9 +227,18 @@ configure_package_config_file(
 	INSTALL_DESTINATION "${LIBUI_INSTALL_CMAKEDIR}"
 )
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/libui-ngConfig.cmake"
+	cmake/libui-ngApplication.cmake
 	DESTINATION "${LIBUI_INSTALL_CMAKEDIR}"
 	COMPONENT Development
 )
+if(WIN32)
+	install(FILES
+		cmake/windows/application.rc.in
+		cmake/windows/application.manifest.in
+		DESTINATION "${LIBUI_INSTALL_CMAKEDIR}/windows"
+		COMPONENT Development
+	)
+endif()
 install(EXPORT libui-ngTargets
 	FILE libui-ngTargets.cmake
 	NAMESPACE libui::

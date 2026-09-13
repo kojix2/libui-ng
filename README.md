@@ -118,6 +118,70 @@ target_link_libraries(myapp PRIVATE libui::ui)
 The same `libui::ui` target is available through `add_subdirectory()` and
 `FetchContent_MakeAvailable()`.
 
+## Quick Start
+
+Create an application target and link it to libui:
+
+```cmake
+cmake_minimum_required(VERSION 3.15)
+project(myapp LANGUAGES C)
+
+include(FetchContent)
+FetchContent_Declare(libui_ng
+    GIT_REPOSITORY https://github.com/kojix2/libui-ng.git
+    GIT_TAG pre-build
+)
+FetchContent_MakeAvailable(libui_ng)
+
+add_executable(myapp main.c)
+target_link_libraries(myapp PRIVATE libui::ui)
+libui_configure_application(myapp)
+```
+
+`libui_configure_application()` applies the platform-specific build and runtime
+settings needed by an application target. Applications that manage these
+details themselves can omit it.
+For reproducible builds, replace `pre-build` with an immutable tag from the
+[release page](https://github.com/kojix2/libui-ng/releases).
+
+When libui is brought in through `FetchContent` or `add_subdirectory`, its tests
+and examples default to off. A top-level libui build enables them by default.
+
+A minimal `main.c` is:
+
+```c
+#include <stdio.h>
+#include <ui.h>
+
+static int onClosing(uiWindow *window, void *data)
+{
+    (void) window;
+    (void) data;
+    uiQuit();
+    return 1;
+}
+
+int main(void)
+{
+    uiInitOptions options = {0};
+    const char *error = uiInit(&options);
+    uiWindow *window;
+
+    if (error != NULL) {
+        fprintf(stderr, "libui initialization failed: %s\n", error);
+        uiFreeInitError(error);
+        return 1;
+    }
+
+    window = uiNewWindow("Hello", 320, 200, 0);
+    uiWindowOnClosing(window, onClosing, NULL);
+    uiControlShow(uiControl(window));
+    uiMain();
+    uiUninit();
+    return 0;
+}
+```
+
 ## Binary SDKs
 
 Release ZIP files are relocatable CMake install trees. They contain public

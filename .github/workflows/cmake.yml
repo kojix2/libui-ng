@@ -47,6 +47,7 @@ jobs:
         run: |
           cmake -S test/cmake/consumer -B consumer-add -G Ninja -DLIBUI_SOURCE_MODE=add_subdirectory -DLIBUI_SOURCE_DIR="$PWD" -DBUILD_SHARED_LIBS=${{ matrix.libtype == 'shared' && 'ON' || 'OFF' }}
           cmake --build consumer-add
+          ./consumer-add/consumer
       - name: Test FetchContent consumer
         if: matrix.arch == 'x64' && matrix.libtype == 'static' && matrix.buildtype == 'Release'
         run: |
@@ -109,6 +110,38 @@ jobs:
         run: |
           cmake --build builddir --verbose
           ctest --test-dir builddir --output-on-failure --timeout 180
+      - name: Test FetchContent consumer
+        if: matrix.arch == 'x64' && matrix.buildtype == 'Release' && matrix.linkage.crt == 'md'
+        shell: pwsh
+        run: |
+          $shared = '${{ matrix.linkage.libtype == 'shared' && 'ON' || 'OFF' }}'
+          cmake -S test/cmake/consumer -B consumer-fetch -G Ninja `
+            -DCMAKE_BUILD_TYPE=${{ matrix.buildtype }} `
+            -DLIBUI_SOURCE_MODE=fetchcontent `
+            -DLIBUI_SOURCE_DIR="$PWD" `
+            "-DBUILD_SHARED_LIBS:BOOL=$shared" `
+            -DCMAKE_MSVC_RUNTIME_LIBRARY=${{ matrix.linkage.runtime }}
+          cmake --build consumer-fetch --verbose
+          & ./consumer-fetch/consumer.exe
+          if ($LASTEXITCODE -ne 0) {
+            throw "FetchContent consumer failed with exit code $LASTEXITCODE"
+          }
+      - name: Test installed consumer
+        if: matrix.arch == 'x64' && matrix.buildtype == 'Release'
+        shell: pwsh
+        run: |
+          $prefix = "$env:RUNNER_TEMP/libui-prefix"
+          cmake --install builddir --prefix $prefix
+          cmake -S test/cmake/consumer -B consumer-installed -G Ninja `
+            -DCMAKE_BUILD_TYPE=${{ matrix.buildtype }} `
+            -DLIBUI_SOURCE_MODE=installed `
+            "-DCMAKE_PREFIX_PATH=$prefix" `
+            -DCMAKE_MSVC_RUNTIME_LIBRARY=${{ matrix.linkage.runtime }}
+          cmake --build consumer-installed --verbose
+          & ./consumer-installed/consumer.exe
+          if ($LASTEXITCODE -ne 0) {
+            throw "Installed consumer failed with exit code $LASTEXITCODE"
+          }
       - name: Visual Studio generator smoke test
         if: matrix.arch == 'x64' && matrix.linkage.libtype == 'shared' && matrix.buildtype == 'Release'
         shell: pwsh
@@ -192,6 +225,17 @@ jobs:
         run: |
           cmake -S . -B build-xcode -G Xcode -DBUILD_SHARED_LIBS=ON -DLIBUI_BUILD_TESTS=OFF -DLIBUI_BUILD_EXAMPLES=OFF -DCMAKE_OSX_DEPLOYMENT_TARGET=${{ matrix.deployment }}
           cmake --build build-xcode --config Release
+      - name: Test installed consumer
+        if: matrix.arch == 'arm64' && matrix.buildtype == 'Release'
+        run: |
+          cmake --install builddir --prefix "$RUNNER_TEMP/libui-prefix"
+          cmake -S test/cmake/consumer -B consumer-installed -G Ninja \
+            -DCMAKE_BUILD_TYPE=${{ matrix.buildtype }} \
+            -DLIBUI_SOURCE_MODE=installed \
+            -DCMAKE_PREFIX_PATH="$RUNNER_TEMP/libui-prefix" \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=${{ matrix.deployment }}
+          cmake --build consumer-installed --verbose
+          ./consumer-installed/consumer
       - uses: actions/upload-artifact@v7
         with:
           name: libui-ng-macos-${{ matrix.arch }}-${{ matrix.libtype }}-${{ matrix.buildlabel }}
@@ -270,6 +314,7 @@ jobs:
             entries=$(unzip -Z1 "$archive")
             grep -qx 'include/ui.h' <<<"$entries"
             grep -qx 'lib/cmake/libui-ng/libui-ngConfig.cmake' <<<"$entries"
+            grep -qx 'lib/cmake/libui-ng/libui-ngApplication.cmake' <<<"$entries"
             grep -qx 'lib/cmake/libui-ng/libui-ngTargets.cmake' <<<"$entries"
             grep -q '^lib/cmake/libui-ng/libui-ngTargets-.*\.cmake$' <<<"$entries"
             grep -qx 'share/doc/libui-ng/LICENSE.md' <<<"$entries"
