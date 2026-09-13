@@ -223,10 +223,10 @@ install(FILES LICENSE.md
 set(LIBUI_INSTALL_CMAKEDIR "${CMAKE_INSTALL_LIBDIR}/cmake/libui-ng")
 configure_package_config_file(
 	cmake/libui-ngConfig.cmake.in
-	"${CMAKE_CURRENT_BINARY_DIR}/libui-ngConfig.cmake"
+	"${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/libui-ngConfig.cmake"
 	INSTALL_DESTINATION "${LIBUI_INSTALL_CMAKEDIR}"
 )
-install(FILES "${CMAKE_CURRENT_BINARY_DIR}/libui-ngConfig.cmake"
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/libui-ngConfig.cmake"
 	cmake/libui-ngApplication.cmake
 	DESTINATION "${LIBUI_INSTALL_CMAKEDIR}"
 	COMPONENT Development
