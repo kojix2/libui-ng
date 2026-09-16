@@ -31,6 +31,9 @@ if(WIN32)
 endif()
 libui_add_test(unit ${unit_sources})
 target_link_libraries(unit PRIVATE libui_test_support)
+if(WIN32)
+	target_link_libraries(unit PRIVATE user32 comctl32)
+endif()
 set_tests_properties(unit PROPERTIES
 	TIMEOUT 180 LABELS "contract;backend;gui;${unit_backend};${unit_linkage}")
 
