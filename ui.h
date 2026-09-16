@@ -922,6 +922,38 @@ _UI_EXTERN char *uiLabelText(uiLabel *l);
 _UI_EXTERN void uiLabelSetText(uiLabel *l, const char *text);
 
 /**
+ * Returns the label font size.
+ *
+ * @param l uiLabel instance.
+ * @returns Font size in typographical points. [Default: OS-dependent].
+ * @memberof uiLabel
+ */
+_UI_EXTERN double uiLabelFontSize(uiLabel *l);
+
+/**
+ * Sets the label font size.
+ *
+ * Only the font size is changed; all other font properties are preserved.
+ *
+ * @param l uiLabel instance.
+ * @param size Font size in typographical points. Must be finite, positive,
+ *             and representable by the platform.
+ * @memberof uiLabel
+ */
+_UI_EXTERN void uiLabelSetFontSize(uiLabel *l, double size);
+
+/**
+ * Restores the platform-default label font size that was in effect when the
+ * label was created.
+ *
+ * Only the font size is reset; all other font properties are preserved.
+ *
+ * @param l uiLabel instance.
+ * @memberof uiLabel
+ */
+_UI_EXTERN void uiLabelResetFontSize(uiLabel *l);
+
+/**
  * Creates a new label.
  *
  * @param text Label text.\n

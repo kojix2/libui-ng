@@ -138,3 +138,79 @@ uiControl *labelVerticalAlignment(void)
 
 	return uiControl(vbox);
 }
+
+const char *labelFontSizeGuide(void) {
+	return
+	"1.\tThe first four labels should appear at 8, default, 18, and 32 point\n"
+	"\tsizes. None of the text should be clipped.\n"
+	"\n"
+	"2.\tUse the buttons to change the final multiline label between 10 and\n"
+	"\t24 points, then restore the default size. Its complete text block\n"
+	"\tshould remain vertically centered beside the entry.\n"
+	"\n"
+	"3.\tResize the window. All labels should retain their selected sizes and\n"
+	"\tthe layout should remain stable."
+	;
+}
+
+static void setLabelSize10(uiButton *button, void *data)
+{
+	uiLabelSetFontSize(uiLabel(data), 10);
+}
+
+static void setLabelSize24(uiButton *button, void *data)
+{
+	uiLabelSetFontSize(uiLabel(data), 24);
+}
+
+static void resetLabelSize(uiButton *button, void *data)
+{
+	uiLabelResetFontSize(uiLabel(data));
+}
+
+uiControl *labelFontSize(void)
+{
+	uiBox *vbox;
+	uiBox *row;
+	uiButton *button;
+	uiLabel *label;
+
+	vbox = uiNewVerticalBox();
+	uiBoxSetPadded(vbox, 1);
+
+	label = uiNewLabel("8 point label");
+	uiLabelSetFontSize(label, 8);
+	uiBoxAppend(vbox, uiControl(label), 0);
+
+	uiBoxAppend(vbox, uiControl(uiNewLabel("Default size label")), 0);
+
+	label = uiNewLabel("18 point label");
+	uiLabelSetFontSize(label, 18);
+	uiBoxAppend(vbox, uiControl(label), 0);
+
+	label = uiNewLabel("32 point label");
+	uiLabelSetFontSize(label, 32);
+	uiBoxAppend(vbox, uiControl(label), 0);
+
+	row = uiNewHorizontalBox();
+	uiBoxSetPadded(row, 1);
+	label = uiNewLabel("Dynamic multiline\nlabel");
+	uiBoxAppend(row, uiControl(label), 0);
+	uiBoxAppend(row, uiControl(newAlignmentTestEntry()), 1);
+	uiBoxAppend(vbox, uiControl(row), 1);
+
+	row = uiNewHorizontalBox();
+	uiBoxSetPadded(row, 1);
+	button = uiNewButton("10 pt");
+	uiButtonOnClicked(button, setLabelSize10, label);
+	uiBoxAppend(row, uiControl(button), 0);
+	button = uiNewButton("24 pt");
+	uiButtonOnClicked(button, setLabelSize24, label);
+	uiBoxAppend(row, uiControl(button), 0);
+	button = uiNewButton("Default");
+	uiButtonOnClicked(button, resetLabelSize, label);
+	uiBoxAppend(row, uiControl(button), 0);
+	uiBoxAppend(vbox, uiControl(row), 0);
+
+	return uiControl(vbox);
+}
