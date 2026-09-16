@@ -43,6 +43,7 @@ struct controlTestCase labelTestCases[] = {
 	QA_TEST("1. Multi Line", labelMultiLine),
 	QA_TEST("2. Vertical Alignment", labelVerticalAlignment),
 	QA_TEST("3. Compact Group Layout", labelCompactGroup),
+	QA_TEST("4. Font Size", labelFontSize),
 	{NULL, NULL, NULL}
 };
 
