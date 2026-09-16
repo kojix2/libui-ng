@@ -755,7 +755,7 @@ void uiLoadControlFont(uiFontDescriptor *f)
 		logLastError(L"error getting device caps");
 		goto fail;
 	}
-	size = abs(metrics.lfMessageFont.lfHeight) * 72 / pixels;
+	size = abs(metrics.lfMessageFont.lfHeight) * 72.0 / pixels;
 
 	uiprivFontDescriptorFromIDWriteFont(dwfont, f);
 	f->Family = toUTF8(family);

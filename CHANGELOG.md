@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- uiLabelFontSize(), uiLabelSetFontSize(), and uiLabelResetFontSize() APIs
 - uiVersion() API
 - uiWindowPosition() API
 - uiWindowSetPosition() API
