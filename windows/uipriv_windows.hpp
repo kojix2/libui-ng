@@ -77,9 +77,12 @@ extern HWND getDlgItem(HWND hwnd, int id);
 extern void invalidateRect(HWND hwnd, RECT *r, BOOL erase);
 
 // text.cpp
+extern double uiprivControlFontSize(HWND hwnd, HFONT font);
+extern HFONT uiprivControlFontForSize(HWND hwnd, HFONT baseFont, double size);
 extern WCHAR *windowTextAndLen(HWND hwnd, LRESULT *len);
 extern WCHAR *windowText(HWND hwnd);
 extern void setWindowText(HWND hwnd, WCHAR *wtext);
+extern void uiprivWindowTextSize(HWND hwnd, HFONT font, int *width, int *height);
 
 // init.cpp
 extern HINSTANCE hInstance;
