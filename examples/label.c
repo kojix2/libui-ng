@@ -45,6 +45,7 @@ int main(void)
 	uiWindowSetChild(w, uiControl(box));
 
 	label = uiNewLabel("Label text");
+	uiLabelSetFontSize(label, 18.0);
 	uiBoxAppend(box, uiControl(label), 0);
 
 	button = uiNewButton("Update Label");
