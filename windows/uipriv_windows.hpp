@@ -78,6 +78,7 @@ extern void invalidateRect(HWND hwnd, RECT *r, BOOL erase);
 extern WCHAR *windowTextAndLen(HWND hwnd, LRESULT *len);
 extern WCHAR *windowText(HWND hwnd);
 extern void setWindowText(HWND hwnd, WCHAR *wtext);
+extern void uiprivWindowTextSize(HWND hwnd, HFONT font, int *width, int *height);
 
 // init.cpp
 extern HINSTANCE hInstance;
