@@ -138,3 +138,46 @@ uiControl *labelVerticalAlignment(void)
 
 	return uiControl(vbox);
 }
+
+const char *labelCompactGroupGuide(void) {
+	return
+	"1.\tThe group on the left should be as tall as the text on the right.\n"
+	"\n"
+	"2.\tThe label row and separator should follow the checkbox closely.\n"
+	"\tAny spare height in the group should be below the entry, not between\n"
+	"\tthe controls."
+	;
+}
+
+uiControl *labelCompactGroup(void)
+{
+	uiBox *columns;
+	uiBox *inner;
+	uiBox *row;
+	uiGroup *group;
+
+	columns = uiNewHorizontalBox();
+	uiBoxSetPadded(columns, 1);
+	group = uiNewGroup("Controls");
+	uiGroupSetMargined(group, 1);
+	uiBoxAppend(columns, uiControl(group), 1);
+
+	inner = uiNewVerticalBox();
+	uiBoxSetPadded(inner, 1);
+	uiGroupSetChild(group, uiControl(inner));
+	uiBoxAppend(inner, uiControl(uiNewButton("Button")), 0);
+	uiBoxAppend(inner, uiControl(uiNewCheckbox("Checkbox")), 0);
+
+	row = uiNewHorizontalBox();
+	uiBoxSetPadded(row, 1);
+	uiBoxAppend(row, uiControl(uiNewLabel("First label")), 0);
+	uiBoxAppend(row, uiControl(uiNewLabel("Second label")), 0);
+	uiBoxAppend(inner, uiControl(row), 0);
+	uiBoxAppend(inner, uiControl(uiNewHorizontalSeparator()), 0);
+	uiBoxAppend(inner, uiControl(uiNewEntry()), 0);
+
+	uiBoxAppend(columns, uiControl(uiNewLabel(
+		"Tall neighbor\nOne\nTwo\nThree\nFour\nFive\nSix\nSeven\nEight\nNine\nTen\n"
+		"Eleven\nTwelve\nThirteen\nFourteen\nFifteen\nSixteen\nSeventeen\nEighteen\nNineteen\nTwenty")), 0);
+	return uiControl(columns);
+}

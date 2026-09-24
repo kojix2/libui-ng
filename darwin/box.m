@@ -294,8 +294,17 @@ static BOOL uiBoxHugsBottom(uiDarwinControl *c)
 }
 
 uiDarwinControlDefaultChildEdgeHuggingChanged(uiBox, view)
-uiDarwinControlDefaultHuggingPriority(uiBox, view)
-uiDarwinControlDefaultSetHuggingPriority(uiBox, view)
+
+// NSStackView has no intrinsic size; use its own hugging priority for nested boxes.
+static NSLayoutPriority uiBoxHuggingPriority(uiDarwinControl *c, NSLayoutConstraintOrientation orientation)
+{
+	return [uiBox(c)->view huggingPriorityForOrientation:orientation];
+}
+
+static void uiBoxSetHuggingPriority(uiDarwinControl *c, NSLayoutPriority priority, NSLayoutConstraintOrientation orientation)
+{
+	[uiBox(c)->view setHuggingPriority:priority forOrientation:orientation];
+}
 
 static void uiBoxChildVisibilityChanged(uiDarwinControl *c)
 {

@@ -50,8 +50,12 @@ void uiprivSingleChildConstraintsEstablish(uiprivSingleChildConstraints *c, NSVi
 {
 	id layoutItem;
 	CGFloat margin;
+	NSLayoutPriority optionalEdgePriority;
 
 	layoutItem = singleChildConstraintLayoutItem(contentView, margined, &margin);
+	// NSStackView hugging and ordinary content hugging both default to 250.
+	// Keep optional edge alignment below them so non-stretchy children stay compact.
+	optionalEdgePriority = NSLayoutPriorityDefaultLow - 1;
 
 	c->leadingConstraint = uiprivMkConstraint(layoutItem, NSLayoutAttributeLeading,
 		NSLayoutRelationEqual,
@@ -85,7 +89,7 @@ void uiprivSingleChildConstraintsEstablish(uiprivSingleChildConstraints *c, NSVi
 		1, margin,
 		[desc stringByAppendingString:@" trailing == constraint"]);
 	if (!hugsTrailing)
-		[c->trailingConstraintEqual setPriority:NSLayoutPriorityDefaultLow];
+		[c->trailingConstraintEqual setPriority:optionalEdgePriority];
 	[contentView addConstraint:c->trailingConstraintEqual];
 	[c->trailingConstraintEqual retain];
 
@@ -105,7 +109,7 @@ void uiprivSingleChildConstraintsEstablish(uiprivSingleChildConstraints *c, NSVi
 		1, margin,
 		[desc stringByAppendingString:@" bottom == constraint"]);
 	if (!hugsBottom)
-		[c->bottomConstraintEqual setPriority:NSLayoutPriorityDefaultLow];
+		[c->bottomConstraintEqual setPriority:optionalEdgePriority];
 	[contentView addConstraint:c->bottomConstraintEqual];
 	[c->bottomConstraintEqual retain];
 }
