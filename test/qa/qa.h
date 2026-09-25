@@ -12,6 +12,8 @@ uiControl *qaMakeGuide(uiControl *c, const char *text);
 
 QA_DECLARE_TEST(buttonOnClicked);
 
+QA_DECLARE_TEST(boxNonStretchyNested);
+
 QA_DECLARE_TEST(checkboxOnToggled);
 
 QA_DECLARE_TEST(entryOnChanged);
@@ -22,6 +24,7 @@ QA_DECLARE_TEST(entryOverflowText);
 
 QA_DECLARE_TEST(labelMultiLine);
 QA_DECLARE_TEST(labelVerticalAlignment);
+QA_DECLARE_TEST(labelCompactGroup);
 
 QA_DECLARE_TEST(radioButtonsOnSelected);
 

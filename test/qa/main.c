@@ -20,6 +20,11 @@ struct controlTestCase buttonTestCases[] = {
 	{NULL, NULL, NULL}
 };
 
+struct controlTestCase boxTestCases[] = {
+	QA_TEST("1. Nested Non-Stretchy Box", boxNonStretchyNested),
+	{NULL, NULL, NULL}
+};
+
 struct controlTestCase checkboxTestCases[] = {
 	QA_TEST("1. Checkbox OnToggled Callback", checkboxOnToggled),
 	{NULL, NULL, NULL}
@@ -37,6 +42,7 @@ struct controlTestCase entryTestCases[] = {
 struct controlTestCase labelTestCases[] = {
 	QA_TEST("1. Multi Line", labelMultiLine),
 	QA_TEST("2. Vertical Alignment", labelVerticalAlignment),
+	QA_TEST("3. Compact Group Layout", labelCompactGroup),
 	{NULL, NULL, NULL}
 };
 
@@ -68,6 +74,7 @@ struct controlTestCase windowTestCases[] = {
 
 struct controlTestGroup controlTestGroups[] = {
 	{"uiButton", buttonTestCases},
+	{"uiBox", boxTestCases},
 	{"uiCheckbox", checkboxTestCases},
 	{"uiEntry", entryTestCases},
 	{"uiLabel", labelTestCases},

@@ -69,7 +69,7 @@ struct uiBox {
 		self->primaryExpansion = NO;
 		self->children = [NSMutableArray new];
 		self->stretchyConstraints = [NSMutableArray new];
-		[self setDistribution:NSStackViewDistributionFill];
+		[self setDistribution:NSStackViewDistributionGravityAreas];
 		[self setDetachesHiddenViews:YES];
 		self->nativeSpacing = [self spacing];
 		[self setSpacing:0];
@@ -89,6 +89,7 @@ struct uiBox {
 			self->primaryOrientation = NSLayoutConstraintOrientationHorizontal;
 			self->secondaryOrientation = NSLayoutConstraintOrientationVertical;
 		}
+		[self updateLayout];
 	}
 	return self;
 }
@@ -147,6 +148,12 @@ struct uiBox {
 		[self->stretchyConstraints addObject:constraint];
 	}
 	hasPrimaryExpansion = firstStretchy != nil;
+	// With no stretchy children, let the stack view's trailing gravity area
+	// absorb extra space. Otherwise keep that area closed so the real stretchy
+	// children receive the extra space instead.
+	[self setHuggingPriority:hasPrimaryExpansion ?
+		NSLayoutPriorityRequired : NSLayoutPriorityDefaultLow - 1
+		forOrientation:self->primaryOrientation];
 	if (hasPrimaryExpansion != self->primaryExpansion) {
 		self->primaryExpansion = hasPrimaryExpansion;
 		uiDarwinNotifyEdgeHuggingChanged(uiDarwinControl(self->b));
