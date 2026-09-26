@@ -81,8 +81,8 @@ jobs:
         libtype: [static, shared]
         buildtype: [Release, Debug]
         include:
-          - {arch: armv7, platform: linux/arm/v7, image: "arm32v7/ubuntu:22.04"}
-          - {arch: i386, platform: linux/386, image: "i386/ubuntu:22.04"}
+          - {arch: armv7, platform: linux/arm/v7, image: "debian:12-slim"}
+          - {arch: i386, platform: linux/386, image: "i386/debian:12-slim"}
           - {buildtype: Release, buildlabel: release}
           - {buildtype: Debug, buildlabel: debug}
     runs-on: ubuntu-latest
@@ -105,7 +105,7 @@ jobs:
                 -DBUILD_SHARED_LIBS=${{ matrix.libtype == 'shared' && 'ON' || 'OFF' }} \
                 -DLIBUI_FETCH_TEST_DEPS=ON && \
               cmake --build builddir-${{ matrix.arch }}-${{ matrix.libtype }}-${{ matrix.buildlabel }} --verbose && \
-              xvfb-run ctest --test-dir builddir-${{ matrix.arch }}-${{ matrix.libtype }}-${{ matrix.buildlabel }} --output-on-failure --timeout 180 && \
+              xvfb-run -a ctest --test-dir builddir-${{ matrix.arch }}-${{ matrix.libtype }}-${{ matrix.buildlabel }} --output-on-failure --timeout 180 && \
               cmake -S test/cmake/consumer -B consumer-add-${{ matrix.arch }}-${{ matrix.libtype }}-${{ matrix.buildlabel }} -G Ninja \
                 -DLIBUI_SOURCE_MODE=add_subdirectory -DLIBUI_SOURCE_DIR=/workspace \
                 -DBUILD_SHARED_LIBS=${{ matrix.libtype == 'shared' && 'ON' || 'OFF' }} && \
