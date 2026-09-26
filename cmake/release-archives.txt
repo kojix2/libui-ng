@@ -10,6 +10,14 @@ libui-ng-ubuntu-arm64-shared-debug.zip
 libui-ng-ubuntu-arm64-shared-release.zip
 libui-ng-ubuntu-arm64-static-debug.zip
 libui-ng-ubuntu-arm64-static-release.zip
+libui-ng-ubuntu-armv7-shared-debug.zip
+libui-ng-ubuntu-armv7-shared-release.zip
+libui-ng-ubuntu-armv7-static-debug.zip
+libui-ng-ubuntu-armv7-static-release.zip
+libui-ng-ubuntu-i386-shared-debug.zip
+libui-ng-ubuntu-i386-shared-release.zip
+libui-ng-ubuntu-i386-static-debug.zip
+libui-ng-ubuntu-i386-static-release.zip
 libui-ng-ubuntu-x64-shared-debug.zip
 libui-ng-ubuntu-x64-shared-release.zip
 libui-ng-ubuntu-x64-static-debug.zip
