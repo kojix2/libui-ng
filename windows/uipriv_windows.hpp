@@ -181,6 +181,9 @@ extern IWICBitmap *uiprivImageAppropriateForSize(const uiImage *i,
 extern HRESULT uiprivWICToGDI(IWICBitmap *b, HDC dc, int width, int height, HBITMAP *hb);
 
 // tooltip.cpp
-extern void uiprivDestroyTooltip(uiControl* c);
+extern void uiprivDestroyTooltip(uiControl *c);
+extern void uiprivAddTooltipToHWND(uiControl *c, HWND hwnd);
+
+extern void uiprivSliderSetControlTooltip(uiSlider *s, int active);
 
 #endif
