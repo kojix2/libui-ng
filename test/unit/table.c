@@ -1,3 +1,4 @@
+#include <math.h>
 #include "unit.h"
 
 struct tableTestState {
@@ -163,10 +164,13 @@ static void tableValueRoundTrips(void **data)
 	value = uiNewTableValueColor(0.1, 0.2, 0.3, 0.4);
 	assert_int_equal(uiTableValueGetType(value), uiTableValueTypeColor);
 	uiTableValueColor(value, &r, &g, &b, &a);
-	assert_true(r == 0.1);
-	assert_true(g == 0.2);
-	assert_true(b == 0.3);
-	assert_true(a == 0.4);
+	// 0.1/0.2/0.3/0.4 are not exactly representable in binary, and on
+	// i386 the x87 FPU keeps intermediates in 80-bit extended precision,
+	// so an exact == comparison fails there. Compare with tolerance.
+	assert_true(fabs(r - 0.1) < 1e-9);
+	assert_true(fabs(g - 0.2) < 1e-9);
+	assert_true(fabs(b - 0.3) < 1e-9);
+	assert_true(fabs(a - 0.4) < 1e-9);
 	uiFreeTableValue(value);
 }
 

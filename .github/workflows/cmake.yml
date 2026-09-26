@@ -3,7 +3,7 @@ name: Build + Release
 on:
   push:
     branches: [main, pre-build, dev]
-    tags: ["commit-*"]
+    tags: ["commit-*", "v*"]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -67,6 +67,54 @@ jobs:
           cpack -G ZIP -C ${{ matrix.buildtype }}
           --config builddir/CPackConfig.cmake -B packages
           -D CPACK_PACKAGE_FILE_NAME=libui-ng-ubuntu-${{ matrix.arch }}-${{ matrix.libtype }}-${{ matrix.buildlabel }}
+      - uses: actions/upload-artifact@v7
+        with:
+          name: libui-ng-ubuntu-${{ matrix.arch }}-${{ matrix.libtype }}-${{ matrix.buildlabel }}
+          path: packages/*.zip
+          if-no-files-found: error
+
+  cmake-linux-multiarch:
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [armv7, i386]
+        libtype: [static, shared]
+        buildtype: [Release, Debug]
+        include:
+          - {arch: armv7, platform: linux/arm/v7, image: "debian:12-slim"}
+          - {arch: i386, platform: linux/386, image: "i386/debian:12-slim"}
+          - {buildtype: Release, buildlabel: release}
+          - {buildtype: Debug, buildlabel: debug}
+    runs-on: ubuntu-latest
+    name: Ubuntu-${{ matrix.arch }}-${{ matrix.libtype }}-${{ matrix.buildlabel }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Set up QEMU
+        if: matrix.arch == 'armv7'
+        uses: docker/setup-qemu-action@v3
+      - name: Build, test, and package in Docker
+        run: |
+          docker run --rm --platform ${{ matrix.platform }} \
+            -v "$GITHUB_WORKSPACE:/workspace" -w /workspace \
+            ${{ matrix.image }} \
+            bash -c "set -e && \
+              apt-get update -qq && \
+              DEBIAN_FRONTEND=noninteractive apt-get install -y cmake ninja-build gcc g++ libgtk-3-dev libcmocka-dev xvfb zip && \
+              cmake -S . -B builddir-${{ matrix.arch }}-${{ matrix.libtype }}-${{ matrix.buildlabel }} -G Ninja \
+                -DCMAKE_BUILD_TYPE=${{ matrix.buildtype }} \
+                -DBUILD_SHARED_LIBS=${{ matrix.libtype == 'shared' && 'ON' || 'OFF' }} \
+                -DLIBUI_FETCH_TEST_DEPS=ON && \
+              cmake --build builddir-${{ matrix.arch }}-${{ matrix.libtype }}-${{ matrix.buildlabel }} --verbose && \
+              xvfb-run -a ctest --test-dir builddir-${{ matrix.arch }}-${{ matrix.libtype }}-${{ matrix.buildlabel }} --output-on-failure --timeout 180 && \
+              cmake -S test/cmake/consumer -B consumer-add-${{ matrix.arch }}-${{ matrix.libtype }}-${{ matrix.buildlabel }} -G Ninja \
+                -DLIBUI_SOURCE_MODE=add_subdirectory -DLIBUI_SOURCE_DIR=/workspace \
+                -DBUILD_SHARED_LIBS=${{ matrix.libtype == 'shared' && 'ON' || 'OFF' }} && \
+              cmake --build consumer-add-${{ matrix.arch }}-${{ matrix.libtype }}-${{ matrix.buildlabel }} && \
+              ./consumer-add-${{ matrix.arch }}-${{ matrix.libtype }}-${{ matrix.buildlabel }}/consumer && \
+              cpack -G ZIP -C ${{ matrix.buildtype }} \
+                --config builddir-${{ matrix.arch }}-${{ matrix.libtype }}-${{ matrix.buildlabel }}/CPackConfig.cmake -B packages \
+                -D CPACK_PACKAGE_FILE_NAME=libui-ng-ubuntu-${{ matrix.arch }}-${{ matrix.libtype }}-${{ matrix.buildlabel }} && \
+              chmod -R a+rw packages"
       - uses: actions/upload-artifact@v7
         with:
           name: libui-ng-ubuntu-${{ matrix.arch }}-${{ matrix.libtype }}-${{ matrix.buildlabel }}
@@ -290,8 +338,8 @@ jobs:
           cmake --build build-clang
 
   release:
-    needs: [cmake-linux, cmake-windows, cmake-msys2, cmake-macos]
-    if: github.ref_type == 'tag' || github.ref_name == 'pre-build'
+    needs: [cmake-linux, cmake-linux-multiarch, cmake-windows, cmake-msys2, cmake-macos]
+    if: github.ref_type == 'tag' || github.ref_name == 'pre-build' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: write
