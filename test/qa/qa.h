@@ -41,4 +41,6 @@ QA_DECLARE_TEST(windowFullscreenBorderless);
 QA_DECLARE_TEST(windowFullscreenResizeable);
 QA_DECLARE_TEST(windowResizeableBorderless);
 
+QA_DECLARE_TEST(tooltipTest);
+
 #endif

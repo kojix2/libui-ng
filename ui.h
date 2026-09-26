@@ -164,6 +164,22 @@ _UI_EXTERN void uiControlOnDestroyed(uiControl *c,
 	void (*f)(uiControl *c, void *data), void *data);
 
 /**
+ * Sets the control's descriptive tooltip.
+ *
+ * @param c uiControl instance.
+ * @param tooltip A valid, `NULL`-terminated UTF-8 string, or `NULL` to remove
+ *                the descriptive tooltip. The string is copied; ownership is
+ *                not transferred.
+ * @note For container controls, the tooltip applies only to the container's
+ *       own native surface and is not propagated to child controls.
+ * @note On a uiSlider, a descriptive tooltip temporarily replaces the value
+ *       tooltip controlled by uiSliderSetHasToolTip(). Removing it restores
+ *       the configured value-tooltip setting.
+ * @memberof uiControl
+ */
+_UI_EXTERN void uiControlSetTooltip(uiControl *c, const char *tooltip);
+
+/**
  * Returns the control's OS-level handle.
  *
  * @param c uiControl instance.
@@ -1274,19 +1290,24 @@ _UI_EXTERN int uiSliderValue(uiSlider *s);
 _UI_EXTERN void uiSliderSetValue(uiSlider *s, int value);
 
 /**
- * Returns whether or not the slider has a tool tip.
+ * Returns whether or not the slider's current value tooltip is enabled.
  *
  * @param s uiSlider instance.
- * @returns `TRUE` if a tool tip is present, `FALSE` otherwise. [Default `TRUE`]
+ * @returns `TRUE` if the value tooltip is enabled, `FALSE` otherwise.
+ *          [Default `TRUE`]
+ * @note A descriptive tooltip set with uiControlSetTooltip() temporarily
+ *       replaces the value tooltip without changing this setting.
  * @memberof uiSlider
  */
 _UI_EXTERN int uiSliderHasToolTip(uiSlider *s);
 
 /**
- * Sets whether or not the slider has a tool tip.
+ * Sets whether or not the slider shows its current value in a tooltip.
  *
  * @param s uiSlider instance.
- * @param hasToolTip `TRUE` to display a tool tip, `FALSE` to display no tool tip.
+ * @param hasToolTip `TRUE` to enable the value tooltip, `FALSE` to disable it.
+ * @note While a descriptive tooltip is set with uiControlSetTooltip(), this
+ *       setting is retained and takes effect when that tooltip is removed.
  * @memberof uiSlider
  */
 _UI_EXTERN void uiSliderSetHasToolTip(uiSlider *s, int hasToolTip);
