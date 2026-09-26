@@ -2,9 +2,19 @@
 
 void uiControlSetTooltip(uiControl *c, const char *tooltip)
 {
-	if (tooltip == NULL) {
-		gtk_widget_set_has_tooltip(GTK_WIDGET(uiControlHandle(c)), FALSE);
-	} else {
-		gtk_widget_set_tooltip_text(GTK_WIDGET(uiControlHandle(c)), tooltip);
+	GtkWidget *widget;
+
+	widget = GTK_WIDGET(uiControlHandle(c));
+	if (c->TypeSignature == uiSliderSignature) {
+		uiSlider *s = uiSlider(c);
+
+		if (tooltip != NULL)
+			uiprivSliderSetControlTooltip(s, 1);
+		gtk_widget_set_tooltip_text(widget, tooltip);
+		if (tooltip == NULL)
+			uiprivSliderSetControlTooltip(s, 0);
+		return;
 	}
+
+	gtk_widget_set_tooltip_text(widget, tooltip);
 }
