@@ -151,3 +151,6 @@ extern void uiprivLoadUndocumented(void);
 
 // event.m
 extern BOOL uiprivSendKeyboardEditEvents(uiprivApplicationClass *app, NSEvent *e);
+
+// slider.m
+extern void uiprivSliderSetControlTooltip(uiSlider *s, int active);

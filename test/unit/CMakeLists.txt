@@ -3,7 +3,7 @@ set(unit_sources
 	radiobuttons.c tab.c entry.c menu.c progressbar.c datetimepicker.c grid.c
 	drawmatrix.c drawimage.c attrstr.c imageview.c window.c box.c group.c
 	editablecombobox.c multilineentry.c
-	separator.c fontdescriptor.c fontbutton.c colorbutton.c form.c area.c image.c table.c
+	separator.c fontdescriptor.c fontbutton.c colorbutton.c form.c area.c image.c table.c tooltip.c
 	toolbar.c
 )
 if(NOT BUILD_SHARED_LIBS)

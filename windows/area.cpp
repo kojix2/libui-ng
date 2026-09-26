@@ -70,6 +70,7 @@ static void uiAreaDestroy(uiControl *c)
 {
 	uiArea *a = uiArea(c);
 
+	uiprivDestroyTooltip(c);
 	uiWindowsEnsureDestroyWindow(a->hwnd);
 	releaseAreaRenderTarget(a);
 	uiFreeControl(uiControl(a));
