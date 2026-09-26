@@ -90,6 +90,7 @@ int main(void)
 		{ drawMatrixRunUnitTests },
 		{ attrstrRunUnitTests },
 		{ tableRunUnitTests },
+		{ tooltipRunUnitTests },
 	};
 
 	for (i = 0; i < sizeof(unitTests)/sizeof(*unitTests); ++i) {

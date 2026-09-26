@@ -2,7 +2,6 @@
 #define __LIBUI_QA_H__
 
 #include "../../ui.h"
-#include "../../ui_ext.h"
 
 #define QA_WINDOW_WIDTH 960
 #define QA_WINDOW_HEIGHT 720

@@ -4,10 +4,16 @@
 
 void uiControlSetTooltip(uiControl *c, const char *tooltip)
 {
-	NSView *view = (NSView *)uiControlHandle(c);
-	if (tooltip == NULL) {
-		view.toolTip = nil;
-	} else {
-		view.toolTip = uiprivToNSString(tooltip);
-	}
+	NSView *view;
+
+	if (c->TypeSignature == uiWindowSignature)
+		view = [(NSWindow *)uiControlHandle(c) contentView];
+	else
+		view = (NSView *)uiControlHandle(c);
+
+	if (c->TypeSignature == uiSliderSignature && tooltip != NULL)
+		uiprivSliderSetControlTooltip(uiSlider(c), 1);
+	[view setToolTip:(tooltip == NULL ? nil : uiprivToNSString(tooltip))];
+	if (c->TypeSignature == uiSliderSignature && tooltip == NULL)
+		uiprivSliderSetControlTooltip(uiSlider(c), 0);
 }

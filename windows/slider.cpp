@@ -9,6 +9,8 @@ struct uiSlider {
 	void (*onReleased)(uiSlider *, void *);
 	void *onReleasedData;
 	HWND hwndToolTip;
+	BOOL hasToolTip;
+	BOOL controlTooltip;
 };
 
 static BOOL onWM_HSCROLL(uiControl *c, HWND hwnd, WORD code, LRESULT *lResult)
@@ -35,10 +37,10 @@ static void uiSliderDestroy(uiControl *c)
 	uiSlider *s = uiSlider(c);
 
 	// ensure TRACKBAR_CLASSW takes care of destroying the tooltip
-	uiSliderSetHasToolTip(s, 1);
+	uiprivDestroyTooltip(c);
+	SendMessage(s->hwnd, TBM_SETTOOLTIPS, (WPARAM) s->hwndToolTip, 0);
 
 	uiWindowsUnregisterWM_HSCROLLHandler(s->hwnd);
-	uiprivDestroyTooltip(c);
 	uiWindowsEnsureDestroyWindow(s->hwnd);
 	uiFreeControl(uiControl(s));
 }
@@ -65,12 +67,26 @@ static void uiSliderMinimumSize(uiWindowsControl *c, int *width, int *height)
 
 int uiSliderHasToolTip(uiSlider *s)
 {
-	return ((HWND) SendMessage(s->hwnd, TBM_GETTOOLTIPS, 0, 0) == s->hwndToolTip);
+	return s->hasToolTip;
 }
 
 void uiSliderSetHasToolTip(uiSlider *s, int hasToolTip)
 {
-	if (hasToolTip)
+	s->hasToolTip = hasToolTip != 0;
+	if (s->controlTooltip)
+		return;
+	if (s->hasToolTip)
+		SendMessage(s->hwnd, TBM_SETTOOLTIPS, (WPARAM) s->hwndToolTip, 0);
+	else
+		SendMessage(s->hwnd, TBM_SETTOOLTIPS, 0, 0);
+}
+
+void uiprivSliderSetControlTooltip(uiSlider *s, int active)
+{
+	s->controlTooltip = active != 0;
+	if (s->controlTooltip)
+		SendMessage(s->hwnd, TBM_SETTOOLTIPS, 0, 0);
+	else if (s->hasToolTip)
 		SendMessage(s->hwnd, TBM_SETTOOLTIPS, (WPARAM) s->hwndToolTip, 0);
 	else
 		SendMessage(s->hwnd, TBM_SETTOOLTIPS, 0, 0);
@@ -152,5 +168,7 @@ uiSlider *uiNewSlider(int min, int max)
 
 	s->hwndToolTip = (HWND) SendMessage(s->hwnd, TBM_GETTOOLTIPS, 0, 0);
 
+	s->hasToolTip = TRUE;
+	s->controlTooltip = FALSE;
 	return s;
 }
