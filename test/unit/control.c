@@ -1,5 +1,6 @@
 #include "unit.h"
 #include "../../common/uipriv.h"
+#include <limits.h>
 
 typedef struct testControl testControl;
 struct testControl {
@@ -390,6 +391,60 @@ static void resourceFreeIsDeferredInFifoOrder(void **state)
 	assert_int_equal(destroyCount, 1);
 	assert_int_equal(freeState.freeCount, 1);
 }
+
+static void minimumSizeOverridesArePerAxisAndDoNotChangeControlABI(void **state)
+{
+	int destroyCount = 0;
+	testControl *tc = newTestControl(&destroyCount);
+	int width, height;
+
+	uiprivControlMinimumSizeGet(uiControl(tc), &width, &height);
+	assert_int_equal(width, -1);
+	assert_int_equal(height, -1);
+
+	uiControlSetMinimumSize(uiControl(tc), 60, -1);
+	uiprivControlMinimumSizeGet(uiControl(tc), &width, &height);
+	assert_int_equal(width, 60);
+	assert_int_equal(height, -1);
+	width = 120;
+	height = 24;
+	uiprivControlMinimumSizeApply(uiControl(tc), &width, &height, 0);
+	assert_int_equal(width, 60);
+	assert_int_equal(height, 24);
+
+	// A container's own setting is additive: its children's structural
+	// minimum remains the lower bound.
+	width = 120;
+	height = 24;
+	uiprivControlMinimumSizeApply(uiControl(tc), &width, &height, 1);
+	assert_int_equal(width, 120);
+	assert_int_equal(height, 24);
+
+	uiControlSetMinimumSize(uiControl(tc), 80, 20);
+	width = 10;
+	height = 10;
+	uiprivControlMinimumSizeApply(uiControl(tc), &width, &height, 0);
+	assert_int_equal(width, 80);
+	assert_int_equal(height, 20);
+
+	uiControlSetMinimumSize(uiControl(tc), -1, -1);
+	uiprivControlMinimumSizeGet(uiControl(tc), &width, &height);
+	assert_int_equal(width, -1);
+	assert_int_equal(height, -1);
+	uiControlDestroy(uiControl(tc));
+	assert_int_equal(destroyCount, 1);
+}
+
+static void minimumSizeArithmeticDoesNotWrap(void **state)
+{
+	assert_int_equal(uiprivMinimumSizeAdd(10, 20), 30);
+	assert_int_equal(uiprivMinimumSizeAdd(INT_MAX, 1), INT_MAX);
+	assert_int_equal(uiprivMinimumSizeAdd(INT_MAX - 1, 1), INT_MAX);
+	assert_int_equal(uiprivMinimumSizeMultiply(10, 20), 200);
+	assert_int_equal(uiprivMinimumSizeMultiply(INT_MAX, 2), INT_MAX);
+	assert_int_equal(uiprivMinimumSizeMultiply(INT_MAX, 0), 0);
+}
+
 static int controlSetup(void **state)
 {
 	uiInitOptions o = {0};
@@ -427,6 +482,8 @@ int controlRunUnitTests(void)
 		cmocka_unit_test(pendingControlIsHiddenAndSuppressesCallbacks),
 		cmocka_unit_test(pendingAncestorSuppressesChildCallbacks),
 		cmocka_unit_test(resourceFreeIsDeferredInFifoOrder),
+		cmocka_unit_test(minimumSizeOverridesArePerAxisAndDoNotChangeControlABI),
+		cmocka_unit_test(minimumSizeArithmeticDoesNotWrap),
 	};
 
 	return cmocka_run_group_tests_name("uiControl deferred destruction", tests,

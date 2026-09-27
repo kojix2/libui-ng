@@ -191,18 +191,20 @@ static void uiFormMinimumSize(uiWindowsControl *c, int *width, int *height)
 		if (maxControlWidth < minimumWidth)
 			maxControlWidth = minimumWidth;
 		if (!fc.stretchy)
-			*height += minimumHeight;
+			*height = uiprivMinimumSizeAdd(*height, minimumHeight);
 	}
 	if (nVisible == 0)		// nothing to show; return 0x0
 		return;
-	*width += maxLabelWidth + maxControlWidth;
+	*width = uiprivMinimumSizeAdd(maxLabelWidth, maxControlWidth);
 
 	// 2) outset the desired rect with the needed padding
-	*width += xpadding;
-	*height += (nVisible - 1) * ypadding;
+	*width = uiprivMinimumSizeAdd(*width, xpadding);
+	*height = uiprivMinimumSizeAdd(*height,
+		uiprivMinimumSizeMultiply(nVisible - 1, ypadding));
 
 	// 3) and now we can add in stretchy controls
-	*height += nStretchy * maxStretchyHeight;
+	*height = uiprivMinimumSizeAdd(*height,
+		uiprivMinimumSizeMultiply(nStretchy, maxStretchyHeight));
 }
 
 static void uiFormMinimumSizeChanged(uiWindowsControl *c)

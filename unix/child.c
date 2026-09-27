@@ -35,7 +35,7 @@ uiprivChild *uiprivNewChild(uiControl *child, uiControl *parent, GtkContainer *p
 
 	c = uiprivNew(uiprivChild);
 	c->c = child;
-	c->widget = GTK_WIDGET(uiControlHandle(c->c));
+	c->widget = uiprivUnixControlLayoutWidget(c->c);
 
 	c->oldhexpand = gtk_widget_get_hexpand(c->widget);
 	c->oldhalign = gtk_widget_get_halign(c->widget);
@@ -71,13 +71,16 @@ uiprivChild *uiprivNewChildWithBox(uiControl *child, uiControl *parent, GtkConta
 
 void uiprivChildRemove(uiprivChild *c)
 {
+	GtkWidget *widget;
+
+	widget = uiprivUnixControlLayoutWidget(c->c);
 	uiControlSetParent(c->c, NULL);
 	uiUnixControlSetContainer(uiUnixControl(c->c), c->parent, TRUE);
 
-	gtk_widget_set_hexpand(c->widget, c->oldhexpand);
-	gtk_widget_set_halign(c->widget, c->oldhalign);
-	gtk_widget_set_vexpand(c->widget, c->oldvexpand);
-	gtk_widget_set_valign(c->widget, c->oldvalign);
+	gtk_widget_set_hexpand(widget, c->oldhexpand);
+	gtk_widget_set_halign(widget, c->oldhalign);
+	gtk_widget_set_vexpand(widget, c->oldvexpand);
+	gtk_widget_set_valign(widget, c->oldvalign);
 
 	if (c->box != NULL)
 		gtk_widget_destroy(c->box);

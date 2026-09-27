@@ -25,6 +25,30 @@ uiUnixControlAllDefaultsExceptDestroy(uiBox)
 
 #define ctrl(b, i) &g_array_index(b->controls, struct boxChild, i)
 
+void uiprivUnixBoxChildLayoutWidgetChanged(uiControl *child, GtkWidget *oldWidget,
+	GtkWidget *newWidget)
+{
+	uiControl *parent;
+	uiBox *b;
+	struct boxChild *bc;
+	guint i;
+
+	parent = uiControlParent(child);
+	if (parent == NULL || parent->TypeSignature != uiBoxSignature)
+		return;
+	b = uiBox(parent);
+	for (i = 0; i < b->controls->len; i++) {
+		bc = ctrl(b, i);
+		if (bc->c != child)
+			continue;
+		if (bc->stretchy) {
+			gtk_size_group_remove_widget(b->stretchygroup, oldWidget);
+			gtk_size_group_add_widget(b->stretchygroup, newWidget);
+		}
+		return;
+	}
+}
+
 static void uiBoxDestroy(uiControl *c)
 {
 	uiBox *b = uiBox(c);
@@ -54,7 +78,7 @@ void uiBoxAppend(uiBox *b, uiControl *c, int stretchy)
 
 	bc.c = c;
 	bc.stretchy = stretchy;
-	widget = GTK_WIDGET(uiControlHandle(bc.c));
+	widget = uiprivUnixControlLayoutWidget(bc.c);
 	bc.oldhexpand = gtk_widget_get_hexpand(widget);
 	bc.oldhalign = gtk_widget_get_halign(widget);
 	bc.oldvexpand = gtk_widget_get_vexpand(widget);
@@ -98,7 +122,7 @@ void uiBoxDelete(uiBox *b, int index)
 	GtkWidget *widget;
 
 	bc = ctrl(b, index);
-	widget = GTK_WIDGET(uiControlHandle(bc->c));
+	widget = uiprivUnixControlLayoutWidget(bc->c);
 
 	uiControlSetParent(bc->c, NULL);
 	uiUnixControlSetContainer(uiUnixControl(bc->c), b->container, TRUE);

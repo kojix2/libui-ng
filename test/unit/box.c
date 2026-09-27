@@ -63,6 +63,22 @@ static void boxAppendAndDelete(void **state)
 	uiControlDestroy(first);
 }
 
+static void boxChildMinimumSizeCanChangeAfterAppend(void **state)
+{
+	uiBox *box = uiBoxFromState(state);
+	uiControl *child;
+
+	child = uiControl(uiNewButton("minimum size"));
+	uiBoxAppend(box, child, 0);
+	uiControlSetMinimumSize(child, 40, -1);
+	uiControlHide(child);
+	uiControlShow(child);
+	uiControlSetMinimumSize(child, 0, 0);
+	uiControlSetMinimumSize(child, -1, -1);
+	uiBoxDelete(box, 0);
+	uiControlDestroy(child);
+}
+
 #define horizontalBoxUnitTest(f) UNIT_TEST_NAMED("horizontal/" #f, (f), \
 		horizontalBoxSetup, unitTestTeardown)
 #define verticalBoxUnitTest(f) UNIT_TEST_NAMED("vertical/" #f, (f), \
@@ -77,6 +93,8 @@ int boxRunUnitTests(void)
 		verticalBoxUnitTest(boxSetPadded),
 		horizontalBoxUnitTest(boxAppendAndDelete),
 		verticalBoxUnitTest(boxAppendAndDelete),
+		horizontalBoxUnitTest(boxChildMinimumSizeCanChangeAfterAppend),
+		verticalBoxUnitTest(boxChildMinimumSizeCanChangeAfterAppend),
 	};
 
 	return cmocka_run_group_tests_name("uiBox", tests,

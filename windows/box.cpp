@@ -195,10 +195,10 @@ static void uiBoxMinimumSize(uiWindowsControl *c, int *width, int *height)
 			if (*width < minimumWidth)
 				*width = minimumWidth;
 			if (!bc.stretchy)
-				*height += minimumHeight;
+				*height = uiprivMinimumSizeAdd(*height, minimumHeight);
 		} else {
 			if (!bc.stretchy)
-				*width += minimumWidth;
+				*width = uiprivMinimumSizeAdd(*width, minimumWidth);
 			if (*height < minimumHeight)
 				*height = minimumHeight;
 		}
@@ -208,15 +208,19 @@ static void uiBoxMinimumSize(uiWindowsControl *c, int *width, int *height)
 
 	// 2) now outset the desired rect with the needed padding
 	if (b->vertical)
-		*height += (nVisible - 1) * ypadding;
+		*height = uiprivMinimumSizeAdd(*height,
+			uiprivMinimumSizeMultiply(nVisible - 1, ypadding));
 	else
-		*width += (nVisible - 1) * xpadding;
+		*width = uiprivMinimumSizeAdd(*width,
+			uiprivMinimumSizeMultiply(nVisible - 1, xpadding));
 
 	// 3) and now we can add in stretchy controls
 	if (b->vertical)
-		*height += nStretchy * maxStretchyHeight;
+		*height = uiprivMinimumSizeAdd(*height,
+			uiprivMinimumSizeMultiply(nStretchy, maxStretchyHeight));
 	else
-		*width += nStretchy * maxStretchyWidth;
+		*width = uiprivMinimumSizeAdd(*width,
+			uiprivMinimumSizeMultiply(nStretchy, maxStretchyWidth));
 }
 
 static void uiBoxMinimumSizeChanged(uiWindowsControl *c)

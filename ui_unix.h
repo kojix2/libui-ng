@@ -23,6 +23,14 @@ struct uiUnixControl {
 // TODO document
 _UI_EXTERN void uiUnixControlSetContainer(uiUnixControl *, GtkContainer *, gboolean);
 
+// These implementation helpers must be exported because the public default
+// macros below are expanded into third-party controls. They are not a new
+// application-facing API. The public handle remains the native widget.
+_UI_EXTERN GtkWidget *uiprivUnixControlLayoutWidget(uiControl *);
+_UI_EXTERN GtkWidget *uiprivUnixControlPrepareWidget(uiUnixControl *);
+_UI_EXTERN void uiprivUnixControlShow(uiUnixControl *);
+_UI_EXTERN void uiprivUnixControlHide(uiUnixControl *);
+
 #define uiUnixControlDefaultDestroy(type) \
 	static void type ## Destroy(uiControl *c) \
 	{ \
@@ -54,19 +62,19 @@ _UI_EXTERN void uiUnixControlSetContainer(uiUnixControl *, GtkContainer *, gbool
 #define uiUnixControlDefaultVisible(type) \
 	static int type ## Visible(uiControl *c) \
 	{ \
-		return gtk_widget_get_visible(type(c)->widget); \
+		return gtk_widget_get_visible(uiprivUnixControlLayoutWidget(c)); \
 	}
 #define uiUnixControlDefaultShow(type) \
 	static void type ## Show(uiControl *c) \
 	{ \
 		/*TODO part of massive hack about hidden before*/uiUnixControl(c)->explicitlyHidden=FALSE; \
-		gtk_widget_show(type(c)->widget); \
+		uiprivUnixControlShow(uiUnixControl(c)); \
 	}
 #define uiUnixControlDefaultHide(type) \
 	static void type ## Hide(uiControl *c) \
 	{ \
 		/*TODO part of massive hack about hidden before*/uiUnixControl(c)->explicitlyHidden=TRUE; \
-		gtk_widget_hide(type(c)->widget); \
+		uiprivUnixControlHide(uiUnixControl(c)); \
 	}
 #define uiUnixControlDefaultEnabled(type) \
 	static int type ## Enabled(uiControl *c) \
@@ -87,16 +95,11 @@ _UI_EXTERN void uiUnixControlSetContainer(uiUnixControl *, GtkContainer *, gbool
 #define uiUnixControlDefaultSetContainer(type) \
 	static void type ## SetContainer(uiUnixControl *c, GtkContainer *container, gboolean remove) \
 	{ \
-		if (!uiUnixControl(c)->addedBefore) { \
-			g_object_ref_sink(type(c)->widget); /* our own reference, which we release in Destroy() */ \
-			/* massive hack notes: without any of this, nothing gets shown when we show a window; without the if, all things get shown even if some were explicitly hidden (TODO why don't we just show everything except windows on create? */ \
-			/*TODO*/if(!uiUnixControl(c)->explicitlyHidden) gtk_widget_show(type(c)->widget); \
-			uiUnixControl(c)->addedBefore = TRUE; \
-		} \
+		GtkWidget *widget = uiprivUnixControlPrepareWidget(c); \
 		if (remove) \
-			gtk_container_remove(container, type(c)->widget); \
+			gtk_container_remove(container, widget); \
 		else \
-			gtk_container_add(container, type(c)->widget); \
+			gtk_container_add(container, widget); \
 	}
 
 #define uiUnixControlAllDefaultsExceptDestroy(type) \

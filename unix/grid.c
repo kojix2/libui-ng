@@ -45,13 +45,6 @@ static void uiGridDestroy(uiControl *c)
 	uiFreeControl(uiControl(g));
 }
 
-#define TODO_MASSIVE_HACK(c) \
-	if (!uiUnixControl(c)->addedBefore) { \
-		g_object_ref_sink(GTK_WIDGET(uiControlHandle(uiControl(c)))); \
-		gtk_widget_show(GTK_WIDGET(uiControlHandle(uiControl(c)))); \
-		uiUnixControl(c)->addedBefore = TRUE; \
-	}
-
 static const GtkAlign gtkAligns[] = {
 	[uiAlignFill] = GTK_ALIGN_FILL,
 	[uiAlignStart] = GTK_ALIGN_START,
@@ -66,7 +59,7 @@ static GtkWidget *prepare(struct gridChild *gc, uiControl *c, int hexpand, uiAli
 	if (c == NULL)
 		uiprivUserBug("You cannot add NULL to a uiGrid.");
 	gc->c = c;
-	widget = GTK_WIDGET(uiControlHandle(gc->c));
+	widget = uiprivUnixControlLayoutWidget(gc->c);
 	gc->oldhexpand = gtk_widget_get_hexpand(widget);
 	gc->oldhalign = gtk_widget_get_halign(widget);
 	gc->oldvexpand = gtk_widget_get_vexpand(widget);
@@ -144,7 +137,7 @@ void uiGridAppend(uiGrid *g, uiControl *c, int left, int top, int xspan, int ysp
 	gc.yspan = yspan;
 	validateChild(g, &gc);
 	uiControlSetParent(gc.c, uiControl(g));
-	TODO_MASSIVE_HACK(uiUnixControl(gc.c));
+	widget = uiprivUnixControlPrepareWidget(uiUnixControl(gc.c));
 	gtk_grid_attach(g->grid, widget,
 		left, top,
 		xspan, yspan);
@@ -164,7 +157,7 @@ void uiGridDelete(uiGrid *g, uiControl *c)
 	}
 	if (i == g->children->len)
 		uiprivUserBug("Control %p is not in grid %p.", c, g);
-	widget = GTK_WIDGET(uiControlHandle(gc->c));
+	widget = uiprivUnixControlLayoutWidget(gc->c);
 	uiControlSetParent(gc->c, NULL);
 	uiUnixControlSetContainer(uiUnixControl(gc->c), g->container, TRUE);
 	gtk_widget_set_hexpand(widget, gc->oldhexpand);
@@ -217,7 +210,7 @@ void uiGridInsertAt(uiGrid *g, uiControl *c, uiControl *existing, uiAt at, int x
 	}
 	validateChild(g, &gc);
 	uiControlSetParent(gc.c, uiControl(g));
-	TODO_MASSIVE_HACK(uiUnixControl(gc.c));
+	widget = uiprivUnixControlPrepareWidget(uiUnixControl(gc.c));
 	gtk_grid_attach(g->grid, widget, gc.left, gc.top, xspan, yspan);
 	g_array_append_val(g->children, gc);
 }

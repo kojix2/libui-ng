@@ -63,6 +63,21 @@ static void formChildVisibilityDoesNotCrash(void **state)
 	uiControlShow(child);
 }
 
+static void formChildMinimumSizeCanChangeAfterAppend(void **state)
+{
+	uiForm *form = uiFormFromState(state);
+	uiControl *child;
+
+	child = uiControl(uiNewEntry());
+	uiFormAppend(form, "Minimum", child, 0);
+	uiControlSetMinimumSize(child, 60, -1);
+	uiControlHide(child);
+	uiControlShow(child);
+	uiControlSetMinimumSize(child, -1, -1);
+	uiFormDelete(form, 0);
+	uiControlDestroy(child);
+}
+
 #define formUnitTest(f) cmocka_unit_test_setup_teardown((f), \
 	formSetup, unitTestTeardown)
 
@@ -73,6 +88,7 @@ int formRunUnitTests(void)
 		formUnitTest(formSetPadded),
 		formUnitTest(formAppendAndDelete),
 		formUnitTest(formChildVisibilityDoesNotCrash),
+		formUnitTest(formChildMinimumSizeCanChangeAfterAppend),
 	};
 
 	return cmocka_run_group_tests_name("uiForm", tests,

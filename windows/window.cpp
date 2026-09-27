@@ -314,8 +314,8 @@ static void uiWindowMinimumSize(uiWindowsControl *c, int *width, int *height)
 	if (w->child != NULL)
 		uiWindowsControlMinimumSize(uiWindowsControl(w->child), width, height);
 	windowMargins(w, &mx, &my);
-	*width += 2 * mx;
-	*height += 2 * my;
+	*width = uiprivMinimumSizeAdd(*width, uiprivMinimumSizeMultiply(2, mx));
+	*height = uiprivMinimumSizeAdd(*height, uiprivMinimumSizeMultiply(2, my));
 }
 
 static void uiWindowMinimumSizeChanged(uiWindowsControl *c)

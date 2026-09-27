@@ -26,6 +26,30 @@ uiUnixControlAllDefaultsExceptDestroy(uiForm)
 
 #define ctrl(f, i) &g_array_index(f->children, struct formChild, i)
 
+void uiprivUnixFormChildLayoutWidgetChanged(uiControl *child, GtkWidget *oldWidget,
+	GtkWidget *newWidget)
+{
+	uiControl *parent;
+	uiForm *f;
+	struct formChild *fc;
+	guint i;
+
+	parent = uiControlParent(child);
+	if (parent == NULL || parent->TypeSignature != uiFormSignature)
+		return;
+	f = uiForm(parent);
+	for (i = 0; i < f->children->len; i++) {
+		fc = ctrl(f, i);
+		if (fc->c != child)
+			continue;
+		if (fc->stretchy) {
+			gtk_size_group_remove_widget(f->stretchygroup, oldWidget);
+			gtk_size_group_add_widget(f->stretchygroup, newWidget);
+		}
+		return;
+	}
+}
+
 static void formChildUnbindLabel(struct formChild *fc)
 {
 	if (fc->labelBinding == NULL)
@@ -42,7 +66,7 @@ static void formReattachChildren(uiForm *f)
 
 	for (i = 0; i < f->children->len; i++) {
 		fc = ctrl(f, i);
-		widget = GTK_WIDGET(uiControlHandle(fc->c));
+		widget = uiprivUnixControlLayoutWidget(fc->c);
 		gtk_container_child_set(f->container, fc->label,
 			"top-attach", i,
 			NULL);
@@ -82,7 +106,7 @@ void uiFormAppend(uiForm *f, const char *label, uiControl *c, int stretchy)
 	guint row;
 
 	fc.c = c;
-	widget = GTK_WIDGET(uiControlHandle(fc.c));
+	widget = uiprivUnixControlLayoutWidget(fc.c);
 	fc.stretchy = stretchy;
 	fc.oldhexpand = gtk_widget_get_hexpand(widget);
 	fc.oldhalign = gtk_widget_get_halign(widget);
@@ -103,7 +127,7 @@ void uiFormAppend(uiForm *f, const char *label, uiControl *c, int stretchy)
 	gtk_widget_set_hexpand(fc.label, FALSE);
 	gtk_widget_set_halign(fc.label, GTK_ALIGN_END);
 	gtk_widget_set_vexpand(fc.label, FALSE);
-	if (GTK_IS_SCROLLED_WINDOW(widget))
+	if (GTK_IS_SCROLLED_WINDOW(GTK_WIDGET(uiControlHandle(fc.c))))
 		gtk_widget_set_valign(fc.label, GTK_ALIGN_START);
 	else
 		gtk_widget_set_valign(fc.label, GTK_ALIGN_CENTER);
@@ -113,6 +137,7 @@ void uiFormAppend(uiForm *f, const char *label, uiControl *c, int stretchy)
 		0, row,
 		1, 1);
 	// and make them share visibility so if the control is hidden, so is its label
+	// Bind to the stable raw widget, not its replaceable wrapper.
 	fc.labelBinding = g_object_bind_property(GTK_WIDGET(uiControlHandle(fc.c)), "visible",
 		fc.label, "visible",
 		G_BINDING_SYNC_CREATE);
@@ -134,7 +159,7 @@ void uiFormDelete(uiForm *f, int index)
 	GtkWidget *widget;
 
 	fc = ctrl(f, index);
-	widget = GTK_WIDGET(uiControlHandle(fc->c));
+	widget = uiprivUnixControlLayoutWidget(fc->c);
 
 	formChildUnbindLabel(fc);
 	gtk_widget_destroy(fc->label);

@@ -253,6 +253,28 @@ _UI_EXTERN void uiControlEnable(uiControl *c);
 _UI_EXTERN void uiControlDisable(uiControl *c);
 
 /**
+ * Overrides a control's minimum layout size.
+ *
+ * This changes the minimum size requested from the control's parent; it does
+ * not make the control a fixed size. The parent may allocate more space, and
+ * native controls may clip their contents when given a very small allocation.
+ * Width and height are independent. Pass -1 for an axis to restore that
+ * axis's normal, current minimum-size calculation. Pass 0 to remove the
+ * control's own minimum request for that axis, or a positive value to replace
+ * it. Values below -1 are invalid.
+ *
+ * uiWindow and controls that are top-level controls are not supported. For a
+ * container, this does not remove the minimum size needed by its visible
+ * children, labels, or padding.
+ *
+ * @param c A non-NULL, live, non-top-level control.
+ * @param width Minimum width, or -1 to restore the default.
+ * @param height Minimum height, or -1 to restore the default.
+ * @memberof uiControl
+ */
+_UI_EXTERN void uiControlSetMinimumSize(uiControl *c, int width, int height);
+
+/**
  * Allocates a uiControl.
  *
  * Helper to allocate new controls.

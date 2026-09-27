@@ -57,6 +57,16 @@ extern void uiprivScheduleControlDestroyFlush(uintptr_t);
 extern void uiprivControlDestroySetScheduleFuncForTests(void (*)(uintptr_t));
 #endif
 
+// controlsize.c
+// Backends ignore controls with another OS signature (including test controls).
+extern void uiprivControlMinimumSizeChanged(uiControl *);
+extern void uiprivControlMinimumSizeDestroyed(uiControl *);
+extern void uiprivControlMinimumSizeRemove(uiControl *);
+extern void uiprivControlMinimumSizeGet(uiControl *, int *, int *);
+extern void uiprivControlMinimumSizeApply(uiControl *, int *, int *, int);
+extern int uiprivMinimumSizeAdd(int, int);
+extern int uiprivMinimumSizeMultiply(int, int);
+
 // areaevents.c
 typedef struct uiprivClickCounter uiprivClickCounter;
 // Call uiprivClickCounterReset() to initialize a new instance.

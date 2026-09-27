@@ -137,6 +137,6 @@ void tabPageMinimumSize(struct tabPage *tp, int *width, int *height)
 	if (tp->child != NULL)
 		uiWindowsControlMinimumSize(uiWindowsControl(tp->child), width, height);
 	tabPageMargins(tp, &mx, &my);
-	*width += 2 * mx;
-	*height += 2 * my;
+	*width = uiprivMinimumSizeAdd(*width, uiprivMinimumSizeMultiply(2, mx));
+	*height = uiprivMinimumSizeAdd(*height, uiprivMinimumSizeMultiply(2, my));
 }

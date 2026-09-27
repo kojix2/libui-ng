@@ -1,5 +1,6 @@
 // 6 april 2015
 #include "uipriv_windows.hpp"
+#include <limits.h>
 
 // this is a helper function that takes the logic of determining window classes and puts it all in one place
 // there are a number of places where we need to know what window class an arbitrary handle has
@@ -75,18 +76,28 @@ DWORD getExStyle(HWND hwnd)
 void clientSizeToWindowSize(HWND hwnd, int *width, int *height, BOOL hasMenubar)
 {
 	RECT window;
+	int clientWidth, clientHeight;
+	int64_t adjustedWidth, adjustedHeight;
+
+	// Measure frame size below the RECT limit, then add it in 64-bit arithmetic.
+	clientWidth = *width;
+	clientHeight = *height;
+	if (clientWidth > INT_MAX / 2)
+		clientWidth = INT_MAX / 2;
+	if (clientHeight > INT_MAX / 2)
+		clientHeight = INT_MAX / 2;
 
 	window.left = 0;
 	window.top = 0;
-	window.right = *width;
-	window.bottom = *height;
+	window.right = clientWidth;
+	window.bottom = clientHeight;
 	if (AdjustWindowRectEx(&window, getStyle(hwnd), hasMenubar, getExStyle(hwnd)) == 0) {
 		logLastError(L"error getting adjusted window rect");
 		// on error, don't give up; the window will be smaller but whatever
 		window.left = 0;
 		window.top = 0;
-		window.right = *width;
-		window.bottom = *height;
+		window.right = clientWidth;
+		window.bottom = clientHeight;
 	}
 	if (hasMenubar) {
 		RECT temp;
@@ -96,8 +107,20 @@ void clientSizeToWindowSize(HWND hwnd, int *width, int *height, BOOL hasMenubar)
 		SendMessageW(hwnd, WM_NCCALCSIZE, (WPARAM) FALSE, (LPARAM) (&temp));
 		window.bottom += temp.top;
 	}
-	*width = window.right - window.left;
-	*height = window.bottom - window.top;
+	adjustedWidth = (int64_t) *width + (int64_t) window.right -
+		(int64_t) window.left - clientWidth;
+	adjustedHeight = (int64_t) *height + (int64_t) window.bottom -
+		(int64_t) window.top - clientHeight;
+	if (adjustedWidth > INT_MAX)
+		adjustedWidth = INT_MAX;
+	if (adjustedHeight > INT_MAX)
+		adjustedHeight = INT_MAX;
+	if (adjustedWidth < INT_MIN)
+		adjustedWidth = INT_MIN;
+	if (adjustedHeight < INT_MIN)
+		adjustedHeight = INT_MIN;
+	*width = (int) adjustedWidth;
+	*height = (int) adjustedHeight;
 }
 
 HWND parentOf(HWND child)

@@ -1,6 +1,22 @@
 // 16 august 2015
 #include "uipriv_windows.hpp"
 
+// choose a value distinct from uiWindowSignature
+#define uiWindowsControlSignature 0x4D53576E
+
+static int isContainerControl(uiControl *c)
+{
+	switch (c->TypeSignature) {
+	case uiBoxSignature:
+	case uiFormSignature:
+	case uiGridSignature:
+	case uiGroupSignature:
+	case uiTabSignature:
+		return 1;
+	}
+	return 0;
+}
+
 void uiWindowsControlSyncEnableState(uiWindowsControl *c, int enabled)
 {
 	(*(c->SyncEnableState))(c, enabled);
@@ -14,6 +30,9 @@ void uiWindowsControlSetParentHWND(uiWindowsControl *c, HWND parent)
 void uiWindowsControlMinimumSize(uiWindowsControl *c, int *width, int *height)
 {
 	(*(c->MinimumSize))(c, width, height);
+	// Preserve a container's structural child minimum.
+	uiprivControlMinimumSizeApply(uiControl(c), width, height,
+		isContainerControl(uiControl(c)));
 }
 
 void uiWindowsControlMinimumSizeChanged(uiWindowsControl *c)
@@ -60,12 +79,31 @@ HWND uiWindowsEnsureCreateControlHWND(DWORD dwExStyle, LPCWSTR lpClassName, LPCW
 	return hwnd;
 }
 
-// choose a value distinct from uiWindowSignature
-#define uiWindowsControlSignature 0x4D53576E
-
 uiWindowsControl *uiWindowsAllocControl(size_t n, uint32_t typesig, const char *typenamestr)
 {
 	return uiWindowsControl(uiAllocControl(n, uiWindowsControlSignature, typesig, typenamestr));
+}
+
+static void minimumSizeOverrideChanged(uiWindowsControl *c)
+{
+	uiControl *parent;
+
+	// A lower minimum must redistribute space from the root downward.
+	parent = uiControlParent(uiControl(c));
+	if (parent != NULL)
+		minimumSizeOverrideChanged(uiWindowsControl(parent));
+	uiWindowsControlMinimumSizeChanged(c);
+}
+
+void uiprivControlMinimumSizeChanged(uiControl *c)
+{
+	if (c->OSSignature != uiWindowsControlSignature)
+		return;
+	minimumSizeOverrideChanged(uiWindowsControl(c));
+}
+
+void uiprivControlMinimumSizeDestroyed(uiControl *c)
+{
 }
 
 BOOL uiWindowsShouldStopSyncEnableState(uiWindowsControl *c, BOOL enabled)

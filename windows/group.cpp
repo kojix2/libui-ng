@@ -103,8 +103,8 @@ static void uiGroupMinimumSize(uiWindowsControl *c, int *width, int *height)
 	if (*width < labelWidth)		// don't clip the label; it doesn't ellipsize
 		*width = labelWidth;
 	groupMargins(g, &mx, &mtop, &mbottom);
-	*width += 2 * mx;
-	*height += mtop + mbottom;
+	*width = uiprivMinimumSizeAdd(*width, uiprivMinimumSizeMultiply(2, mx));
+	*height = uiprivMinimumSizeAdd(*height, uiprivMinimumSizeAdd(mtop, mbottom));
 }
 
 static void uiGroupMinimumSizeChanged(uiWindowsControl *c)

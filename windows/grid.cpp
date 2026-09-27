@@ -528,13 +528,15 @@ static void uiGridMinimumSize(uiWindowsControl *c, int *width, int *height)
 	colwidth = 0;
 	rowheight = 0;
 	for (x = 0; x < xcount(g); x++)
-		colwidth += ld->colwidths[x];
+		colwidth = uiprivMinimumSizeAdd(colwidth, ld->colwidths[x]);
 	for (y = 0; y < ycount(g); y++)
-		rowheight += ld->rowheights[y];
+		rowheight = uiprivMinimumSizeAdd(rowheight, ld->rowheights[y]);
 
 	// and that's it; just account for padding
-	*width = colwidth + (ld->nVisibleColumns - 1) * xpadding;
-	*height = rowheight + (ld->nVisibleRows - 1) * ypadding;
+	*width = uiprivMinimumSizeAdd(colwidth,
+		uiprivMinimumSizeMultiply(ld->nVisibleColumns - 1, xpadding));
+	*height = uiprivMinimumSizeAdd(rowheight,
+		uiprivMinimumSizeMultiply(ld->nVisibleRows - 1, ypadding));
 }
 
 static void uiGridMinimumSizeChanged(uiWindowsControl *c)

@@ -108,6 +108,22 @@ static void gridDeleteDetachesAndUpdatesChildren(void **state)
 	uiControlDestroy(second);
 }
 
+static void gridChildMinimumSizeCanChangeAfterAppend(void **state)
+{
+	uiGrid *grid = uiGridFromState(state);
+	uiControl *child;
+
+	child = uiControl(uiNewButton("minimum size"));
+	uiGridAppend(grid, child, 0, 0, 1, 1,
+		0, uiAlignFill, 0, uiAlignFill);
+	uiControlSetMinimumSize(child, 40, 0);
+	uiControlHide(child);
+	uiControlShow(child);
+	uiControlSetMinimumSize(child, -1, -1);
+	uiGridDelete(grid, child);
+	uiControlDestroy(child);
+}
+
 #define gridUnitTest(f) cmocka_unit_test_setup_teardown((f), \
 	gridSetup, unitTestTeardown)
 
@@ -121,6 +137,7 @@ int gridRunUnitTests(void)
 		gridUnitTest(gridChildVisibilityChangesDoNotCrash),
 		gridUnitTest(gridNestedGridDoesNotCrash),
 		gridUnitTest(gridDeleteDetachesAndUpdatesChildren),
+		gridUnitTest(gridChildMinimumSizeCanChangeAfterAppend),
 	};
 
 	return cmocka_run_group_tests_name("uiGrid", tests,

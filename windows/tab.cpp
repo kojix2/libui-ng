@@ -1,5 +1,6 @@
 // 16 may 2015
 #include "uipriv_windows.hpp"
+#include <limits.h>
 
 // You don't add controls directly to a tab control on Windows; instead you make them siblings and swap between them on a TCN_SELCHANGING/TCN_SELCHANGE notification pair.
 // In addition, you use dialogs because they can be textured properly; other controls cannot. (Things will look wrong if the tab background in the current theme is fancy if you just use the tab background by itself; see http://stackoverflow.com/questions/30087540/why-are-my-programss-tab-controls-rendering-their-background-in-a-blocky-way-b.)
@@ -172,6 +173,8 @@ static void uiTabMinimumSize(uiWindowsControl *c, int *width, int *height)
 	struct tabPage *page;
 	RECT r;
 	int current;
+	int measuredWidth, measuredHeight;
+	int64_t adjustedWidth, adjustedHeight;
 
 	// only consider the current page
 	pagewid = 0;
@@ -184,12 +187,26 @@ static void uiTabMinimumSize(uiWindowsControl *c, int *width, int *height)
 
 	r.left = 0;
 	r.top = 0;
-	r.right = pagewid;
-	r.bottom = pageht;
+	measuredWidth = pagewid;
+	measuredHeight = pageht;
+	if (measuredWidth > INT_MAX / 2)
+		measuredWidth = INT_MAX / 2;
+	if (measuredHeight > INT_MAX / 2)
+		measuredHeight = INT_MAX / 2;
+	r.right = measuredWidth;
+	r.bottom = measuredHeight;
 	// this also includes the tabs themselves
 	SendMessageW(t->tabHWND, TCM_ADJUSTRECT, (WPARAM) TRUE, (LPARAM) (&r));
-	*width = r.right - r.left;
-	*height = r.bottom - r.top;
+	adjustedWidth = (int64_t) pagewid + (int64_t) r.right -
+		(int64_t) r.left - measuredWidth;
+	adjustedHeight = (int64_t) pageht + (int64_t) r.bottom -
+		(int64_t) r.top - measuredHeight;
+	if (adjustedWidth < 0)
+		adjustedWidth = 0;
+	if (adjustedHeight < 0)
+		adjustedHeight = 0;
+	*width = adjustedWidth > INT_MAX ? INT_MAX : (int) adjustedWidth;
+	*height = adjustedHeight > INT_MAX ? INT_MAX : (int) adjustedHeight;
 }
 
 static void uiTabMinimumSizeChanged(uiWindowsControl *c)

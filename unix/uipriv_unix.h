@@ -41,6 +41,12 @@ extern void uiprivChildSetFlag(uiprivChild *c, int flag);
 extern GtkWidget *uiprivChildBox(uiprivChild *c);
 extern void uiprivChildSetMargined(uiprivChild *c, int margined);
 
+// box.c
+extern void uiprivUnixBoxChildLayoutWidgetChanged(uiControl *, GtkWidget *, GtkWidget *);
+
+// form.c
+extern void uiprivUnixFormChildLayoutWidgetChanged(uiControl *, GtkWidget *, GtkWidget *);
+
 // draw.c
 extern uiDrawContext *uiprivNewContext(cairo_t *cr, GtkStyleContext *style);
 extern void uiprivFreeContext(uiDrawContext *);

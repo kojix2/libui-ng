@@ -350,6 +350,8 @@ void uiFreeControl(uiControl *c)
 
 	if (uiControlParent(c) != NULL)
 		uiprivUserBug("You cannot destroy a uiControl while it still has a parent. (control: %p)", c);
+	// Drop the minimum-size state before freeing the control.
+	uiprivControlMinimumSizeRemove(c);
 	// A parent destroy can synchronously destroy a child that was also queued.
 	// Remove that stale queue entry before releasing the child's storage.
 	removePendingControlDestroy(c);
