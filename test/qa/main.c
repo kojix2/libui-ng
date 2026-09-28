@@ -46,6 +46,16 @@ struct controlTestCase labelTestCases[] = {
 	{NULL, NULL, NULL}
 };
 
+struct controlTestCase layoutTestCases[] = {
+	QA_TEST("1. Spinbox Width Stability", layoutSpinboxStability),
+	QA_TEST("2. Explicit Minimum Size", layoutMinimumSize),
+	QA_TEST("3. Radio Buttons Sizing", layoutRadioButtons),
+	QA_TEST("4. Container Boundaries", layoutContainers),
+	QA_TEST("5. Grid Expansion and Visibility", layoutGrid),
+	QA_TEST("6. Spinbox Baseline and Height", layoutSpinboxBaseline),
+	{NULL, NULL, NULL}
+};
+
 struct controlTestCase radioButtonsTestCases[] = {
 	QA_TEST("1. OnSelected Callback", radioButtonsOnSelected),
 	{NULL, NULL, NULL}
@@ -78,6 +88,7 @@ struct controlTestGroup controlTestGroups[] = {
 	{"uiCheckbox", checkboxTestCases},
 	{"uiEntry", entryTestCases},
 	{"uiLabel", labelTestCases},
+	{"macOS Layout Audit", layoutTestCases},
 	{"uiRadioButtons", radioButtonsTestCases},
 	{"uiSeparator", separatorTestCases},
 	{"uiSpinbox", spinboxTestCases},

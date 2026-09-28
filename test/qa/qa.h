@@ -26,6 +26,13 @@ QA_DECLARE_TEST(labelMultiLine);
 QA_DECLARE_TEST(labelVerticalAlignment);
 QA_DECLARE_TEST(labelCompactGroup);
 
+QA_DECLARE_TEST(layoutSpinboxStability);
+QA_DECLARE_TEST(layoutMinimumSize);
+QA_DECLARE_TEST(layoutRadioButtons);
+QA_DECLARE_TEST(layoutContainers);
+QA_DECLARE_TEST(layoutGrid);
+QA_DECLARE_TEST(layoutSpinboxBaseline);
+
 QA_DECLARE_TEST(radioButtonsOnSelected);
 
 QA_DECLARE_TEST(separatorVertical);
