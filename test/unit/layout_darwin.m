@@ -348,6 +348,40 @@ static void gridKeepsNonexpandingAxisAtFittingSize(void **state)
 	uiControlDestroy(uiControl(box));
 }
 
+static void imageViewDefaultMinimumCanBeOverriddenAndRestored(void **state)
+{
+	uiImageView *imageView;
+	NSLayoutConstraint *height;
+	NSLayoutConstraint *width;
+	NSSize intrinsic;
+	NSView *view;
+
+	(void) state;
+	imageView = uiNewImageView();
+	view = controlView(uiControl(imageView));
+	intrinsic = [view intrinsicContentSize];
+	assert_true(intrinsic.width == NSViewNoIntrinsicMetric);
+	assert_true(intrinsic.height == NSViewNoIntrinsicMetric);
+	width = minimumConstraint(view, NSLayoutAttributeWidth);
+	height = minimumConstraint(view, NSLayoutAttributeHeight);
+	assert_non_null(width);
+	assert_non_null(height);
+	assertNear([width constant], 16);
+	assertNear([height constant], 16);
+
+	uiControlSetMinimumSize(uiControl(imageView), 0, 0);
+	assertNear([width constant], 0);
+	assertNear([height constant], 0);
+	uiControlSetMinimumSize(uiControl(imageView), 48, -1);
+	assertNear([width constant], 48);
+	assertNear([height constant], 16);
+	uiControlSetMinimumSize(uiControl(imageView), -1, -1);
+	assertNear([width constant], 16);
+	assertNear([height constant], 16);
+
+	uiControlDestroy(uiControl(imageView));
+}
+
 int main(void)
 {
 	const struct CMUnitTest tests[] = {
@@ -357,6 +391,7 @@ int main(void)
 		cmocka_unit_test(formUsesOptionalPreferredHeight),
 		cmocka_unit_test(radioButtonsUseStackHuggingAndRestoreIt),
 		cmocka_unit_test(gridKeepsNonexpandingAxisAtFittingSize),
+		cmocka_unit_test(imageViewDefaultMinimumCanBeOverriddenAndRestored),
 	};
 	NSAutoreleasePool *pool;
 	uiInitOptions options = {0};
