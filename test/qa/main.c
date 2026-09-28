@@ -47,6 +47,11 @@ struct controlTestCase labelTestCases[] = {
 	{NULL, NULL, NULL}
 };
 
+struct controlTestCase imageViewTestCases[] = {
+	QA_TEST("1. Default Minimum and Content Modes", imageViewLayout),
+	{NULL, NULL, NULL}
+};
+
 struct controlTestCase layoutTestCases[] = {
 	QA_TEST("1. Spinbox Width Stability", layoutSpinboxStability),
 	QA_TEST("2. Explicit Minimum Size", layoutMinimumSize),
@@ -93,6 +98,7 @@ struct controlTestGroup controlTestGroups[] = {
 	{"uiBox", boxTestCases},
 	{"uiCheckbox", checkboxTestCases},
 	{"uiEntry", entryTestCases},
+	{"uiImageView", imageViewTestCases},
 	{"uiLabel", labelTestCases},
 	{"macOS Layout Audit", layoutTestCases},
 	{"uiRadioButtons", radioButtonsTestCases},
