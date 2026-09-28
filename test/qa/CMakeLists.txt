@@ -1,5 +1,5 @@
 set(qa_sources
-	qa.c main.c box.c button.c checkbox.c entry.c label.c layout.c radiobuttons.c separator.c
+	qa.c main.c box.c button.c checkbox.c entry.c imageview.c label.c layout.c radiobuttons.c separator.c
 	spinbox.c tooltip.c window.c
 )
 if(WIN32)
