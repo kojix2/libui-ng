@@ -79,8 +79,20 @@ uiDarwinControlDefaultSetSuperview(uiRadioButtons, view)
 uiDarwinControlDefaultHugsTrailingEdge(uiRadioButtons, view)
 uiDarwinControlDefaultHugsBottom(uiRadioButtons, view)
 uiDarwinControlDefaultChildEdgeHuggingChanged(uiRadioButtons, view)
-uiDarwinControlDefaultHuggingPriority(uiRadioButtons, view)
-uiDarwinControlDefaultSetHuggingPriority(uiRadioButtons, view)
+
+static NSLayoutPriority uiRadioButtonsHuggingPriority(uiDarwinControl *c,
+	NSLayoutConstraintOrientation orientation)
+{
+	return [uiRadioButtons(c)->view huggingPriorityForOrientation:orientation];
+}
+
+static void uiRadioButtonsSetHuggingPriority(uiDarwinControl *c,
+	NSLayoutPriority priority, NSLayoutConstraintOrientation orientation)
+{
+	[uiRadioButtons(c)->view setHuggingPriority:priority
+		forOrientation:orientation];
+}
+
 uiDarwinControlDefaultChildVisibilityChanged(uiRadioButtons, view)
 
 static void defaultOnSelected(uiRadioButtons *r, void *data)

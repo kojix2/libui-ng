@@ -177,13 +177,14 @@ struct uiBox {
 	uiDarwinControlSyncEnableState(uiDarwinControl(bc.c), uiControlEnabledToUser(uiControl(self->b)));
 	[self addArrangedSubview:[bc view]];
 
-	priority = bc.stretchy ? NSLayoutPriorityDefaultLow : NSLayoutPriorityRequired;
+	priority = bc.stretchy ? NSLayoutPriorityDefaultLow :
+		NSLayoutPriorityRequired - 1;
 	uiDarwinControlSetHuggingPriority(uiDarwinControl(bc.c), priority, self->primaryOrientation);
 	if (!self->vertical && bc.c->TypeSignature == uiLabelSignature) {
 		// Let the stack view center the label at its intrinsic height. This
 		// centers the complete text block, including multiline labels.
 		uiDarwinControlSetHuggingPriority(uiDarwinControl(bc.c),
-			NSLayoutPriorityRequired, self->secondaryOrientation);
+			NSLayoutPriorityRequired - 1, self->secondaryOrientation);
 	} else {
 		uiDarwinControlSetHuggingPriority(uiDarwinControl(bc.c),
 			NSLayoutPriorityDefaultLow, self->secondaryOrientation);

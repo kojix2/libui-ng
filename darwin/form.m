@@ -21,6 +21,7 @@
 @property BOOL stretchy;
 @property NSLayoutPriority oldHorzHuggingPri;
 @property NSLayoutPriority oldVertHuggingPri;
+@property (strong) NSLayoutConstraint *baselineConstraint;
 - (NSView *)view;
 @end
 
@@ -57,6 +58,7 @@ struct uiForm {
 - (void)dealloc
 {
 	[self.label release];
+	[self.baselineConstraint release];
 	[super dealloc];
 }
 
@@ -207,6 +209,7 @@ struct uiForm {
 	formChild *fc;
 	NSTextField *labelView;
 	NSLayoutPriority priority;
+	NSView *baselineView;
 	NSGridRow *row;
 
 	fc = [formChild new];
@@ -230,7 +233,8 @@ struct uiForm {
 
 	// Stretchy controls divide additional height equally; all other controls
 	// keep their intrinsic height.
-	priority = fc.stretchy ? NSLayoutPriorityDefaultLow : NSLayoutPriorityRequired;
+	priority = fc.stretchy ? NSLayoutPriorityDefaultLow :
+		NSLayoutPriorityRequired - 1;
 	uiDarwinControlSetHuggingPriority(uiDarwinControl(fc.c), priority, NSLayoutConstraintOrientationVertical);
 	uiDarwinControlSetHuggingPriority(uiDarwinControl(fc.c), NSLayoutPriorityDefaultLow, NSLayoutConstraintOrientationHorizontal);
 
@@ -241,7 +245,24 @@ struct uiForm {
 	// horizontal use center alignment, while tall or baseline-less composites
 	// use top alignment. Treating every AppKit view as baseline-bearing can
 	// move a control down by much of its height (notably NSColorWell).
-	if ([[fc view] isKindOfClass:[NSScrollView class]]) {
+	baselineView = [fc view];
+	if ([[fc view] conformsToProtocol:@protocol(uiprivDarwinBaselineView)])
+		baselineView = [(id<uiprivDarwinBaselineView>) [fc view]
+			uiprivFirstBaselineView];
+	if (baselineView != [fc view]) {
+		// NSGridView converts a composite view's baseline offset into a constant
+		// when it creates the row. That constant becomes stale if the composite
+		// later grows. Tie the label directly to the native baseline view instead;
+		// the constraint then follows the centered child without rebuilding rows.
+		[row setRowAlignment:NSGridRowAlignmentNone];
+		[[row cellAtIndex:0] setYPlacement:NSGridCellPlacementNone];
+		[[row cellAtIndex:1] setYPlacement:NSGridCellPlacementTop];
+		fc.baselineConstraint = uiprivMkConstraint(fc.label,
+			NSLayoutAttributeFirstBaseline, NSLayoutRelationEqual,
+			baselineView, NSLayoutAttributeFirstBaseline,
+			1, 0, @"uiForm composite control baseline");
+		[self addConstraint:fc.baselineConstraint];
+	} else if ([[fc view] isKindOfClass:[NSScrollView class]]) {
 		[[row cellAtIndex:0] setYPlacement:NSGridCellPlacementTop];
 		[[row cellAtIndex:1] setYPlacement:NSGridCellPlacementFill];
 	} else if ([[fc view] isKindOfClass:[NSSlider class]] ||
@@ -266,6 +287,8 @@ struct uiForm {
 		[self removeConstraints:self->stretchyConstraints];
 		[self->stretchyConstraints removeAllObjects];
 	}
+	if (fc.baselineConstraint != nil)
+		[self removeConstraint:fc.baselineConstraint];
 	[self removeRowAtIndex:n];
 	uiControlSetParent(fc.c, NULL);
 	uiDarwinControlSetSuperview(uiDarwinControl(fc.c), nil);

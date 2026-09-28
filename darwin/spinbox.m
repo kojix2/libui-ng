@@ -1,7 +1,7 @@
 // 14 august 2015
 #import "uipriv_darwin.h"
 
-@interface libui_spinbox : NSView<NSTextFieldDelegate> {
+@interface libui_spinbox : NSView<NSTextFieldDelegate, uiprivDarwinBaselineView> {
 	NSTextField *tf;
 	NSNumberFormatter *formatter;
 	NSStepper *stepper;
@@ -72,16 +72,21 @@ struct uiSpinbox {
 			self, NSLayoutAttributeTrailing,
 			1, 0,
 			@"uiSpinbox right edge")];
-		[self addConstraint:uiprivMkConstraint(self->stepper, NSLayoutAttributeTop,
+		[self addConstraint:uiprivMkConstraint(self->stepper, NSLayoutAttributeCenterY,
 			NSLayoutRelationEqual,
+			self, NSLayoutAttributeCenterY,
+			1, 0,
+			@"uiSpinbox stepper vertical centering")];
+		[self addConstraint:uiprivMkConstraint(self->stepper, NSLayoutAttributeTop,
+			NSLayoutRelationGreaterThanOrEqual,
 			self, NSLayoutAttributeTop,
 			1, 0,
-			@"uiSpinbox top edge stepper")];
-		[self addConstraint:uiprivMkConstraint(self->stepper, NSLayoutAttributeBottom,
-			NSLayoutRelationEqual,
-			self, NSLayoutAttributeBottom,
+			@"uiSpinbox stepper top boundary")];
+		[self addConstraint:uiprivMkConstraint(self, NSLayoutAttributeBottom,
+			NSLayoutRelationGreaterThanOrEqual,
+			self->stepper, NSLayoutAttributeBottom,
 			1, 0,
-			@"uiSpinbox bottom edge stepper")];
+			@"uiSpinbox stepper bottom boundary")];
 		[self addConstraint:uiprivMkConstraint(self->tf, NSLayoutAttributeCenterY,
 			NSLayoutRelationEqual,
 			self->stepper, NSLayoutAttributeCenterY,
@@ -112,6 +117,21 @@ struct uiSpinbox {
 	return self;
 }
 
+- (NSSize)intrinsicContentSize
+{
+	NSSize fieldSize;
+	NSSize result;
+	NSSize stepperSize;
+
+	fieldSize = [self->tf intrinsicContentSize];
+	stepperSize = [self->stepper intrinsicContentSize];
+	result = [super intrinsicContentSize];
+	if (fieldSize.width != NSViewNoIntrinsicMetric &&
+		stepperSize.width != NSViewNoIntrinsicMetric)
+		result.width = fieldSize.width + stepperSize.width;
+	return result;
+}
+
 - (void)dealloc
 {
 	[self->tf setDelegate:nil];
@@ -127,18 +147,28 @@ struct uiSpinbox {
 - (CGFloat)textFieldVerticalInset
 {
 	NSSize fieldSize;
+	NSSize stepperSize;
+	CGFloat height;
 
 	// Baseline offsets are expressed in the receiving view's coordinates.
-	// Account for the field being vertically centered beside a taller stepper.
+	// Use the natural composite height until Auto Layout has assigned a frame,
+	// then account for the field being centered in the allocated wrapper.
 	fieldSize = [self->tf intrinsicContentSize];
-	return (MAX(fieldSize.height, [self->stepper intrinsicContentSize].height) -
-		fieldSize.height) / 2;
+	stepperSize = [self->stepper intrinsicContentSize];
+	height = MAX(NSHeight([self bounds]), MAX(fieldSize.height, stepperSize.height));
+	return (height - fieldSize.height) / 2;
+}
+
+- (NSView *)uiprivFirstBaselineView
+{
+	return self->tf;
 }
 
 - (CGFloat)firstBaselineOffsetFromTop
 {
-	// NSGridView aligns the composite view's reported offset, not the text
-	// field returned by viewForFirstBaselineLayout, so expose it directly.
+	// Containers that use the composite view directly still need the translated
+	// offset. uiForm uses uiprivFirstBaselineView so its baseline constraint
+	// follows the field as the wrapper height changes.
 	return [self textFieldVerticalInset] +
 		[self->tf firstBaselineOffsetFromTop];
 }

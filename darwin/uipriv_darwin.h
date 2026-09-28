@@ -3,6 +3,12 @@
 #import <dlfcn.h>		// see undocumented.m
 #import "../ui.h"
 #import "../ui_darwin.h"
+
+// Composite controls can expose the native descendant whose text baseline
+// should be aligned by containers such as uiForm.
+@protocol uiprivDarwinBaselineView
+- (NSView *)uiprivFirstBaselineView;
+@end
 #import "../common/uipriv.h"
 
 // TODO should we rename the uiprivMk things or not

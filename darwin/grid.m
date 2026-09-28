@@ -37,6 +37,8 @@ enum {
 	BOOL verticalExpansion;
 	CGFloat nativeRowSpacing;
 	CGFloat nativeColumnSpacing;
+	NSSize lastFittingSize;
+	BOOL hasLastFittingSize;
 }
 - (id)initWithGrid:(uiGrid *)g;
 - (void)onDestroy;
@@ -201,6 +203,44 @@ static NSView *newCellView(gridChild *child)
 
 @implementation gridView
 
+- (void)layout
+{
+	NSSize fitting;
+
+	[super layout];
+	if (self->nativeGrid == nil)
+		return;
+	fitting = [self->nativeGrid fittingSize];
+	if (!self->hasLastFittingSize ||
+		!NSEqualSizes(fitting, self->lastFittingSize)) {
+		// Descendant controls can change their natural size after insertion.
+		// Keep only the last observation for change detection; intrinsicContentSize
+		// below always asks NSGridView for the current fitting size.
+		self->lastFittingSize = fitting;
+		self->hasLastFittingSize = YES;
+		[self invalidateIntrinsicContentSize];
+	}
+}
+
+- (NSSize)intrinsicContentSize
+{
+	NSSize fitting;
+	NSSize result;
+
+	result = NSMakeSize(NSViewNoIntrinsicMetric, NSViewNoIntrinsicMetric);
+	if (self->nativeGrid == nil)
+		return result;
+	// Only publish a preferred size on axes that contain no expanding tracks.
+	// NSGridView's fitting size is independent of its currently allocated frame,
+	// so this keeps a compact grid compact without constraining an expand axis.
+	fitting = [self->nativeGrid fittingSize];
+	if (!self->horizontalExpansion)
+		result.width = fitting.width;
+	if (!self->verticalExpansion)
+		result.height = fitting.height;
+	return result;
+}
+
 - (id)initWithGrid:(uiGrid *)g
 {
 	self = [super initWithFrame:NSZeroRect];
@@ -281,6 +321,7 @@ static NSView *newCellView(gridChild *child)
 	[self removeNativeGrid];
 	self->horizontalExpansion = NO;
 	self->verticalExpansion = NO;
+	self->hasLastFittingSize = NO;
 
 	first = YES;
 	for (child in self->children) {
@@ -311,8 +352,10 @@ static NSView *newCellView(gridChild *child)
 		if (child.vexpand)
 			self->verticalExpansion = YES;
 	}
-	if (first)
+	if (first) {
+		[self invalidateIntrinsicContentSize];
 		return;
+	}
 
 	xcount = xmax - xmin;
 	ycount = ymax - ymin;
@@ -510,6 +553,7 @@ static NSView *newCellView(gridChild *child)
 	uiprivFree(occupancy);
 	uiprivFree(expandedRows);
 	uiprivFree(expandedColumns);
+	[self invalidateIntrinsicContentSize];
 }
 
 - (void)validateChild:(gridChild *)candidate
@@ -633,6 +677,8 @@ static NSView *newCellView(gridChild *child)
 		return;
 	[self->nativeGrid setRowSpacing:self->padded ? self->nativeRowSpacing : 0];
 	[self->nativeGrid setColumnSpacing:self->padded ? self->nativeColumnSpacing : 0];
+	self->hasLastFittingSize = NO;
+	[self invalidateIntrinsicContentSize];
 }
 
 - (BOOL)hugsTrailing
