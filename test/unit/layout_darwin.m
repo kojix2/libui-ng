@@ -41,6 +41,8 @@ static void spinboxHasStableNaturalWidthAndHeight(void **state)
 	NSStepper *stepper;
 	NSView *view;
 	NSView *subview;
+	NSRect fieldAlignmentRect;
+	NSRect stepperAlignmentRect;
 	CGFloat expectedBaseline;
 
 	(void) state;
@@ -72,10 +74,15 @@ static void spinboxHasStableNaturalWidthAndHeight(void **state)
 
 	[view setFrameSize:NSMakeSize(natural.width, 80)];
 	[view layoutSubtreeIfNeeded];
-	assertNear(NSHeight([field frame]), [field intrinsicContentSize].height);
-	assertNear(NSHeight([stepper frame]), [stepper intrinsicContentSize].height);
-	assertNear(NSMidY([field frame]), NSMidY([stepper frame]));
-	assertNear(NSMidY([stepper frame]), NSMidY([view bounds]));
+	// Auto Layout sizes and positions alignment rects. On some macOS versions,
+	// NSStepper's frame includes vertical alignment insets (for example, a
+	// 28-point frame around a 20-point intrinsic alignment rect).
+	fieldAlignmentRect = [field alignmentRectForFrame:[field frame]];
+	stepperAlignmentRect = [stepper alignmentRectForFrame:[stepper frame]];
+	assertNear(NSHeight(fieldAlignmentRect), [field intrinsicContentSize].height);
+	assertNear(NSHeight(stepperAlignmentRect), [stepper intrinsicContentSize].height);
+	assertNear(NSMidY(fieldAlignmentRect), NSMidY(stepperAlignmentRect));
+	assertNear(NSMidY(stepperAlignmentRect), NSMidY([view bounds]));
 	expectedBaseline = (NSHeight([view bounds]) -
 		[field intrinsicContentSize].height) / 2 +
 		[field firstBaselineOffsetFromTop];
