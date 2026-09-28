@@ -29,10 +29,8 @@ static NSLayoutConstraint *minimumConstraint(NSView *view,
 	return nil;
 }
 
-static void assertNear(CGFloat actual, CGFloat expected)
-{
-	assert_float_equal(actual, expected, EPSILON);
-}
+#define assertNear(actual, expected) \
+	assert_float_equal((actual), (expected), EPSILON)
 
 static void spinboxHasStableNaturalWidthAndHeight(void **state)
 {

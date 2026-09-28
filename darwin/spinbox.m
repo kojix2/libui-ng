@@ -40,6 +40,13 @@ struct uiSpinbox {
 	if (self) {
 		self->tf = uiprivNewEditableTextField();
 		[self->tf setTranslatesAutoresizingMaskIntoConstraints:NO];
+		// The wrapper can be taller than either native child. AppKit otherwise
+		// permits a child to absorb that spare height on some OS versions, even
+		// though both controls have an intrinsic height. Keep their natural
+		// heights while leaving compression resistance unchanged for genuinely
+		// undersized layouts.
+		[self->tf setContentHuggingPriority:NSLayoutPriorityRequired
+			forOrientation:NSLayoutConstraintOrientationVertical];
 
 		self->formatter = [NSNumberFormatter new];
 		[self->formatter setFormatterBehavior:NSNumberFormatterBehavior10_4];
@@ -54,6 +61,8 @@ struct uiSpinbox {
 		[self->stepper setValueWraps:NO];
 		[self->stepper setAutorepeat:YES];              // hold mouse button to step repeatedly
 		[self->stepper setTranslatesAutoresizingMaskIntoConstraints:NO];
+		[self->stepper setContentHuggingPriority:NSLayoutPriorityRequired
+			forOrientation:NSLayoutConstraintOrientationVertical];
 
 		[self->tf setDelegate:self];
 		[self->stepper setTarget:self];
