@@ -82,6 +82,10 @@ uiImageView *uiNewImageView(void)
     v->iv   = v->host.iv;
     v->mode = uiImageViewContentFit;
     [v->iv setImageScaling:scalingFor(v->mode)];
+    // Match the other backends' icon-sized default without making the image
+    // dimensions a preferred layout size. Explicit minimum overrides replace
+    // this value, and -1 restores it.
+    uiprivDarwinControlSetDefaultMinimumSize(uiControl(v), 16, 16);
     return v;
 }
 

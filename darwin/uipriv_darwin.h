@@ -93,6 +93,10 @@ extern uiWindow *uiprivWindowFromNSWindow(NSWindow *);
 extern void uiprivInitAlloc(void);
 extern void uiprivUninitAlloc(void);
 
+// control.m
+extern void uiprivDarwinControlSetDefaultMinimumSize(uiControl *c,
+	int width, int height);
+
 // autolayout.m
 extern NSLayoutConstraint *uiprivMkConstraint(id view1, NSLayoutAttribute attr1, NSLayoutRelation relation, id view2, NSLayoutAttribute attr2, CGFloat multiplier, CGFloat c, NSString *desc);
 extern void uiprivJiggleViewLayout(NSView *view);
