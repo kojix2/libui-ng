@@ -13,10 +13,22 @@ struct minimumSizeAxis {
 @public
 	minimumSizeAxis width;
 	minimumSizeAxis height;
+	int defaultWidth;
+	int defaultHeight;
 }
 @end
 
 @implementation uiprivMinimumSizeState
+
+- (id)init
+{
+	self = [super init];
+	if (self != nil) {
+		defaultWidth = -1;
+		defaultHeight = -1;
+	}
+	return self;
+}
 
 - (void)dealloc
 {
@@ -100,6 +112,32 @@ static void invalidateMinimumSizeLayout(NSView *view)
 		[ancestor setNeedsLayout:YES];
 }
 
+static int effectiveMinimumSize(int requested, int defaultValue)
+{
+	if (requested != -1)
+		return requested;
+	return defaultValue;
+}
+
+static void applyMinimumSizeState(uiControl *c, NSView *view,
+	uiprivMinimumSizeState *state)
+{
+	int width, height;
+
+	uiprivControlMinimumSizeGet(c, &width, &height);
+	setMinimumSizeConstraint(view, state,
+		effectiveMinimumSize(width, state->defaultWidth),
+		NSLayoutAttributeWidth);
+	setMinimumSizeConstraint(view, state,
+		effectiveMinimumSize(height, state->defaultHeight),
+		NSLayoutAttributeHeight);
+	if (width == -1 && height == -1 &&
+		state->defaultWidth == -1 && state->defaultHeight == -1)
+		objc_setAssociatedObject(view, &minimumSizeStateAssociationKey, nil,
+			OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+	invalidateMinimumSizeLayout(view);
+}
+
 void uiDarwinControlSyncEnableState(uiDarwinControl *c, int state)
 {
 	(*(c->SyncEnableState))(c, state);
@@ -160,12 +198,24 @@ void uiprivControlMinimumSizeChanged(uiControl *c)
 	state = minimumSizeState(view, width != -1 || height != -1);
 	if (state == nil)
 		return;
-	setMinimumSizeConstraint(view, state, width, NSLayoutAttributeWidth);
-	setMinimumSizeConstraint(view, state, height, NSLayoutAttributeHeight);
-	if (width == -1 && height == -1)
-		objc_setAssociatedObject(view, &minimumSizeStateAssociationKey, nil,
-			OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-	invalidateMinimumSizeLayout(view);
+	applyMinimumSizeState(c, view, state);
+}
+
+void uiprivDarwinControlSetDefaultMinimumSize(uiControl *c, int width, int height)
+{
+	NSView *view;
+	uiprivMinimumSizeState *state;
+
+	if (width < -1 || height < -1)
+		uiprivImplBug("invalid Darwin default minimum size (%d, %d)",
+			width, height);
+	view = (NSView *) uiControlHandle(c);
+	state = minimumSizeState(view, width != -1 || height != -1);
+	if (state == nil)
+		return;
+	state->defaultWidth = width;
+	state->defaultHeight = height;
+	applyMinimumSizeState(c, view, state);
 }
 
 void uiprivControlMinimumSizeDestroyed(uiControl *c)
