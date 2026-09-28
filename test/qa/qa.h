@@ -27,6 +27,8 @@ QA_DECLARE_TEST(labelVerticalAlignment);
 QA_DECLARE_TEST(labelCompactGroup);
 QA_DECLARE_TEST(labelFontSize);
 
+QA_DECLARE_TEST(imageViewLayout);
+
 QA_DECLARE_TEST(layoutSpinboxStability);
 QA_DECLARE_TEST(layoutMinimumSize);
 QA_DECLARE_TEST(layoutRadioButtons);
