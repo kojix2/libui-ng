@@ -144,6 +144,15 @@ static void copyLayoutProperties(GtkWidget *from, GtkWidget *to)
 	gtk_widget_set_valign(to, gtk_widget_get_valign(from));
 }
 
+static void makeWrapperChildFill(GtkWidget *widget)
+{
+	// The wrapper owns alignment relative to the control's parent. The raw
+	// widget must fill the allocation that the wrapper gives it rather than
+	// applying the same alignment a second time.
+	gtk_widget_set_halign(widget, GTK_ALIGN_FILL);
+	gtk_widget_set_valign(widget, GTK_ALIGN_FILL);
+}
+
 static gboolean isContainerControl(uiControl *c)
 {
 	switch (c->TypeSignature) {
@@ -216,6 +225,7 @@ static void wrapInCurrentParent(GtkWidget *widget, GtkWidget *wrapper)
 	visible = gtk_widget_get_visible(widget);
 	copyLayoutProperties(widget, wrapper);
 	replaceInParent(widget, wrapper);
+	makeWrapperChildFill(widget);
 	gtk_container_add(GTK_CONTAINER(wrapper), widget);
 	if (visible)
 		gtk_widget_show(wrapper);

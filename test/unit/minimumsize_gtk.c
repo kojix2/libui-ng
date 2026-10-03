@@ -165,6 +165,66 @@ cleanupWindow:
 	return result;
 }
 
+static int testGridAlignment(void)
+{
+	uiInitOptions options = {0};
+	uiWindow *window;
+	uiGrid *grid;
+	uiButton *buttons[3];
+	GtkWidget *raw[3];
+	const uiAlign alignments[] = {
+		uiAlignStart,
+		uiAlignCenter,
+		uiAlignEnd,
+	};
+	const GtkAlign gtkAlignments[] = {
+		GTK_ALIGN_START,
+		GTK_ALIGN_CENTER,
+		GTK_ALIGN_END,
+	};
+	int i;
+	int result = 1;
+
+	if (uiInit(&options) != NULL)
+		return 1;
+	window = uiNewWindow("minimum-size grid alignment test", 360, 360, 0);
+	grid = uiNewGrid();
+	for (i = 0; i < 3; i++) {
+		buttons[i] = uiNewButton("short");
+		raw[i] = GTK_WIDGET(uiControlHandle(uiControl(buttons[i])));
+		uiGridAppend(grid, uiControl(buttons[i]), 0, i, 1, 1,
+			0, alignments[i], 0, alignments[i]);
+		// Exercise wrapper insertion after the grid has set raw alignment.
+		uiControlSetMinimumSize(uiControl(buttons[i]), 300, 100);
+	}
+	uiWindowSetChild(window, uiControl(grid));
+	uiControlShow(uiControl(window));
+	uiMainSteps();
+	uiMainStep(0);
+
+	for (i = 0; i < 3; i++)
+		if (gtk_widget_get_allocated_width(raw[i]) < 300 ||
+			gtk_widget_get_allocated_height(raw[i]) < 100) {
+			fprintf(stderr, "grid-aligned raw widget did not receive its minimum allocation\n");
+			goto cleanup;
+		}
+
+	for (i = 0; i < 3; i++) {
+		uiControlSetMinimumSize(uiControl(buttons[i]), -1, -1);
+		if (gtk_widget_get_halign(raw[i]) != gtkAlignments[i] ||
+			gtk_widget_get_valign(raw[i]) != gtkAlignments[i]) {
+			fprintf(stderr, "minimum-size reset did not restore grid alignment\n");
+			goto cleanup;
+		}
+	}
+	result = 0;
+
+cleanup:
+	uiControlDestroy(uiControl(window));
+	uiUninit();
+	return result;
+}
+
 static int testExternalControl(void)
 {
 	uiInitOptions options = {0};
@@ -196,6 +256,8 @@ int main(void)
 	if (testBox() != 0)
 		return 1;
 	if (testForm() != 0)
+		return 1;
+	if (testGridAlignment() != 0)
 		return 1;
 	return testExternalControl();
 }
