@@ -348,6 +348,78 @@ static void gridKeepsNonexpandingAxisAtFittingSize(void **state)
 	uiControlDestroy(uiControl(box));
 }
 
+static NSUInteger constraintsWithIdentifierPrefix(NSView *view,
+	NSString *prefix)
+{
+	NSLayoutConstraint *constraint;
+	NSUInteger count;
+
+	count = 0;
+	for (constraint in [view constraints])
+		if ([[constraint identifier] hasPrefix:prefix])
+			count++;
+	return count;
+}
+
+static void singleChildConstraintsFollowVisibility(void **state)
+{
+	uiButton *child;
+	uiGroup *group;
+	uiTab *tab;
+	uiWindow *window;
+	NSBox *groupView;
+	NSView *owner;
+	NSTabView *tabView;
+	NSWindow *nativeWindow;
+	NSUInteger visibleCount;
+
+	(void) state;
+	group = uiNewGroup("Group");
+	child = uiNewButton("group child");
+	uiControlSetMinimumSize(uiControl(child), 600, 400);
+	uiGroupSetChild(group, uiControl(child));
+	groupView = (NSBox *) controlView(uiControl(group));
+	owner = [groupView contentView];
+	visibleCount = constraintsWithIdentifierPrefix(owner, @"uiGroup");
+	assert_true(visibleCount != 0);
+	uiControlHide(uiControl(child));
+	assert_int_equal(constraintsWithIdentifierPrefix(owner, @"uiGroup"), 0);
+	uiControlShow(uiControl(child));
+	assert_int_equal(constraintsWithIdentifierPrefix(owner, @"uiGroup"),
+		visibleCount);
+	uiControlDestroy(uiControl(group));
+
+	window = uiNewWindow("Window", 320, 200, 0);
+	child = uiNewButton("window child");
+	uiControlSetMinimumSize(uiControl(child), 600, 400);
+	uiWindowSetChild(window, uiControl(child));
+	nativeWindow = (NSWindow *) uiControlHandle(uiControl(window));
+	owner = [nativeWindow contentView];
+	visibleCount = constraintsWithIdentifierPrefix(owner, @"uiWindow");
+	assert_true(visibleCount != 0);
+	uiControlHide(uiControl(child));
+	assert_int_equal(constraintsWithIdentifierPrefix(owner, @"uiWindow"), 0);
+	uiControlShow(uiControl(child));
+	assert_int_equal(constraintsWithIdentifierPrefix(owner, @"uiWindow"),
+		visibleCount);
+	uiControlDestroy(uiControl(window));
+
+	tab = uiNewTab();
+	child = uiNewButton("tab child");
+	uiControlSetMinimumSize(uiControl(child), 600, 400);
+	uiTabAppend(tab, "Page", uiControl(child));
+	tabView = (NSTabView *) controlView(uiControl(tab));
+	owner = [[tabView tabViewItemAtIndex:0] view];
+	visibleCount = constraintsWithIdentifierPrefix(owner, @"uiTab page");
+	assert_true(visibleCount != 0);
+	uiControlHide(uiControl(child));
+	assert_int_equal(constraintsWithIdentifierPrefix(owner, @"uiTab page"), 0);
+	uiControlShow(uiControl(child));
+	assert_int_equal(constraintsWithIdentifierPrefix(owner, @"uiTab page"),
+		visibleCount);
+	uiControlDestroy(uiControl(tab));
+}
+
 int main(void)
 {
 	const struct CMUnitTest tests[] = {
@@ -357,6 +429,7 @@ int main(void)
 		cmocka_unit_test(formUsesOptionalPreferredHeight),
 		cmocka_unit_test(radioButtonsUseStackHuggingAndRestoreIt),
 		cmocka_unit_test(gridKeepsNonexpandingAxisAtFittingSize),
+		cmocka_unit_test(singleChildConstraintsFollowVisibility),
 	};
 	NSAutoreleasePool *pool;
 	uiInitOptions options = {0};

@@ -53,7 +53,7 @@ struct uiTab {
 - (void)establishChildConstraints
 {
 	[self removeChildConstraints];
-	if (self.c == NULL)
+	if (self.c == NULL || !uiControlVisible(self.c))
 		return;
 	uiprivSingleChildConstraintsEstablish(&(self->constraints),
 		self->view, [self childView],

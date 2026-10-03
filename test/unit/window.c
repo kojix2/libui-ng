@@ -1,5 +1,9 @@
 #include "unit.h"
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 #define uiWindowFromState(s) (((struct state *)*(s))->w)
 
 static void windowNew(void **state)
@@ -197,6 +201,71 @@ static void windowSettersDoNotRunEventLoop(void **state)
 	assert_int_equal(queuedCallbackCalled, 0);
 }
 
+#ifdef _WIN32
+static SIZE minimumWindowSize(uiWindow *w)
+{
+	MINMAXINFO info;
+	SIZE size;
+
+	ZeroMemory(&info, sizeof (MINMAXINFO));
+	SendMessageW((HWND) uiControlHandle(uiControl(w)),
+		WM_GETMINMAXINFO, 0, (LPARAM) (&info));
+	size.cx = info.ptMinTrackSize.x;
+	size.cy = info.ptMinTrackSize.y;
+	return size;
+}
+
+static void assertHidingControlReducesWindowMinimum(uiWindow *w, uiControl *c)
+{
+	SIZE visible;
+	SIZE hidden;
+	SIZE restored;
+
+	visible = minimumWindowSize(w);
+	uiControlHide(c);
+	hidden = minimumWindowSize(w);
+	assert_true(hidden.cx < visible.cx);
+	assert_true(hidden.cy < visible.cy);
+	uiControlShow(c);
+	restored = minimumWindowSize(w);
+	assert_int_equal(restored.cx, visible.cx);
+	assert_int_equal(restored.cy, visible.cy);
+}
+
+static void windowMinimumExcludesHiddenSingleChildren(void **state)
+{
+	uiWindow *w = uiWindowFromState(state);
+	uiControl *child;
+	uiGroup *group;
+	uiTab *tab;
+
+	child = uiControl(uiNewButton("window child"));
+	uiControlSetMinimumSize(child, 600, 400);
+	uiWindowSetChild(w, child);
+	assertHidingControlReducesWindowMinimum(w, child);
+	uiWindowSetChild(w, NULL);
+	uiControlDestroy(child);
+
+	group = uiNewGroup("group");
+	child = uiControl(uiNewButton("group child"));
+	uiControlSetMinimumSize(child, 600, 400);
+	uiGroupSetChild(group, child);
+	uiWindowSetChild(w, uiControl(group));
+	assertHidingControlReducesWindowMinimum(w, child);
+	uiWindowSetChild(w, NULL);
+	uiControlDestroy(uiControl(group));
+
+	tab = uiNewTab();
+	child = uiControl(uiNewButton("tab child"));
+	uiControlSetMinimumSize(child, 600, 400);
+	uiTabAppend(tab, "Page", child);
+	uiWindowSetChild(w, uiControl(tab));
+	assertHidingControlReducesWindowMinimum(w, child);
+	uiWindowSetChild(w, NULL);
+	uiControlDestroy(uiControl(tab));
+}
+#endif
+
 #define windowUnitTest(f) cmocka_unit_test_setup_teardown((f), \
 		unitTestSetup, unitTestTeardown)
 
@@ -216,6 +285,9 @@ int windowRunUnitTests(void)
 		windowUnitTest(windowSetConstrainedContentSizeNoSynchronousCallback),
 		windowUnitTest(windowSetPositionNoSynchronousCallback),
 		windowUnitTest(windowSettersDoNotRunEventLoop),
+	#ifdef _WIN32
+		windowUnitTest(windowMinimumExcludesHiddenSingleChildren),
+	#endif
 	};
 
 	return cmocka_run_group_tests_name("uiWindow", tests, unitTestsSetup, unitTestsTeardown);

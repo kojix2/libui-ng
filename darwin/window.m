@@ -238,7 +238,7 @@ static void windowRelayout(uiWindow *w)
 	NSView *contentView;
 
 	removeConstraints(w);
-	if (w->child == NULL)
+	if (w->child == NULL || !uiControlVisible(w->child))
 		return;
 	childView = (NSView *) uiControlHandle(w->child);
 	contentView = [w->window contentView];

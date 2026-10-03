@@ -24,7 +24,7 @@ static void tabPageRelayout(struct tabPage *tp)
 	int mx, my;
 	HWND child;
 
-	if (tp->child == NULL)
+	if (tp->child == NULL || !uiControlVisible(tp->child))
 		return;
 	uiWindowsEnsureGetClientRect(tp->hwnd, &r);
 	tabPageMargins(tp, &mx, &my);
@@ -134,7 +134,7 @@ void tabPageMinimumSize(struct tabPage *tp, int *width, int *height)
 
 	*width = 0;
 	*height = 0;
-	if (tp->child != NULL)
+	if (tp->child != NULL && uiControlVisible(tp->child))
 		uiWindowsControlMinimumSize(uiWindowsControl(tp->child), width, height);
 	tabPageMargins(tp, &mx, &my);
 	*width = uiprivMinimumSizeAdd(*width, uiprivMinimumSizeMultiply(2, mx));

@@ -70,7 +70,7 @@ static void windowRelayout(uiWindow *w)
 	int mx, my;
 	HWND child;
 
-	if (w->child == NULL)
+	if (w->child == NULL || !uiControlVisible(w->child))
 		return;
 	x = 0;
 	y = 0;
@@ -311,7 +311,7 @@ static void uiWindowMinimumSize(uiWindowsControl *c, int *width, int *height)
 
 	*width = 0;
 	*height = 0;
-	if (w->child != NULL)
+	if (w->child != NULL && uiControlVisible(w->child))
 		uiWindowsControlMinimumSize(uiWindowsControl(w->child), width, height);
 	windowMargins(w, &mx, &my);
 	*width = uiprivMinimumSizeAdd(*width, uiprivMinimumSizeMultiply(2, mx));

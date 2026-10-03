@@ -42,7 +42,7 @@ static void groupRelayout(uiGroup *g)
 	RECT r;
 	int mx, mtop, mbottom;
 
-	if (g->child == NULL)
+	if (g->child == NULL || !uiControlVisible(g->child))
 		return;
 	uiWindowsEnsureGetClientRect(g->hwnd, &r);
 	groupMargins(g, &mx, &mtop, &mbottom);
@@ -97,7 +97,7 @@ static void uiGroupMinimumSize(uiWindowsControl *c, int *width, int *height)
 
 	*width = 0;
 	*height = 0;
-	if (g->child != NULL)
+	if (g->child != NULL && uiControlVisible(g->child))
 		uiWindowsControlMinimumSize(uiWindowsControl(g->child), width, height);
 	labelWidth = uiWindowsWindowTextWidth(g->hwnd);
 	if (*width < labelWidth)		// don't clip the label; it doesn't ellipsize

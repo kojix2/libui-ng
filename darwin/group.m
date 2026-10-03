@@ -62,7 +62,7 @@ static void groupRelayout(uiGroup *g)
 	NSView *childView;
 
 	removeConstraints(g);
-	if (g->child == NULL)
+	if (g->child == NULL || !uiControlVisible(g->child))
 		return;
 	childView = (NSView *) uiControlHandle(g->child);
 	uiprivSingleChildConstraintsEstablish(&(g->constraints),
