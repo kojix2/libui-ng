@@ -176,53 +176,40 @@ static void measureTracks(uiGrid *g, gridLayoutData *ld)
 {
 	int ix, iy;
 	int iwidth, iheight;
-	int i;
-	struct gridChild *gc;
+	int trackWidth, trackHeight;
+	int extraWidth, extraHeight;
 
-	// 1) compute colwidths and rowheights before handling expansion
-	// we only count non-spanning controls to avoid weirdness
-	for (iy = 0; iy < ycount(g); iy++)
-		for (ix = 0; ix < xcount(g); ix++) {
-			i = ld->gg[iy][ix];
-			if (i == -1)
-				continue;
-			gc = (*(g->children))[i];
-			uiWindowsControlMinimumSize(uiWindowsControl(gc->c), &iwidth, &iheight);
-			if (gc->xspan == 1)
-				if (ld->colwidths[ix] < iwidth)
-					ld->colwidths[ix] = iwidth;
-			if (gc->yspan == 1)
-				if (ld->rowheights[iy] < iheight)
-					ld->rowheights[iy] = iheight;
-			// save these for step 6
-			gc->minwidth = iwidth;
-			gc->minheight = iheight;
+	// 1) compute colwidths and rowheights before handling expansion.
+	// Spanning controls divide their minimum across the tracks they occupy,
+	// assigning any remainder one pixel at a time. Minimum-size calculation
+	// and actual layout use this same measurement so they cannot disagree about
+	// the tracks in a span.
+	for (struct gridChild *gc : *(g->children)) {
+		if (!uiControlVisible(gc->c))
+			continue;
+		uiWindowsControlMinimumSize(uiWindowsControl(gc->c), &iwidth, &iheight);
+		trackWidth = iwidth / gc->xspan;
+		extraWidth = iwidth % gc->xspan;
+		trackHeight = iheight / gc->yspan;
+		extraHeight = iheight % gc->yspan;
+		for (ix = gc->left; ix < gc->left + gc->xspan; ix++) {
+			int minimum;
+
+			minimum = trackWidth + (ix - gc->left < extraWidth);
+			if (ld->colwidths[toxindex(g, ix)] < minimum)
+				ld->colwidths[toxindex(g, ix)] = minimum;
 		}
-}
+		for (iy = gc->top; iy < gc->top + gc->yspan; iy++) {
+			int minimum;
 
-static void measureMinimumTracks(uiGrid *g, gridLayoutData *ld)
-{
-	int x, y;
-	int i;
-	struct gridChild *gc;
-	int minwid, minht;
-
-	// Minimum-size calculation includes spanning controls. Divide their
-	// minimum dimensions equally among the tracks they occupy.
-	for (y = 0; y < ycount(g); y++)
-		for (x = 0; x < xcount(g); x++) {
-			i = ld->gg[y][x];
-			if (i == -1)
-				continue;
-			gc = (*(g->children))[i];
-			uiWindowsControlMinimumSize(uiWindowsControl(gc->c), &minwid, &minht);
-			if (ld->colwidths[x] < minwid / gc->xspan)
-				ld->colwidths[x] = minwid / gc->xspan;
-			if (ld->rowheights[y] < minht / gc->yspan)
-				ld->rowheights[y] = minht / gc->yspan;
-			gc->minwidth = minwid;
-			gc->minheight = minht;
+			minimum = trackHeight + (iy - gc->top < extraHeight);
+			if (ld->rowheights[toyindex(g, iy)] < minimum)
+				ld->rowheights[toyindex(g, iy)] = minimum;
 		}
+		// save these for step 6
+		gc->minwidth = iwidth;
+		gc->minheight = iheight;
+	}
 }
 
 static void findExpandingTracks(uiGrid *g, gridLayoutData *ld)
@@ -328,20 +315,23 @@ static void computeCellRects(uiGrid *g, gridLayoutData *ld, int xpadding, int yp
 		curx = 0;
 		prev = -1;
 		for (ix = 0; ix < xcount(g); ix++) {
-			if (!ld->visibleColumn(g, ix))
-				continue;
+			bool visible;
+
+			visible = ld->visibleColumn(g, ix);
 			i = ld->gg[iy][ix];
 			if (i != -1) {
 				gc = (*(g->children))[i];
 				if (iy == toyindex(g, gc->top)) {		// don't repeat this step if the control spans vertically
 					if (i != prev)
 						gc->finalx = curx;
-					else
+					else if (visible)
 						gc->finalwidth += xpadding;
 					gc->finalwidth += ld->colwidths[ix];
 				}
 			}
-			curx += ld->colwidths[ix] + xpadding;
+			curx += ld->colwidths[ix];
+			if (visible)
+				curx += xpadding;
 			prev = i;
 		}
 	}
@@ -352,20 +342,23 @@ static void computeCellRects(uiGrid *g, gridLayoutData *ld, int xpadding, int yp
 		cury = 0;
 		prev = -1;
 		for (iy = 0; iy < ycount(g); iy++) {
-			if (!ld->visibleRow(g, iy))
-				continue;
+			bool visible;
+
+			visible = ld->visibleRow(g, iy);
 			i = ld->gg[iy][ix];
 			if (i != -1) {
 				gc = (*(g->children))[i];
 				if (ix == toxindex(g, gc->left)) {		// don't repeat this step if the control spans horizontally
 					if (i != prev)
 						gc->finaly = cury;
-					else
+					else if (visible)
 						gc->finalheight += ypadding;
 					gc->finalheight += ld->rowheights[iy];
 				}
 			}
-			cury += ld->rowheights[iy] + ypadding;
+			cury += ld->rowheights[iy];
+			if (visible)
+				cury += ypadding;
 			prev = i;
 		}
 	}
@@ -522,7 +515,7 @@ static void uiGridMinimumSize(uiWindowsControl *c, int *width, int *height)
 		return;
 	}
 
-	measureMinimumTracks(g, ld);
+	measureTracks(g, ld);
 
 	// 2) compute total column width/row height
 	colwidth = 0;

@@ -1,5 +1,9 @@
 #include "unit.h"
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 #define uiGridFromState(s) ((uiGrid *) (((struct state *) *(s))->c))
 
 static int gridSetup(void **state)
@@ -124,6 +128,83 @@ static void gridChildMinimumSizeCanChangeAfterAppend(void **state)
 	uiControlDestroy(child);
 }
 
+#ifdef _WIN32
+static int controlWindowWidth(uiControl *c)
+{
+	RECT r;
+
+	assert_true(GetWindowRect((HWND) uiControlHandle(c), &r));
+	return r.right - r.left;
+}
+
+static int controlWindowHeight(uiControl *c)
+{
+	RECT r;
+
+	assert_true(GetWindowRect((HWND) uiControlHandle(c), &r));
+	return r.bottom - r.top;
+}
+
+static void gridNonExpandingSpanUsesItsMinimumSize(void **state)
+{
+	struct state *s = *state;
+	uiGrid *grid = uiGridFromState(state);
+	uiControl *child;
+
+	child = uiControl(uiNewButton("span"));
+	uiControlSetMinimumSize(child, 120, 90);
+	uiGridAppend(grid, child, 0, 0, 2, 2,
+		0, uiAlignFill, 0, uiAlignFill);
+	uiWindowSetChild(s->w, uiControl(grid));
+
+	assert_int_equal(controlWindowWidth(child), 120);
+	assert_int_equal(controlWindowHeight(child), 90);
+}
+
+static void gridExpandingSpanUsesTheAvailableSize(void **state)
+{
+	struct state *s = *state;
+	uiGrid *grid = uiGridFromState(state);
+	uiControl *child;
+
+	child = uiControl(uiNewButton("span"));
+	uiControlSetMinimumSize(child, 120, 90);
+	uiGridAppend(grid, child, 0, 0, 2, 2,
+		1, uiAlignFill, 1, uiAlignFill);
+	uiWindowSetChild(s->w, uiControl(grid));
+
+	assert_int_equal(controlWindowWidth(child),
+		controlWindowWidth(uiControl(grid)));
+	assert_int_equal(controlWindowHeight(child),
+		controlWindowHeight(uiControl(grid)));
+}
+
+static void gridMixedSpanUsesItsMinimumWidth(void **state)
+{
+	struct state *s = *state;
+	uiGrid *grid = uiGridFromState(state);
+	uiControl *span;
+	uiControl *left;
+	uiControl *right;
+
+	span = uiControl(uiNewButton("span"));
+	left = uiControl(uiNewButton("left"));
+	right = uiControl(uiNewButton("right"));
+	uiControlSetMinimumSize(span, 121, 30);
+	uiControlSetMinimumSize(left, 20, 20);
+	uiControlSetMinimumSize(right, 20, 20);
+	uiGridAppend(grid, span, 0, 0, 2, 1,
+		0, uiAlignFill, 0, uiAlignFill);
+	uiGridAppend(grid, left, 0, 1, 1, 1,
+		0, uiAlignFill, 0, uiAlignFill);
+	uiGridAppend(grid, right, 1, 1, 1, 1,
+		0, uiAlignFill, 0, uiAlignFill);
+	uiWindowSetChild(s->w, uiControl(grid));
+
+	assert_int_equal(controlWindowWidth(span), 121);
+}
+#endif
+
 #define gridUnitTest(f) cmocka_unit_test_setup_teardown((f), \
 	gridSetup, unitTestTeardown)
 
@@ -138,6 +219,11 @@ int gridRunUnitTests(void)
 		gridUnitTest(gridNestedGridDoesNotCrash),
 		gridUnitTest(gridDeleteDetachesAndUpdatesChildren),
 		gridUnitTest(gridChildMinimumSizeCanChangeAfterAppend),
+	#ifdef _WIN32
+		gridUnitTest(gridNonExpandingSpanUsesItsMinimumSize),
+		gridUnitTest(gridExpandingSpanUsesTheAvailableSize),
+		gridUnitTest(gridMixedSpanUsesItsMinimumWidth),
+	#endif
 	};
 
 	return cmocka_run_group_tests_name("uiGrid", tests,
