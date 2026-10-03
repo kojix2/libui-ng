@@ -35,9 +35,20 @@ void uiWindowsControlMinimumSize(uiWindowsControl *c, int *width, int *height)
 		isContainerControl(uiControl(c)));
 }
 
+static void notifyMinimumSizeChanged(uiWindowsControl *c)
+{
+	uiControl *parent;
+
+	// Relayout from the root so smaller minima redistribute existing space.
+	parent = uiControlParent(uiControl(c));
+	if (parent != NULL)
+		notifyMinimumSizeChanged(uiWindowsControl(parent));
+	(*(c->MinimumSizeChanged))(c);
+}
+
 void uiWindowsControlMinimumSizeChanged(uiWindowsControl *c)
 {
-	(*(c->MinimumSizeChanged))(c);
+	notifyMinimumSizeChanged(c);
 }
 
 // TODO get rid of this
@@ -84,22 +95,11 @@ uiWindowsControl *uiWindowsAllocControl(size_t n, uint32_t typesig, const char *
 	return uiWindowsControl(uiAllocControl(n, uiWindowsControlSignature, typesig, typenamestr));
 }
 
-static void minimumSizeOverrideChanged(uiWindowsControl *c)
-{
-	uiControl *parent;
-
-	// A lower minimum must redistribute space from the root downward.
-	parent = uiControlParent(uiControl(c));
-	if (parent != NULL)
-		minimumSizeOverrideChanged(uiWindowsControl(parent));
-	uiWindowsControlMinimumSizeChanged(c);
-}
-
 void uiprivControlMinimumSizeChanged(uiControl *c)
 {
 	if (c->OSSignature != uiWindowsControlSignature)
 		return;
-	minimumSizeOverrideChanged(uiWindowsControl(c));
+	uiWindowsControlMinimumSizeChanged(uiWindowsControl(c));
 }
 
 void uiprivControlMinimumSizeDestroyed(uiControl *c)
@@ -140,15 +140,6 @@ BOOL uiWindowsControlTooSmall(uiWindowsControl *c)
 	if ((r.bottom - r.top) < height)
 		return TRUE;
 	return FALSE;
-}
-
-void uiWindowsControlContinueMinimumSizeChanged(uiWindowsControl *c)
-{
-	uiControl *parent;
-
-	parent = uiControlParent(uiControl(c));
-	if (parent != NULL)
-		uiWindowsControlMinimumSizeChanged(uiWindowsControl(parent));
 }
 
 void uiWindowsControlNotifyVisibilityChanged(uiWindowsControl *c)

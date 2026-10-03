@@ -549,10 +549,6 @@ static void uiGridMinimumSizeChanged(uiWindowsControl *c)
 {
 	uiGrid *g = uiGrid(c);
 
-	if (uiWindowsControlTooSmall(uiWindowsControl(g))) {
-		uiWindowsControlContinueMinimumSizeChanged(uiWindowsControl(g));
-		return;
-	}
 	gridRelayout(g);
 }
 

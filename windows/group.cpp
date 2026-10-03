@@ -111,10 +111,6 @@ static void uiGroupMinimumSizeChanged(uiWindowsControl *c)
 {
 	uiGroup *g = uiGroup(c);
 
-	if (uiWindowsControlTooSmall(uiWindowsControl(g))) {
-		uiWindowsControlContinueMinimumSizeChanged(uiWindowsControl(g));
-		return;
-	}
 	groupRelayout(g);
 }
 
@@ -146,8 +142,8 @@ void uiGroupSetChild(uiGroup *g, uiControl *child)
 		uiControlSetParent(g->child, uiControl(g));
 		uiWindowsControlSetParentHWND(uiWindowsControl(g->child), g->hwnd);
 		uiWindowsControlAssignSoleControlIDZOrder(uiWindowsControl(g->child));
-		uiWindowsControlMinimumSizeChanged(uiWindowsControl(g));
 	}
+	uiWindowsControlMinimumSizeChanged(uiWindowsControl(g));
 }
 
 int uiGroupMargined(uiGroup *g)

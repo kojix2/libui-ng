@@ -211,10 +211,6 @@ static void uiFormMinimumSizeChanged(uiWindowsControl *c)
 {
 	uiForm *f = uiForm(c);
 
-	if (uiWindowsControlTooSmall(uiWindowsControl(f))) {
-		uiWindowsControlContinueMinimumSizeChanged(uiWindowsControl(f));
-		return;
-	}
 	formRelayout(f);
 }
 

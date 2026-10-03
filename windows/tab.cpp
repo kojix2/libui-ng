@@ -213,10 +213,6 @@ static void uiTabMinimumSizeChanged(uiWindowsControl *c)
 {
 	uiTab *t = uiTab(c);
 
-	if (uiWindowsControlTooSmall(uiWindowsControl(t))) {
-		uiWindowsControlContinueMinimumSizeChanged(uiWindowsControl(t));
-		return;
-	}
 	tabRelayout(t);
 }
 

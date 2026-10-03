@@ -118,11 +118,8 @@ _UI_EXTERN void uiWindowsControlChildVisibilityChanged(uiWindowsControl *);
 #define uiWindowsControlDefaultMinimumSizeChanged(type) \
 	static void type ## MinimumSizeChanged(uiWindowsControl *c) \
 	{ \
-		if (uiWindowsControlTooSmall(c)) { \
-			uiWindowsControlContinueMinimumSizeChanged(c); \
-			return; \
-		} \
-		/* otherwise do nothing; we have no children */ \
+		(void) c; \
+		/* leaf controls have no children to relayout */ \
 	}
 #define uiWindowsControlDefaultLayoutRect(type) \
 	static void type ## LayoutRect(uiWindowsControl *c, RECT *r) \
@@ -255,7 +252,6 @@ _UI_EXTERN HWND uiWindowsMakeContainer(uiWindowsControl *c, void (*onResize)(uiW
 
 // TODO document
 _UI_EXTERN BOOL uiWindowsControlTooSmall(uiWindowsControl *c);
-_UI_EXTERN void uiWindowsControlContinueMinimumSizeChanged(uiWindowsControl *c);
 
 // TODO document
 _UI_EXTERN void uiWindowsControlAssignSoleControlIDZOrder(uiWindowsControl *);

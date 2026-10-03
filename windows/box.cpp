@@ -227,10 +227,6 @@ static void uiBoxMinimumSizeChanged(uiWindowsControl *c)
 {
 	uiBox *b = uiBox(c);
 
-	if (uiWindowsControlTooSmall(uiWindowsControl(b))) {
-		uiWindowsControlContinueMinimumSizeChanged(uiWindowsControl(b));
-		return;
-	}
 	boxRelayout(b);
 }
 

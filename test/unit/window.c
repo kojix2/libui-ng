@@ -264,6 +264,67 @@ static void windowMinimumExcludesHiddenSingleChildren(void **state)
 	uiWindowSetChild(w, NULL);
 	uiControlDestroy(uiControl(tab));
 }
+
+static int controlHeight(uiControl *c)
+{
+	RECT rect;
+
+	assert_true(GetWindowRect((HWND) uiControlHandle(c), &rect));
+	return rect.bottom - rect.top;
+}
+
+static void windowRelayoutsAncestorsWhenChildIsHidden(void **state)
+{
+	uiWindow *w = uiWindowFromState(state);
+	uiBox *outer;
+	uiBox *inner;
+	uiControl *largeChild;
+	uiControl *stretchySibling;
+	int before;
+
+	outer = uiNewVerticalBox();
+	inner = uiNewVerticalBox();
+	largeChild = uiControl(uiNewButton("large child"));
+	stretchySibling = uiControl(uiNewButton("stretchy sibling"));
+	uiControlSetMinimumSize(largeChild, 50, 100);
+	uiBoxAppend(inner, largeChild, 0);
+	uiBoxAppend(outer, uiControl(inner), 0);
+	uiBoxAppend(outer, stretchySibling, 1);
+	uiWindowSetChild(w, uiControl(outer));
+	uiControlShow(uiControl(w));
+
+	before = controlHeight(stretchySibling);
+	assert_true(before > 0);
+	uiControlHide(largeChild);
+	assert_true(controlHeight(stretchySibling) > before);
+}
+
+static void windowRelayoutsAncestorsWhenGroupChildIsRemoved(void **state)
+{
+	uiWindow *w = uiWindowFromState(state);
+	uiBox *outer;
+	uiGroup *group;
+	uiControl *largeChild;
+	uiControl *stretchySibling;
+	int before;
+
+	outer = uiNewVerticalBox();
+	group = uiNewGroup("group");
+	largeChild = uiControl(uiNewButton("large child"));
+	stretchySibling = uiControl(uiNewButton("stretchy sibling"));
+	uiControlSetMinimumSize(largeChild, 50, 100);
+	uiGroupSetChild(group, largeChild);
+	uiBoxAppend(outer, uiControl(group), 0);
+	uiBoxAppend(outer, stretchySibling, 1);
+	uiWindowSetChild(w, uiControl(outer));
+	uiControlShow(uiControl(w));
+
+	before = controlHeight(stretchySibling);
+	assert_true(before > 0);
+	uiGroupSetChild(group, NULL);
+	assert_true(controlHeight(stretchySibling) > before);
+	uiControlDestroy(largeChild);
+}
 #endif
 
 #define windowUnitTest(f) cmocka_unit_test_setup_teardown((f), \
@@ -287,6 +348,8 @@ int windowRunUnitTests(void)
 		windowUnitTest(windowSettersDoNotRunEventLoop),
 	#ifdef _WIN32
 		windowUnitTest(windowMinimumExcludesHiddenSingleChildren),
+		windowUnitTest(windowRelayoutsAncestorsWhenChildIsHidden),
+		windowUnitTest(windowRelayoutsAncestorsWhenGroupChildIsRemoved),
 	#endif
 	};
 
