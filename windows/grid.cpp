@@ -537,6 +537,8 @@ static void uiGridMinimumSize(uiWindowsControl *c, int *width, int *height)
 		uiprivMinimumSizeMultiply(ld->nVisibleColumns - 1, xpadding));
 	*height = uiprivMinimumSizeAdd(rowheight,
 		uiprivMinimumSizeMultiply(ld->nVisibleRows - 1, ypadding));
+
+	delete ld;
 }
 
 static void uiGridMinimumSizeChanged(uiWindowsControl *c)
