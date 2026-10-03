@@ -153,6 +153,30 @@ static void makeWrapperChildFill(GtkWidget *widget)
 	gtk_widget_set_valign(widget, GTK_ALIGN_FILL);
 }
 
+static GtkWidget *refFocusedWidgetWithin(GtkWidget *widget)
+{
+	GtkWidget *toplevel;
+	GtkWidget *focused;
+
+	toplevel = gtk_widget_get_toplevel(widget);
+	if (!GTK_IS_WINDOW(toplevel))
+		return NULL;
+	focused = gtk_window_get_focus(GTK_WINDOW(toplevel));
+	if (focused == NULL)
+		return NULL;
+	if (focused != widget && !gtk_widget_is_ancestor(focused, widget))
+		return NULL;
+	return g_object_ref(focused);
+}
+
+static void restoreFocusedWidget(GtkWidget *focused)
+{
+	if (focused == NULL)
+		return;
+	gtk_widget_grab_focus(focused);
+	g_object_unref(focused);
+}
+
 static gboolean isContainerControl(uiControl *c)
 {
 	switch (c->TypeSignature) {
@@ -221,26 +245,32 @@ static void replaceInParent(GtkWidget *from, GtkWidget *to)
 static void wrapInCurrentParent(GtkWidget *widget, GtkWidget *wrapper)
 {
 	gboolean visible;
+	GtkWidget *focused;
 
 	visible = gtk_widget_get_visible(widget);
+	focused = refFocusedWidgetWithin(widget);
 	copyLayoutProperties(widget, wrapper);
 	replaceInParent(widget, wrapper);
 	makeWrapperChildFill(widget);
 	gtk_container_add(GTK_CONTAINER(wrapper), widget);
 	if (visible)
 		gtk_widget_show(wrapper);
+	restoreFocusedWidget(focused);
 }
 
 static void unwrapFromCurrentParent(GtkWidget *widget, GtkWidget *wrapper)
 {
 	gboolean visible;
+	GtkWidget *focused;
 
 	visible = gtk_widget_get_visible(wrapper);
+	focused = refFocusedWidgetWithin(widget);
 	copyLayoutProperties(wrapper, widget);
 	gtk_container_remove(GTK_CONTAINER(wrapper), widget);
 	replaceInParent(wrapper, widget);
 	if (visible)
 		gtk_widget_show(widget);
+	restoreFocusedWidget(focused);
 }
 
 GtkWidget *uiprivUnixControlPrepareWidget(uiUnixControl *c)

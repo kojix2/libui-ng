@@ -225,6 +225,100 @@ cleanup:
 	return result;
 }
 
+static GtkWidget *findTextView(GtkWidget *widget)
+{
+	GList *children;
+	GList *child;
+	GtkWidget *found;
+
+	if (GTK_IS_TEXT_VIEW(widget))
+		return widget;
+	if (!GTK_IS_CONTAINER(widget))
+		return NULL;
+	children = gtk_container_get_children(GTK_CONTAINER(widget));
+	found = NULL;
+	for (child = children; child != NULL; child = child->next) {
+		found = findTextView(GTK_WIDGET(child->data));
+		if (found != NULL)
+			break;
+	}
+	g_list_free(children);
+	return found;
+}
+
+static int testFocusPreserved(void)
+{
+	uiInitOptions options = {0};
+	uiWindow *window;
+	uiBox *box;
+	uiEntry *entry;
+	uiMultilineEntry *multiline;
+	GtkWindow *nativeWindow;
+	GtkWidget *rawEntry;
+	GtkWidget *rawMultiline;
+	GtkWidget *textView;
+	int result = 1;
+
+	if (uiInit(&options) != NULL)
+		return 1;
+	window = uiNewWindow("minimum-size focus test", 320, 180, 0);
+	box = uiNewVerticalBox();
+	entry = uiNewEntry();
+	multiline = uiNewMultilineEntry();
+	rawEntry = GTK_WIDGET(uiControlHandle(uiControl(entry)));
+	rawMultiline = GTK_WIDGET(uiControlHandle(uiControl(multiline)));
+	uiBoxAppend(box, uiControl(entry), 0);
+	uiBoxAppend(box, uiControl(multiline), 1);
+	uiWindowSetChild(window, uiControl(box));
+	uiControlShow(uiControl(window));
+	uiMainSteps();
+	uiMainStep(0);
+	nativeWindow = GTK_WINDOW((void *) uiControlHandle(uiControl(window)));
+
+	gtk_widget_grab_focus(rawEntry);
+	if (gtk_window_get_focus(nativeWindow) != rawEntry) {
+		fprintf(stderr, "entry did not receive focus before wrapping\n");
+		goto cleanup;
+	}
+	uiControlSetMinimumSize(uiControl(entry), 300, -1);
+	if (gtk_window_get_focus(nativeWindow) != rawEntry) {
+		fprintf(stderr, "wrapping lost direct widget focus\n");
+		goto cleanup;
+	}
+	uiControlSetMinimumSize(uiControl(entry), -1, -1);
+	if (gtk_window_get_focus(nativeWindow) != rawEntry) {
+		fprintf(stderr, "unwrapping lost direct widget focus\n");
+		goto cleanup;
+	}
+
+	textView = findTextView(rawMultiline);
+	if (textView == NULL) {
+		fprintf(stderr, "multiline entry has no text view descendant\n");
+		goto cleanup;
+	}
+	gtk_widget_grab_focus(textView);
+	if (gtk_window_get_focus(nativeWindow) != textView) {
+		fprintf(stderr, "text view did not receive focus before wrapping\n");
+		goto cleanup;
+	}
+	uiControlSetMinimumSize(uiControl(multiline), -1, 120);
+	if (gtk_window_get_focus(nativeWindow) != textView) {
+		fprintf(stderr, "wrapping lost descendant widget focus\n");
+		goto cleanup;
+	}
+	uiControlSetMinimumSize(uiControl(multiline), -1, -1);
+	if (gtk_window_get_focus(nativeWindow) != textView) {
+		fprintf(stderr, "unwrapping lost descendant widget focus\n");
+		goto cleanup;
+	}
+	result = 0;
+
+cleanup:
+	uiControlDestroy(uiControl(window));
+	uiUninit();
+	return result;
+}
+
 static int testExternalControl(void)
 {
 	uiInitOptions options = {0};
@@ -258,6 +352,8 @@ int main(void)
 	if (testForm() != 0)
 		return 1;
 	if (testGridAlignment() != 0)
+		return 1;
+	if (testFocusPreserved() != 0)
 		return 1;
 	return testExternalControl();
 }
