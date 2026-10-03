@@ -67,6 +67,10 @@ extern void uiprivControlMinimumSizeApply(uiControl *, int *, int *, int);
 extern int uiprivMinimumSizeAdd(int, int);
 extern int uiprivMinimumSizeMultiply(int, int);
 
+// gridutil.c
+// Validates the dimensions of the dense native grid implementations.
+extern int uiprivGridDimensions(int, int, int, int, int *, int *, int *);
+
 // areaevents.c
 typedef struct uiprivClickCounter uiprivClickCounter;
 // Call uiprivClickCounterReset() to initialize a new instance.

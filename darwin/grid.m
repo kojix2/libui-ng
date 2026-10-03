@@ -4,14 +4,6 @@
 #include <limits.h>
 #include <stdint.h>
 
-// NSGridView uses a dense matrix internally. Keep hostile sparse coordinates
-// from turning a small logical grid into an uncontrolled allocation.
-enum {
-	maxGridRows = 10000,
-	maxGridColumns = 10000,
-	maxGridCells = 100000,
-};
-
 @interface gridChild : NSObject
 @property uiControl *control;
 @property int left;
@@ -313,7 +305,7 @@ static NSView *newCellView(gridChild *child)
 	int xmin, ymin, xmax, ymax;
 	int xcount, ycount;
 	int x, y, xx, yy;
-	int64_t cellCount;
+	int cellCount;
 	BOOL *expandedColumns, *expandedRows;
 	int *occupancy;
 	NSView **columnViews, **rowViews;
@@ -357,13 +349,13 @@ static NSView *newCellView(gridChild *child)
 		return;
 	}
 
-	xcount = xmax - xmin;
-	ycount = ymax - ymin;
-	cellCount = ((int64_t) xcount) * ycount;
-	if (xcount > maxGridColumns || ycount > maxGridRows ||
-		cellCount > maxGridCells)
-		uiprivUserBug("uiGrid dimensions are too large (%d columns, %d rows).",
-			xcount, ycount);
+	if (!uiprivGridDimensions(xmin, ymin, xmax, ymax,
+		&xcount, &ycount, &cellCount)) {
+		uiprivUserBug("uiGrid dimensions are too large.");
+		// Keep subsequent code safe if a debugger continues past the user bug.
+		[self invalidateIntrinsicContentSize];
+		return;
+	}
 	expandedColumns = (BOOL *) uiprivAlloc(xcount * sizeof (BOOL), "uiGrid expanded columns");
 	expandedRows = (BOOL *) uiprivAlloc(ycount * sizeof (BOOL), "uiGrid expanded rows");
 	occupancy = (int *) uiprivAlloc(cellCount * sizeof (int), "uiGrid occupancy");

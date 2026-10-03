@@ -32,21 +32,29 @@ struct uiGrid {
 
 	int xmin, ymin;
 	int xmax, ymax;
+	int ncolumns, nrows;
 };
+
+static int checkedGridEnd(int origin, int span, const char *axis);
 
 static bool gridRecomputeMinMax(uiGrid *g)
 {
 	bool first = true;
+	int cellCount;
 
 	for (struct gridChild *gc : *(g->children)) {
+		int xend, yend;
+
 		// this is important; we want g->xmin/g->ymin to satisfy gridLayoutData::visibleRow()/visibleColumn()
 		if (!uiControlVisible(gc->c))
 			continue;
+		xend = checkedGridEnd(gc->left, gc->xspan, "horizontal");
+		yend = checkedGridEnd(gc->top, gc->yspan, "vertical");
 		if (first) {
 			g->xmin = gc->left;
 			g->ymin = gc->top;
-			g->xmax = gc->left + gc->xspan;
-			g->ymax = gc->top + gc->yspan;
+			g->xmax = xend;
+			g->ymax = yend;
 			first = false;
 			continue;
 		}
@@ -54,16 +62,37 @@ static bool gridRecomputeMinMax(uiGrid *g)
 			g->xmin = gc->left;
 		if (g->ymin > gc->top)
 			g->ymin = gc->top;
-		if (g->xmax < (gc->left + gc->xspan))
-			g->xmax = gc->left + gc->xspan;
-		if (g->ymax < (gc->top + gc->yspan))
-			g->ymax = gc->top + gc->yspan;
+		if (g->xmax < xend)
+			g->xmax = xend;
+		if (g->ymax < yend)
+			g->ymax = yend;
 	}
-	return first != false;
+	if (first) {
+		g->xmin = 0;
+		g->ymin = 0;
+		g->xmax = 0;
+		g->ymax = 0;
+		g->ncolumns = 0;
+		g->nrows = 0;
+		return true;
+	}
+	if (!uiprivGridDimensions(g->xmin, g->ymin, g->xmax, g->ymax,
+		&(g->ncolumns), &(g->nrows), &cellCount)) {
+		uiprivUserBug("uiGrid dimensions are too large.");
+		// Keep subsequent code safe if a debugger continues past the user bug.
+		g->xmin = 0;
+		g->ymin = 0;
+		g->xmax = 0;
+		g->ymax = 0;
+		g->ncolumns = 0;
+		g->nrows = 0;
+		return true;
+	}
+	return false;
 }
 
-#define xcount(g) ((g)->xmax - (g)->xmin)
-#define ycount(g) ((g)->ymax - (g)->ymin)
+#define xcount(g) ((g)->ncolumns)
+#define ycount(g) ((g)->nrows)
 #define toxindex(g, x) ((x) - (g)->xmin)
 #define toyindex(g, y) ((y) - (g)->ymin)
 

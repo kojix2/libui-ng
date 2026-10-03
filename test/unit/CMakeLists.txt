@@ -30,6 +30,13 @@ libui_apply_internal_options(imagerep-unit)
 add_test(NAME imagerep-unit COMMAND imagerep-unit)
 set_tests_properties(imagerep-unit PROPERTIES TIMEOUT 60)
 
+add_executable(gridutil-unit gridutil.c ../../common/gridutil.c)
+target_link_libraries(gridutil-unit PRIVATE cmocka::cmocka)
+target_include_directories(gridutil-unit PRIVATE ../.. ../../common)
+libui_apply_internal_options(gridutil-unit)
+add_test(NAME gridutil-unit COMMAND gridutil-unit)
+set_tests_properties(gridutil-unit PROPERTIES TIMEOUT 60)
+
 if(UNIX AND NOT APPLE)
 	add_executable(minimumsize-gtk minimumsize_gtk.c)
 	target_link_libraries(minimumsize-gtk PRIVATE libui::ui)
