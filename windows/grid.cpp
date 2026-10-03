@@ -263,30 +263,41 @@ static void findExpandingTracks(uiGrid *g, gridLayoutData *ld)
 	}
 }
 
-static void distributeExtraSpace(uiGrid *g, gridLayoutData *ld, int width, int height)
+static void distributeAxisExtraSpace(int *sizes, bool *expand, int count,
+	int available)
 {
 	int i;
-	int nhexpand, nvexpand;
+	int minimum;
+	int nexpand;
+	int extra, share, remainder;
 
-	// 4) compute and assign expanded widths/heights
-	nhexpand = 0;
-	nvexpand = 0;
-	for (i = 0; i < xcount(g); i++)
-		if (ld->hexpand[i])
-			nhexpand++;
-		else
-			width -= ld->colwidths[i];
-	for (i = 0; i < ycount(g); i++)
-		if (ld->vexpand[i])
-			nvexpand++;
-		else
-			height -= ld->rowheights[i];
-	for (i = 0; i < xcount(g); i++)
-		if (ld->hexpand[i])
-			ld->colwidths[i] = width / nhexpand;
-	for (i = 0; i < ycount(g); i++)
-		if (ld->vexpand[i])
-			ld->rowheights[i] = height / nvexpand;
+	minimum = 0;
+	nexpand = 0;
+	for (i = 0; i < count; i++) {
+		minimum = uiprivMinimumSizeAdd(minimum, sizes[i]);
+		if (expand[i])
+			nexpand++;
+	}
+	if (nexpand == 0 || available <= minimum)
+		return;
+
+	extra = available - minimum;
+	share = extra / nexpand;
+	remainder = extra % nexpand;
+	for (i = 0; i < count; i++)
+		if (expand[i]) {
+			sizes[i] += share + (remainder != 0);
+			if (remainder != 0)
+				remainder--;
+		}
+}
+
+static void distributeExtraSpace(uiGrid *g, gridLayoutData *ld, int width, int height)
+{
+	// 4) preserve every track's minimum, then divide only the extra space
+	// among the expanding tracks.
+	distributeAxisExtraSpace(ld->colwidths, ld->hexpand, xcount(g), width);
+	distributeAxisExtraSpace(ld->rowheights, ld->vexpand, ycount(g), height);
 }
 
 static void computeCellRects(uiGrid *g, gridLayoutData *ld, int xpadding, int ypadding)

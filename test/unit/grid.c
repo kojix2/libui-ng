@@ -203,6 +203,45 @@ static void gridMixedSpanUsesItsMinimumWidth(void **state)
 
 	assert_int_equal(controlWindowWidth(span), 121);
 }
+
+static void gridExpansionPreservesTrackMinimums(void **state)
+{
+	struct state *s = *state;
+	uiGrid *grid = uiGridFromState(state);
+	uiControl *topLeft;
+	uiControl *topRight;
+	uiControl *bottomLeft;
+	uiControl *bottomRight;
+
+	topLeft = uiControl(uiNewButton("top left"));
+	topRight = uiControl(uiNewButton("top right"));
+	bottomLeft = uiControl(uiNewButton("bottom left"));
+	bottomRight = uiControl(uiNewButton("bottom right"));
+	uiControlSetMinimumSize(topLeft, 240, 140);
+	uiControlSetMinimumSize(topRight, 20, 140);
+	uiControlSetMinimumSize(bottomLeft, 240, 20);
+	uiControlSetMinimumSize(bottomRight, 20, 20);
+	uiGridAppend(grid, topLeft, 0, 0, 1, 1,
+		1, uiAlignFill, 1, uiAlignFill);
+	uiGridAppend(grid, topRight, 1, 0, 1, 1,
+		1, uiAlignFill, 1, uiAlignFill);
+	uiGridAppend(grid, bottomLeft, 0, 1, 1, 1,
+		1, uiAlignFill, 1, uiAlignFill);
+	uiGridAppend(grid, bottomRight, 1, 1, 1, 1,
+		1, uiAlignFill, 1, uiAlignFill);
+	uiWindowSetChild(s->w, uiControl(grid));
+
+	assert_true(controlWindowWidth(topLeft) >= 240);
+	assert_true(controlWindowWidth(topRight) >= 20);
+	assert_true(controlWindowHeight(topLeft) >= 140);
+	assert_true(controlWindowHeight(bottomLeft) >= 20);
+	assert_int_equal(controlWindowWidth(topLeft) +
+		controlWindowWidth(topRight),
+		controlWindowWidth(uiControl(grid)));
+	assert_int_equal(controlWindowHeight(topLeft) +
+		controlWindowHeight(bottomLeft),
+		controlWindowHeight(uiControl(grid)));
+}
 #endif
 
 #define gridUnitTest(f) cmocka_unit_test_setup_teardown((f), \
@@ -223,6 +262,7 @@ int gridRunUnitTests(void)
 		gridUnitTest(gridNonExpandingSpanUsesItsMinimumSize),
 		gridUnitTest(gridExpandingSpanUsesTheAvailableSize),
 		gridUnitTest(gridMixedSpanUsesItsMinimumWidth),
+		gridUnitTest(gridExpansionPreservesTrackMinimums),
 	#endif
 	};
 
