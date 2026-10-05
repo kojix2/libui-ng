@@ -217,6 +217,7 @@ void uiMain(void)
 		return [uiprivNSApp() isRunning];
 	};
 	[uiprivNSApp() run];
+	uiprivControlDestroyMainLoopExit();
 }
 
 void uiMainSteps(void)
@@ -232,6 +233,7 @@ void uiMainSteps(void)
 int uiMainStep(int wait)
 {
 	uiprivNextEventArgs nea;
+	int running;
 
 	nea.mask = NSEventMaskAny;
 
@@ -244,9 +246,12 @@ int uiMainStep(int wait)
 	nea.mode = NSDefaultRunLoopMode;
 	nea.dequeue = YES;
 
-	return uiprivMainStep(&nea, ^(NSEvent *e) {
+	running = uiprivMainStep(&nea, ^(NSEvent *e) {
 		return NO;
 	});
+	if (!running)
+		uiprivControlDestroyMainLoopExit();
+	return running;
 }
 
 // see also:

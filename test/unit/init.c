@@ -41,7 +41,61 @@ static void queuedCallbackAndQuit(void *data)
 	queuedCallback(data);
 	uiQuit();
 }
+#endif
 
+struct destroyAndQuitState {
+	uiControl *control;
+	int destroyed;
+};
+
+static void countDestroyedOnMainExit(uiControl *c, void *data)
+{
+	struct destroyAndQuitState *state = data;
+
+	state->destroyed++;
+}
+
+static void destroyAndQuit(void *data)
+{
+	struct destroyAndQuitState *state = data;
+
+	uiControlDestroy(state->control);
+	uiQuit();
+}
+
+static void mainFlushesDeferredDestroysBeforeReturning(void **state)
+{
+	uiInitOptions o = {0};
+	struct destroyAndQuitState destroyState = { NULL, 0 };
+
+	assert_null(uiInit(&o));
+	destroyState.control = uiControl(uiNewWindow("Deferred destroy", 100, 100, 0));
+	uiControlOnDestroyed(destroyState.control, countDestroyedOnMainExit,
+		&destroyState);
+	uiQueueMain(destroyAndQuit, &destroyState);
+	uiMain();
+	assert_int_equal(destroyState.destroyed, 1);
+	uiUninit();
+}
+
+static void mainStepsFlushDeferredDestroysBeforeReturning(void **state)
+{
+	uiInitOptions o = {0};
+	struct destroyAndQuitState destroyState = { NULL, 0 };
+
+	assert_null(uiInit(&o));
+	destroyState.control = uiControl(uiNewWindow("Deferred destroy", 100, 100, 0));
+	uiControlOnDestroyed(destroyState.control, countDestroyedOnMainExit,
+		&destroyState);
+	uiMainSteps();
+	uiQueueMain(destroyAndQuit, &destroyState);
+	while (uiMainStep(1))
+		;
+	assert_int_equal(destroyState.destroyed, 1);
+	uiUninit();
+}
+
+#if !defined(_WIN32)
 static void queuedCallbacksDoNotSurviveUninit(void **state)
 {
 	uiInitOptions o = {0};
@@ -131,6 +185,8 @@ int initRunUnitTests(void)
 #if !defined(_WIN32)
 		cmocka_unit_test(queuedCallbacksDoNotSurviveUninit),
 #endif
+		cmocka_unit_test(mainFlushesDeferredDestroysBeforeReturning),
+		cmocka_unit_test(mainStepsFlushDeferredDestroysBeforeReturning),
 #if !defined(_WIN32) && !defined(__APPLE__)
 		cmocka_unit_test(mainStepsResetAfterQuit),
 #endif

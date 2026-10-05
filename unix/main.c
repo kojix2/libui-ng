@@ -108,6 +108,7 @@ void uiMain(void)
 {
 	iteration = gtk_main_iteration_do;
 	gtk_main();
+	uiprivControlDestroyMainLoopExit();
 }
 
 static gboolean stepsQuit = FALSE;
@@ -129,11 +130,15 @@ void uiMainSteps(void)
 int uiMainStep(int wait)
 {
 	gboolean block;
+	int running;
 
 	block = FALSE;
 	if (wait)
 		block = TRUE;
-	return (*iteration)(block) == FALSE;
+	running = (*iteration)(block) == FALSE;
+	if (!running)
+		uiprivControlDestroyMainLoopExit();
+	return running;
 }
 
 // gtk_main_quit() may run immediately, or it may wait for other pending events; "it depends" (thanks mclasen in irc.gimp.net/#gtk+)

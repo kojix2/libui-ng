@@ -51,6 +51,9 @@ extern int uiprivUserCallbackDeferFree(void *, void (*)(void *));
 extern int uiprivControlDestroyPending(uiControl *);
 extern void uiprivControlDestroyFlush(uintptr_t);
 extern void uiprivControlDestroyFlushPending(void);
+// Completes pending work when an outer event loop stops. A nested loop that
+// returns inside a user callback leaves the work for that callback's Leave().
+extern void uiprivControlDestroyMainLoopExit(void);
 extern void uiprivControlDestroyUninit(void);
 extern void uiprivScheduleControlDestroyFlush(uintptr_t);
 #ifdef _UI_STATIC

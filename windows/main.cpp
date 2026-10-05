@@ -98,8 +98,10 @@ int uiMainStep(int wait)
 	MSG msg;
 
 	if (wait) {
-		if (!waitMessage(&msg))
+		if (!waitMessage(&msg)) {
+			uiprivControlDestroyMainLoopExit();
 			return 0;
+		}
 		processMessage(&msg);
 		return 1;
 	}
@@ -108,6 +110,7 @@ int uiMainStep(int wait)
 	switch (peekMessage(&msg)) {
 	case 0:		// quit
 		// WM_QUIT was removed from the queue; returning 0 consumes the quit request.
+		uiprivControlDestroyMainLoopExit();
 		return 0;
 	case 1:		// process a message
 		processMessage(&msg);

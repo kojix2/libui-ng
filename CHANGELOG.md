@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Release archives are now relocatable CMake/CPack SDKs with standard `include`, `lib`, and `bin` install directories and native toolchain library names.
 - The minimum supported Microsoft toolchain is now Visual Studio 2017; Visual Studio 2013 support has ended.
 - uiControlDestroy() now safely defers destruction requested from user callbacks.
+- Outermost event-loop shutdown now completes destruction and resource frees already requested from user callbacks before returning to the application.
 - uiFreeFontDescriptor() is now the common release function for all font descriptors filled by libui; uiFreeFontButtonFont() remains a compatibility alias.
 
 ### Added

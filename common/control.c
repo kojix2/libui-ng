@@ -188,6 +188,15 @@ void uiprivControlDestroyFlushPending(void)
 	flushPendingControlDestroys();
 }
 
+void uiprivControlDestroyMainLoopExit(void)
+{
+	// A nested main loop may return while an outer user callback is still on
+	// the stack. Its Leave() will arrange the normal deferred flush.
+	if (userCallbackDepth != 0)
+		return;
+	uiprivControlDestroyFlushPending();
+}
+
 void uiprivControlDestroyUninit(void)
 {
 	if (userCallbackDepth != 0)

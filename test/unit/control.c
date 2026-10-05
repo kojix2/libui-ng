@@ -161,6 +161,20 @@ static void nestedCallbacksDeferUntilOutermostLeave(void **state)
 	assert_int_equal(destroyCount, 1);
 }
 
+static void nestedMainLoopExitDefersUntilCallbackLeave(void **state)
+{
+	int destroyCount = 0;
+	testControl *tc = newTestControl(&destroyCount);
+
+	uiprivUserCallbackEnter(NULL);
+	uiControlDestroy(uiControl(tc));
+	uiprivControlDestroyMainLoopExit();
+	assert_int_equal(destroyCount, 0);
+	uiprivUserCallbackLeave();
+	uiprivControlDestroyMainLoopExit();
+	assert_int_equal(destroyCount, 1);
+}
+
 static void duplicateDestroyIsCoalesced(void **state)
 {
 	int destroyCount = 0;
@@ -469,6 +483,7 @@ int controlRunUnitTests(void)
 	const struct CMUnitTest tests[] = {
 		cmocka_unit_test(destroyIsDeferred),
 		cmocka_unit_test(nestedCallbacksDeferUntilOutermostLeave),
+		cmocka_unit_test(nestedMainLoopExitDefersUntilCallbackLeave),
 		cmocka_unit_test(duplicateDestroyIsCoalesced),
 		cmocka_unit_test(parentDestroyCancelsQueuedChild),
 		cmocka_unit_test(pendingAncestorMakesChildPending),
