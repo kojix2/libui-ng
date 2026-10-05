@@ -122,6 +122,7 @@ extern BOOL areaFilter(MSG *);
 extern ATOM registerWindowClass(HICON, HCURSOR);
 extern void unregisterWindowClass(void);
 extern void ensureMinimumWindowSize(uiWindow *);
+extern uiWindow *activeWindow(void);
 extern void disableAllWindowsExcept(uiWindow *which);
 extern void enableAllWindowsExcept(uiWindow *which);
 

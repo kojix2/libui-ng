@@ -14,6 +14,15 @@
 
 #define windowHWND(w) (w ? (HWND)uiControlHandle(uiControl(w)) : NULL)
 
+static uiWindow *dialogParent(uiWindow *parent)
+{
+	if (parent != NULL)
+		return parent;
+	// Let Windows restore activation when a parentless dialog was opened
+	// from a foreground libui window.
+	return activeWindow();
+}
+
 char *commonItemDialog(HWND parent, REFCLSID clsid, REFIID iid, FILEOPENDIALOGOPTIONS optsadd)
 {
 	IFileDialog *d = NULL;
@@ -78,6 +87,7 @@ char *uiOpenFile(uiWindow *parent)
 {
 	char *res;
 
+	parent = dialogParent(parent);
 	disableAllWindowsExcept(parent);
 	res = commonItemDialog(windowHWND(parent),
 		CLSID_FileOpenDialog, IID_IFileOpenDialog,
@@ -90,6 +100,7 @@ char *uiOpenFolder(uiWindow *parent)
 {
 	char *res;
 
+	parent = dialogParent(parent);
 	disableAllWindowsExcept(parent);
 	res = commonItemDialog(windowHWND(parent),
 		CLSID_FileOpenDialog, IID_IFileOpenDialog,
@@ -102,6 +113,7 @@ char *uiSaveFile(uiWindow *parent)
 {
 	char *res;
 
+	parent = dialogParent(parent);
 	disableAllWindowsExcept(parent);
 	res = commonItemDialog(windowHWND(parent),
 		CLSID_FileSaveDialog, IID_IFileSaveDialog,
@@ -128,6 +140,7 @@ static void msgbox(HWND parent, const char *title, const char *description, TASK
 
 void uiMsgBox(uiWindow *parent, const char *title, const char *description)
 {
+	parent = dialogParent(parent);
 	disableAllWindowsExcept(parent);
 	msgbox(windowHWND(parent), title, description, TDCBF_OK_BUTTON, NULL);
 	enableAllWindowsExcept(parent);
@@ -135,6 +148,7 @@ void uiMsgBox(uiWindow *parent, const char *title, const char *description)
 
 void uiMsgBoxError(uiWindow *parent, const char *title, const char *description)
 {
+	parent = dialogParent(parent);
 	disableAllWindowsExcept(parent);
 	msgbox(windowHWND(parent), title, description, TDCBF_OK_BUTTON, TD_ERROR_ICON);
 	enableAllWindowsExcept(parent);

@@ -604,6 +604,27 @@ void ensureMinimumWindowSize(uiWindow *w)
 		logLastError(L"error resizing window");
 }
 
+uiWindow *activeWindow(void)
+{
+	HWND active;
+
+	active = GetForegroundWindow();
+	if (active == NULL)
+		return NULL;
+	for (auto &w : windows) {
+		if (w->hwnd != active)
+			continue;
+		if (IsWindowVisible(w->hwnd) == 0)
+			continue;
+		if (IsWindowEnabled(w->hwnd) == 0)
+			continue;
+		if (uiprivControlDestroyPending(uiControl(w)))
+			continue;
+		return w;
+	}
+	return NULL;
+}
+
 void disableAllWindowsExcept(uiWindow *which)
 {
 	for (auto &w : windows) {
