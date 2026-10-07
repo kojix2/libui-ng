@@ -1,6 +1,6 @@
 set(qa_sources
-	qa.c main.c box.c button.c checkbox.c entry.c imageview.c label.c layout.c radiobuttons.c separator.c
-	spinbox.c tooltip.c window.c
+	qa.c main.c box.c button.c checkbox.c entry.c imageview.c label.c layout.c multilineentry.c
+	radiobuttons.c separator.c spinbox.c tooltip.c window.c
 )
 if(WIN32)
 	list(APPEND qa_sources resources.rc)

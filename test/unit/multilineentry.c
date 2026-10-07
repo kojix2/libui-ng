@@ -1,3 +1,5 @@
+#include <float.h>
+#include <math.h>
 #include "unit.h"
 
 #define uiMultilineEntryFromState(s) \
@@ -59,6 +61,46 @@ static void multilineEntrySetReadOnly(void **state)
 	assert_int_equal(uiMultilineEntryReadOnly(entry), 0);
 }
 
+static void multilineEntryFontSize(void **state)
+{
+	uiMultilineEntry *entry = uiMultilineEntryFromState(state);
+	double size;
+
+	size = uiMultilineEntryFontSize(entry);
+	assert_true(size > 0 && size <= DBL_MAX);
+}
+
+static void multilineEntrySetFontSize(void **state)
+{
+	uiMultilineEntry *entry = uiMultilineEntryFromState(state);
+
+	uiMultilineEntrySetFontSize(entry, 18.5);
+	assert_true(fabs(uiMultilineEntryFontSize(entry) - 18.5) < 0.000001);
+}
+
+static void multilineEntryTextPreservesFontSize(void **state)
+{
+	uiMultilineEntry *entry = uiMultilineEntryFromState(state);
+
+	uiMultilineEntrySetFontSize(entry, 18.5);
+	uiMultilineEntrySetText(entry, "First");
+	uiMultilineEntryAppend(entry, "\nSecond");
+	assert_true(fabs(uiMultilineEntryFontSize(entry) - 18.5) < 0.000001);
+}
+
+static void multilineEntryResetFontSize(void **state)
+{
+	uiMultilineEntry *entry = uiMultilineEntryFromState(state);
+	double initial;
+
+	initial = uiMultilineEntryFontSize(entry);
+	uiMultilineEntrySetFontSize(entry, initial + 5);
+	uiMultilineEntryResetFontSize(entry);
+	assert_true(fabs(uiMultilineEntryFontSize(entry) - initial) < 0.000001);
+	uiMultilineEntryResetFontSize(entry);
+	assert_true(fabs(uiMultilineEntryFontSize(entry) - initial) < 0.000001);
+}
+
 static void onChangedNoCall(uiMultilineEntry *entry, void *data)
 {
 	function_called();
@@ -71,6 +113,8 @@ static void multilineEntryProgrammaticChangesDoNotCallback(void **state)
 	uiMultilineEntryOnChanged(entry, onChangedNoCall, NULL);
 	uiMultilineEntrySetText(entry, "First");
 	uiMultilineEntryAppend(entry, "Second");
+	uiMultilineEntrySetFontSize(entry, 18);
+	uiMultilineEntryResetFontSize(entry);
 }
 
 #define wrappingUnitTest(f) UNIT_TEST_NAMED("wrapping/" #f, (f), \
@@ -85,6 +129,10 @@ int multilineEntryRunUnitTests(void)
 		multilineEntryUnitTests(multilineEntryNew),
 		multilineEntryUnitTests(multilineEntrySetAndAppendText),
 		multilineEntryUnitTests(multilineEntrySetReadOnly),
+		multilineEntryUnitTests(multilineEntryFontSize),
+		multilineEntryUnitTests(multilineEntrySetFontSize),
+		multilineEntryUnitTests(multilineEntryTextPreservesFontSize),
+		multilineEntryUnitTests(multilineEntryResetFontSize),
 		multilineEntryUnitTests(multilineEntryProgrammaticChangesDoNotCallback),
 	};
 

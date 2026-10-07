@@ -1,4 +1,6 @@
 // 8 april 2015
+#include <float.h>
+#include <limits.h>
 #include "uipriv_windows.hpp"
 
 // TODO there's alpha darkening of text going on in read-only ones; something is up in our parent logic
@@ -6,6 +8,9 @@
 struct uiMultilineEntry {
 	uiWindowsControl c;
 	HWND hwnd;
+	HFONT customFont;
+	double fontSize;
+	double defaultFontSize;
 	void (*onChanged)(uiMultilineEntry *, void *);
 	void *onChangedData;
 	BOOL inhibitChanged;
@@ -32,10 +37,14 @@ static BOOL onWM_COMMAND(uiControl *c, HWND hwnd, WORD code, LRESULT *lResult)
 static void uiMultilineEntryDestroy(uiControl *c)
 {
 	uiMultilineEntry *e = uiMultilineEntry(c);
+	HFONT customFont;
 
+	customFont = e->customFont;
 	uiWindowsUnregisterWM_COMMANDHandler(e->hwnd);
 	uiprivDestroyTooltip(c);
 	uiWindowsEnsureDestroyWindow(e->hwnd);
+	if (customFont != NULL && DeleteObject(customFont) == 0)
+		logLastError(L"error deleting multiline entry font");
 	uiFreeControl(uiControl(e));
 }
 
@@ -119,6 +128,126 @@ void uiMultilineEntryOnChanged(uiMultilineEntry *e, void (*f)(uiMultilineEntry *
 	e->onChangedData = data;
 }
 
+static double multilineEntryFontSizeFromHFONT(HWND hwnd, HFONT font)
+{
+	HDC dc;
+	HGDIOBJ oldFont;
+	TEXTMETRICW metrics;
+	int dpi;
+	double size;
+
+	dc = GetDC(hwnd);
+	if (dc == NULL) {
+		logLastError(L"error getting device context for multiline entry font");
+		return 0;
+	}
+	oldFont = SelectObject(dc, font);
+	if (oldFont == NULL || oldFont == HGDI_ERROR) {
+		logLastError(L"error selecting multiline entry font");
+		ReleaseDC(hwnd, dc);
+		return 0;
+	}
+	if (GetTextMetricsW(dc, &metrics) == 0) {
+		logLastError(L"error getting multiline entry font metrics");
+		SelectObject(dc, oldFont);
+		ReleaseDC(hwnd, dc);
+		return 0;
+	}
+	dpi = GetDeviceCaps(dc, LOGPIXELSY);
+	if (dpi <= 0) {
+		logLastError(L"error getting vertical DPI for multiline entry font");
+		SelectObject(dc, oldFont);
+		ReleaseDC(hwnd, dc);
+		return 0;
+	}
+	size = ((double) metrics.tmHeight - metrics.tmInternalLeading) * 72.0 / dpi;
+	SelectObject(dc, oldFont);
+	ReleaseDC(hwnd, dc);
+	return size;
+}
+
+static HFONT multilineEntryFontForSize(uiMultilineEntry *e, double size)
+{
+	HFONT baseFont;
+	LOGFONTW lf;
+	HDC dc;
+	double height;
+	int dpi;
+	HFONT font;
+
+	baseFont = (HFONT) SendMessageW(e->hwnd, WM_GETFONT, 0, 0);
+	if (baseFont == NULL)
+		baseFont = hMessageFont;
+	if (GetObjectW(baseFont, sizeof (LOGFONTW), &lf) == 0) {
+		logLastError(L"error getting multiline entry font description");
+		return NULL;
+	}
+
+	dc = GetDC(e->hwnd);
+	if (dc == NULL) {
+		logLastError(L"error getting device context for multiline entry font");
+		return NULL;
+	}
+	dpi = GetDeviceCaps(dc, LOGPIXELSY);
+	ReleaseDC(e->hwnd, dc);
+	if (dpi <= 0) {
+		logLastError(L"error getting vertical DPI for multiline entry font");
+		return NULL;
+	}
+	height = size * dpi / 72.0;
+	if (height > (double) LONG_MAX - 0.5) {
+		uiprivUserBug(
+			"uiMultilineEntrySetFontSize() size cannot be represented by GDI.");
+		return NULL;
+	}
+
+	lf.lfHeight = -(LONG) (height + 0.5);
+	if (lf.lfHeight == 0)
+		lf.lfHeight = -1;
+	lf.lfWidth = 0;
+	font = CreateFontIndirectW(&lf);
+	if (font == NULL)
+		logLastError(L"error creating multiline entry font");
+	return font;
+}
+
+static void setMultilineEntryFontSize(uiMultilineEntry *e, double size)
+{
+	HFONT font;
+	HFONT oldFont;
+
+	font = multilineEntryFontForSize(e, size);
+	if (font == NULL)
+		return;
+	oldFont = e->customFont;
+	SendMessageW(e->hwnd, WM_SETFONT, (WPARAM) font, (LPARAM) TRUE);
+	e->customFont = font;
+	e->fontSize = size;
+	if (oldFont != NULL && DeleteObject(oldFont) == 0)
+		logLastError(L"error deleting previous multiline entry font");
+}
+
+double uiMultilineEntryFontSize(uiMultilineEntry *e)
+{
+	return e->fontSize;
+}
+
+void uiMultilineEntrySetFontSize(uiMultilineEntry *e, double size)
+{
+	if (!(size > 0) || size > DBL_MAX) {
+		uiprivUserBug(
+			"uiMultilineEntrySetFontSize() size must be finite and positive.");
+		return;
+	}
+
+	setMultilineEntryFontSize(e, size);
+}
+
+void uiMultilineEntryResetFontSize(uiMultilineEntry *e)
+{
+	setMultilineEntryFontSize(e, e->defaultFontSize);
+}
+
 int uiMultilineEntryReadOnly(uiMultilineEntry *e)
 {
 	return (getStyle(e->hwnd) & ES_READONLY) != 0;
@@ -133,6 +262,7 @@ void uiMultilineEntrySetReadOnly(uiMultilineEntry *e, int readonly)
 static uiMultilineEntry *finishMultilineEntry(DWORD style)
 {
 	uiMultilineEntry *e;
+	HFONT font;
 
 	uiWindowsNewControl(uiMultilineEntry, e);
 
@@ -141,6 +271,12 @@ static uiMultilineEntry *finishMultilineEntry(DWORD style)
 		ES_AUTOVSCROLL | ES_LEFT | ES_MULTILINE | ES_NOHIDESEL | ES_WANTRETURN | WS_TABSTOP | WS_VSCROLL | style,
 		hInstance, NULL,
 		TRUE);
+	font = (HFONT) SendMessageW(e->hwnd, WM_GETFONT, 0, 0);
+	if (font == NULL)
+		font = hMessageFont;
+	e->customFont = NULL;
+	e->fontSize = multilineEntryFontSizeFromHFONT(e->hwnd, font);
+	e->defaultFontSize = e->fontSize;
 
 	uiWindowsRegisterWM_COMMANDHandler(e->hwnd, onWM_COMMAND, uiControl(e));
 	uiMultilineEntryOnChanged(e, defaultOnChanged, NULL);
