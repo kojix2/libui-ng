@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - uiImageGetSize() API for reading an image's logical dimensions in points.
+- uiMultilineEntry font size API
 - uiControlSetMinimumSize() API
 - uiLabelFontSize(), uiLabelSetFontSize(), and uiLabelResetFontSize() APIs
 - uiVersion() API
