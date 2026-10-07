@@ -1,4 +1,5 @@
 // 8 december 2015
+#include <float.h>
 #import "uipriv_darwin.h"
 
 // NSTextView has no intrinsic content size by default, which wreaks havoc on a pure-Auto Layout system
@@ -14,6 +15,8 @@ struct uiMultilineEntry {
 	uiDarwinControl c;
 	NSScrollView *sv;
 	intrinsicSizeTextView *tv;
+	double fontSize;
+	double defaultFontSize;
 	void (*onChanged)(uiMultilineEntry *, void *);
 	void *onChangedData;
 	BOOL changing;
@@ -138,6 +141,50 @@ void uiMultilineEntryOnChanged(uiMultilineEntry *e, void (*f)(uiMultilineEntry *
 	e->onChangedData = data;
 }
 
+static void setMultilineEntryFontSize(uiMultilineEntry *e, double size)
+{
+	NSFont *font;
+	NSMutableDictionary *typingAttributes;
+
+	font = [e->tv font];
+	if (font == nil)
+		font = [NSFont systemFontOfSize:
+			[NSFont systemFontSizeForControlSize:NSControlSizeRegular]];
+	font = [font fontWithSize:(CGFloat) size];
+	[e->tv setFont:font];
+
+	typingAttributes = [[e->tv typingAttributes] mutableCopy];
+	if (typingAttributes == nil)
+		typingAttributes = [[NSMutableDictionary alloc] init];
+	[typingAttributes setObject:font forKey:NSFontAttributeName];
+	[e->tv setTypingAttributes:typingAttributes];
+	[typingAttributes release];
+
+	[e->tv invalidateIntrinsicContentSize];
+	e->fontSize = size;
+}
+
+double uiMultilineEntryFontSize(uiMultilineEntry *e)
+{
+	return e->fontSize;
+}
+
+void uiMultilineEntrySetFontSize(uiMultilineEntry *e, double size)
+{
+	if (!(size > 0) || size > DBL_MAX) {
+		uiprivUserBug(
+			"uiMultilineEntrySetFontSize() size must be finite and positive.");
+		return;
+	}
+
+	setMultilineEntryFontSize(e, size);
+}
+
+void uiMultilineEntryResetFontSize(uiMultilineEntry *e)
+{
+	setMultilineEntryFontSize(e, e->defaultFontSize);
+}
+
 int uiMultilineEntryReadOnly(uiMultilineEntry *e)
 {
 	return e->readonly;
@@ -243,6 +290,8 @@ if (@available(macOS 10.14, *)) {
 	// e->tv font from Interface Builder is nil, but setFont:nil throws an exception
 	// let's just set it to the standard control font anyway, just to be safe
 	[e->tv setFont:font];
+	e->fontSize = (double) [font pointSize];
+	e->defaultFontSize = e->fontSize;
 
 	memset(&p, 0, sizeof (uiprivScrollViewCreateParams));
 	p.DocumentView = e->tv;
