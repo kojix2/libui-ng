@@ -62,6 +62,11 @@ struct controlTestCase layoutTestCases[] = {
 	{NULL, NULL, NULL}
 };
 
+struct controlTestCase multilineEntryTestCases[] = {
+	QA_TEST("1. Font Size", multilineEntryFontSize),
+	{NULL, NULL, NULL}
+};
+
 struct controlTestCase radioButtonsTestCases[] = {
 	QA_TEST("1. OnSelected Callback", radioButtonsOnSelected),
 	{NULL, NULL, NULL}
@@ -101,6 +106,7 @@ struct controlTestGroup controlTestGroups[] = {
 	{"uiImageView", imageViewTestCases},
 	{"uiLabel", labelTestCases},
 	{"macOS Layout Audit", layoutTestCases},
+	{"uiMultilineEntry", multilineEntryTestCases},
 	{"uiRadioButtons", radioButtonsTestCases},
 	{"uiSeparator", separatorTestCases},
 	{"uiSpinbox", spinboxTestCases},
