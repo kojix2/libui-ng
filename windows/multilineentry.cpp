@@ -1,4 +1,5 @@
 // 8 april 2015
+#include <float.h>
 #include "uipriv_windows.hpp"
 
 // TODO there's alpha darkening of text going on in read-only ones; something is up in our parent logic
@@ -6,6 +7,9 @@
 struct uiMultilineEntry {
 	uiWindowsControl c;
 	HWND hwnd;
+	HFONT customFont;
+	double fontSize;
+	double defaultFontSize;
 	void (*onChanged)(uiMultilineEntry *, void *);
 	void *onChangedData;
 	BOOL inhibitChanged;
@@ -32,10 +36,14 @@ static BOOL onWM_COMMAND(uiControl *c, HWND hwnd, WORD code, LRESULT *lResult)
 static void uiMultilineEntryDestroy(uiControl *c)
 {
 	uiMultilineEntry *e = uiMultilineEntry(c);
+	HFONT customFont;
 
+	customFont = e->customFont;
 	uiWindowsUnregisterWM_COMMANDHandler(e->hwnd);
 	uiprivDestroyTooltip(c);
 	uiWindowsEnsureDestroyWindow(e->hwnd);
+	if (customFont != NULL && DeleteObject(customFont) == 0)
+		logLastError(L"error deleting multiline entry font");
 	uiFreeControl(uiControl(e));
 }
 
@@ -119,6 +127,47 @@ void uiMultilineEntryOnChanged(uiMultilineEntry *e, void (*f)(uiMultilineEntry *
 	e->onChangedData = data;
 }
 
+static void setMultilineEntryFontSize(uiMultilineEntry *e, double size)
+{
+	HFONT font;
+	HFONT oldFont;
+	HFONT baseFont;
+
+	baseFont = (HFONT) SendMessageW(e->hwnd, WM_GETFONT, 0, 0);
+	if (baseFont == NULL)
+		baseFont = hMessageFont;
+	font = uiprivControlFontForSize(e->hwnd, baseFont, size);
+	if (font == NULL)
+		return;
+	oldFont = e->customFont;
+	SendMessageW(e->hwnd, WM_SETFONT, (WPARAM) font, (LPARAM) TRUE);
+	e->customFont = font;
+	e->fontSize = size;
+	if (oldFont != NULL && DeleteObject(oldFont) == 0)
+		logLastError(L"error deleting previous multiline entry font");
+}
+
+double uiMultilineEntryFontSize(uiMultilineEntry *e)
+{
+	return e->fontSize;
+}
+
+void uiMultilineEntrySetFontSize(uiMultilineEntry *e, double size)
+{
+	if (!(size > 0) || size > DBL_MAX) {
+		uiprivUserBug(
+			"uiMultilineEntrySetFontSize() size must be finite and positive.");
+		return;
+	}
+
+	setMultilineEntryFontSize(e, size);
+}
+
+void uiMultilineEntryResetFontSize(uiMultilineEntry *e)
+{
+	setMultilineEntryFontSize(e, e->defaultFontSize);
+}
+
 int uiMultilineEntryReadOnly(uiMultilineEntry *e)
 {
 	return (getStyle(e->hwnd) & ES_READONLY) != 0;
@@ -133,6 +182,7 @@ void uiMultilineEntrySetReadOnly(uiMultilineEntry *e, int readonly)
 static uiMultilineEntry *finishMultilineEntry(DWORD style)
 {
 	uiMultilineEntry *e;
+	HFONT font;
 
 	uiWindowsNewControl(uiMultilineEntry, e);
 
@@ -143,6 +193,12 @@ static uiMultilineEntry *finishMultilineEntry(DWORD style)
 		TRUE);
 	// Remove the edit control's default 32767-character user input limit.
 	SendMessageW(e->hwnd, EM_SETLIMITTEXT, 0, 0);
+	font = (HFONT) SendMessageW(e->hwnd, WM_GETFONT, 0, 0);
+	if (font == NULL)
+		font = hMessageFont;
+	e->customFont = NULL;
+	e->fontSize = uiprivControlFontSize(e->hwnd, font);
+	e->defaultFontSize = e->fontSize;
 
 	uiWindowsRegisterWM_COMMANDHandler(e->hwnd, onWM_COMMAND, uiControl(e));
 	uiMultilineEntryOnChanged(e, defaultOnChanged, NULL);

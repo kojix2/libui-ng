@@ -36,6 +36,8 @@ QA_DECLARE_TEST(layoutContainers);
 QA_DECLARE_TEST(layoutGrid);
 QA_DECLARE_TEST(layoutSpinboxBaseline);
 
+QA_DECLARE_TEST(multilineEntryFontSize);
+
 QA_DECLARE_TEST(radioButtonsOnSelected);
 
 QA_DECLARE_TEST(separatorVertical);
