@@ -1860,6 +1860,38 @@ _UI_EXTERN void uiMultilineEntryOnChanged(uiMultilineEntry *e,
 	void (*f)(uiMultilineEntry *sender, void *senderData), void *data);
 
 /**
+ * Returns the multi line entry's font size.
+ *
+ * @param e uiMultilineEntry instance.
+ * @returns Font size in typographical points. [Default: OS-dependent].
+ * @memberof uiMultilineEntry
+ */
+_UI_EXTERN double uiMultilineEntryFontSize(uiMultilineEntry *e);
+
+/**
+ * Sets the multi line entry's font size.
+ *
+ * Only the font size is changed; all other font properties are preserved.
+ *
+ * @param e uiMultilineEntry instance.
+ * @param size Font size in typographical points. Must be finite, positive,
+ *             and representable by the platform.
+ * @memberof uiMultilineEntry
+ */
+_UI_EXTERN void uiMultilineEntrySetFontSize(uiMultilineEntry *e, double size);
+
+/**
+ * Restores the platform-default multi line entry font size that was in effect
+ * when the multi line entry was created.
+ *
+ * Only the font size is reset; all other font properties are preserved.
+ *
+ * @param e uiMultilineEntry instance.
+ * @memberof uiMultilineEntry
+ */
+_UI_EXTERN void uiMultilineEntryResetFontSize(uiMultilineEntry *e);
+
+/**
  * Returns whether or not the multi line entry's text can be changed.
  *
  * @param e uiMultilineEntry instance.
