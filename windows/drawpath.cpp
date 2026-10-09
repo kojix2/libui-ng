@@ -150,9 +150,9 @@ static void drawArc(uiDrawPath *p, struct arc *a, void (*startFunction)(uiDrawPa
 	as.size.height = uiprivD2DFloat(a->radius);
 	as.rotationAngle = 0;		// as above, not relevant for circles
 	if (a->negative)
-		as.sweepDirection = D2D1_SWEEP_DIRECTION_CLOCKWISE;
-	else
 		as.sweepDirection = D2D1_SWEEP_DIRECTION_COUNTER_CLOCKWISE;
+	else
+		as.sweepDirection = D2D1_SWEEP_DIRECTION_CLOCKWISE;
 	// Reversing direction selects the complementary arc between the same
 	// endpoints, so the large/small choice must also be reversed.
 	if (!a->negative) {
