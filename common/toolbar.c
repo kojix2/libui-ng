@@ -92,6 +92,7 @@ void uiToolbarSetDisplayMode(uiToolbar *t, uiToolbarDisplayMode mode)
 	}
 	uiToolbarDisplayMode previous = t->displayMode;
 	t->displayMode = mode;
+	// The native mode may have changed independently; let the platform reapply it.
 	if (!uiprivToolbarPlatformSetDisplayMode(t, previous))
 		t->displayMode = previous;
 }
@@ -154,9 +155,11 @@ void uiToolbarItemSetText(uiToolbarItem *item, const char *text)
 		uiprivUserBug("You cannot set a uiToolbarItem's text to NULL.");
 		return;
 	}
+	if (strcmp(item->text, text) == 0)
+		return;
 	uiprivFree(item->text);
 	item->text = toolbarStrdup(text);
-	uiprivToolbarPlatformSyncItem(item);
+	uiprivToolbarPlatformSyncItem(item, uiprivToolbarItemText);
 }
 
 void uiToolbarItemSetIcon(uiToolbarItem *item, uiImage *icon)
@@ -176,9 +179,11 @@ void uiToolbarItemSetTooltip(uiToolbarItem *item, const char *tooltip)
 		uiprivUserBug("You cannot set a uiToolbarItem's tooltip to NULL.");
 		return;
 	}
+	if (strcmp(item->tooltip, tooltip) == 0)
+		return;
 	uiprivFree(item->tooltip);
 	item->tooltip = toolbarStrdup(tooltip);
-	uiprivToolbarPlatformSyncItem(item);
+	uiprivToolbarPlatformSyncItem(item, uiprivToolbarItemTooltip);
 }
 
 int uiToolbarItemEnabled(uiToolbarItem *item)
@@ -188,14 +193,18 @@ int uiToolbarItemEnabled(uiToolbarItem *item)
 
 void uiToolbarItemEnable(uiToolbarItem *item)
 {
+	if (item->enabled)
+		return;
 	item->enabled = 1;
-	uiprivToolbarPlatformSyncItem(item);
+	uiprivToolbarPlatformSyncItem(item, uiprivToolbarItemEnabled);
 }
 
 void uiToolbarItemDisable(uiToolbarItem *item)
 {
+	if (!item->enabled)
+		return;
 	item->enabled = 0;
-	uiprivToolbarPlatformSyncItem(item);
+	uiprivToolbarPlatformSyncItem(item, uiprivToolbarItemEnabled);
 }
 
 void uiToolbarItemOnClicked(uiToolbarItem *item,
@@ -224,8 +233,11 @@ void uiToolbarItemSetChecked(uiToolbarItem *item, int checked)
 		uiprivUserBug("You can only set the checked state of a toggle uiToolbarItem.");
 		return;
 	}
-	item->checked = checked != 0;
-	uiprivToolbarPlatformSyncItem(item);
+	checked = checked != 0;
+	if (item->checked == checked)
+		return;
+	item->checked = checked;
+	uiprivToolbarPlatformSyncItem(item, uiprivToolbarItemChecked);
 }
 
 int uiprivToolbarCanAttach(uiToolbar *t, uiWindow *w)
