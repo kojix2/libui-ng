@@ -72,7 +72,13 @@ static void syncCustomButtonView(uiToolbarItem *item, NSToolbarItem *native)
 {
 	if (!itemNeedsCustomButton(item)) {
 		if (item->type == uiprivToolbarItemButton && [native view] != nil) {
+			id target = [native target];
+			SEL action = [native action];
+
 			[native setView:nil];
+			// Removing a custom view discards its target and action.
+			[native setTarget:target];
+			[native setAction:action];
 			[native setMenuFormRepresentation:nil];
 		}
 		return;
@@ -267,9 +273,34 @@ void uiprivToolbarPlatformDetach(uiToolbar *t, uiWindow *w)
 		[window setToolbar:nil];
 }
 
-void uiprivToolbarPlatformSyncItem(uiToolbarItem *item)
+void uiprivToolbarPlatformSyncItem(uiToolbarItem *item, uiprivToolbarItemProperty property)
 {
-	syncItem(item);
+	NSToolbarItem *native = (NSToolbarItem *) item->native;
+	if (native == nil)
+		return;
+	NSButton *button = itemNeedsCustomButton(item) ? (NSButton *) [native view] : nil;
+	NSMenuItem *menuItem = [native menuFormRepresentation];
+	switch (property) {
+	case uiprivToolbarItemText:
+		syncItem(item);
+		break;
+	case uiprivToolbarItemTooltip: {
+		NSString *tooltip = item->tooltip[0] == '\0' ? nil : uiprivToNSString(item->tooltip);
+		[native setToolTip:tooltip];
+		[button setToolTip:tooltip];
+		[menuItem setToolTip:tooltip];
+		break;
+	}
+	case uiprivToolbarItemEnabled:
+		[native setEnabled:item->enabled != 0];
+		[button setEnabled:item->enabled != 0];
+		[menuItem setEnabled:item->enabled != 0];
+		break;
+	case uiprivToolbarItemChecked:
+		[button setState:item->checked ? NSOnState : NSOffState];
+		[menuItem setState:item->checked ? NSOnState : NSOffState];
+		break;
+	}
 }
 
 int uiprivToolbarPlatformSetDisplayMode(uiToolbar *t, uiToolbarDisplayMode previous)
