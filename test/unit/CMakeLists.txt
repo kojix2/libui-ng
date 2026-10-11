@@ -73,7 +73,6 @@ if(APPLE)
 	libui_apply_internal_options(layout-darwin)
 	add_test(NAME layout-darwin COMMAND layout-darwin)
 	set_tests_properties(layout-darwin PROPERTIES TIMEOUT 60)
-
 	add_executable(alloc-darwin alloc_backend.c alloc_darwin.m
 		../../darwin/alloc.m)
 	target_link_libraries(alloc-darwin PRIVATE cmocka::cmocka
@@ -81,6 +80,13 @@ if(APPLE)
 	libui_apply_internal_options(alloc-darwin)
 	add_test(NAME alloc-darwin COMMAND alloc-darwin)
 	set_tests_properties(alloc-darwin PROPERTIES TIMEOUT 60)
+
+	add_executable(toolbar-darwin toolbar_darwin.m)
+	target_link_libraries(toolbar-darwin PRIVATE libui::ui cmocka::cmocka
+		${LIBUI_TEST_APPKIT_FRAMEWORK})
+	libui_apply_internal_options(toolbar-darwin)
+	add_test(NAME toolbar-darwin COMMAND toolbar-darwin)
+	set_tests_properties(toolbar-darwin PROPERTIES TIMEOUT 60)
 endif()
 
 add_executable(imageviewrect-unit

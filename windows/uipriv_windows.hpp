@@ -130,6 +130,7 @@ extern void enableAllWindowsExcept(uiWindow *which);
 // toolbar.cpp
 extern BOOL uiprivToolbarWindowsCommand(uiToolbar *, UINT);
 extern BOOL uiprivToolbarWindowsNotify(uiToolbar *, NMHDR *, LRESULT *);
+extern int uiprivToolbarWindowsHeight(uiToolbar *);
 extern int uiprivToolbarWindowsLayout(uiToolbar *, int);
 
 // container.cpp

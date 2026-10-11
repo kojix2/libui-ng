@@ -12,6 +12,7 @@
 #ifdef _WIN32
 #include <windows.h>
 #include <commctrl.h>
+#include "../../ui_windows.h"
 #endif
 
 static void countToolbarClicks(uiToolbarItem *item, void *data)
@@ -219,6 +220,89 @@ static HWND nativeToolbarForWindow(uiWindow *window)
 {
 	return FindWindowExW((HWND) uiControlHandle(uiControl(window)),
 		NULL, TOOLBARCLASSNAMEW, NULL);
+}
+
+static void toolbarWindowsMeasurementDoesNotResize(void **state)
+{
+	struct state *s = *state;
+	uiToolbar *toolbar = uiNewToolbar();
+	uiLabel *label = uiNewLabel("Ready");
+	HWND parent = (HWND) uiControlHandle(uiControl(s->w));
+	MINMAXINFO minimum = {0};
+	RECT before, after, client;
+	int width, height;
+
+	uiToolbarAppendButton(toolbar, "Zoom in", NULL);
+	uiWindowSetChild(s->w, uiControl(label));
+	uiWindowSetToolbar(s->w, toolbar);
+	for (int mode = 0; mode < 4; mode++) {
+		uiToolbarSetDisplayMode(toolbar, (uiToolbarDisplayMode) mode);
+		HWND native = nativeToolbarForWindow(s->w);
+		GetWindowRect(native, &before);
+		uiWindowsControlMinimumSize(uiWindowsControl(s->w), &width, &height);
+		SendMessageW(parent, WM_GETMINMAXINFO, 0, (LPARAM) &minimum);
+		GetWindowRect(native, &after);
+		assert_true(EqualRect(&before, &after));
+		uiLabelSetText(label, "Loading a region");
+		GetClientRect(parent, &client);
+		GetWindowRect(native, &after);
+		assert_int_equal(after.right - after.left, client.right - client.left);
+		uiLabelSetText(label, "Ready");
+	}
+	uiWindowSetToolbar(s->w, NULL);
+	uiFreeToolbar(toolbar);
+}
+
+static LRESULT CALLBACK countToolbarUpdates(HWND hwnd, UINT message,
+	WPARAM wParam, LPARAM lParam, UINT_PTR id, DWORD_PTR data)
+{
+	int *updates = (int *) data;
+	if (message == TB_SETBUTTONINFOW || message == TB_ENABLEBUTTON ||
+		message == TB_CHECKBUTTON)
+		(*updates)++;
+	return DefSubclassProc(hwnd, message, wParam, lParam);
+}
+
+static void toolbarWindowsUpdatesPreserveNativeState(void **state)
+{
+	struct state *s = *state;
+	uiToolbar *toolbar = uiNewToolbar();
+	uiToolbarItem *item = uiToolbarAppendToggleButton(toolbar, "Pin", NULL);
+	TBBUTTON button;
+	int updates = 0;
+	WCHAR text[32];
+
+	uiWindowSetToolbar(s->w, toolbar);
+	HWND native = nativeToolbarForWindow(s->w);
+	assert_true(SendMessageW(native, TB_GETBUTTON, 0, (LPARAM) &button));
+	SendMessageW(native, TB_PRESSBUTTON, button.idCommand, TRUE);
+	assert_true(SetWindowSubclass(native, countToolbarUpdates, 1, (DWORD_PTR) &updates));
+	uiToolbarItemEnable(item);
+	uiToolbarItemSetChecked(item, 0);
+	uiToolbarItemSetText(item, "Pin");
+	uiToolbarItemSetTooltip(item, "Keep pinned");
+	assert_int_equal(updates, 0);
+	assert_true(SendMessageW(native, TB_ISBUTTONPRESSED, button.idCommand, 0));
+	uiToolbarItemSetChecked(item, 1);
+	assert_true(SendMessageW(native, TB_ISBUTTONCHECKED, button.idCommand, 0));
+	assert_true(SendMessageW(native, TB_ISBUTTONPRESSED, button.idCommand, 0));
+	uiToolbarItemSetText(item, "Pinned");
+	assert_true(SendMessageW(native, TB_ISBUTTONCHECKED, button.idCommand, 0));
+	assert_true(SendMessageW(native, TB_ISBUTTONPRESSED, button.idCommand, 0));
+	assert_int_equal(SendMessageW(native, TB_GETBUTTONTEXTW, button.idCommand, (LPARAM) text), 6);
+	assert_true(wcscmp(text, L"Pinned") == 0);
+	uiToolbarItemDisable(item);
+	assert_false(SendMessageW(native, TB_ISBUTTONENABLED, button.idCommand, 0));
+	assert_true(SendMessageW(native, TB_ISBUTTONCHECKED, button.idCommand, 0));
+	updates = 0;
+	uiToolbarItemDisable(item);
+	uiToolbarItemSetChecked(item, 1);
+	uiToolbarItemSetText(item, "Pinned");
+	uiToolbarItemSetTooltip(item, "Keep pinned");
+	assert_int_equal(updates, 0);
+	RemoveWindowSubclass(native, countToolbarUpdates, 1);
+	uiWindowSetToolbar(s->w, NULL);
+	uiFreeToolbar(toolbar);
 }
 
 static void toolbarButtonHasIconAndText(void **state)
@@ -514,6 +598,8 @@ int toolbarRunUnitTests(void)
 		cmocka_unit_test(toolbarPendingWindowSuppressesClick),
 #endif
 #ifdef _WIN32
+		toolbarUnitTest(toolbarWindowsMeasurementDoesNotResize),
+		toolbarUnitTest(toolbarWindowsUpdatesPreserveNativeState),
 		toolbarUnitTest(toolbarButtonHasIconAndText),
 		toolbarUnitTest(toolbarIconOnlyFallsBackToText),
 		toolbarUnitTest(toolbarHorizontalShowsIconAndText),

@@ -161,7 +161,7 @@ static void updateImage(uiToolbarItem *item)
 	SendMessageW(hwnd, TB_SETBUTTONINFOW, item->nativeID, (LPARAM) &info);
 }
 
-static void syncItem(uiToolbarItem *item)
+static void syncText(uiToolbarItem *item)
 {
 	HWND hwnd = (HWND) item->toolbar->native;
 	TBBUTTONINFOW info;
@@ -172,12 +172,9 @@ static void syncItem(uiToolbarItem *item)
 	text = toUTF16(item->text);
 	ZeroMemory(&info, sizeof info);
 	info.cbSize = sizeof info;
-	info.dwMask = TBIF_TEXT | TBIF_STATE;
+	info.dwMask = TBIF_TEXT;
 	info.pszText = item->toolbar->displayMode == uiToolbarDisplayModeIconOnly &&
 		item->icon != NULL ? (WCHAR *) L"" : text;
-	info.fsState = item->enabled ? TBSTATE_ENABLED : 0;
-	if (item->type == uiprivToolbarItemToggleButton && item->checked)
-		info.fsState |= TBSTATE_CHECKED;
 	SendMessageW(hwnd, TB_SETBUTTONINFOW, item->nativeID, (LPARAM) &info);
 	uiprivFree(text);
 }
@@ -327,15 +324,35 @@ void uiprivToolbarPlatformDetach(uiToolbar *t, uiWindow *w)
 	destroyNative(t);
 }
 
-void uiprivToolbarPlatformSyncItem(uiToolbarItem *item)
+void uiprivToolbarPlatformSyncItem(uiToolbarItem *item, uiprivToolbarItemProperty property)
 {
-	syncItem(item);
+	HWND hwnd = (HWND) item->toolbar->native;
+	if (hwnd == NULL || item->nativeID == 0)
+		return;
+	switch (property) {
+	case uiprivToolbarItemText:
+		syncText(item);
+		uiWindowsControlMinimumSizeChanged(uiWindowsControl(item->toolbar->window));
+		break;
+	case uiprivToolbarItemEnabled:
+		SendMessageW(hwnd, TB_ENABLEBUTTON, item->nativeID, MAKELONG(item->enabled, 0));
+		break;
+	case uiprivToolbarItemChecked:
+		SendMessageW(hwnd, TB_CHECKBUTTON, item->nativeID, MAKELONG(item->checked, 0));
+		break;
+	case uiprivToolbarItemTooltip:
+		// TBN_GETINFOTIPW reads the current tooltip directly from the item.
+		break;
+	}
 }
 
 void uiprivToolbarPlatformSyncItemIcon(uiToolbarItem *item)
 {
 	updateImage(item);
-	syncItem(item);
+	if (item->toolbar->displayMode == uiToolbarDisplayModeIconOnly)
+		syncText(item);
+	if (item->toolbar->window != NULL)
+		uiWindowsControlMinimumSizeChanged(uiWindowsControl(item->toolbar->window));
 }
 
 char *uiprivToolbarPlatformDupText(const char *text)
@@ -376,8 +393,10 @@ BOOL uiprivToolbarWindowsNotify(uiToolbar *t, NMHDR *hdr, LRESULT *result)
 	return FALSE;
 }
 
-int uiprivToolbarWindowsLayout(uiToolbar *t, int width)
+int uiprivToolbarWindowsHeight(uiToolbar *t)
 {
+	// Minimum-size queries must not resize the live toolbar. Only the layout
+	// path may apply the measured height to the native window.
 	HWND hwnd = (HWND) t->native;
 	int toolbarHeight = 0;
 
@@ -394,6 +413,14 @@ int uiprivToolbarWindowsLayout(uiToolbar *t, int width)
 		GetWindowRect(hwnd, &r);
 		toolbarHeight = r.bottom - r.top;
 	}
-	uiWindowsEnsureMoveWindowDuringResize(hwnd, 0, 0, width, toolbarHeight);
+	return toolbarHeight;
+}
+
+int uiprivToolbarWindowsLayout(uiToolbar *t, int width)
+{
+	if (t->native == NULL)
+		return 0;
+	int toolbarHeight = uiprivToolbarWindowsHeight(t);
+	uiWindowsEnsureMoveWindowDuringResize((HWND) t->native, 0, 0, width, toolbarHeight);
 	return toolbarHeight;
 }
