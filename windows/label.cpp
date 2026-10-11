@@ -42,9 +42,17 @@ char *uiLabelText(uiLabel *l)
 
 void uiLabelSetText(uiLabel *l, const char *text)
 {
+	char *previous = uiWindowsWindowText(l->hwnd);
+	int unchanged = strcmp(previous, text) == 0;
+	uiFreeText(previous);
+	if (unchanged)
+		return;
+	int oldWidth, oldHeight, width, height;
+	uiWindowsControlMinimumSize(uiWindowsControl(l), &oldWidth, &oldHeight);
 	uiWindowsSetWindowText(l->hwnd, text);
-	// changing the text might necessitate a change in the label's size
-	uiWindowsControlMinimumSizeChanged(uiWindowsControl(l));
+	uiWindowsControlMinimumSize(uiWindowsControl(l), &width, &height);
+	if (width != oldWidth || height != oldHeight)
+		uiWindowsControlMinimumSizeChanged(uiWindowsControl(l));
 }
 
 static double labelFontSize(HWND hwnd, HFONT font)
