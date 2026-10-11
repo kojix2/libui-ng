@@ -11,6 +11,13 @@ typedef enum uiprivToolbarItemType {
 	uiprivToolbarItemSeparator,
 } uiprivToolbarItemType;
 
+typedef enum uiprivToolbarItemProperty {
+	uiprivToolbarItemText,
+	uiprivToolbarItemTooltip,
+	uiprivToolbarItemEnabled,
+	uiprivToolbarItemChecked,
+} uiprivToolbarItemProperty;
+
 struct uiToolbarItem {
 	uiToolbar *toolbar;
 	uiprivToolbarItemType type;
@@ -48,7 +55,7 @@ extern void uiprivToolbarPlatformFree(uiToolbar *);
 extern void uiprivToolbarPlatformAttach(uiToolbar *, uiWindow *);
 extern void uiprivToolbarPlatformDetach(uiToolbar *, uiWindow *);
 extern int uiprivToolbarPlatformSetDisplayMode(uiToolbar *, uiToolbarDisplayMode previous);
-extern void uiprivToolbarPlatformSyncItem(uiToolbarItem *);
+extern void uiprivToolbarPlatformSyncItem(uiToolbarItem *, uiprivToolbarItemProperty);
 extern void uiprivToolbarPlatformSyncItemIcon(uiToolbarItem *);
 extern char *uiprivToolbarPlatformDupText(const char *);
 

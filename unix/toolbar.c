@@ -137,10 +137,29 @@ void uiprivToolbarPlatformDetach(uiToolbar *t, uiWindow *w)
 		gtk_container_remove(GTK_CONTAINER(parent), native);
 }
 
-void uiprivToolbarPlatformSyncItem(uiToolbarItem *item)
+void uiprivToolbarPlatformSyncItem(uiToolbarItem *item, uiprivToolbarItemProperty property)
 {
-	if (item->toolbar->native != NULL)
-		syncItem(item);
+	GtkToolItem *native = GTK_TOOL_ITEM(item->native);
+	if (native == NULL)
+		return;
+	switch (property) {
+	case uiprivToolbarItemText:
+		gtk_tool_button_set_label(GTK_TOOL_BUTTON(native), item->text);
+		if (item->icon == NULL && item->toolbar->displayMode == uiToolbarDisplayModeIconOnly)
+			gtk_tool_button_set_icon_widget(GTK_TOOL_BUTTON(native), newIcon(item));
+		break;
+	case uiprivToolbarItemTooltip:
+		gtk_tool_item_set_tooltip_text(native, item->tooltip[0] == '\0' ? NULL : item->tooltip);
+		break;
+	case uiprivToolbarItemEnabled:
+		gtk_widget_set_sensitive(GTK_WIDGET(native), item->enabled != 0);
+		break;
+	case uiprivToolbarItemChecked:
+		g_signal_handler_block(native, (gulong) item->nativeID);
+		gtk_toggle_tool_button_set_active(GTK_TOGGLE_TOOL_BUTTON(native), item->checked != 0);
+		g_signal_handler_unblock(native, (gulong) item->nativeID);
+		break;
+	}
 }
 
 int uiprivToolbarPlatformSetDisplayMode(uiToolbar *t, uiToolbarDisplayMode previous)
@@ -156,7 +175,8 @@ int uiprivToolbarPlatformSetDisplayMode(uiToolbar *t, uiToolbarDisplayMode previ
 
 void uiprivToolbarPlatformSyncItemIcon(uiToolbarItem *item)
 {
-	uiprivToolbarPlatformSyncItem(item);
+	if (item->toolbar->native != NULL)
+		syncItem(item);
 }
 
 char *uiprivToolbarPlatformDupText(const char *text)

@@ -388,7 +388,7 @@ static void uiWindowMinimumSize(uiWindowsControl *c, int *width, int *height)
 	if (w->child != NULL && uiControlVisible(w->child))
 		uiWindowsControlMinimumSize(uiWindowsControl(w->child), width, height);
 	if (w->toolbar != NULL)
-		*height += uiprivToolbarWindowsLayout(w->toolbar, *width);
+		*height += uiprivToolbarWindowsHeight(w->toolbar);
 	windowMargins(w, &mx, &my);
 	*width = uiprivMinimumSizeAdd(*width, uiprivMinimumSizeMultiply(2, mx));
 	*height = uiprivMinimumSizeAdd(*height, uiprivMinimumSizeMultiply(2, my));
