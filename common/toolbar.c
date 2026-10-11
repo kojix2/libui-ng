@@ -91,9 +91,8 @@ void uiToolbarSetDisplayMode(uiToolbar *t, uiToolbarDisplayMode mode)
 		return;
 	}
 	uiToolbarDisplayMode previous = t->displayMode;
-	if (mode == previous)
-		return;
 	t->displayMode = mode;
+	// The native mode may have changed independently; let the platform reapply it.
 	if (!uiprivToolbarPlatformSetDisplayMode(t, previous))
 		t->displayMode = previous;
 }
