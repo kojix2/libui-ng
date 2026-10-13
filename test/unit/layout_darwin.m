@@ -348,6 +348,45 @@ static void gridKeepsNonexpandingAxisAtFittingSize(void **state)
 	uiControlDestroy(uiControl(box));
 }
 
+static void gridRebuildsWithCompositeChildren(void **state)
+{
+	uiGrid *grid;
+	uiGroup *group;
+	uiTab *tab;
+	NSView *outer;
+	NSGridView *nativeGrid;
+	NSView *subview;
+
+	(void) state;
+	grid = uiNewGrid();
+	group = uiNewGroup("Files");
+	uiGroupSetChild(group, uiControl(uiNewLabel("Input")));
+	tab = uiNewTab();
+	uiTabAppend(tab, "Preview", uiControl(uiNewLabel("Frame")));
+
+	// Setting a Group or Tab's hugging priority notifies its parent Grid.
+	// Appending and rebuilding them must not recursively rebuild the Grid.
+	uiGridAppend(grid, uiControl(group),
+		0, 0, 1, 1, 1, uiAlignFill, 0, uiAlignFill);
+	uiGridAppend(grid, uiControl(tab),
+		0, 1, 1, 1, 1, uiAlignFill, 1, uiAlignFill);
+	uiControlHide(uiControl(tab));
+	uiControlShow(uiControl(tab));
+
+	outer = controlView(uiControl(grid));
+	nativeGrid = nil;
+	for (subview in [outer subviews])
+		if ([subview isKindOfClass:[NSGridView class]])
+			nativeGrid = (NSGridView *) subview;
+	assert_non_null(nativeGrid);
+	assert_true([controlView(uiControl(group)) isDescendantOf:
+		[[nativeGrid cellAtColumnIndex:0 rowIndex:0] contentView]]);
+	assert_true([controlView(uiControl(tab)) isDescendantOf:
+		[[nativeGrid cellAtColumnIndex:0 rowIndex:1] contentView]]);
+
+	uiControlDestroy(uiControl(grid));
+}
+
 static NSUInteger constraintsWithIdentifierPrefix(NSView *view,
 	NSString *prefix)
 {
@@ -429,6 +468,7 @@ int main(void)
 		cmocka_unit_test(formUsesOptionalPreferredHeight),
 		cmocka_unit_test(radioButtonsUseStackHuggingAndRestoreIt),
 		cmocka_unit_test(gridKeepsNonexpandingAxisAtFittingSize),
+		cmocka_unit_test(gridRebuildsWithCompositeChildren),
 		cmocka_unit_test(singleChildConstraintsFollowVisibility),
 	};
 	NSAutoreleasePool *pool;

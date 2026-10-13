@@ -27,6 +27,7 @@
 	BOOL padded;
 	BOOL horizontalExpansion;
 	BOOL verticalExpansion;
+	BOOL rebuilding;
 	CGFloat nativeRowSpacing;
 	CGFloat nativeColumnSpacing;
 	NSSize lastFittingSize;
@@ -310,6 +311,11 @@ static NSView *newCellView(gridChild *child)
 	int *occupancy;
 	NSView **columnViews, **rowViews;
 
+	// Composite children notify their parent when their hugging priority is set.
+	// Those notifications are caused by this rebuild and must not start another.
+	if (self->rebuilding)
+		return;
+	self->rebuilding = YES;
 	[self removeNativeGrid];
 	self->horizontalExpansion = NO;
 	self->verticalExpansion = NO;
@@ -346,6 +352,7 @@ static NSView *newCellView(gridChild *child)
 	}
 	if (first) {
 		[self invalidateIntrinsicContentSize];
+		self->rebuilding = NO;
 		return;
 	}
 
@@ -354,6 +361,7 @@ static NSView *newCellView(gridChild *child)
 		uiprivUserBug("uiGrid dimensions are too large.");
 		// Keep subsequent code safe if a debugger continues past the user bug.
 		[self invalidateIntrinsicContentSize];
+		self->rebuilding = NO;
 		return;
 	}
 	expandedColumns = (BOOL *) uiprivAlloc(xcount * sizeof (BOOL), "uiGrid expanded columns");
@@ -546,6 +554,7 @@ static NSView *newCellView(gridChild *child)
 	uiprivFree(expandedRows);
 	uiprivFree(expandedColumns);
 	[self invalidateIntrinsicContentSize];
+	self->rebuilding = NO;
 }
 
 - (void)validateChild:(gridChild *)candidate
