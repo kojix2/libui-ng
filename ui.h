@@ -92,13 +92,15 @@ _UI_EXTERN void uiOnShouldQuit(int (*f)(void *data), void *data);
 
 
 /**
- * Free the memory of a returned string.
+ * Frees a non-`NULL` string owned by the caller when the returning function
+ * specifies `uiFreeText()` as its release function.
  *
- * @note Every time a string is returned from the library, this method should be called.
- *       Examples of these functions are uiWindowTitle, uiOpenFile, uiSaveFile, and uiEntryText.
- *       It is not required for input strings, e.g. in uiWindowSetTitle.
+ * Examples include strings returned by uiWindowTitle(), uiOpenFile(),
+ * uiSaveFile(), and uiEntryText(). Do not use this function for borrowed
+ * strings such as uiVersion(), initialization errors released with
+ * uiFreeInitError(), or strings passed into libui.
  *
- * @param text The string to free memory
+ * @param text A non-`NULL` owned string whose API specifies `uiFreeText()`.
  */
 _UI_EXTERN void uiFreeText(char *text);
 
@@ -2017,12 +2019,12 @@ _UI_EXTERN uiMenu *uiNewMenu(const char *name);
 /**
  * File chooser dialog window to select a single file.
  *
- * @param parent Parent window.
- * @returns File path, `NULL` on cancel.\n
- *          If path is not `NULL`:\n
- *          TODO: clarify string encoding.
- *          Caller is responsible for freeing the data with `uiFreeText()`.
- * @note File paths are separated by the underlying OS file path separator.
+ * @param parent Parent window, or `NULL` for a parentless dialog.
+ * @returns An absolute filesystem path, or `NULL` on cancellation or a
+ *          recoverable failure. Free a non-`NULL` result with `uiFreeText()`.
+ * @note Windows and macOS return UTF-8. Unix returns the filesystem filename
+ *       encoding, which may not be UTF-8. Path separators are OS-specific.
+ *       Items without a filesystem path cannot be selected.
  * @ingroup dataEntry dialogWindow
  */
 _UI_EXTERN char *uiOpenFile(uiWindow *parent);
@@ -2030,12 +2032,12 @@ _UI_EXTERN char *uiOpenFile(uiWindow *parent);
 /**
  * Folder chooser dialog window to select a single folder.
  *
- * @param parent Parent window.
- * @returns Folder path, `NULL` on cancel.\n
- *          If path is not `NULL`:\n
- *          TODO: clarify string encoding.
- *          Caller is responsible for freeing the data with `uiFreeText()`.
- * @note File paths are separated by the underlying OS file path separator.
+ * @param parent Parent window, or `NULL` for a parentless dialog.
+ * @returns An absolute filesystem path, or `NULL` on cancellation or a
+ *          recoverable failure. Free a non-`NULL` result with `uiFreeText()`.
+ * @note Windows and macOS return UTF-8. Unix returns the filesystem filename
+ *       encoding, which may not be UTF-8. Path separators are OS-specific.
+ *       Items without a filesystem path cannot be selected.
  * @ingroup dataEntry dialogWindow
  */
 _UI_EXTERN char *uiOpenFolder(uiWindow *parent);
@@ -2046,12 +2048,12 @@ _UI_EXTERN char *uiOpenFolder(uiWindow *parent);
  * The user is asked to confirm overwriting existing files, should the chosen
  * file path already exist on the system.
  *
- * @param parent Parent window.
- * @returns File path, `NULL` on cancel.\n
- *          If path is not `NULL`:\n
- *          TODO: clarify string encoding.
- *          Caller is responsible for freeing the data with `uiFreeText()`.
- * @note File paths are separated by the underlying OS file path separator.
+ * @param parent Parent window, or `NULL` for a parentless dialog.
+ * @returns An absolute filesystem path, or `NULL` on cancellation or a
+ *          recoverable failure. Free a non-`NULL` result with `uiFreeText()`.
+ * @note Windows and macOS return UTF-8. Unix returns the filesystem filename
+ *       encoding, which may not be UTF-8. Path separators are OS-specific.
+ *       Items without a filesystem path cannot be selected.
  * @ingroup dataEntry dialogWindow
  */
 _UI_EXTERN char *uiSaveFile(uiWindow *parent);
