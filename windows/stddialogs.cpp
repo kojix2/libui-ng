@@ -24,10 +24,25 @@ static uiWindow *dialogParent(uiWindow *parent)
 	return activeWindow();
 }
 
+static HRESULT configureItemDialog(IFileDialog *d, FILEOPENDIALOGOPTIONS optsadd)
+{
+	FILEOPENDIALOGOPTIONS opts;
+	HRESULT hr;
+
+	hr = d->GetOptions(&opts);
+	if (hr != S_OK)
+		return hr;
+	opts |= optsadd;
+	// the other platforms don't check read-only; we won't either
+	opts &= ~(FOS_NOREADONLYRETURN | FOS_ALLNONSTORAGEITEMS);
+	// GetDisplayName(SIGDN_FILESYSPATH) requires a filesystem item.
+	opts |= FOS_FORCEFILESYSTEM;
+	return d->SetOptions(opts);
+}
+
 char *commonItemDialog(HWND parent, REFCLSID clsid, REFIID iid, FILEOPENDIALOGOPTIONS optsadd)
 {
 	IFileDialog *d = NULL;
-	FILEOPENDIALOGOPTIONS opts;
 	IShellItem *result = NULL;
 	WCHAR *wname = NULL;
 	char *name = NULL;
@@ -41,19 +56,9 @@ char *commonItemDialog(HWND parent, REFCLSID clsid, REFIID iid, FILEOPENDIALOGOP
 		// always return NULL on error
 		goto out;
 	}
-	hr = d->GetOptions(&opts);
+	hr = configureItemDialog(d, optsadd);
 	if (hr != S_OK) {
-		logHRESULT(L"error getting current options", hr);
-		goto out;
-	}
-	opts |= optsadd;
-	// the other platforms don't check read-only; we won't either
-	opts &= ~(FOS_NOREADONLYRETURN | FOS_ALLNONSTORAGEITEMS);
-	// GetDisplayName(SIGDN_FILESYSPATH) requires a filesystem item.
-	opts |= FOS_FORCEFILESYSTEM;
-	hr = d->SetOptions(opts);
-	if (hr != S_OK) {
-		logHRESULT(L"error setting options", hr);
+		logHRESULT(L"error configuring dialog options", hr);
 		goto out;
 	}
 	hr = d->Show(parent);
@@ -110,6 +115,114 @@ char *uiOpenFolder(uiWindow *parent)
 		FOS_NOCHANGEDIR | FOS_NOVALIDATE | FOS_PATHMUSTEXIST | FOS_PICKFOLDERS | FOS_SHAREAWARE | FOS_NOTESTFILECREATE | FOS_NODEREFERENCELINKS | FOS_FORCESHOWHIDDEN | FOS_DEFAULTNOMINIMODE);
 	enableAllWindowsExcept(parent);
 	return res;
+}
+
+static char **commonOpenMultiple(HWND parent, FILEOPENDIALOGOPTIONS optsadd,
+	HRESULT *error, const WCHAR **operation)
+{
+	IFileOpenDialog *d = NULL;
+	IShellItemArray *results = NULL;
+	IShellItem *item = NULL;
+	WCHAR *wname = NULL;
+	char **paths = NULL;
+	DWORD count, i;
+	HRESULT hr;
+
+	*error = S_OK;
+	*operation = NULL;
+	hr = CoCreateInstance(CLSID_FileOpenDialog, NULL, CLSCTX_INPROC_SERVER,
+		IID_IFileOpenDialog, (LPVOID *) (&d));
+	if (hr != S_OK) {
+		*operation = L"error creating file open dialog";
+		goto fail;
+	}
+	hr = configureItemDialog(d, optsadd | FOS_ALLOWMULTISELECT);
+	if (hr != S_OK) {
+		*operation = L"error configuring file open dialog";
+		goto fail;
+	}
+	hr = d->Show(parent);
+	if (hr == HRESULT_FROM_WIN32(ERROR_CANCELLED))
+		goto out;
+	if (hr != S_OK) {
+		*operation = L"error showing file open dialog";
+		goto fail;
+	}
+	hr = d->GetResults(&results);
+	if (hr != S_OK) {
+		*operation = L"error getting file dialog results";
+		goto fail;
+	}
+	hr = results->GetCount(&count);
+	if (hr != S_OK) {
+		*operation = L"error counting file dialog results";
+		goto fail;
+	}
+	if (count == 0)
+		goto out;
+	paths = uiprivNewTextArray((size_t) count);
+	if (paths == NULL)
+		goto out;
+	for (i = 0; i < count; i++) {
+		hr = results->GetItemAt(i, &item);
+		if (hr != S_OK) {
+			*operation = L"error getting file dialog item";
+			goto fail;
+		}
+		hr = item->GetDisplayName(SIGDN_FILESYSPATH, &wname);
+		if (hr != S_OK) {
+			*operation = L"error getting file dialog path";
+			goto fail;
+		}
+		paths[i] = toUTF8(wname);
+		CoTaskMemFree(wname);
+		wname = NULL;
+		item->Release();
+		item = NULL;
+	}
+	goto out;
+
+fail:
+	*error = hr;
+	uiFreeTextArray(paths);
+	paths = NULL;
+out:
+	if (wname != NULL)
+		CoTaskMemFree(wname);
+	if (item != NULL)
+		item->Release();
+	if (results != NULL)
+		results->Release();
+	if (d != NULL)
+		d->Release();
+	return paths;
+}
+
+static char **openMultiple(uiWindow *parent, FILEOPENDIALOGOPTIONS opts)
+{
+	char **paths;
+	HRESULT error;
+	const WCHAR *operation;
+
+	parent = dialogParent(parent);
+	disableAllWindowsExcept(parent);
+	paths = commonOpenMultiple(windowHWND(parent), opts, &error, &operation);
+	enableAllWindowsExcept(parent);
+	if (operation != NULL)
+		logHRESULT(operation, error);
+	return paths;
+}
+
+char **uiOpenFiles(uiWindow *parent)
+{
+	return openMultiple(parent,
+		FOS_NOCHANGEDIR | FOS_NOVALIDATE | FOS_PATHMUSTEXIST | FOS_FILEMUSTEXIST | FOS_SHAREAWARE | FOS_NOTESTFILECREATE | FOS_NODEREFERENCELINKS | FOS_FORCESHOWHIDDEN | FOS_DEFAULTNOMINIMODE);
+}
+
+char **uiOpenFolders(uiWindow *parent)
+{
+	return openMultiple(parent,
+		FOS_NOCHANGEDIR | FOS_NOVALIDATE | FOS_PATHMUSTEXIST | FOS_PICKFOLDERS | FOS_SHAREAWARE | FOS_NOTESTFILECREATE | FOS_NODEREFERENCELINKS | FOS_FORCESHOWHIDDEN | FOS_DEFAULTNOMINIMODE);
 }
 
 char *uiSaveFile(uiWindow *parent)

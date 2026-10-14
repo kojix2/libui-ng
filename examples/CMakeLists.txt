@@ -2,7 +2,7 @@ set(libui_examples
 	hello-world window button label checkbox entry multiline-entry box-layout
 	form-layout grid-layout tabs group control-destroy combobox editable-combobox
 	radio-buttons spinbox slider progressbar separator date-picker time-picker
-	color-button font-button menu menu-checkbox open-file open-folder save-file
+	color-button font-button menu menu-checkbox open-file open-folder open-multiple save-file
 	message-box error-message-box timer queue-main should-quit toolbar
 )
 

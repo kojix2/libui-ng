@@ -17,9 +17,8 @@ static void setupSavePanel(NSSavePanel *s)
 	[s setCanSelectHiddenExtension:NO];
 }
 
-static char *runSavePanel(NSWindow *parent, NSSavePanel *s)
+static NSInteger runPanel(NSWindow *parent, NSSavePanel *s)
 {
-	char *filename;
 	NSInteger result;
 
 	if (parent == nil) {
@@ -30,10 +29,14 @@ static char *runSavePanel(NSWindow *parent, NSSavePanel *s)
 		}];
 		result = [uiprivNSApp() runModalForWindow:s];
 	}
-	if (result != NSFileHandlingPanelOKButton)
+	return result;
+}
+
+static char *runSavePanel(NSWindow *parent, NSSavePanel *s)
+{
+	if (runPanel(parent, s) != NSFileHandlingPanelOKButton)
 		return NULL;
-	filename = uiDarwinNSStringToText([[s URL] path]);
-	return filename;
+	return uiDarwinNSStringToText([[s URL] path]);
 }
 
 char *uiOpenFile(uiWindow *parent)
@@ -62,6 +65,52 @@ char *uiOpenFolder(uiWindow *parent)
 	setupSavePanel(o);
 	// panel is autoreleased
 	return runSavePanel(windowWindow(parent), o);
+}
+
+static char **openMultiple(uiWindow *parent, BOOL folders)
+{
+	NSOpenPanel *o;
+	NSArray *urls;
+	NSUInteger i, count;
+	char **paths;
+	NSURL *url;
+	NSString *path;
+
+	o = [NSOpenPanel openPanel];
+	[o setCanChooseFiles:!folders];
+	[o setCanChooseDirectories:folders];
+	[o setResolvesAliases:NO];
+	[o setAllowsMultipleSelection:YES];
+	setupSavePanel(o);
+	if (runPanel(windowWindow(parent), o) != NSFileHandlingPanelOKButton)
+		return NULL;
+	urls = [o URLs];
+	count = [urls count];
+	if (count == 0)
+		return NULL;
+	paths = uiprivNewTextArray((size_t) count);
+	if (paths == NULL)
+		return NULL;
+	for (i = 0; i < count; i++) {
+		url = [urls objectAtIndex:i];
+		path = [url path];
+		if (![url isFileURL] || path == nil) {
+			uiFreeTextArray(paths);
+			return NULL;
+		}
+		paths[i] = uiDarwinNSStringToText(path);
+	}
+	return paths;
+}
+
+char **uiOpenFiles(uiWindow *parent)
+{
+	return openMultiple(parent, NO);
+}
+
+char **uiOpenFolders(uiWindow *parent)
+{
+	return openMultiple(parent, YES);
 }
 
 char *uiSaveFile(uiWindow *parent)
