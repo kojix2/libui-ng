@@ -220,6 +220,13 @@ static int createNative(uiToolbar *t, uiWindow *w)
 	SendMessageW(hwnd, TB_BUTTONSTRUCTSIZE, sizeof (TBBUTTON), 0);
 	SendMessageW(hwnd, TB_SETEXTENDEDSTYLE, 0,
 		nativeToolbarExtendedStyle(t->displayMode));
+	// Give the first button a small leading gap. Window content has a
+	// 7-DLU margin, while toolbar buttons already provide their own padding.
+	uiWindowsSizing sizing;
+	int leadingInset = 3;
+	uiWindowsGetSizing(parent, &sizing);
+	uiWindowsSizingDlgUnitsToPixels(&sizing, &leadingInset, NULL);
+	SendMessageW(hwnd, TB_SETINDENT, leadingInset, 0);
 	if (!buildImages(t))
 		goto fail;
 	for (size_t i = 0; i < t->len; i++) {
