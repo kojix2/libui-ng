@@ -57,6 +57,12 @@ libui_add_test(allocsize-unit allocsize.c)
 set_tests_properties(allocsize-unit PROPERTIES LABELS "logic;portable")
 target_link_libraries(allocsize-unit PRIVATE cmocka::cmocka)
 
+add_executable(textarray-unit textarray.c ../../common/textarray.c)
+target_link_libraries(textarray-unit PRIVATE cmocka::cmocka)
+libui_apply_internal_options(textarray-unit)
+add_test(NAME textarray-unit COMMAND textarray-unit)
+set_tests_properties(textarray-unit PROPERTIES TIMEOUT 60)
+
 libui_add_test(shouldquit-unit shouldquit.c ../../common/shouldquit.c)
 set_tests_properties(shouldquit-unit PROPERTIES LABELS "logic;portable")
 target_link_libraries(shouldquit-unit PRIVATE cmocka::cmocka)
@@ -75,7 +81,8 @@ target_include_directories(gridutil-unit PRIVATE ../.. ../../common)
 if(UNIX AND NOT APPLE)
 	target_sources(unit PRIVATE entry_gtk.c area_gtk.c)
 
-	libui_add_test(alloc-unix alloc_backend.c ../../unix/alloc.c)
+	libui_add_test(alloc-unix alloc_backend.c ../../unix/alloc.c
+		../../unix/text.c ../../common/textarray.c)
 	set_tests_properties(alloc-unix PROPERTIES LABELS "backend;fault;gtk")
 	target_link_libraries(alloc-unix PRIVATE cmocka::cmocka PkgConfig::GTK3)
 	target_compile_definitions(alloc-unix PRIVATE _POSIX_C_SOURCE=200809L)
@@ -101,7 +108,7 @@ if(APPLE)
 		${LIBUI_TEST_APPKIT_FRAMEWORK})
 
 	libui_add_test(alloc-darwin alloc_backend.c alloc_darwin.m
-		../../darwin/alloc.m)
+		../../darwin/alloc.m ../../darwin/text.m ../../common/textarray.c)
 	set_tests_properties(alloc-darwin PROPERTIES LABELS "backend;fault;darwin")
 	target_link_libraries(alloc-darwin PRIVATE cmocka::cmocka
 		${LIBUI_TEST_APPKIT_FRAMEWORK})
