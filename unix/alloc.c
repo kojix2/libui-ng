@@ -1,6 +1,7 @@
 // 7 april 2015
 #include <string.h>
 #include "uipriv_unix.h"
+#include "../common/allocsize.h"
 
 static GPtrArray *allocations;
 
@@ -46,8 +47,13 @@ void uiprivUninitAlloc(void)
 void *uiprivAlloc(size_t size, const char *type)
 {
 	void *out;
+	size_t total;
 
-	out = g_malloc0(EXTRA + size);
+	if (!uiprivAllocSizeWithHeader(size, EXTRA, &total)) {
+		fputs("allocation size overflow in libui allocator\n", stderr);
+		abort();
+	}
+	out = g_malloc0(total);
 	*SIZE(out) = size;
 	*TYPE(out) = type;
 	g_ptr_array_add(allocations, out);
@@ -58,11 +64,16 @@ void *uiprivRealloc(void *p, size_t new, const char *type)
 {
 	void *out;
 	size_t *s;
+	size_t total;
 
 	if (p == NULL)
 		return uiprivAlloc(new, type);
+	if (!uiprivAllocSizeWithHeader(new, EXTRA, &total)) {
+		fputs("allocation size overflow in libui allocator\n", stderr);
+		abort();
+	}
 	p = BASE(p);
-	out = g_realloc(p, EXTRA + new);
+	out = g_realloc(p, total);
 	s = SIZE(out);
 	if (new > *s)
 		memset(((uint8_t *) DATA(out)) + *s, 0, new - *s);

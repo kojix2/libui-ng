@@ -1,6 +1,7 @@
 // 4 december 2014
 #import <stdlib.h>
 #import "uipriv_darwin.h"
+#include "../common/allocsize.h"
 
 static NSMutableArray *allocations;
 
@@ -41,8 +42,13 @@ void uiprivUninitAlloc(void)
 void *uiprivAlloc(size_t size, const char *type)
 {
 	void *out;
+	size_t total;
 
-	out = malloc(EXTRA + size);
+	if (!uiprivAllocSizeWithHeader(size, EXTRA, &total)) {
+		fputs("allocation size overflow in libui allocator\n", stderr);
+		abort();
+	}
+	out = malloc(total);
 	if (out == NULL) {
 		fprintf(stderr, "memory exhausted in uiAlloc()\n");
 		abort();
@@ -58,11 +64,16 @@ void *uiprivRealloc(void *p, size_t new, const char *type)
 {
 	void *out;
 	size_t *s;
+	size_t total;
 
 	if (p == NULL)
 		return uiprivAlloc(new, type);
+	if (!uiprivAllocSizeWithHeader(new, EXTRA, &total)) {
+		fputs("allocation size overflow in libui allocator\n", stderr);
+		abort();
+	}
 	p = BASE(p);
-	out = realloc(p, EXTRA + new);
+	out = realloc(p, total);
 	if (out == NULL) {
 		fprintf(stderr, "memory exhausted in uiprivRealloc()\n");
 		abort();
