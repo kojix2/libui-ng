@@ -109,11 +109,11 @@ static void multilineEntryReplaceText(uiMultilineEntry *e, NSRange range, NSStri
 {
 	e->changing = YES;
 	@try {
-		if ([e->tv shouldChangeTextInRange:range replacementString:text]) {
-			[[e->tv textStorage] replaceCharactersInRange:range
-				withString:text];
-			[e->tv didChangeText];
-		}
+		// Programmatic changes must work even when the view is read only.
+		// shouldChangeTextInRange: rejects changes when editable is NO.
+		[[e->tv textStorage] replaceCharactersInRange:range
+			withString:text];
+		[e->tv didChangeText];
 	}
 	@finally {
 		e->changing = NO;

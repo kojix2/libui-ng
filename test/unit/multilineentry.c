@@ -49,6 +49,20 @@ static void multilineEntrySetAndAppendText(void **state)
 	uiFreeText(text);
 }
 
+static void multilineEntrySetAndAppendTextWhenReadOnly(void **state)
+{
+	uiMultilineEntry *entry = uiMultilineEntryFromState(state);
+	char *text;
+
+	uiMultilineEntrySetReadOnly(entry, 1);
+	uiMultilineEntrySetText(entry, "First");
+	uiMultilineEntryAppend(entry, "\nSecond");
+	text = uiMultilineEntryText(entry);
+	assert_string_equal(text, "First\nSecond");
+	uiFreeText(text);
+	assert_int_equal(uiMultilineEntryReadOnly(entry), 1);
+}
+
 static void multilineEntrySetReadOnly(void **state)
 {
 	uiMultilineEntry *entry = uiMultilineEntryFromState(state);
@@ -84,6 +98,7 @@ int multilineEntryRunUnitTests(void)
 	const struct CMUnitTest tests[] = {
 		multilineEntryUnitTests(multilineEntryNew),
 		multilineEntryUnitTests(multilineEntrySetAndAppendText),
+		multilineEntryUnitTests(multilineEntrySetAndAppendTextWhenReadOnly),
 		multilineEntryUnitTests(multilineEntrySetReadOnly),
 		multilineEntryUnitTests(multilineEntryProgrammaticChangesDoNotCallback),
 	};
