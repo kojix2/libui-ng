@@ -192,8 +192,8 @@ static LRESULT CALLBACK windowWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARA
 }
 
 struct windowClassIcons {
-	HICON large;
-	HICON small;
+	HICON largeIcon;
+	HICON smallIcon;
 };
 
 static windowClassIcons classIcons = { NULL, NULL };
@@ -202,22 +202,22 @@ static BOOL CALLBACK loadExecutableWindowIcons(HMODULE executable, LPCWSTR type,
 	LPWSTR name, LONG_PTR data)
 {
 	windowClassIcons *icons = (windowClassIcons *) data;
-	HICON large;
-	HICON small;
+	HICON largeIcon;
+	HICON smallIcon;
 
-	large = (HICON) LoadImageW(executable, name, IMAGE_ICON,
+	largeIcon = (HICON) LoadImageW(executable, name, IMAGE_ICON,
 		GetSystemMetrics(SM_CXICON), GetSystemMetrics(SM_CYICON), 0);
-	small = (HICON) LoadImageW(executable, name, IMAGE_ICON,
+	smallIcon = (HICON) LoadImageW(executable, name, IMAGE_ICON,
 		GetSystemMetrics(SM_CXSMICON), GetSystemMetrics(SM_CYSMICON), 0);
-	if (large == NULL || small == NULL) {
-		if (large != NULL)
-			DestroyIcon(large);
-		if (small != NULL)
-			DestroyIcon(small);
+	if (largeIcon == NULL || smallIcon == NULL) {
+		if (largeIcon != NULL)
+			DestroyIcon(largeIcon);
+		if (smallIcon != NULL)
+			DestroyIcon(smallIcon);
 		return TRUE;
 	}
-	icons->large = large;
-	icons->small = small;
+	icons->largeIcon = largeIcon;
+	icons->smallIcon = smallIcon;
 	return FALSE;
 }
 
@@ -237,16 +237,16 @@ ATOM registerWindowClass(HICON hDefaultIcon, HCURSOR hDefaultCursor)
 	wc.lpszClassName = windowClass;
 	wc.lpfnWndProc = windowWndProc;
 	wc.hInstance = hInstance;
-	wc.hIcon = classIcons.large != NULL ? classIcons.large : hDefaultIcon;
-	wc.hIconSm = classIcons.small;
+	wc.hIcon = classIcons.largeIcon != NULL ? classIcons.largeIcon : hDefaultIcon;
+	wc.hIconSm = classIcons.smallIcon;
 	wc.hCursor = hDefaultCursor;
 	wc.hbrBackground = (HBRUSH) (COLOR_BTNFACE + 1);
 	atom = RegisterClassExW(&wc);
 	if (atom == 0) {
-		if (classIcons.large != NULL)
-			DestroyIcon(classIcons.large);
-		if (classIcons.small != NULL)
-			DestroyIcon(classIcons.small);
+		if (classIcons.largeIcon != NULL)
+			DestroyIcon(classIcons.largeIcon);
+		if (classIcons.smallIcon != NULL)
+			DestroyIcon(classIcons.smallIcon);
 		classIcons = { NULL, NULL };
 	}
 	return atom;
@@ -258,10 +258,10 @@ void unregisterWindowClass(void)
 		logLastError(L"error unregistering uiWindow window class");
 		return;
 	}
-	if (classIcons.large != NULL)
-		DestroyIcon(classIcons.large);
-	if (classIcons.small != NULL)
-		DestroyIcon(classIcons.small);
+	if (classIcons.largeIcon != NULL)
+		DestroyIcon(classIcons.largeIcon);
+	if (classIcons.smallIcon != NULL)
+		DestroyIcon(classIcons.smallIcon);
 	classIcons = { NULL, NULL };
 }
 
