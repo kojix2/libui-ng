@@ -1,6 +1,3 @@
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(GTK3 REQUIRED IMPORTED_TARGET "gtk+-3.0>=3.18")
-
 target_sources(libui_ui PRIVATE
 	alloc.c area.c attrstr.c box.c button.c cellrendererbutton.c checkbox.c child.c
 	colorbutton.c combobox.c control.c controlsize.c datetimepicker.c debug.c draw.c drawmatrix.c
