@@ -222,6 +222,28 @@ static HWND nativeToolbarForWindow(uiWindow *window)
 		NULL, TOOLBARCLASSNAMEW, NULL);
 }
 
+static void toolbarWindowsLeadingInset(void **state)
+{
+	struct state *s = *state;
+	uiToolbar *toolbar = uiNewToolbar();
+	uiWindowsSizing sizing;
+	int expected = 3;
+
+	uiWindowsGetSizing((HWND) uiControlHandle(uiControl(s->w)), &sizing);
+	uiWindowsSizingDlgUnitsToPixels(&sizing, &expected, NULL);
+	uiToolbarAppendButton(toolbar, "Open", NULL);
+	uiWindowSetToolbar(s->w, toolbar);
+	for (int mode = 0; mode < 4; mode++) {
+		RECT button;
+		uiToolbarSetDisplayMode(toolbar, (uiToolbarDisplayMode) mode);
+		assert_true(SendMessageW(nativeToolbarForWindow(s->w),
+			TB_GETITEMRECT, 0, (LPARAM) &button));
+		assert_int_equal(button.left, expected);
+	}
+	uiWindowSetToolbar(s->w, NULL);
+	uiFreeToolbar(toolbar);
+}
+
 static void toolbarWindowsMeasurementDoesNotResize(void **state)
 {
 	struct state *s = *state;
@@ -598,6 +620,7 @@ int toolbarRunUnitTests(void)
 		cmocka_unit_test(toolbarPendingWindowSuppressesClick),
 #endif
 #ifdef _WIN32
+		toolbarUnitTest(toolbarWindowsLeadingInset),
 		toolbarUnitTest(toolbarWindowsMeasurementDoesNotResize),
 		toolbarUnitTest(toolbarWindowsUpdatesPreserveNativeState),
 		toolbarUnitTest(toolbarButtonHasIconAndText),
