@@ -43,6 +43,61 @@ char *uiOpenFolder(uiWindow *parent)
 	return filedialog(windowWindow(parent), GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER, "_Open");
 }
 
+static char **filedialogMultiple(GtkWindow *parent, GtkFileChooserAction mode)
+{
+	GtkWidget *fcd;
+	GtkFileChooser *fc;
+	GSList *files, *item;
+	char **paths;
+	size_t i, count;
+
+	fcd = gtk_file_chooser_dialog_new(NULL, parent, mode,
+		"_Cancel", GTK_RESPONSE_CANCEL,
+		"_Open", GTK_RESPONSE_ACCEPT,
+		NULL);
+	fc = GTK_FILE_CHOOSER(fcd);
+	gtk_file_chooser_set_local_only(fc, TRUE);
+	gtk_file_chooser_set_select_multiple(fc, TRUE);
+	gtk_file_chooser_set_show_hidden(fc, TRUE);
+	gtk_file_chooser_set_create_folders(fc, TRUE);
+	if (gtk_dialog_run(GTK_DIALOG(fcd)) != GTK_RESPONSE_ACCEPT) {
+		gtk_widget_destroy(fcd);
+		return NULL;
+	}
+	files = gtk_file_chooser_get_files(fc);
+	count = (size_t) g_slist_length(files);
+	paths = NULL;
+	if (count != 0)
+		paths = uiprivNewTextArray(count);
+	if (paths != NULL) {
+		i = 0;
+		for (item = files; item != NULL; item = item->next) {
+			paths[i] = g_file_get_path(G_FILE(item->data));
+			if (paths[i] == NULL) {
+				uiFreeTextArray(paths);
+				paths = NULL;
+				break;
+			}
+			i++;
+		}
+	}
+	for (item = files; item != NULL; item = item->next)
+		g_object_unref(item->data);
+	g_slist_free(files);
+	gtk_widget_destroy(fcd);
+	return paths;
+}
+
+char **uiOpenFiles(uiWindow *parent)
+{
+	return filedialogMultiple(windowWindow(parent), GTK_FILE_CHOOSER_ACTION_OPEN);
+}
+
+char **uiOpenFolders(uiWindow *parent)
+{
+	return filedialogMultiple(windowWindow(parent), GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER);
+}
+
 char *uiSaveFile(uiWindow *parent)
 {
 	return filedialog(windowWindow(parent), GTK_FILE_CHOOSER_ACTION_SAVE, "_Save");
