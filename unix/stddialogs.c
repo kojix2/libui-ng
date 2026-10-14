@@ -18,7 +18,7 @@ static char *filedialog(GtkWindow *parent, GtkFileChooserAction mode, const gcha
 		confirm, GTK_RESPONSE_ACCEPT,
 		NULL);
 	fc = GTK_FILE_CHOOSER(fcd);
-	gtk_file_chooser_set_local_only(fc, FALSE);
+	gtk_file_chooser_set_local_only(fc, TRUE);
 	gtk_file_chooser_set_select_multiple(fc, FALSE);
 	gtk_file_chooser_set_show_hidden(fc, TRUE);
 	gtk_file_chooser_set_do_overwrite_confirmation(fc, TRUE);
