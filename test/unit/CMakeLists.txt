@@ -39,6 +39,12 @@ libui_apply_internal_options(allocsize-unit)
 add_test(NAME allocsize-unit COMMAND allocsize-unit)
 set_tests_properties(allocsize-unit PROPERTIES TIMEOUT 60)
 
+add_executable(textarray-unit textarray.c ../../common/textarray.c)
+target_link_libraries(textarray-unit PRIVATE cmocka::cmocka)
+libui_apply_internal_options(textarray-unit)
+add_test(NAME textarray-unit COMMAND textarray-unit)
+set_tests_properties(textarray-unit PROPERTIES TIMEOUT 60)
+
 add_executable(shouldquit-unit shouldquit.c ../../common/shouldquit.c)
 target_link_libraries(shouldquit-unit PRIVATE cmocka::cmocka)
 target_include_directories(shouldquit-unit PRIVATE ../.. ../../common)
@@ -61,7 +67,8 @@ add_test(NAME gridutil-unit COMMAND gridutil-unit)
 set_tests_properties(gridutil-unit PROPERTIES TIMEOUT 60)
 
 if(UNIX AND NOT APPLE)
-	add_executable(alloc-unix alloc_backend.c ../../unix/alloc.c)
+	add_executable(alloc-unix alloc_backend.c ../../unix/alloc.c
+		../../unix/text.c ../../common/textarray.c)
 	target_link_libraries(alloc-unix PRIVATE cmocka::cmocka PkgConfig::GTK3)
 	target_compile_definitions(alloc-unix PRIVATE _POSIX_C_SOURCE=200809L)
 	libui_apply_internal_options(alloc-unix)
@@ -86,7 +93,7 @@ if(APPLE)
 	add_test(NAME layout-darwin COMMAND layout-darwin)
 	set_tests_properties(layout-darwin PROPERTIES TIMEOUT 60)
 	add_executable(alloc-darwin alloc_backend.c alloc_darwin.m
-		../../darwin/alloc.m)
+		../../darwin/alloc.m ../../darwin/text.m ../../common/textarray.c)
 	target_link_libraries(alloc-darwin PRIVATE cmocka::cmocka
 		${LIBUI_TEST_APPKIT_FRAMEWORK})
 	libui_apply_internal_options(alloc-darwin)

@@ -29,6 +29,32 @@ static void openFolder(uiButton *b, void *data)
 	}
 }
 
+static void openMultiple(uiLabel *label, char **paths)
+{
+	size_t count;
+	char summary[64];
+
+	if (paths == NULL) {
+		uiLabelSetText(label, "(cancelled)");
+		return;
+	}
+	for (count = 0; paths[count] != NULL; count++)
+		printf("Selected: %s\n", paths[count]);
+	snprintf(summary, sizeof summary, "%zu selected (paths printed to stdout)", count);
+	uiLabelSetText(label, summary);
+	uiFreeTextArray(paths);
+}
+
+static void openFiles(uiButton *b, void *data)
+{
+	openMultiple(uiLabel(data), uiOpenFiles(parent));
+}
+
+static void openFolders(uiButton *b, void *data)
+{
+	openMultiple(uiLabel(data), uiOpenFolders(parent));
+}
+
 static void saveFile(uiButton *b, void *data)
 {
 	char *fn;
@@ -99,7 +125,9 @@ uiBox *makePage5(uiWindow *pw)
 	uiBoxAppend(page5, uiControl(hbox), 0);
 
 	D("Open File", openFile);
+	D("Open Files", openFiles);
 	D("Open Folder", openFolder);
+	D("Open Folders", openFolders);
 	D("Save File", saveFile);
 
 	title = uiNewEntry();
