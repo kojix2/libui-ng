@@ -94,7 +94,7 @@ examples, build trees, and CI logs are not included in the SDK.
 When the workflow runs for a tag, the `release` job waits for all 28 packages,
 checks their names against `cmake/release-archives.txt`, validates their
 contents, rejects legacy/build-tree paths, and
-tests relocated CMake, direct C, Crystal, and Ruby Fiddle consumers before
+tests relocated CMake and direct C consumers before
 publishing a GitHub Release. The same packaging and consumer validation runs on
 the `pre-build` branch without publishing a release.
 

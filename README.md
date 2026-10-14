@@ -201,8 +201,8 @@ After extracting an SDK, CMake consumers can set its root as a prefix:
 cmake -S app -B app-build -DCMAKE_PREFIX_PATH=/path/to/libui-ng-sdk
 ```
 
-Non-CMake consumers, including Crystal and Ruby extensions, can use
-`include/`, `lib/`, and `bin/` directly. Library filenames remain native to the
+Non-CMake consumers can use `include/`, `lib/`, and `bin/` directly.
+Library filenames remain native to the
 toolchain: MSVC uses `.lib`, MinGW and Unix static builds use `.a`, Windows
 shared builds provide a `.dll` and import library, and Unix/macOS shared builds
 provide `.so`/`.dylib` files.

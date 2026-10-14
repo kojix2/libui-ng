@@ -401,19 +401,11 @@ jobs:
           /tmp/libui-consumer/consumer
           cc test/cmake/consumer/main.c test/cmake/consumer/extension.c -I/tmp/libui-prefix-two/include /tmp/libui-prefix-two/lib/libui.a $(pkg-config --cflags --libs gtk+-3.0) -lm -ldl -o /tmp/libui-direct-consumer
           /tmp/libui-direct-consumer
-      - uses: crystal-lang/install-crystal@v1
-      - name: Validate Crystal and Ruby consumers
-        run: |
           mkdir /tmp/libui-shared-prefix-one
           unzip -q zips/libui-ng-ubuntu-x64-shared-release.zip -d /tmp/libui-shared-prefix-one
           mv /tmp/libui-shared-prefix-one /tmp/libui-shared-prefix-two
-          CRYSTAL_CACHE_DIR=/tmp/crystal-cache crystal build test/bindings/crystal_smoke.cr -o /tmp/libui-crystal-static --link-flags "/tmp/libui-prefix-two/lib/libui.a $(pkg-config --libs gtk+-3.0) -lm -ldl"
-          /tmp/libui-crystal-static
           cc test/cmake/consumer/main.c test/cmake/consumer/extension.c -I/tmp/libui-shared-prefix-two/include -L/tmp/libui-shared-prefix-two/lib -lui $(pkg-config --cflags --libs gtk+-3.0) -Wl,-rpath,/tmp/libui-shared-prefix-two/lib -o /tmp/libui-direct-shared
           /tmp/libui-direct-shared
-          CRYSTAL_CACHE_DIR=/tmp/crystal-cache crystal build test/bindings/crystal_smoke.cr -o /tmp/libui-crystal-shared --link-flags "-L/tmp/libui-shared-prefix-two/lib -lui"
-          LD_LIBRARY_PATH=/tmp/libui-shared-prefix-two/lib /tmp/libui-crystal-shared
-          ruby test/bindings/ruby_fiddle_smoke.rb /tmp/libui-shared-prefix-two/lib/libui.so
       - name: Publish GitHub Release
         if: github.ref_type == 'tag'
         uses: softprops/action-gh-release@v3
