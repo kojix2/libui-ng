@@ -16,6 +16,10 @@
 #include "../../ui.h"
 #include "../../common/uipriv.h"
 
+#ifndef __APPLE__
+#include <glib.h>
+#endif
+
 extern char **environ;
 extern void uiprivInitAlloc(void);
 extern void uiprivUninitAlloc(void);
@@ -60,6 +64,32 @@ static void allocatorPreservesDataAndTracksReallocation(void **state)
 	uiprivUninitAlloc();
 }
 
+static void textArrayUsesBackendAllocators(void **state)
+{
+	char **texts;
+
+	(void) state;
+	uiprivInitAlloc();
+	texts = uiprivNewTextArray(2);
+	assert_non_null(texts);
+	assert_null(texts[0]);
+	assert_null(texts[1]);
+	assert_null(texts[2]);
+#ifdef __APPLE__
+	texts[0] = malloc(1);
+	assert_non_null(texts[0]);
+	texts[0][0] = '\0';
+#else
+	texts[0] = g_strdup("");
+#endif
+	uiFreeTextArray(texts);
+	texts = uiprivNewTextArray(0);
+	assert_non_null(texts);
+	uiFreeTextArray(texts);
+	uiFreeTextArray(NULL);
+	uiprivUninitAlloc();
+}
+
 static void assertOverflowAborts(const char *mode)
 {
 	posix_spawn_file_actions_t actions;
@@ -101,6 +131,7 @@ int runAllocatorBackendTests(int argc, char **argv)
 {
 	const struct CMUnitTest tests[] = {
 		cmocka_unit_test(allocatorPreservesDataAndTracksReallocation),
+		cmocka_unit_test(textArrayUsesBackendAllocators),
 		cmocka_unit_test(allocatorRejectsOverflowBeforeAllocating),
 	};
 	const size_t extra = sizeof(size_t) + sizeof(const char **);
