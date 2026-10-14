@@ -18,6 +18,9 @@ extern void *uiprivAlloc(size_t, const char *);
 extern void *uiprivRealloc(void *, size_t, const char *);
 extern void uiprivFree(void *);
 
+// textarray.c
+extern char **uiprivNewTextArray(size_t count);
+
 // debug.c and OS-specific debug.* files
 // MSVC 2013 does not provide C99's __func__; use its
 // __FUNCTION__ extension instead.
