@@ -105,6 +105,16 @@ _UI_EXTERN void uiOnShouldQuit(int (*f)(void *data), void *data);
  */
 _UI_EXTERN void uiFreeText(char *text);
 
+/**
+ * Frees a `NULL`-terminated array returned by an API that specifies
+ * `uiFreeTextArray()`. Each string and the array itself are released.
+ *
+ * Passing `NULL` does nothing. Do not free individual elements, replace
+ * elements, or pass an array assembled by the caller. Call this on the UI
+ * thread before `uiUninit()`.
+ */
+_UI_EXTERN void uiFreeTextArray(char **texts);
+
 
 /**
  * Base class for GUI controls providing common methods.
@@ -2116,6 +2126,23 @@ _UI_EXTERN uiMenu *uiNewMenu(const char *name);
 _UI_EXTERN char *uiOpenFile(uiWindow *parent);
 
 /**
+ * Opens a native dialog to select one or more files.
+ *
+ * @param parent Parent window, or `NULL` for a parentless dialog.
+ * @returns A `NULL`-terminated array containing at least one absolute
+ *          filesystem path, or `NULL` on cancellation or recoverable failure.
+ *          Free the whole array once with `uiFreeTextArray()` before
+ *          `uiUninit()`. The paths remain valid until then, independently of
+ *          the dialog and parent window. Do not free individual paths.
+ * @note Selection order is unspecified. Windows and macOS return UTF-8;
+ *       Unix returns the filesystem filename encoding, which may not be
+ *       UTF-8. Path separators are OS-specific. Items without a filesystem
+ *       path cannot be selected. Call on the UI thread after `uiInit()`.
+ * @ingroup dataEntry dialogWindow
+ */
+_UI_EXTERN char **uiOpenFiles(uiWindow *parent);
+
+/**
  * Folder chooser dialog window to select a single folder.
  *
  * @param parent Parent window, or `NULL` for a parentless dialog.
@@ -2127,6 +2154,24 @@ _UI_EXTERN char *uiOpenFile(uiWindow *parent);
  * @ingroup dataEntry dialogWindow
  */
 _UI_EXTERN char *uiOpenFolder(uiWindow *parent);
+
+/**
+ * Opens a native dialog to select one or more folders.
+ *
+ * @param parent Parent window, or `NULL` for a parentless dialog.
+ * @returns A `NULL`-terminated array containing at least one absolute
+ *          filesystem path, or `NULL` on cancellation or recoverable failure.
+ *          Free the whole array once with `uiFreeTextArray()` before
+ *          `uiUninit()`. The paths remain valid until then, independently of
+ *          the dialog and parent window. Do not free individual paths.
+ * @note Selection order is unspecified. Folder contents are not enumerated.
+ *       Windows and macOS return UTF-8; Unix returns the filesystem filename
+ *       encoding, which may not be UTF-8. Path separators are OS-specific.
+ *       Items without a filesystem path cannot be selected. Call on the UI
+ *       thread after `uiInit()`.
+ * @ingroup dataEntry dialogWindow
+ */
+_UI_EXTERN char **uiOpenFolders(uiWindow *parent);
 
 /**
  * Save file dialog window.
