@@ -191,24 +191,78 @@ static LRESULT CALLBACK windowWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARA
 	return DefWindowProcW(hwnd, uMsg, wParam, lParam);
 }
 
+struct windowClassIcons {
+	HICON large;
+	HICON small;
+};
+
+static windowClassIcons classIcons = { NULL, NULL };
+
+static BOOL CALLBACK loadExecutableWindowIcons(HMODULE executable, LPCWSTR type,
+	LPWSTR name, LONG_PTR data)
+{
+	windowClassIcons *icons = (windowClassIcons *) data;
+	HICON large;
+	HICON small;
+
+	large = (HICON) LoadImageW(executable, name, IMAGE_ICON,
+		GetSystemMetrics(SM_CXICON), GetSystemMetrics(SM_CYICON), 0);
+	small = (HICON) LoadImageW(executable, name, IMAGE_ICON,
+		GetSystemMetrics(SM_CXSMICON), GetSystemMetrics(SM_CYSMICON), 0);
+	if (large == NULL || small == NULL) {
+		if (large != NULL)
+			DestroyIcon(large);
+		if (small != NULL)
+			DestroyIcon(small);
+		return TRUE;
+	}
+	icons->large = large;
+	icons->small = small;
+	return FALSE;
+}
+
 ATOM registerWindowClass(HICON hDefaultIcon, HCURSOR hDefaultCursor)
 {
-	WNDCLASSW wc;
+	WNDCLASSEXW wc;
+	HMODULE executable;
+	ATOM atom;
 
-	ZeroMemory(&wc, sizeof (WNDCLASSW));
+	executable = GetModuleHandleW(NULL);
+	if (executable != NULL)
+		EnumResourceNamesW(executable, RT_GROUP_ICON,
+			loadExecutableWindowIcons, (LONG_PTR) &classIcons);
+
+	ZeroMemory(&wc, sizeof wc);
+	wc.cbSize = sizeof wc;
 	wc.lpszClassName = windowClass;
 	wc.lpfnWndProc = windowWndProc;
 	wc.hInstance = hInstance;
-	wc.hIcon = hDefaultIcon;
+	wc.hIcon = classIcons.large != NULL ? classIcons.large : hDefaultIcon;
+	wc.hIconSm = classIcons.small;
 	wc.hCursor = hDefaultCursor;
 	wc.hbrBackground = (HBRUSH) (COLOR_BTNFACE + 1);
-	return RegisterClassW(&wc);
+	atom = RegisterClassExW(&wc);
+	if (atom == 0) {
+		if (classIcons.large != NULL)
+			DestroyIcon(classIcons.large);
+		if (classIcons.small != NULL)
+			DestroyIcon(classIcons.small);
+		classIcons = { NULL, NULL };
+	}
+	return atom;
 }
 
 void unregisterWindowClass(void)
 {
-	if (UnregisterClassW(windowClass, hInstance) == 0)
+	if (UnregisterClassW(windowClass, hInstance) == 0) {
 		logLastError(L"error unregistering uiWindow window class");
+		return;
+	}
+	if (classIcons.large != NULL)
+		DestroyIcon(classIcons.large);
+	if (classIcons.small != NULL)
+		DestroyIcon(classIcons.small);
+	classIcons = { NULL, NULL };
 }
 
 static int defaultOnClosing(uiWindow *w, void *data)
