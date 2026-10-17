@@ -11,8 +11,11 @@ struct uiArea {
 	int scrollHeight;
 	int hscrollpos;
 	int vscrollpos;
-	int hwheelCarry;
-	int vwheelCarry;
+	int64_t hwheelCarry;
+	int64_t vwheelCarry;
+	UINT hwheelAmount;
+	UINT vwheelAmount;
+	BOOL updatingScroll;
 
 	uiprivClickCounter cc;
 	BOOL capturing;

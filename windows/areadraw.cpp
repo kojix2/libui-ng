@@ -75,6 +75,8 @@ static HRESULT doPaint(uiArea *a, ID2D1RenderTarget *rt, RECT *clip)
 static void onWM_PAINT(uiArea *a)
 {
 	RECT clip;
+	PAINTSTRUCT ps;
+	HDC dc;
 	HRESULT hr;
 
 	if (!uiprivUserCallbackEnter(uiControl(a))) {
@@ -82,27 +84,25 @@ static void onWM_PAINT(uiArea *a)
 			logLastError(L"error validating rect");
 		return;
 	}
-	// do not clear the update rect; we do that ourselves in doPaint()
-	if (GetUpdateRect(a->hwnd, &clip, FALSE) == 0) {
-		// set a zero clip rect just in case GetUpdateRect() didn't change clip
-		clip.left = 0;
-		clip.top = 0;
-		clip.right = 0;
-		clip.bottom = 0;
+	// BeginPaint validates the current update region before Draw can request
+	// another paint. The HDC is not used by the Direct2D HWND render target.
+	dc = BeginPaint(a->hwnd, &ps);
+	if (dc == NULL) {
+		logLastError(L"BeginPaint() for uiArea");
+		uiprivUserCallbackLeave();
+		return;
 	}
+	clip = ps.rcPaint;
 	hr = doPaint(a, a->rt, &clip);
+	if (EndPaint(a->hwnd, &ps) == 0)
+		logLastError(L"EndPaint() for uiArea");
 	switch (hr) {
 	case S_OK:
-		if (ValidateRect(a->hwnd, NULL) == 0)
-			logLastError(L"error validating rect");
 		break;
 	case (HRESULT)D2DERR_RECREATE_TARGET:
-		// DON'T validate the rect
-		// instead, simply drop the render target
-		// we'll get another WM_PAINT and make the render target again
+		// A new render target has no retained contents, so redraw everything.
 		a->rt->Release();
 		a->rt = NULL;
-		// A new render target has no retained contents, so redraw everything.
 		invalidateRect(a->hwnd, NULL, FALSE);
 		break;
 	default:
