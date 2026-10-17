@@ -491,41 +491,27 @@ static HWND areaHWND(struct areaState *s)
 	return (HWND) uiControlHandle(uiControl(s->area));
 }
 
+extern BOOL auditAreaInside(const uiArea *a);
+extern BOOL auditAreaCapturing(const uiArea *a);
+extern BOOL auditAreaTracking(const uiArea *a);
+
 static void mouseTrackingResumesAfterClick(void **data)
 {
 	struct areaState *s = *data;
-	TRACKMOUSEEVENT tm = {0};
 	HWND hwnd = areaHWND(s);
 	LPARAM point = MAKELPARAM(20, 20);
-	POINT oldCursor, inside = {20, 20};
-	POINT actual;
-	BOOL tracking;
-	if (!GetCursorPos(&oldCursor))
-		skip();
-	ClientToScreen(hwnd, &inside);
-	if (!SetCursorPos(inside.x, inside.y))
-		skip();
-	if (!GetCursorPos(&actual) || actual.x != inside.x ||
-		actual.y != inside.y || WindowFromPoint(actual) != hwnd) {
-		SetCursorPos(oldCursor.x, oldCursor.y);
-		// A background desktop or an occluding window cannot establish
-		// native leave tracking for this Area.
-		skip();
-	}
+	// Synthetic button messages do not control the desktop's mouse state.
+	// Check Area's tracking transition instead of querying native TME state.
 	SendMessageW(hwnd, WM_MOUSEMOVE, 0, point);
+	assert_true(auditAreaInside(s->area));
+	assert_true(auditAreaTracking(s->area));
 	SendMessageW(hwnd, WM_LBUTTONDOWN, MK_LBUTTON, point);
+	assert_true(auditAreaCapturing(s->area));
+	assert_false(auditAreaTracking(s->area));
 	SendMessageW(hwnd, WM_LBUTTONUP, 0, point);
-	if (!GetCursorPos(&actual) || actual.x != inside.x ||
-		actual.y != inside.y || WindowFromPoint(actual) != hwnd) {
-		SetCursorPos(oldCursor.x, oldCursor.y);
-		skip();
-	}
-	tm.cbSize = sizeof tm;
-	tm.dwFlags = TME_QUERY;
-	tm.hwndTrack = hwnd;
-	tracking = TrackMouseEvent(&tm) && (tm.dwFlags & TME_LEAVE) != 0;
-	SetCursorPos(oldCursor.x, oldCursor.y);
-	assert_true(tracking);
+	assert_false(auditAreaCapturing(s->area));
+	assert_true(auditAreaInside(s->area));
+	assert_true(auditAreaTracking(s->area));
 }
 
 static void horizontalWheelMovesRight(void **data)
