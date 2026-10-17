@@ -207,8 +207,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {system: MINGW64, flavor: mingw, buildtype: Release, buildlabel: release}
-          - {system: MINGW64, flavor: mingw, buildtype: Debug, buildlabel: debug}
           - {system: UCRT64, flavor: ucrt, buildtype: Release, buildlabel: release}
           - {system: UCRT64, flavor: ucrt, buildtype: Debug, buildlabel: debug}
     runs-on: windows-latest

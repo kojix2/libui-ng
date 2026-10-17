@@ -14,8 +14,6 @@ libui-ng-ubuntu-x64-shared-debug.zip
 libui-ng-ubuntu-x64-shared-release.zip
 libui-ng-ubuntu-x64-static-debug.zip
 libui-ng-ubuntu-x64-static-release.zip
-libui-ng-windows-x64-mingw-static-debug.zip
-libui-ng-windows-x64-mingw-static-release.zip
 libui-ng-windows-x64-msvc-shared-md-debug.zip
 libui-ng-windows-x64-msvc-shared-md-release.zip
 libui-ng-windows-x64-msvc-static-md-debug.zip

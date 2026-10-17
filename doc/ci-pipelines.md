@@ -19,12 +19,11 @@ The build workflow runs on:
 
 ## Build Matrix
 
-The workflow currently runs 32 release configurations before packaging, plus
+The workflow currently runs 30 release configurations before packaging, plus
 minimum-CMake, Linux distribution, and Clang checks:
 
 - Ubuntu: 8 builds
 - Windows MSVC: 12 builds
-- Windows MinGW: 2 builds
 - Windows UCRT: 2 builds
 - macOS: 8 builds
 
@@ -57,15 +56,6 @@ covers `FetchContent`.
   use the release CRT instead of `/MDd` or `/MTd` for language-binding compatibility.
 - Tests: `ctest --test-dir builddir --output-on-failure`
 
-### Windows MinGW
-
-- Runner: `windows-latest`
-- MSYS2 environment: `MINGW64`
-- Architecture: `x64`
-- Library type: `static`
-- Build types: `Release`, `Debug`
-- Tests: `ctest --test-dir builddir --output-on-failure`
-
 ### Windows UCRT
 
 - Runner: `windows-latest`
@@ -91,7 +81,7 @@ headers in `include/`, native libraries in `lib/`, Windows runtime DLLs in
 `bin/`, and exported CMake package files in `lib/cmake/libui-ng/`. Tests,
 examples, build trees, and CI logs are not included in the SDK.
 
-When the workflow runs for a tag, the `release` job waits for all 28 packages,
+When the workflow runs for a tag, the `release` job waits for all 30 packages,
 checks their names against `cmake/release-archives.txt`, validates their
 contents, rejects legacy/build-tree paths, and
 tests relocated CMake and direct C consumers before
