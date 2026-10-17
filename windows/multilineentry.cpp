@@ -140,6 +140,8 @@ static uiMultilineEntry *finishMultilineEntry(DWORD style)
 		ES_AUTOVSCROLL | ES_LEFT | ES_MULTILINE | ES_NOHIDESEL | ES_WANTRETURN | WS_TABSTOP | WS_VSCROLL | style,
 		hInstance, NULL,
 		TRUE);
+	// Remove the edit control's default 32767-character user input limit.
+	SendMessageW(e->hwnd, EM_SETLIMITTEXT, 0, 0);
 
 	uiWindowsRegisterWM_COMMANDHandler(e->hwnd, onWM_COMMAND, uiControl(e));
 	uiMultilineEntryOnChanged(e, defaultOnChanged, NULL);

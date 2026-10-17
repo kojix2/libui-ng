@@ -19,6 +19,14 @@ struct handler {
 
 static std::map<HWND, struct handler> handlers;
 
+static void eraseEmptyHandler(HWND hwnd)
+{
+	auto it = handlers.find(hwnd);
+	if (it != handlers.end() && it->second.commandHandler == NULL &&
+		it->second.notifyHandler == NULL && it->second.hscrollHandler == NULL)
+		handlers.erase(it);
+}
+
 void uiWindowsRegisterWM_COMMANDHandler(HWND hwnd, BOOL (*handler)(uiControl *, HWND, WORD, LRESULT *), uiControl *c)
 {
 	if (handlers[hwnd].commandHandler != NULL)
@@ -48,6 +56,7 @@ void uiWindowsUnregisterWM_COMMANDHandler(HWND hwnd)
 	if (handlers[hwnd].commandHandler == NULL)
 		uiprivImplBug("window handle %p not registered to receive WM_COMMAND events", hwnd);
 	handlers[hwnd].commandHandler = NULL;
+	eraseEmptyHandler(hwnd);
 }
 
 void uiWindowsUnregisterWM_NOTIFYHandler(HWND hwnd)
@@ -55,6 +64,7 @@ void uiWindowsUnregisterWM_NOTIFYHandler(HWND hwnd)
 	if (handlers[hwnd].notifyHandler == NULL)
 		uiprivImplBug("window handle %p not registered to receive WM_NOTIFY events", hwnd);
 	handlers[hwnd].notifyHandler = NULL;
+	eraseEmptyHandler(hwnd);
 }
 
 void uiWindowsUnregisterWM_HSCROLLHandler(HWND hwnd)
@@ -62,6 +72,7 @@ void uiWindowsUnregisterWM_HSCROLLHandler(HWND hwnd)
 	if (handlers[hwnd].hscrollHandler == NULL)
 		uiprivImplBug("window handle %p not registered to receive WM_HSCROLL events", hwnd);
 	handlers[hwnd].hscrollHandler = NULL;
+	eraseEmptyHandler(hwnd);
 }
 
 template<typename T>
@@ -83,11 +94,13 @@ BOOL runWM_COMMAND(WPARAM wParam, LPARAM lParam, LRESULT *lResult)
 	WORD arg3;
 	BOOL (*handler)(uiControl *, HWND, WORD, LRESULT *);
 	uiControl *c;
+	auto it = handlers.end();
 
 	hwnd = (HWND) lParam;
 	arg3 = HIWORD(wParam);
-	handler = handlers[hwnd].commandHandler;
-	c = handlers[hwnd].c;
+	it = handlers.find(hwnd);
+	handler = it == handlers.end() ? NULL : it->second.commandHandler;
+	c = it == handlers.end() ? NULL : it->second.c;
 	if (shouldRun(hwnd, handler))
 		return (*handler)(c, hwnd, arg3, lResult);
 	return FALSE;
@@ -99,11 +112,13 @@ BOOL runWM_NOTIFY(WPARAM wParam, LPARAM lParam, LRESULT *lResult)
 	NMHDR *arg3;
 	BOOL (*handler)(uiControl *, HWND, NMHDR *, LRESULT *);
 	uiControl *c;
+	auto it = handlers.end();
 
 	arg3 = (NMHDR *) lParam;
 	hwnd = arg3->hwndFrom;
-	handler = handlers[hwnd].notifyHandler;
-	c = handlers[hwnd].c;
+	it = handlers.find(hwnd);
+	handler = it == handlers.end() ? NULL : it->second.notifyHandler;
+	c = it == handlers.end() ? NULL : it->second.c;
 	if (shouldRun(hwnd, handler))
 		return (*handler)(c, hwnd, arg3, lResult);
 	return FALSE;
@@ -115,11 +130,13 @@ BOOL runWM_HSCROLL(WPARAM wParam, LPARAM lParam, LRESULT *lResult)
 	WORD arg3;
 	BOOL (*handler)(uiControl *, HWND, WORD, LRESULT *);
 	uiControl *c;
+	auto it = handlers.end();
 
 	hwnd = (HWND) lParam;
 	arg3 = LOWORD(wParam);
-	handler = handlers[hwnd].hscrollHandler;
-	c = handlers[hwnd].c;
+	it = handlers.find(hwnd);
+	handler = it == handlers.end() ? NULL : it->second.hscrollHandler;
+	c = it == handlers.end() ? NULL : it->second.c;
 	if (shouldRun(hwnd, handler))
 		return (*handler)(c, hwnd, arg3, lResult);
 	return FALSE;

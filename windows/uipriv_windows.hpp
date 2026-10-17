@@ -100,6 +100,8 @@ struct uiprivTimer {
 extern int registerMessageFilter(void);
 extern void unregisterMessageFilter(void);
 extern void uiprivFreeTimer(uiprivTimer *t);
+extern BOOL uiprivTimerBeginCallback(uiprivTimer *timer);
+extern void uiprivTimerEndCallback(uiprivTimer *timer);
 extern void uiprivUninitTimers(void);
 
 // parent.cpp

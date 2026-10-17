@@ -25,6 +25,9 @@ void uiWindowsControlSyncEnableState(uiWindowsControl *c, int enabled)
 void uiWindowsControlSetParentHWND(uiWindowsControl *c, HWND parent)
 {
 	(*(c->SetParentHWND))(c, parent);
+	// Win32 retains the child's explicit disabled bit across reparenting.
+	// Recompute from the updated logical parent chain.
+	uiWindowsControlSyncEnableState(c, uiControlEnabledToUser(uiControl(c)));
 }
 
 void uiWindowsControlMinimumSize(uiWindowsControl *c, int *width, int *height)

@@ -46,9 +46,12 @@ static LRESULT CALLBACK utilWindowWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, L
 		return 0;
 	case WM_TIMER:
 		timer = (uiprivTimer *) wParam;
+		if (!uiprivTimerBeginCallback(timer))
+			return 0;
 		uiprivUserCallbackEnter(NULL);
 		repeat = (*(timer->f))(timer->data);
 		uiprivUserCallbackLeave();
+		uiprivTimerEndCallback(timer);
 		if (!repeat) {
 			if (KillTimer(utilWindow, (UINT_PTR) timer) == 0)
 				logLastError(L"error calling KillTimer() to end uiTimer() procedure");

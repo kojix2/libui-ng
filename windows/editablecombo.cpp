@@ -109,7 +109,7 @@ uiEditableCombobox *uiNewEditableCombobox(void)
 
 	c->hwnd = uiWindowsEnsureCreateControlHWND(WS_EX_CLIENTEDGE,
 		L"combobox", L"",
-		CBS_DROPDOWN | WS_TABSTOP | WS_VSCROLL,
+		CBS_DROPDOWN | CBS_AUTOHSCROLL | WS_TABSTOP | WS_VSCROLL,
 		hInstance, NULL,
 		TRUE);
 

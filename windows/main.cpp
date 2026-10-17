@@ -133,6 +133,22 @@ void uiQueueMain(void (*f)(void *data), void *data)
 
 static std::map<uiprivTimer *, bool> timers;
 
+BOOL uiprivTimerBeginCallback(uiprivTimer *timer)
+{
+	auto it = timers.find(timer);
+	if (it == timers.end() || it->second)
+		return FALSE;
+	it->second = true;
+	return TRUE;
+}
+
+void uiprivTimerEndCallback(uiprivTimer *timer)
+{
+	auto it = timers.find(timer);
+	if (it != timers.end())
+		it->second = false;
+}
+
 void uiTimer(int milliseconds, int (*f)(void *data), void *data)
 {
 	uiprivTimer *timer;
@@ -151,13 +167,13 @@ void uiTimer(int milliseconds, int (*f)(void *data), void *data)
 		uiprivFree(timer);
 		return;
 	}
-	timers[timer] = true;
+	timers[timer] = false;
 }
 
 void uiprivFreeTimer(uiprivTimer *t)
 {
-	timers.erase(t);
-	uiprivFree(t);
+	if (timers.erase(t) != 0)
+		uiprivFree(t);
 }
 
 // since timers use uiprivAlloc(), we have to clean them up in uiUninit(), or else we'll get dangling allocation errors
