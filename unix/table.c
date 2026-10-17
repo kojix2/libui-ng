@@ -176,6 +176,11 @@ static void textColumnEdited(GtkCellRendererText *r, gchar *path, gchar *newText
 
 	reference = (GtkTreeRowReference *) g_object_steal_data(G_OBJECT(r),
 		textEditingRowReferenceKey);
+	if (!uiprivUserCallbackEnter(uiControl(p->t))) {
+		if (reference != NULL)
+			gtk_tree_row_reference_free(reference);
+		return;
+	}
 	tvalue = uiNewTableValueString(newText);
 	if (reference != NULL) {
 		currentPath = gtk_tree_row_reference_get_path(reference);
@@ -187,6 +192,7 @@ static void textColumnEdited(GtkCellRendererText *r, gchar *path, gchar *newText
 	} else
 		onEdited(p->t->model, p->modelColumn, path, tvalue);
 	uiFreeTableValue(tvalue);
+	uiprivUserCallbackLeave();
 }
 
 struct imageColumnParams {
@@ -243,8 +249,10 @@ static void checkboxColumnToggled(GtkCellRendererToggle *r, gchar *pathstr, gpoi
 	GtkTreeIter iter;
 	int row;
 
-	if (!iterFromPath(p->t->model, pathstr, &iter))
+	if (!uiprivUserCallbackEnter(uiControl(p->t)))
 		return;
+	if (!iterFromPath(p->t->model, pathstr, &iter))
+		goto done;
 	row = GPOINTER_TO_INT(iter.user_data);
 	gtk_tree_model_get_value(GTK_TREE_MODEL(p->t->model), &iter, p->modelColumn, &value);
 	v = g_value_get_int(&value);
@@ -252,6 +260,8 @@ static void checkboxColumnToggled(GtkCellRendererToggle *r, gchar *pathstr, gpoi
 	tvalue = uiNewTableValueInt(!v);
 	uiprivTableModelSetCellValue(p->t->model, row, p->modelColumn, tvalue);
 	uiFreeTableValue(tvalue);
+done:
+	uiprivUserCallbackLeave();
 }
 
 struct progressBarColumnParams {
@@ -462,7 +472,10 @@ static void buttonColumnClicked(GtkCellRenderer *r, gchar *pathstr, gpointer dat
 {
 	struct buttonColumnParams *p = (struct buttonColumnParams *) data;
 
+	if (!uiprivUserCallbackEnter(uiControl(p->t)))
+		return;
 	onEdited(p->t->model, p->modelColumn, pathstr, NULL);
+	uiprivUserCallbackLeave();
 }
 
 uiSortIndicator uiTableHeaderSortIndicator(uiTable *t, int lcol)
