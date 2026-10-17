@@ -21,7 +21,7 @@ static inline void uiprivInitBrushProperties(D2D1_BRUSH_PROPERTIES *props, FLOAT
 
 struct drawState {
 	ID2D1DrawingStateBlock *dsb;
-	ID2D1PathGeometry *clip;
+	ID2D1Geometry *clip;
 };
 
 struct uiDrawContext {
@@ -29,7 +29,7 @@ struct uiDrawContext {
 	// uiDrawContext is allocated with uiprivNew(), which does not run C++
 	// constructors, so construct and destroy the vector separately.
 	std::vector<struct drawState> *states;
-	ID2D1PathGeometry *currentClip;
+	ID2D1Geometry *currentClip;
 };
 extern ID2D1Layer *uiprivApplyClip(uiDrawContext *c);
 extern void uiprivUnapplyClip(uiDrawContext *c, ID2D1Layer *layer);

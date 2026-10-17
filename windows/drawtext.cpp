@@ -98,6 +98,34 @@ uiDrawTextLayout *uiDrawNewTextLayout(uiDrawTextLayoutParams *p)
 	}
 
 	uiprivAttributedStringApplyAttributesToDWriteTextLayout(p, tl->layout, &(tl->backgroundParams));
+	if (p->Width < 0) {
+		DWRITE_TEXT_METRICS metrics;
+		// With FLT_MAX layout width, center and trailing alignment can make
+		// widthIncludingTrailingWhitespace read as zero. Measure as leading.
+		hr = tl->layout->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_LEADING);
+		if (hr != S_OK) {
+			logHRESULT(L"error measuring unwrapped text alignment", hr);
+			goto fail;
+		}
+		hr = tl->layout->GetMetrics(&metrics);
+		if (hr != S_OK) {
+			logHRESULT(L"error measuring unwrapped text layout", hr);
+			goto fail;
+		}
+		maxWidth = metrics.widthIncludingTrailingWhitespace;
+		if (maxWidth < 1)
+			maxWidth = 1;
+		hr = tl->layout->SetMaxWidth(maxWidth);
+		if (hr != S_OK) {
+			logHRESULT(L"error setting unwrapped text layout width", hr);
+			goto fail;
+		}
+		hr = tl->layout->SetTextAlignment(dwriteAligns.at(p->Align));
+		if (hr != S_OK) {
+			logHRESULT(L"error applying unwrapped text alignment", hr);
+			goto fail;
+		}
+	}
 
 	// and finally copy the UTF-8/UTF-16 index conversion tables
 	tl->u8tou16 = uiprivAttributedStringCopyUTF8ToUTF16Table(p->String, &(tl->nUTF8));
@@ -603,10 +631,11 @@ public:
 			pt.x = 0;
 			pt.y = rect.top;
 			pt = pixeltf.TransformPoint(pt);
-			rect.top = (FLOAT) ((int) (pt.y + 0.5));
-			pixeltf.Invert();
-			pt = pixeltf.TransformPoint(pt);
-			rect.top = pt.y;
+			pt.y = floorf(pt.y + 0.5f);
+			if (pixeltf.Invert()) {
+				pt = pixeltf.TransformPoint(pt);
+				rect.top = pt.y;
+			}
 			// first line
 			rect.top -= underline->thickness;
 			// and it seems we need to recompute this

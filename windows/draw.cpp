@@ -285,15 +285,16 @@ static ID2D1Brush *makeBrush(uiDrawBrush *b, ID2D1RenderTarget *rt)
 // this is really the only way to clip in Direct2D that doesn't involve opacity images
 // reference counting:
 // - initially the clip is NULL, which means do not use a layer
-// - the first time uiDrawClip() is called, we take a reference on the path passed in (this is also why uiPathEnd() is needed)
-// - every successive time, we create a new PathGeometry and merge the current clip with the new path, releasing the reference we took earlier and taking a reference to the new one
-// - in Save, we take another reference; in Restore we drop the refernece to the existing path geometry and transfer that saved ref to the new path geometry over to the context
-// uiDrawFreePath() doesn't destroy the path geometry, it just drops the reference count, so a clip can exist independent of its path
+// - uiDrawClip() stores a transformed geometry in target coordinates and owns its reference
+// - every successive clip intersects that geometry with another transformed geometry
+// - Save takes another reference; Restore transfers that saved reference to the context
+// uiDrawFreePath() can therefore release the source path independently of the clip
 
 ID2D1Layer *uiprivApplyClip(uiDrawContext *c)
 {
 	ID2D1Layer *layer = NULL;
 	D2D1_LAYER_PARAMETERS params;
+	D2D1_MATRIX_3X2_F savedTransform, identity;
 	HRESULT hr;
 
 	// if no clip, don't do anything
@@ -327,7 +328,15 @@ ID2D1Layer *uiprivApplyClip(uiDrawContext *c)
 	// On Windows 7, preserve ClearType rendering through the clipping layer.
 	if (c->rt->GetTextAntialiasMode() == D2D1_TEXT_ANTIALIAS_MODE_CLEARTYPE)
 		params.layerOptions = D2D1_LAYER_OPTIONS_INITIALIZE_FOR_CLEARTYPE;
+	// currentClip was transformed when it was set. Apply it in target
+	// coordinates so later drawing transforms cannot move an earlier clip.
+	c->rt->GetTransform(&savedTransform);
+	ZeroMemory(&identity, sizeof identity);
+	identity._11 = 1;
+	identity._22 = 1;
+	c->rt->SetTransform(&identity);
 	c->rt->PushLayer(&params, layer);
+	c->rt->SetTransform(&savedTransform);
 
 	// return the layer so it can be freed later
 	return layer;
@@ -459,15 +468,22 @@ void uiDrawTransform(uiDrawContext *c, uiDrawMatrix *m)
 
 void uiDrawClip(uiDrawContext *c, uiDrawPath *path)
 {
+	ID2D1TransformedGeometry *transformedPath = NULL;
 	ID2D1PathGeometry *newPath = NULL;
 	ID2D1GeometrySink *newSink = NULL;
+	D2D1_MATRIX_3X2_F transform;
 	HRESULT hr;
 
-	// if there's no current clip, borrow the path
+	c->rt->GetTransform(&transform);
+	hr = d2dfactory->CreateTransformedGeometry(pathGeometry(path),
+		&transform, &transformedPath);
+	if (hr != S_OK) {
+		logHRESULT(L"error transforming clip geometry", hr);
+		return;
+	}
+	// Store the clip in target coordinates at the moment it is set.
 	if (c->currentClip == NULL) {
-		c->currentClip = pathGeometry(path);
-		// we have to take our own reference to that clip
-		c->currentClip->AddRef();
+		c->currentClip = transformedPath;
 		return;
 	}
 
@@ -476,16 +492,18 @@ void uiDrawClip(uiDrawContext *c, uiDrawPath *path)
 	hr = d2dfactory->CreatePathGeometry(&newPath);
 	if (hr != S_OK) {
 		logHRESULT(L"error creating new path", hr);
+		transformedPath->Release();
 		return;
 	}
 	hr = newPath->Open(&newSink);
 	if (hr != S_OK) {
 		logHRESULT(L"error opening new path", hr);
 		newPath->Release();
+		transformedPath->Release();
 		return;
 	}
 	hr = c->currentClip->CombineWithGeometry(
-		pathGeometry(path),
+		transformedPath,
 		D2D1_COMBINE_MODE_INTERSECT,
 		NULL,
 		// Geometry flattening tolerance is specified for this operation, not per target.
@@ -495,8 +513,10 @@ void uiDrawClip(uiDrawContext *c, uiDrawPath *path)
 		logHRESULT(L"error intersecting old path with new path", hr);
 		newSink->Release();
 		newPath->Release();
+		transformedPath->Release();
 		return;
 	}
+	transformedPath->Release();
 	hr = newSink->Close();
 	newSink->Release();
 	if (hr != S_OK) {
