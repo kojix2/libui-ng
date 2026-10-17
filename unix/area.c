@@ -39,6 +39,15 @@ struct uiArea {
 	gboolean scrolling;
 	int scrollWidth;
 	int scrollHeight;
+	// uiAreaSetSize() queues GTK layout, so a following ScrollTo() must be
+	// replayed after the new adjustment bounds have been allocated.
+	gboolean scrollSizePending;
+	gboolean hasPendingScroll;
+	guint pendingScrollIdle;
+	double pendingScrollX;
+	double pendingScrollY;
+	double pendingScrollWidth;
+	double pendingScrollHeight;
 
 	// note that this is a pointer; see above
 	uiprivClickCounter *cc;
@@ -48,6 +57,8 @@ struct uiArea {
 };
 
 G_DEFINE_TYPE(areaWidget, areaWidget, GTK_TYPE_DRAWING_AREA)
+
+static gboolean reapplyPendingScroll(gpointer data);
 
 static void areaWidget_init(areaWidget *aw)
 {
@@ -267,12 +278,12 @@ static gboolean areaWidget_button_press_event(GtkWidget *w, GdkEventButton *e)
 		"gtk-double-click-distance", &maxDistance,
 		NULL);
 	// don't unref settings; it's transfer-none (thanks gregier in irc.gimp.net/#gtk+)
-	// e->time is guint32
+	// e->time is a wrapping guint32.
 	// e->x and e->y are floating-point; just make them 32-bit integers
 	// maxTime and maxDistance... are gint, which *should* fit, hopefully...
-	me.Count = uiprivClickCounterClick(a->cc, me.Down,
+	me.Count = uiprivClickCounterClick32(a->cc, me.Down,
 		e->x, e->y,
-		e->time, maxTime,
+		e->time, (guint32) maxTime,
 		maxDistance, maxDistance);
 
 	// and set things up for window drags
@@ -534,7 +545,17 @@ static void areaWidget_class_init(areaWidgetClass *class)
 
 // control implementation
 
-uiUnixControlAllDefaults(uiArea)
+uiUnixControlAllDefaultsExceptDestroy(uiArea)
+
+static void uiAreaDestroy(uiControl *c)
+{
+	uiArea *a = uiArea(c);
+
+	if (a->pendingScrollIdle != 0)
+		g_source_remove(a->pendingScrollIdle);
+	g_object_unref(a->widget);
+	uiFreeControl(c);
+}
 
 void uiAreaSetSize(uiArea *a, int width, int height)
 {
@@ -542,6 +563,7 @@ void uiAreaSetSize(uiArea *a, int width, int height)
 		uiprivUserBug("You cannot call uiAreaSetSize() on a non-scrolling uiArea. (area: %p)", a);
 	a->scrollWidth = width;
 	a->scrollHeight = height;
+	a->scrollSizePending = TRUE;
 	gtk_widget_queue_resize(a->areaWidget);
 }
 
@@ -565,6 +587,27 @@ static void clampAdjustmentPage(GtkAdjustment *adj, double start, double size)
 	gtk_adjustment_clamp_page(adj, start, end);
 }
 
+static gboolean reapplyPendingScroll(gpointer data)
+{
+	uiArea *a = uiArea(data);
+	GtkAdjustment *hadj;
+	GtkAdjustment *vadj;
+
+	// A second SetSize() can be issued before GTK processes the first resize.
+	// Wait for the allocation associated with the most recent request.
+	if (a->scrollSizePending)
+		return G_SOURCE_CONTINUE;
+	a->pendingScrollIdle = 0;
+	if (!a->hasPendingScroll)
+		return G_SOURCE_REMOVE;
+	hadj = gtk_scrolled_window_get_hadjustment(a->sw);
+	vadj = gtk_scrolled_window_get_vadjustment(a->sw);
+	clampAdjustmentPage(hadj, a->pendingScrollX, a->pendingScrollWidth);
+	clampAdjustmentPage(vadj, a->pendingScrollY, a->pendingScrollHeight);
+	a->hasPendingScroll = FALSE;
+	return G_SOURCE_REMOVE;
+}
+
 void uiAreaScrollTo(uiArea *a, double x, double y, double width, double height)
 {
 	GtkAdjustment *hadj;
@@ -576,6 +619,15 @@ void uiAreaScrollTo(uiArea *a, double x, double y, double width, double height)
 	vadj = gtk_scrolled_window_get_vadjustment(a->sw);
 	clampAdjustmentPage(hadj, x, width);
 	clampAdjustmentPage(vadj, y, height);
+	// Keep the most recent request until the queued post-allocation replay has
+	// completed; it may arrive after size_allocate() but before the idle runs.
+	if (a->scrollSizePending || a->hasPendingScroll) {
+		a->pendingScrollX = x;
+		a->pendingScrollY = y;
+		a->pendingScrollWidth = width;
+		a->pendingScrollHeight = height;
+		a->hasPendingScroll = TRUE;
+	}
 }
 
 void uiAreaBeginUserWindowMove(uiArea *a)
