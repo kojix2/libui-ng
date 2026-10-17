@@ -693,5 +693,5 @@ int main(void)
 		cmocka_unit_test_setup_teardown(clipIntersectionUsesSetTimeTransforms, areaSetup, areaTeardown),
 		cmocka_unit_test_setup_teardown(unwrappedAlignedTextIsVisible, areaSetup, areaTeardown),
 	};
-	return cmocka_run_group_tests_name("windows audit", tests, NULL, NULL);
+	return cmocka_run_group_tests_name("windows regression", tests, NULL, NULL);
 }
