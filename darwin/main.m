@@ -189,6 +189,7 @@ void uiUninit(void)
 {
 	if (!globalPool)
 		uiprivUserBug("You must call uiInit() first!");
+	uiprivUninitShouldQuit();
 	cancelQueuedCallbacks();
 	uiprivControlDestroyUninit();
 	uiprivUninitTimers();

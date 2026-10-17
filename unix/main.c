@@ -78,6 +78,7 @@ static void uninitTimer(gpointer key, gpointer value, gpointer data)
 
 void uiUninit(void)
 {
+	uiprivUninitShouldQuit();
 	cancelQueuedCallbacks();
 	uiprivControlDestroyUninit();
 	g_hash_table_foreach(timers, uninitTimer, NULL);

@@ -29,6 +29,13 @@ libui_apply_internal_options(allocsize-unit)
 add_test(NAME allocsize-unit COMMAND allocsize-unit)
 set_tests_properties(allocsize-unit PROPERTIES TIMEOUT 60)
 
+add_executable(shouldquit-unit shouldquit.c ../../common/shouldquit.c)
+target_link_libraries(shouldquit-unit PRIVATE cmocka::cmocka)
+target_include_directories(shouldquit-unit PRIVATE ../.. ../../common)
+libui_apply_internal_options(shouldquit-unit)
+add_test(NAME shouldquit-unit COMMAND shouldquit-unit)
+set_tests_properties(shouldquit-unit PROPERTIES TIMEOUT 60)
+
 add_executable(imagerep-unit imagerep.c ../../common/imagerep.c)
 target_link_libraries(imagerep-unit PRIVATE cmocka::cmocka)
 target_include_directories(imagerep-unit PRIVATE ../.. ../../common)

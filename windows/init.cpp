@@ -141,6 +141,7 @@ const char *uiInit(uiInitOptions *o)
 
 void uiUninit(void)
 {
+	uiprivUninitShouldQuit();
 	uiprivControlDestroyUninit();
 	uiprivUninitTimers();
 	uiprivUninitImage();

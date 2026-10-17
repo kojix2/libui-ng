@@ -36,6 +36,7 @@ extern void uiprivDoUserBug(const char *file, const char *line, const char *func
 
 // shouldquit.c
 extern int uiprivShouldQuit(void);
+extern void uiprivUninitShouldQuit(void);
 
 // control.c
 // These delimit backend work that invokes user callbacks.  Destruction

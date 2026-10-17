@@ -18,6 +18,12 @@ void uiOnShouldQuit(int (*f)(void *), void *data)
 	onShouldQuitData = data;
 }
 
+void uiprivUninitShouldQuit(void)
+{
+	onShouldQuit = defaultOnShouldQuit;
+	onShouldQuitData = NULL;
+}
+
 int uiprivShouldQuit(void)
 {
 	int shouldQuit;
