@@ -87,6 +87,8 @@ void uiTableModelRowInserted(uiTableModel *m, int newIndex)
 	item.iSubItem = 0;
 
 	for (auto t : *(m->tables)) {
+		if (t->edit != NULL && newIndex <= t->editedItem)
+			t->editedItem++;
 		shiftIndeterminateProgressRows(t, newIndex, 1);
 		if (ListView_InsertItem(t->hwnd, &item) == -1)
 			logLastError(L"error calling ListView_InsertItem in uiTableModelRowInserted()");
@@ -107,6 +109,12 @@ void uiTableModelRowChanged(uiTableModel *m, int index)
 void uiTableModelRowDeleted(uiTableModel *m, int oldIndex)
 {
 	for (auto t : *(m->tables)) {
+		if (t->edit != NULL) {
+			if (oldIndex == t->editedItem)
+				uiprivTableAbortEditingText(t);
+			else if (oldIndex < t->editedItem)
+				t->editedItem--;
+		}
 		removeIndeterminateProgressRow(t, oldIndex);
 		if (ListView_DeleteItem(t->hwnd, oldIndex) == FALSE)
 			logLastError(L"error calling ListView_DeleteItem() in uiTableModelRowDeleted()");
@@ -991,7 +999,7 @@ uiTable *uiNewTable(uiTableParams *p)
 	// WS_CLIPCHILDREN is here to prevent drawing over the edit box used for editing text
 	t->hwnd = uiWindowsEnsureCreateControlHWND(WS_EX_CLIENTEDGE,
 		WC_LISTVIEW, L"",
-		LVS_REPORT | LVS_OWNERDATA | WS_CLIPCHILDREN | WS_TABSTOP | WS_HSCROLL | WS_VSCROLL,
+		LVS_REPORT | LVS_OWNERDATA | LVS_SHAREIMAGELISTS | WS_CLIPCHILDREN | WS_TABSTOP | WS_HSCROLL | WS_VSCROLL,
 		hInstance, NULL,
 		TRUE);
 	t->model->tables->push_back(t);

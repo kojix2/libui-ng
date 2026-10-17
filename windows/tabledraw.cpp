@@ -54,7 +54,7 @@ static HRESULT drawBackgrounds(HRESULT hr, struct drawState *s)
 	if (hr != S_OK)
 		return hr;
 	if (s->m->hasImage)
-		if (FillRect(s->dc, &(s->m->subitemIcon), GetSysColorBrush(COLOR_WINDOW)) == 0) {
+		if (FillRect(s->dc, &(s->m->subitemIcon), s->bgBrush) == 0) {
 			logLastError(L"FillRect() icon");
 			return E_FAIL;
 		}
@@ -529,7 +529,7 @@ static HRESULT drawButtonPart(HRESULT hr, struct drawState *s)
 		}
 	} else {
 		UINT state;
-		HBRUSH color, prevColor;
+		COLORREF prevColor;
 		int prevBkMode;
 
 		// The themed bitmap includes transparent edge pixels; DrawFrameControl()
@@ -547,17 +547,17 @@ static HRESULT drawButtonPart(HRESULT hr, struct drawState *s)
 			hr = E_FAIL;
 			goto fail;
 		}
-		color = GetSysColorBrush(COLOR_BTNTEXT);
-		prevColor = (HBRUSH) SelectObject(s->dc, color);
-		if (prevColor == NULL) {
-			logLastError(L"SelectObject() button text brush");
+		prevColor = SetTextColor(s->dc,
+			GetSysColor(enabled ? COLOR_BTNTEXT : COLOR_GRAYTEXT));
+		if (prevColor == CLR_INVALID) {
+			logLastError(L"SetTextColor() button text");
 			hr = E_FAIL;
 			goto fail;
 		}
 		prevBkMode = SetBkMode(s->dc, TRANSPARENT);
 		if (prevBkMode == 0) {
 			logLastError(L"SetBkMode()");
-			SelectObject(s->dc, prevColor);
+			SetTextColor(s->dc, prevColor);
 			hr = E_FAIL;
 			goto fail;
 		}
@@ -569,8 +569,8 @@ static HRESULT drawButtonPart(HRESULT hr, struct drawState *s)
 		}
 		if (SetBkMode(s->dc, prevBkMode) == 0)
 			logLastError(L"SetBkMode() prev");
-		if (SelectObject(s->dc, prevColor) == NULL)
-			logLastError(L"SelectObject() prev button text brush");
+		if (SetTextColor(s->dc, prevColor) == CLR_INVALID)
+			logLastError(L"SetTextColor() prev button text");
 		if (hr != S_OK)
 			goto fail;
 	}

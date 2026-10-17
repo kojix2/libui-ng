@@ -169,6 +169,9 @@ HRESULT uiprivTableFinishEditingText(uiTable *t)
 	uiprivTableColumnParams *p;
 	uiTableValue *value;
 	char *text;
+	uiTableModel *model;
+	int row, column;
+	HRESULT hr;
 
 	if (t->edit == NULL)
 		return S_OK;
@@ -176,9 +179,19 @@ HRESULT uiprivTableFinishEditingText(uiTable *t)
 	value = uiNewTableValueString(text);
 	uiFreeText(text);
 	p = (*(t->columns))[t->editedSubitem];
-	uiprivTableModelSetCellValue(t->model, t->editedItem, p->textModelColumn, value);
+	model = t->model;
+	row = t->editedItem;
+	column = p->textModelColumn;
+	// Destroying the editor can send focus notifications. Do it before calling
+	// user code, so neither those notifications nor the setter can commit twice.
+	hr = uiprivTableAbortEditingText(t);
+	if (hr != S_OK) {
+		uiFreeTableValue(value);
+		return hr;
+	}
+	uiprivTableModelSetCellValue(model, row, column, value);
 	uiFreeTableValue(value);
-	return uiprivTableAbortEditingText(t);
+	return S_OK;
 }
 
 HRESULT uiprivTableAbortEditingText(uiTable *t)
@@ -218,14 +231,14 @@ HRESULT uiprivTableHandleNM_CLICK(uiTable *t, NMITEMACTIVATE *nm, LRESULT *lResu
 	text = false;
 	checkbox = false;
 	p = (*(t->columns))[ht.iSubItem];
-	if (p->textModelColumn != -1) {
-		modelColumn = p->textModelColumn;
-		editableColumn = p->textEditableModelColumn;
-		text = true;
-	} else if (p->checkboxModelColumn != -1) {
+	if (p->checkboxModelColumn != -1 && (ht.flags & LVHT_ONITEMICON) != 0) {
 		modelColumn = p->checkboxModelColumn;
 		editableColumn = p->checkboxEditableModelColumn;
 		checkbox = true;
+	} else if (p->textModelColumn != -1) {
+		modelColumn = p->textModelColumn;
+		editableColumn = p->textEditableModelColumn;
+		text = true;
 	} else if (p->buttonModelColumn != -1) {
 		modelColumn = p->buttonModelColumn;
 		editableColumn = p->buttonClickableModelColumn;
