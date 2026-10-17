@@ -450,7 +450,8 @@ static gboolean areaWidget_key_press_event(GtkWidget *w, GdkEventKey *e)
 	uiArea *a = aw->a;
 	int handled;
 
-	uiprivUserCallbackEnter(NULL);
+	if (!uiprivUserCallbackEnter(uiControl(a)))
+		return GDK_EVENT_PROPAGATE;
 	handled = areaKeyEvent(a, 0, e);
 	uiprivUserCallbackLeave();
 	if (handled)
@@ -464,7 +465,8 @@ static gboolean areaWidget_key_release_event(GtkWidget *w, GdkEventKey *e)
 	uiArea *a = aw->a;
 	int handled;
 
-	uiprivUserCallbackEnter(NULL);
+	if (!uiprivUserCallbackEnter(uiControl(a)))
+		return GDK_EVENT_PROPAGATE;
 	handled = areaKeyEvent(a, 1, e);
 	uiprivUserCallbackLeave();
 	if (handled)
