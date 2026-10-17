@@ -498,21 +498,28 @@ static void mouseTrackingResumesAfterClick(void **data)
 	HWND hwnd = areaHWND(s);
 	LPARAM point = MAKELPARAM(20, 20);
 	POINT oldCursor, inside = {20, 20};
+	POINT actual;
 	BOOL tracking;
-	GetCursorPos(&oldCursor);
+	if (!GetCursorPos(&oldCursor))
+		skip();
 	ClientToScreen(hwnd, &inside);
 	if (!SetCursorPos(inside.x, inside.y))
 		skip();
-	{
-		POINT actual;
-		GetCursorPos(&actual);
-		if (actual.x != inside.x || actual.y != inside.y)
-			skip();
+	if (!GetCursorPos(&actual) || actual.x != inside.x ||
+		actual.y != inside.y || WindowFromPoint(actual) != hwnd) {
+		SetCursorPos(oldCursor.x, oldCursor.y);
+		// A background desktop or an occluding window cannot establish
+		// native leave tracking for this Area.
+		skip();
 	}
 	SendMessageW(hwnd, WM_MOUSEMOVE, 0, point);
 	SendMessageW(hwnd, WM_LBUTTONDOWN, MK_LBUTTON, point);
 	SendMessageW(hwnd, WM_LBUTTONUP, 0, point);
-	SendMessageW(hwnd, WM_MOUSEMOVE, 0, point);
+	if (!GetCursorPos(&actual) || actual.x != inside.x ||
+		actual.y != inside.y || WindowFromPoint(actual) != hwnd) {
+		SetCursorPos(oldCursor.x, oldCursor.y);
+		skip();
+	}
 	tm.cbSize = sizeof tm;
 	tm.dwFlags = TME_QUERY;
 	tm.hwndTrack = hwnd;
