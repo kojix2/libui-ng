@@ -88,6 +88,8 @@ struct uiprivClickCounter {
 	int count;
 };
 extern int uiprivClickCounterClick(uiprivClickCounter *c, int button, int x, int y, uintptr_t time, uintptr_t maxTime, int32_t xdist, int32_t ydist);
+// GTK event timestamps wrap at 32 bits even on 64-bit hosts.
+extern int uiprivClickCounterClick32(uiprivClickCounter *c, int button, int x, int y, uint32_t time, uint32_t maxTime, int32_t xdist, int32_t ydist);
 extern void uiprivClickCounterReset(uiprivClickCounter *);
 extern int uiprivFromScancode(uintptr_t, uiAreaKeyEvent *);
 

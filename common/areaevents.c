@@ -16,9 +16,8 @@ The click rectangle is half-open: its left and top edges are included, while its
 When count is zero, the previous button, rectangle, and timestamp do not affect the result: the next click increments the count from zero to one regardless of whether those values match.
 */
 
-// x, y, xdist, ydist, and c.rect must have the same units
-// so must time, maxTime, and c.prevTime
-int uiprivClickCounterClick(uiprivClickCounter *c, int button, int x, int y, uintptr_t time, uintptr_t maxTime, int32_t xdist, int32_t ydist)
+// x, y, xdist, ydist, and c.rect must have the same units.
+static int clickCounterClick(uiprivClickCounter *c, int button, int x, int y, uintptr_t time, int tooSlow, int32_t xdist, int32_t ydist)
 {
 	// different button than before? if so, don't count
 	if (button != c->curButton)
@@ -35,8 +34,7 @@ int uiprivClickCounterClick(uiprivClickCounter *c, int button, int x, int y, uin
 		c->count = 0;
 
 	// too slow? if so, don't count
-	// note the below expression; time > (c.prevTime + maxTime) can overflow!
-	if ((time - c->prevTime) > maxTime)	// too slow; don't count
+	if (tooSlow)	// too slow; don't count
 		c->count = 0;
 
 	c->count++;		// if either of the above ifs happened, this will make the click count 1; otherwise it will make the click count 2, 3, 4, 5, ...
@@ -50,6 +48,21 @@ int uiprivClickCounterClick(uiprivClickCounter *c, int button, int x, int y, uin
 	c->rectY1 = (int64_t) y + ydist;
 
 	return c->count;
+}
+
+// time, maxTime, and c.prevTime must have the same units.
+int uiprivClickCounterClick(uiprivClickCounter *c, int button, int x, int y, uintptr_t time, uintptr_t maxTime, int32_t xdist, int32_t ydist)
+{
+	// Subtract instead of adding maxTime, which could overflow.
+	return clickCounterClick(c, button, x, y, time,
+		(time - c->prevTime) > maxTime, xdist, ydist);
+}
+
+int uiprivClickCounterClick32(uiprivClickCounter *c, int button, int x, int y, uint32_t time, uint32_t maxTime, int32_t xdist, int32_t ydist)
+{
+	return clickCounterClick(c, button, x, y, time,
+		(uint32_t) (time - (uint32_t) c->prevTime) > maxTime,
+		xdist, ydist);
 }
 
 void uiprivClickCounterReset(uiprivClickCounter *c)

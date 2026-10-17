@@ -86,6 +86,13 @@ static void areaWidget_size_allocate(GtkWidget *w, GtkAllocation *allocation)
 	// this will call gtk_widget_set_allocation() for us
 	GTK_WIDGET_CLASS(areaWidget_parent_class)->size_allocate(w, allocation);
 
+	if (a->scrolling && a->scrollSizePending) {
+		a->scrollSizePending = FALSE;
+		if (a->hasPendingScroll && a->pendingScrollIdle == 0)
+			a->pendingScrollIdle = g_idle_add_full(G_PRIORITY_DEFAULT_IDLE,
+				reapplyPendingScroll, a, NULL);
+	}
+
 	if (!a->scrolling)
 		// match the other backends: nonscrolling areas redraw fully on resize
 		gtk_widget_queue_draw(w);
