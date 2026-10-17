@@ -47,15 +47,17 @@ static void track(uiArea *a, BOOL tracking)
 	if (!a->tracking && !tracking)
 		return;
 
-	a->tracking = tracking;
 	ZeroMemory(&tm, sizeof (TRACKMOUSEEVENT));
 	tm.cbSize = sizeof (TRACKMOUSEEVENT);
 	tm.dwFlags = TME_LEAVE;
-	if (!a->tracking)
+	if (!tracking)
 		tm.dwFlags |= TME_CANCEL;
 	tm.hwndTrack = a->hwnd;
-	if (_TrackMouseEvent(&tm) == 0)
+	if (_TrackMouseEvent(&tm) == 0) {
 		logLastError(L"error setting up mouse tracking");
+		return;
+	}
+	a->tracking = tracking;
 }
 
 static void capture(uiArea *a, BOOL capturing)
