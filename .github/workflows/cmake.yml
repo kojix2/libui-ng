@@ -77,12 +77,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: [armv7, i386]
+        # ARMv7 builds under QEMU take several minutes. Run the full matrix for
+        # tags and manual releases; keep the i386 checks on ordinary pushes.
+        # This job does not produce SDK archives.
+        arch: ${{ fromJSON((startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch') && '["armv7","i386"]' || '["i386"]') }}
         libtype: [static, shared]
         buildtype: [Release, Debug]
         include:
-          - {arch: armv7, platform: linux/arm/v7, image: "debian:12-slim"}
-          - {arch: i386, platform: linux/386, image: "i386/debian:12-slim"}
           - {buildtype: Release, buildlabel: release}
           - {buildtype: Debug, buildlabel: debug}
     runs-on: ubuntu-latest
@@ -94,9 +95,9 @@ jobs:
         uses: docker/setup-qemu-action@v3
       - name: Build and test in Docker
         run: |
-          docker run --rm --platform ${{ matrix.platform }} \
+          docker run --rm --platform ${{ matrix.arch == 'armv7' && 'linux/arm/v7' || 'linux/386' }} \
             -v "$GITHUB_WORKSPACE:/workspace" -w /workspace \
-            ${{ matrix.image }} \
+            ${{ matrix.arch == 'armv7' && 'debian:12-slim' || 'i386/debian:12-slim' }} \
             bash -c "set -e && \
               apt-get update -qq && \
               DEBIAN_FRONTEND=noninteractive apt-get install -y cmake ninja-build gcc g++ libgtk-3-dev libcmocka-dev xvfb && \
