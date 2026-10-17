@@ -78,15 +78,26 @@ static gboolean iterFromPath(uiTableModel *m, const char *pathstr, GtkTreeIter *
 	return valid;
 }
 
-static void onEdited(uiTableModel *m, int column, const char *pathstr, const uiTableValue *tvalue)
+static void onEditedAtPath(uiTableModel *m, int column, GtkTreePath *path, const uiTableValue *tvalue)
 {
 	GtkTreeIter iter;
 	int row;
 
-	if (!iterFromPath(m, pathstr, &iter))
+	if (!gtk_tree_model_get_iter(GTK_TREE_MODEL(m), &iter, path))
 		return;
 	row = GPOINTER_TO_INT(iter.user_data);
 	uiprivTableModelSetCellValue(m, row, column, tvalue);
+}
+
+static void onEdited(uiTableModel *m, int column, const char *pathstr, const uiTableValue *tvalue)
+{
+	GtkTreePath *path;
+
+	path = gtk_tree_path_new_from_string(pathstr);
+	if (path == NULL)
+		return;
+	onEditedAtPath(m, column, path, tvalue);
+	gtk_tree_path_free(path);
 }
 
 struct textColumnParams {
@@ -95,6 +106,46 @@ struct textColumnParams {
 	int editableColumn;
 	uiTableTextColumnOptionalParams params;
 };
+
+// GtkCellRendererText gives edited() the path that was current when editing
+// started. Keep a row reference so model insertions and deletions move or
+// invalidate that target before the edit is committed.
+#define textEditingRowReferenceKey "libui-text-editing-row-reference"
+
+static void clearTextEditingRowReference(GtkCellRenderer *r)
+{
+	GtkTreeRowReference *reference;
+
+	reference = (GtkTreeRowReference *) g_object_steal_data(G_OBJECT(r),
+		textEditingRowReferenceKey);
+	if (reference != NULL)
+		gtk_tree_row_reference_free(reference);
+}
+
+static void textColumnEditingStarted(GtkCellRenderer *r, GtkCellEditable *editable, const gchar *pathstr, gpointer data)
+{
+	struct textColumnParams *p = (struct textColumnParams *) data;
+	GtkTreePath *path;
+	GtkTreeRowReference *reference;
+
+	(void) editable;
+	clearTextEditingRowReference(r);
+	path = gtk_tree_path_new_from_string(pathstr);
+	if (path == NULL)
+		return;
+	reference = gtk_tree_row_reference_new(GTK_TREE_MODEL(p->t->model), path);
+	gtk_tree_path_free(path);
+	if (reference == NULL)
+		return;
+	g_object_set_data_full(G_OBJECT(r), textEditingRowReferenceKey, reference,
+		(GDestroyNotify) gtk_tree_row_reference_free);
+}
+
+static void textColumnEditingCanceled(GtkCellRenderer *r, gpointer data)
+{
+	(void) data;
+	clearTextEditingRowReference(r);
+}
 
 static void textColumnDataFunc(GtkTreeViewColumn *c, GtkCellRenderer *r, GtkTreeModel *m, GtkTreeIter *iter, gpointer data)
 {
@@ -119,10 +170,22 @@ static void textColumnDataFunc(GtkTreeViewColumn *c, GtkCellRenderer *r, GtkTree
 static void textColumnEdited(GtkCellRendererText *r, gchar *path, gchar *newText, gpointer data)
 {
 	struct textColumnParams *p = (struct textColumnParams *) data;
+	GtkTreeRowReference *reference;
+	GtkTreePath *currentPath;
 	uiTableValue *tvalue;
 
+	reference = (GtkTreeRowReference *) g_object_steal_data(G_OBJECT(r),
+		textEditingRowReferenceKey);
 	tvalue = uiNewTableValueString(newText);
-	onEdited(p->t->model, p->modelColumn, path, tvalue);
+	if (reference != NULL) {
+		currentPath = gtk_tree_row_reference_get_path(reference);
+		gtk_tree_row_reference_free(reference);
+		if (currentPath != NULL) {
+			onEditedAtPath(p->t->model, p->modelColumn, currentPath, tvalue);
+			gtk_tree_path_free(currentPath);
+		}
+	} else
+		onEdited(p->t->model, p->modelColumn, path, tvalue);
 	uiFreeTableValue(tvalue);
 }
 
@@ -638,6 +701,8 @@ static void addTextColumn(uiTable *t, GtkTreeViewColumn *c, int textModelColumn,
 	r = gtk_cell_renderer_text_new();
 	gtk_tree_view_column_pack_start(c, r, TRUE);
 	gtk_tree_view_column_set_cell_data_func(c, r, textColumnDataFunc, p, NULL);
+	g_signal_connect(r, "editing-started", G_CALLBACK(textColumnEditingStarted), p);
+	g_signal_connect(r, "editing-canceled", G_CALLBACK(textColumnEditingCanceled), p);
 	g_signal_connect(r, "edited", G_CALLBACK(textColumnEdited), p);
 	g_ptr_array_add(t->columnParams, p);
 }
