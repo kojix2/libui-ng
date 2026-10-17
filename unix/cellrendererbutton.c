@@ -98,33 +98,43 @@ static PangoLayout *cellRendererButtonPangoLayout(cellRendererButton *c, GtkWidg
 static void cellRendererButtonSize(cellRendererButton *c, GtkWidget *widget, PangoLayout *layout, const GdkRectangle *cell_area, gint *xoff, gint *yoff, gint *width, gint *height)
 {
 	PangoRectangle rect;
+	gint availableWidth, availableHeight;
+	gint alignedWidth, alignedHeight;
 	gint xpad, ypad;
 	gfloat xalign, yalign;
 
 	gtk_cell_renderer_get_padding(GTK_CELL_RENDERER(c), &xpad, &ypad);
 	pango_layout_get_pixel_extents(layout, NULL, &rect);
-	if (rect.width > cell_area->width - (2 * xpad))
-		rect.width = cell_area->width - (2 * xpad);
-	if (rect.height > cell_area->height - (2 * ypad))
-		rect.height = cell_area->height - (2 * ypad);
+	availableWidth = MAX(cell_area->width - (2 * xpad), 0);
+	availableHeight = MAX(cell_area->height - (2 * ypad), 0);
+	if (rect.width > availableWidth)
+		rect.width = availableWidth;
+	if (rect.height > availableHeight)
+		rect.height = availableHeight;
+	// The aligned area covers text and padding; clamp it to the cell when the
+	// cell is narrower than its configured padding.
+	alignedWidth = MIN(rect.width + (2 * xpad), MAX(cell_area->width, 0));
+	alignedHeight = MIN(rect.height + (2 * ypad), MAX(cell_area->height, 0));
 
 	gtk_cell_renderer_get_alignment(GTK_CELL_RENDERER(c), &xalign, &yalign);
 	if (gtk_widget_get_direction(widget) == GTK_TEXT_DIR_RTL)
 		xalign = 1.0 - xalign;
 	if (xoff != NULL) {
-		*xoff = cell_area->width - (rect.width + (2 * xpad));
+		*xoff = cell_area->width - alignedWidth;
 		*xoff = (gint) ((gfloat) (*xoff) * xalign);
+		if (*xoff < 0)
+			*xoff = 0;
 	}
 	if (yoff != NULL) {
-		*yoff = cell_area->height - (rect.height + (2 * ypad));
+		*yoff = cell_area->height - alignedHeight;
 		*yoff = (gint) ((gfloat) (*yoff) * yalign);
 		if (*yoff < 0)
 			*yoff = 0;
 	}
 	if (width != NULL)
-		*width = rect.width - (2 * xpad);
+		*width = alignedWidth;
 	if (height != NULL)
-		*height = rect.height - (2 * ypad);
+		*height = alignedHeight;
 }
 
 static void cellRendererButton_get_preferred_width(GtkCellRenderer *r, GtkWidget *widget, gint *minimum, gint *natural)
