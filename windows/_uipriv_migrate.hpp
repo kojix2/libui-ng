@@ -6,6 +6,8 @@ extern HMENU makeMenubar(void);
 extern void runMenuEvent(UINT, uiWindow *);
 extern void freeMenubar(HMENU);
 extern void uninitMenus(void);
+extern void freezeMenuShortcuts(void);
+extern HACCEL menuAccelerators(void);
 
 // draw.c
 extern HRESULT initDraw(void);
