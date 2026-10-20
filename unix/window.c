@@ -383,6 +383,8 @@ uiWindow *uiNewWindow(const char *title, int width, int height, int hasMenubar)
 {
 	uiWindow *w;
 
+	uiprivFreezeMenuShortcuts();
+
 	uiUnixNewControl(uiWindow, w);
 
 	w->resizeable = TRUE;
