@@ -1,6 +1,9 @@
 // 24 april 2015
 #include "uipriv_windows.hpp"
 #include <cstdlib>
+#include "../common/menushortcut.h"
+#include <vector>
+#include <string>
 
 // LONGTERM migrate to std::vector
 
@@ -8,6 +11,8 @@ static uiMenu **menus = NULL;
 static size_t len = 0;
 static size_t cap = 0;
 static BOOL menusFinalized = FALSE;
+static BOOL shortcutsFinalized = FALSE;
+static HACCEL accelerators = NULL;
 enum {
 	firstMenuID = 100,			// start somewhere safe
 	maxMenuID = 0xFFFF,			// WM_COMMAND only carries the low WORD
@@ -33,6 +38,8 @@ struct uiMenuItem {
 	void *onClickedData;
 	BOOL disabled;				// template for new instances; kept in sync with everything else
 	BOOL checked;
+	unsigned int shortcutKey;
+	uiModifiers shortcutModifiers;
 	HMENU *hmenus;
 	size_t len;
 	size_t cap;
@@ -46,6 +53,121 @@ enum {
 	typeAbout,
 	typeSeparator,
 };
+
+static WORD shortcutVirtualKey(unsigned int key)
+{
+	if (key >= 'A' && key <= 'Z')
+		return (WORD) key;
+	if (key >= '0' && key <= '9')
+		return (WORD) key;
+	if (key >= uiExtKeyF1 && key <= uiExtKeyF12)
+		return (WORD) (VK_F1 + key - uiExtKeyF1);
+	switch (key) {
+	case uiExtKeyDelete: return VK_DELETE;
+	case uiExtKeyUp: return VK_UP;
+	case uiExtKeyDown: return VK_DOWN;
+	case uiExtKeyLeft: return VK_LEFT;
+	case uiExtKeyRight: return VK_RIGHT;
+	default: return 0;
+	}
+}
+
+static BYTE shortcutFlags(uiModifiers modifiers)
+{
+	BYTE flags = FVIRTKEY;
+	modifiers = uiprivShortcutEffectiveModifiers(modifiers);
+	if (modifiers & uiModifierCtrl) flags |= FCONTROL;
+	if (modifiers & uiModifierAlt) flags |= FALT;
+	if (modifiers & uiModifierShift) flags |= FSHIFT;
+	return flags;
+}
+
+void uiMenuItemSetShortcut(uiMenuItem *item, unsigned int key,
+	uiModifiers modifiers)
+{
+	size_t i, j;
+	uiMenuItem *other;
+
+	if (shortcutsFinalized || menusFinalized)
+		uiprivUserBug("Menu shortcuts must be set before the first window is created.");
+	if (item->type == typeSeparator)
+		uiprivUserBug("A separator cannot have a menu shortcut.");
+	uiprivValidateMenuShortcut(key, modifiers);
+	modifiers = uiprivShortcutEffectiveModifiers(modifiers);
+	if (key != uiExtKeyNone)
+		for (i = 0; i < len; i++)
+			for (j = 0; j < menus[i]->len; j++) {
+				other = menus[i]->items[j];
+				if (other != item && other->shortcutKey == key &&
+					other->shortcutModifiers == modifiers)
+					uiprivUserBug("Duplicate menu shortcut.");
+			}
+	item->shortcutKey = key;
+	item->shortcutModifiers = modifiers;
+}
+
+void freezeMenuShortcuts(void)
+{
+	std::vector<ACCEL> entries;
+	ACCEL entry;
+	size_t i, j;
+	uiMenuItem *item;
+
+	if (shortcutsFinalized)
+		return;
+	shortcutsFinalized = TRUE;
+	for (i = 0; i < len; i++)
+		for (j = 0; j < menus[i]->len; j++) {
+			item = menus[i]->items[j];
+			if (item->shortcutKey == uiExtKeyNone)
+				continue;
+			entry.fVirt = shortcutFlags(item->shortcutModifiers);
+			entry.key = shortcutVirtualKey(item->shortcutKey);
+			entry.cmd = (WORD) item->id;
+			entries.push_back(entry);
+		}
+	if (entries.size() > 32767)
+		uiprivUserBug("Too many menu shortcuts for a Windows accelerator table.");
+	if (!entries.empty()) {
+		accelerators = CreateAcceleratorTableW(entries.data(), (int) entries.size());
+		if (accelerators == NULL)
+			logLastError(L"error creating menu accelerator table");
+	}
+}
+
+HACCEL menuAccelerators(void)
+{
+	return accelerators;
+}
+
+static std::wstring shortcutLabel(uiMenuItem *item)
+{
+	std::wstring label(item->name);
+	uiModifiers modifiers = item->shortcutModifiers;
+	unsigned int key = item->shortcutKey;
+	if (key == uiExtKeyNone)
+		return label;
+	label += L"\t";
+	if (modifiers & uiModifierCtrl) label += L"Ctrl+";
+	if (modifiers & uiModifierAlt) label += L"Alt+";
+	if (modifiers & uiModifierShift) label += L"Shift+";
+	if (key >= 'A' && key <= 'Z')
+		label += (WCHAR) key;
+	else if (key >= '0' && key <= '9')
+		label += (WCHAR) key;
+	else if (key >= uiExtKeyF1 && key <= uiExtKeyF12)
+		label += L"F" + std::to_wstring(1 + key - uiExtKeyF1);
+	else {
+		switch (key) {
+		case uiExtKeyDelete: label += L"Delete"; break;
+		case uiExtKeyUp: label += L"Up"; break;
+		case uiExtKeyDown: label += L"Down"; break;
+		case uiExtKeyLeft: label += L"Left"; break;
+		case uiExtKeyRight: label += L"Right"; break;
+		}
+	}
+	return label;
+}
 
 #define grow 32
 
@@ -234,6 +356,7 @@ uiMenu *uiNewMenu(const char *name)
 static void appendMenuItem(HMENU menu, uiMenuItem *item)
 {
 	UINT uFlags;
+	std::wstring label;
 
 	uFlags = MF_SEPARATOR;
 	if (item->type != typeSeparator) {
@@ -243,7 +366,10 @@ static void appendMenuItem(HMENU menu, uiMenuItem *item)
 		if (item->checked)
 			uFlags |= MF_CHECKED;
 	}
-	if (AppendMenuW(menu, uFlags, item->id, item->name) == 0) {
+	if (item->type != typeSeparator)
+		label = shortcutLabel(item);
+	if (AppendMenuW(menu, uFlags, item->id,
+		item->type == typeSeparator ? NULL : label.c_str()) == 0) {
 		logLastError(L"error appending menu item in appendMenuItem()");
 		std::abort();		// the menu must match the registered item list
 	}
@@ -318,6 +444,8 @@ void runMenuEvent(UINT id, uiWindow *w)
 	return;
 
 found:
+	if (item->disabled)
+		return;
 	// first toggle checkboxes, if any
 	if (item->type == typeCheckbox)
 		uiMenuItemSetChecked(item, !uiMenuItemChecked(item));
@@ -401,6 +529,10 @@ void uninitMenus(void)
 	uiMenu *m;
 	uiMenuItem *item;
 	size_t i, j;
+	if (accelerators != NULL) {
+		DestroyAcceleratorTable(accelerators);
+		accelerators = NULL;
+	}
 
 	for (i = 0; i < len; i++) {
 		m = menus[i];
@@ -428,6 +560,7 @@ void uninitMenus(void)
 	len = 0;
 	cap = 0;
 	menusFinalized = FALSE;
+	shortcutsFinalized = FALSE;
 	curID = firstMenuID;
 	hasQuit = FALSE;
 	hasPreferences = FALSE;

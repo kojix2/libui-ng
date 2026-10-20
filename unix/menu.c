@@ -1,8 +1,10 @@
 // 23 april 2015
 #include "uipriv_unix.h"
+#include "../common/menushortcut.h"
 
 static GArray *menus = NULL;
 static gboolean menusFinalized = FALSE;
+static gboolean shortcutsFinalized = FALSE;
 static gboolean hasQuit = FALSE;
 static gboolean hasPreferences = FALSE;
 static gboolean hasAbout = FALSE;
@@ -20,6 +22,8 @@ struct uiMenuItem {
 	GType gtype;					// template for new instances; kept in sync with everything else
 	gboolean disabled;
 	gboolean checked;
+	unsigned int shortcutKey;
+	uiModifiers shortcutModifiers;
 	GHashTable *windows;			// map[GtkMenuItem]*menuItemWindow
 };
 
@@ -36,6 +40,66 @@ enum {
 	typeAbout,
 	typeSeparator,
 };
+
+void uiprivFreezeMenuShortcuts(void)
+{
+	shortcutsFinalized = TRUE;
+}
+
+static guint shortcutKeyval(unsigned int key)
+{
+	if (key >= 'A' && key <= 'Z')
+		return GDK_KEY_a + key - 'A';
+	if (key >= '0' && key <= '9')
+		return GDK_KEY_0 + key - '0';
+	if (key >= uiExtKeyF1 && key <= uiExtKeyF12)
+		return GDK_KEY_F1 + key - uiExtKeyF1;
+	switch (key) {
+	case uiExtKeyDelete: return GDK_KEY_Delete;
+	case uiExtKeyUp: return GDK_KEY_Up;
+	case uiExtKeyDown: return GDK_KEY_Down;
+	case uiExtKeyLeft: return GDK_KEY_Left;
+	case uiExtKeyRight: return GDK_KEY_Right;
+	default: return 0;
+	}
+}
+
+static GdkModifierType shortcutGdkModifiers(uiModifiers modifiers)
+{
+	GdkModifierType result = 0;
+	modifiers = uiprivShortcutEffectiveModifiers(modifiers);
+	if (modifiers & uiModifierCtrl) result |= GDK_CONTROL_MASK;
+	if (modifiers & uiModifierAlt) result |= GDK_MOD1_MASK;
+	if (modifiers & uiModifierShift) result |= GDK_SHIFT_MASK;
+	return result;
+}
+
+void uiMenuItemSetShortcut(uiMenuItem *item, unsigned int key,
+	uiModifiers modifiers)
+{
+	guint i, j;
+	uiMenu *m;
+	uiMenuItem *other;
+
+	if (shortcutsFinalized || menusFinalized)
+		uiprivUserBug("Menu shortcuts must be set before the first window is created.");
+	if (item->type == typeSeparator)
+		uiprivUserBug("A separator cannot have a menu shortcut.");
+	uiprivValidateMenuShortcut(key, modifiers);
+	modifiers = uiprivShortcutEffectiveModifiers(modifiers);
+	if (key != uiExtKeyNone && menus != NULL)
+		for (i = 0; i < menus->len; i++) {
+			m = g_array_index(menus, uiMenu *, i);
+			for (j = 0; j < m->items->len; j++) {
+				other = g_array_index(m->items, uiMenuItem *, j);
+				if (other != item && other->shortcutKey == key &&
+					other->shortcutModifiers == modifiers)
+					uiprivUserBug("Duplicate menu shortcut.");
+			}
+		}
+	item->shortcutKey = key;
+	item->shortcutModifiers = modifiers;
+}
 
 // we do NOT want programmatic updates to raise an ::activated signal
 static void singleSetChecked(GtkCheckMenuItem *menuitem, gboolean checked, gulong signal)
@@ -249,7 +313,8 @@ uiMenu *uiNewMenu(const char *name)
 	return m;
 }
 
-static void appendMenuItem(GtkMenuShell *submenu, uiMenuItem *item, uiWindow *w)
+static void appendMenuItem(GtkMenuShell *submenu, uiMenuItem *item, uiWindow *w,
+	GtkAccelGroup *accels)
 {
 	GtkWidget *menuitem;
 	gulong signal;
@@ -261,6 +326,10 @@ static void appendMenuItem(GtkMenuShell *submenu, uiMenuItem *item, uiWindow *w)
 		gtk_menu_item_set_label(GTK_MENU_ITEM(menuitem), item->name);
 	if (item->type != typeSeparator) {
 		signal = g_signal_connect(menuitem, "activate", G_CALLBACK(onClicked), item);
+		if (item->shortcutKey != uiExtKeyNone)
+			gtk_widget_add_accelerator(menuitem, "activate", accels,
+				shortcutKeyval(item->shortcutKey),
+				shortcutGdkModifiers(item->shortcutModifiers), GTK_ACCEL_VISIBLE);
 		gtk_widget_set_sensitive(menuitem, !item->disabled);
 		if (item->type == typeCheckbox)
 			singleSetChecked(GTK_CHECK_MENU_ITEM(menuitem), item->checked, signal);
@@ -279,10 +348,16 @@ GtkWidget *uiprivMakeMenubar(uiWindow *w)
 	uiMenu *m;
 	GtkWidget *menuitem;
 	GtkWidget *submenu;
+	GtkWidget *windowWidget;
+	GtkAccelGroup *accels;
 
 	menusFinalized = TRUE;
 
 	menubar = gtk_menu_bar_new();
+	windowWidget = (GtkWidget *) uiControlHandle(uiControl(w));
+	accels = gtk_accel_group_new();
+	gtk_window_add_accel_group(GTK_WINDOW(windowWidget), accels);
+	g_object_unref(accels);
 
 	if (menus != NULL)
 		for (i = 0; i < menus->len; i++) {
@@ -291,7 +366,8 @@ GtkWidget *uiprivMakeMenubar(uiWindow *w)
 			submenu = gtk_menu_new();
 			gtk_menu_item_set_submenu(GTK_MENU_ITEM(menuitem), submenu);
 			for (j = 0; j < m->items->len; j++)
-				appendMenuItem(GTK_MENU_SHELL(submenu), g_array_index(m->items, uiMenuItem *, j), w);
+				appendMenuItem(GTK_MENU_SHELL(submenu),
+					g_array_index(m->items, uiMenuItem *, j), w, accels);
 			gtk_menu_shell_append(GTK_MENU_SHELL(menubar), menuitem);
 		}
 
@@ -351,8 +427,11 @@ void uiprivUninitMenus(void)
 	uiMenuItem *item;
 	guint i, j;
 
-	if (menus == NULL)
+	if (menus == NULL) {
+		menusFinalized = FALSE;
+		shortcutsFinalized = FALSE;
 		return;
+	}
 	for (i = 0; i < menus->len; i++) {
 		m = g_array_index(menus, uiMenu *, i);
 		g_free(m->name);
@@ -373,6 +452,7 @@ void uiprivUninitMenus(void)
 	/* Reset global state. */
 	menus = NULL;
 	menusFinalized = FALSE;
+	shortcutsFinalized = FALSE;
 	hasQuit = FALSE;
 	hasPreferences = FALSE;
 	hasAbout = FALSE;

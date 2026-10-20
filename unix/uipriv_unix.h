@@ -22,6 +22,7 @@
 extern GtkWidget *uiprivMakeMenubar(uiWindow *);
 extern void uiprivFreeMenubar(GtkWidget *);
 extern void uiprivUninitMenus(void);
+extern void uiprivFreezeMenuShortcuts(void);
 
 // toolbar.c
 extern GtkWidget *uiprivToolbarWidget(uiToolbar *);

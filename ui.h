@@ -56,6 +56,21 @@ _UI_ENUM(uiForEach) {
 	uiForEachStop,
 };
 
+/**
+ * Bitmask of keyboard modifiers for Area events and menu shortcuts.
+ * Primary means Ctrl on Linux/Windows and Command on macOS; Area events never
+ * report it. Super is reported by Area but is invalid for menu shortcuts.
+ *
+ * @enum uiModifiers
+ */
+_UI_ENUM(uiModifiers) {
+	uiModifierCtrl    = 1 << 0, //!< Control key.
+	uiModifierAlt     = 1 << 1, //!< Alternate/Option key.
+	uiModifierShift   = 1 << 2, //!< Shift key.
+	uiModifierSuper   = 1 << 3, //!< Super/Command/Windows key in Area events.
+	uiModifierPrimary = 1 << 4, //!< Platform primary menu shortcut modifier.
+};
+
 typedef struct uiInitOptions uiInitOptions;
 
 struct uiInitOptions {
@@ -1950,6 +1965,26 @@ typedef struct uiMenuItem uiMenuItem;
 #define uiMenuItem(this) ((uiMenuItem *) (this))
 
 /**
+ * Sets a menu shortcut before the first window is created. Keys are ASCII
+ * 'A'–'Z' or '0'–'9', uiExtKeyF1–uiExtKeyF12, uiExtKeyDelete (forward Delete),
+ * uiExtKeyUp, uiExtKeyDown, uiExtKeyLeft, and uiExtKeyRight. Keypad keys are
+ * not supported. Pass uiExtKeyNone with zero modifiers to clear it.
+ *
+ * Only F1–F12 may be unmodified; other keys require uiModifierPrimary,
+ * uiModifierCtrl, or uiModifierAlt. uiModifierShift may be added.
+ * uiModifierSuper and uiModifierPrimary with uiModifierCtrl are invalid.
+ * Duplicate assignments are rejected.
+ *
+ * Native key handling decides whether the menu, a focused uiArea, or a text
+ * input sees the key first. Avoid overlapping bindings; Area may receive a
+ * key release without the corresponding press.
+ *
+ * @memberof uiMenuItem
+ */
+_UI_EXTERN void uiMenuItemSetShortcut(uiMenuItem *item, unsigned int key,
+	uiModifiers modifiers);
+
+/**
  * Enables the menu item.
  *
  * @param m uiMenuItem instance.
@@ -3065,20 +3100,6 @@ _UI_EXTERN uiFontButton *uiNewFontButton(void);
  */
 _UI_EXTERN void uiFreeFontButtonFont(uiFontDescriptor *desc);
 
-/**
- * Keyboard modifier keys.
- *
- * Usable as bitmasks.
- *
- * @enum uiModifiers
- */
-_UI_ENUM(uiModifiers) {
-	uiModifierCtrl  = 1 << 0, //!< Control key.
-	uiModifierAlt   = 1 << 1, //!< Alternate/Option key.
-	uiModifierShift = 1 << 2, //!< Shift key.
-	uiModifierSuper = 1 << 3, //!< Super/Command/Windows key.
-};
-
 // Mouse input is captured after a button press until all buttons are released.
 // DragBroken is called if that capture is lost unexpectedly.
 struct uiAreaMouseEvent {
@@ -3102,6 +3123,7 @@ struct uiAreaMouseEvent {
 };
 
 _UI_ENUM(uiExtKey) {
+	uiExtKeyNone = 0,		// no extended key; also clears a menu shortcut
 	uiExtKeyEscape = 1,
 	uiExtKeyInsert,			// equivalent to "Help" on Apple keyboards
 	uiExtKeyDelete,
