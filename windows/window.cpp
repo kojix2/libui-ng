@@ -42,7 +42,9 @@ static BOOL isMenuCommand(WPARAM wParam, LPARAM lParam)
 	// IsDialogMessage() will also generate IDOK and IDCANCEL when pressing
 	// Enter and Escape (respectively) on some controls, like EDIT controls.
 	// These reserved dialog command IDs are not menu item IDs.
-	if (HIWORD(wParam) != 0 || LOWORD(wParam) <= IDCANCEL)
+	// A menu click uses notification 0; TranslateAcceleratorW uses 1.
+	if ((HIWORD(wParam) != 0 && HIWORD(wParam) != 1) ||
+		LOWORD(wParam) <= IDCANCEL)
 		return FALSE;
 
 	return TRUE;
@@ -639,6 +641,8 @@ uiWindow *uiNewWindow(const char *title, int width, int height, int hasMenubar)
 	uiWindow *w;
 	WCHAR *wtitle;
 	BOOL hasMenubarBOOL;
+
+	freezeMenuShortcuts();
 
 	uiWindowsNewControl(uiWindow, w);
 
