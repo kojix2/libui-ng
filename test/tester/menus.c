@@ -27,6 +27,13 @@ uiMenu *multiMenu;
 uiMenu *helpMenu;
 uiMenuItem *helpItem;
 uiMenuItem *aboutItem;
+static int shortcutActionCount;
+
+static void shortcutActivated(uiMenuItem *item, uiWindow *w, void *data)
+{
+	printf("shortcut %s action #%d on window %p\n",
+		(const char *) data, ++shortcutActionCount, (void *) w);
+}
 
 static void enableItemTest(uiMenuItem *item, uiWindow *w, void *data)
 {
@@ -48,11 +55,14 @@ static void forceOff(uiMenuItem *item, uiWindow *w, void *data)
 
 static void whatWindow(uiMenuItem *item, uiWindow *w, void *data)
 {
-	printf("menu item clicked on window %p\n", (void *) w);
+	printf("Delete action #%d on window %p\n",
+		++shortcutActionCount, (void *) w);
 }
 
 static void toggleResize(uiMenuItem *item, uiWindow *w, void *data)
 {
+	printf("resize action #%d on window %p\n",
+		++shortcutActionCount, (void *) w);
 	uiWindowSetResizeable(w, uiMenuItemChecked(item));
 }
 
@@ -60,13 +70,22 @@ void initMenus(void)
 {
 	fileMenu = uiNewMenu("File");
 	newItem = uiMenuAppendItem(fileMenu, "New");
+	uiMenuItemSetShortcut(newItem, 'N',
+		uiModifierPrimary);
+	uiMenuItemOnClicked(newItem, shortcutActivated, "New");
 	openItem = uiMenuAppendItem(fileMenu, "Open");
+	uiMenuItemSetShortcut(openItem, 'O',
+		uiModifierPrimary);
+	uiMenuItemOnClicked(openItem, shortcutActivated, "Open");
 	uiMenuAppendSeparator(fileMenu);
 	shouldQuitItem = uiMenuAppendCheckItem(fileMenu, "Should Quit");
 	quitItem = uiMenuAppendQuitItem(fileMenu);
 
 	editMenu = uiNewMenu("Edit");
 	undoItem = uiMenuAppendItem(editMenu, "Undo");
+	uiMenuItemSetShortcut(undoItem, 'Z',
+		uiModifierPrimary);
+	uiMenuItemOnClicked(undoItem, shortcutActivated, "Undo (disabled)");
 	uiMenuItemDisable(undoItem);
 	uiMenuAppendSeparator(editMenu);
 	checkItem = uiMenuAppendCheckItem(editMenu, "Check Me\tTest");
@@ -84,8 +103,12 @@ void initMenus(void)
 	uiMenuItemOnClicked(forceUncheckedItem, forceOff, NULL);
 	uiMenuAppendSeparator(testMenu);
 	whatWindowItem = uiMenuAppendItem(testMenu, "What Window?");
+	uiMenuItemSetShortcut(whatWindowItem, uiExtKeyDelete,
+		uiModifierPrimary);
 	uiMenuItemOnClicked(whatWindowItem, whatWindow, NULL);
 	resizeableItem = uiMenuAppendCheckItem(testMenu, "Enable Resize");
+	uiMenuItemSetShortcut(resizeableItem, 'R',
+		uiModifierPrimary | uiModifierShift);
 	uiMenuItemSetChecked(resizeableItem, 1);
 	uiMenuItemOnClicked(resizeableItem, toggleResize, NULL);
 
@@ -112,6 +135,8 @@ void initMenus(void)
 
 	helpMenu = uiNewMenu("Help");
 	helpItem = uiMenuAppendItem(helpMenu, "Help");
+	uiMenuItemSetShortcut(helpItem, uiExtKeyF1, 0);
+	uiMenuItemOnClicked(helpItem, shortcutActivated, "Help");
 	aboutItem = uiMenuAppendAboutItem(helpMenu);
 
 	uiMenuItemOnClicked(quitEnabledItem, enableItemTest, quitItem);

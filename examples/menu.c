@@ -43,6 +43,8 @@ int main(void)
 
 	fileMenu = uiNewMenu("File");
 	item = uiMenuAppendItem(fileMenu, "New");
+	uiMenuItemSetShortcut(item, 'N',
+		uiModifierPrimary);
 	uiMenuItemOnClicked(item, onNewClicked, NULL);
 	uiMenuAppendSeparator(fileMenu);
 	uiMenuAppendQuitItem(fileMenu);

@@ -1,5 +1,6 @@
 // 28 april 2015
 #import "uipriv_darwin.h"
+#include "../common/menushortcut.h"
 
 struct uiMenu {
 	NSMenu *menu;
@@ -235,6 +236,75 @@ static uiWindow *currentMenuEventWindow(void)
 static void defaultOnClicked(uiMenuItem *item, uiWindow *w, void *data)
 {
 	// do nothing
+}
+
+static NSString *shortcutEquivalent(unsigned int key)
+{
+	unichar c;
+
+	if (key >= 'A' && key <= 'Z')
+		c = 'a' + key - 'A';
+	else if (key >= '0' && key <= '9')
+		c = '0' + key - '0';
+	else if (key >= uiExtKeyF1 && key <= uiExtKeyF12)
+		c = NSF1FunctionKey + key - uiExtKeyF1;
+	else {
+		switch (key) {
+		case uiExtKeyDelete: c = NSDeleteCharacter; break;
+		case uiExtKeyUp: c = NSUpArrowFunctionKey; break;
+		case uiExtKeyDown: c = NSDownArrowFunctionKey; break;
+		case uiExtKeyLeft: c = NSLeftArrowFunctionKey; break;
+		case uiExtKeyRight: c = NSRightArrowFunctionKey; break;
+		default: return @"";
+		}
+	}
+	return [NSString stringWithCharacters:&c length:1];
+}
+
+static NSEventModifierFlags shortcutMask(uiModifiers modifiers)
+{
+	NSEventModifierFlags mask = 0;
+	if (modifiers & uiModifierPrimary) mask |= NSEventModifierFlagCommand;
+	if (modifiers & uiModifierCtrl) mask |= NSEventModifierFlagControl;
+	if (modifiers & uiModifierAlt) mask |= NSEventModifierFlagOption;
+	if (modifiers & uiModifierShift) mask |= NSEventModifierFlagShift;
+	return mask;
+}
+
+static BOOL hasShortcut(NSMenu *menu, NSMenuItem *except,
+	NSString *equivalent, NSEventModifierFlags mask)
+{
+	NSMenuItem *native;
+	for (native in [menu itemArray]) {
+		if (native != except &&
+			[[native keyEquivalent] isEqualToString:equivalent] &&
+			[native keyEquivalentModifierMask] == mask)
+			return YES;
+		if ([native hasSubmenu] &&
+			hasShortcut([native submenu], except, equivalent, mask))
+			return YES;
+	}
+	return NO;
+}
+
+void uiMenuItemSetShortcut(uiMenuItem *item, unsigned int key,
+	uiModifiers modifiers)
+{
+	@autoreleasepool {
+	NSString *equivalent;
+	NSEventModifierFlags mask;
+
+	if ([uiprivAppDelegate().menuManager finalized])
+		uiprivUserBug("Menu shortcuts must be set before the first window is created.");
+	uiprivValidateMenuShortcut(key, modifiers);
+	equivalent = shortcutEquivalent(key);
+	mask = shortcutMask(modifiers);
+	if (key != uiExtKeyNone &&
+		hasShortcut([uiprivNSApp() mainMenu], item->item, equivalent, mask))
+		uiprivUserBug("Duplicate menu shortcut.");
+	[item->item setKeyEquivalent:equivalent];
+	[item->item setKeyEquivalentModifierMask:mask];
+	}
 }
 
 void uiMenuItemEnable(uiMenuItem *item)
