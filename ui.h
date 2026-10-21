@@ -3311,6 +3311,19 @@ typedef struct uiImage uiImage;
 _UI_EXTERN uiImage *uiNewImage(double width, double height);
 
 /**
+ * Returns the image's logical dimensions in points.
+ * These are the dimensions passed to uiNewImage() and do not change when
+ * representations with different pixel sizes are appended.
+ * This function does not modify or take ownership of the image.
+ *
+ * @param i Non-`NULL` uiImage instance.
+ * @param width Non-`NULL` output for the width in points.
+ * @param height Non-`NULL` output for the height in points.
+ * @memberof uiImage
+ */
+_UI_EXTERN void uiImageGetSize(uiImage *i, double *width, double *height);
+
+/**
  * Frees the image container and all associated resources.
  * If called from a user callback, the free is deferred and ordered with any
  * control destruction requested by that callback.

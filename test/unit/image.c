@@ -35,11 +35,30 @@ static void imageNew(void **state)
 	assert_non_null(s->image);
 }
 
+static void imageGetSize(void **state)
+{
+	struct imageTestState *s = *state;
+	uiImage *fractional;
+	double width, height;
+
+	uiImageGetSize(s->image, &width, &height);
+	assert_true(width == 16);
+	assert_true(height == 16);
+
+	fractional = uiNewImage(16.5, 12.25);
+	assert_non_null(fractional);
+	uiImageGetSize(fractional, &width, &height);
+	assert_true(width == 16.5);
+	assert_true(height == 12.25);
+	uiFreeImage(fractional);
+}
+
 static void imageAppendRepresentations(void **state)
 {
 	struct imageTestState *s = *state;
 	unsigned char pixels1x[16 * 16 * 4] = {0};
 	unsigned char pixels2x[32 * 32 * 4] = {0};
+	double width, height;
 
 	pixels1x[0] = 0x20;
 	pixels1x[1] = 0x40;
@@ -47,6 +66,9 @@ static void imageAppendRepresentations(void **state)
 	pixels1x[3] = 0x80;
 	uiImageAppend(s->image, pixels1x, 16, 16, 16 * 4);
 	uiImageAppend(s->image, pixels2x, 32, 32, 32 * 4);
+	uiImageGetSize(s->image, &width, &height);
+	assert_true(width == 16);
+	assert_true(height == 16);
 }
 
 static void imageAppendPaddedStride(void **state)
@@ -61,6 +83,8 @@ int imageRunUnitTests(void)
 {
 	const struct CMUnitTest tests[] = {
 		cmocka_unit_test_setup_teardown(imageNew,
+			imageSetup, imageTeardown),
+		cmocka_unit_test_setup_teardown(imageGetSize,
 			imageSetup, imageTeardown),
 		cmocka_unit_test_setup_teardown(imageAppendRepresentations,
 			imageSetup, imageTeardown),

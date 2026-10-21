@@ -22,8 +22,9 @@ Upstream projects:
 
 - `pre-build`: build branch for release binaries, with downstream fixes and
   compatible API additions (`uiVersion`, `uiControlOnDestroyed`, `uiTabSelected`,
-  `uiTabSetSelected`, `uiTabOnSelected`, and `uiGridDelete`). `uiControlDestroy`
-  is also safe to call from user callbacks. Tags use `commit-xxxxxxx`.
+  `uiTabSetSelected`, `uiTabOnSelected`, `uiGridDelete`, and `uiImageGetSize`).
+  `uiControlDestroy` is also safe to call from user callbacks. Tags use
+  `commit-xxxxxxx`.
 - `dev`: development branch based on `pre-build`, with additional fixes and
   experimental APIs (`uiToolbar`, `uiImageView`, `uiDrawImage`). Tags use
   `commit-xxxxxxx-experimental`.

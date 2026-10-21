@@ -23,6 +23,12 @@ uiImage *uiNewImage(double width, double height)
 	return i;
 }
 
+void uiImageGetSize(uiImage *i, double *width, double *height)
+{
+	*width = i->size.width;
+	*height = i->size.height;
+}
+
 static void freeImage(void *p)
 {
 	uiImage *i = p;
