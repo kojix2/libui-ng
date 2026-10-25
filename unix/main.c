@@ -11,6 +11,8 @@ struct queued {
 	guint source;
 	gboolean canceled;
 	struct queued *next;
+	// Points to the link that currently holds this node, or NULL after removal.
+	struct queued **prevNext;
 };
 
 static GMutex queuedMutex;
@@ -162,18 +164,26 @@ void uiQuit(void)
 	gdk_threads_add_idle(quit, NULL);
 }
 
+// queuedMutex must be held. The source destructor also calls this after a
+// normal callback, when the node has already been removed.
+static void removequeued(struct queued *q)
+{
+	if (q->prevNext == NULL)
+		return;
+	*(q->prevNext) = q->next;
+	if (q->next != NULL)
+		q->next->prevNext = q->prevNext;
+	q->prevNext = NULL;
+	q->next = NULL;
+}
+
 static gboolean doqueued(gpointer data)
 {
 	struct queued *q = (struct queued *) data;
-	struct queued **link;
 	gboolean canceled;
 
 	g_mutex_lock(&queuedMutex);
-	for (link = &queuedCallbacks; *link != NULL; link = &((*link)->next))
-		if (*link == q) {
-			*link = q->next;
-			break;
-		}
+	removequeued(q);
 	canceled = q->canceled;
 	g_mutex_unlock(&queuedMutex);
 	if (!canceled) {
@@ -187,14 +197,9 @@ static gboolean doqueued(gpointer data)
 static void freequeued(gpointer data)
 {
 	struct queued *q = (struct queued *) data;
-	struct queued **link;
 
 	g_mutex_lock(&queuedMutex);
-	for (link = &queuedCallbacks; *link != NULL; link = &((*link)->next))
-		if (*link == q) {
-			*link = q->next;
-			break;
-		}
+	removequeued(q);
 	g_mutex_unlock(&queuedMutex);
 	g_free(q);
 }
@@ -215,6 +220,9 @@ void uiQueueMain(void (*f)(void *data), void *data)
 		return;
 	}
 	q->next = queuedCallbacks;
+	q->prevNext = &queuedCallbacks;
+	if (q->next != NULL)
+		q->next->prevNext = &q->next;
 	queuedCallbacks = q;
 	q->source = gdk_threads_add_idle_full(G_PRIORITY_DEFAULT_IDLE,
 		doqueued, q, freequeued);

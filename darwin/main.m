@@ -14,6 +14,8 @@ struct queued {
 	void *data;
 	BOOL canceled;
 	struct queued *next;
+	// Points to the link that currently holds this node, or NULL after removal.
+	struct queued **prevNext;
 };
 
 static pthread_mutex_t queuedMutex = PTHREAD_MUTEX_INITIALIZER;
@@ -309,15 +311,14 @@ void uiprivScheduleControlDestroyFlush(uintptr_t id)
 static void doQueued(void *data)
 {
 	struct queued *q = data;
-	struct queued **link;
 	BOOL canceled;
 
 	pthread_mutex_lock(&queuedMutex);
-	for (link = &queuedCallbacks; *link != NULL; link = &((*link)->next))
-		if (*link == q) {
-			*link = q->next;
-			break;
-		}
+	*q->prevNext = q->next;
+	if (q->next != NULL)
+		q->next->prevNext = q->prevNext;
+	q->prevNext = NULL;
+	q->next = NULL;
 	canceled = q->canceled;
 	pthread_mutex_unlock(&queuedMutex);
 	if (!canceled) {
@@ -348,6 +349,9 @@ void uiQueueMain(void (*f)(void *data), void *data)
 		return;
 	}
 	q->next = queuedCallbacks;
+	q->prevNext = &queuedCallbacks;
+	if (q->next != NULL)
+		q->next->prevNext = &q->next;
 	queuedCallbacks = q;
 	dispatch_async_f(dispatch_get_main_queue(), q, doQueued);
 	pthread_mutex_unlock(&queuedMutex);

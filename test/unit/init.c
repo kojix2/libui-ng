@@ -1,5 +1,9 @@
 #include "unit.h"
 
+#if !defined(_WIN32)
+#include <pthread.h>
+#endif
+
 static void versionIsAvailableWithoutInitialization(void **state)
 {
 	const char *version = uiVersion();
@@ -100,15 +104,112 @@ static void queuedCallbacksDoNotSurviveUninit(void **state)
 {
 	uiInitOptions o = {0};
 	int calls = 0;
+	int i;
 
 	assert_null(uiInit(&o));
-	uiQueueMain(queuedCallback, &calls);
+	for (i = 0; i < 1000; i++)
+		uiQueueMain(queuedCallback, &calls);
 	uiUninit();
 
 	assert_null(uiInit(&o));
 	uiQueueMain(queuedCallbackAndQuit, &calls);
 	uiMain();
 	assert_int_equal(calls, 1);
+	uiUninit();
+}
+
+struct queueOrderState {
+	int received[4];
+	int count;
+};
+
+struct queueOrderItem {
+	struct queueOrderState *state;
+	int value;
+	struct queueOrderItem *next;
+};
+
+static void recordQueuedOrder(void *data)
+{
+	struct queueOrderItem *item = data;
+	struct queueOrderState *state = item->state;
+
+	state->received[state->count++] = item->value;
+	if (item->next != NULL)
+		uiQueueMain(recordQueuedOrder, item->next);
+	if (item->value == 3)
+		uiQuit();
+}
+
+static void queuedCallbacksKeepOrderWhenReentered(void **state)
+{
+	uiInitOptions o = {0};
+	struct queueOrderState order = {{0}, 0};
+	struct queueOrderItem items[4] = {
+		{&order, 0, NULL},
+		{&order, 1, NULL},
+		{&order, 2, NULL},
+		{&order, 3, NULL},
+	};
+	int i;
+
+	assert_null(uiInit(&o));
+	items[0].next = &items[3];
+	for (i = 0; i < 3; i++)
+		uiQueueMain(recordQueuedOrder, &items[i]);
+	uiMain();
+	assert_int_equal(order.count, 4);
+	for (i = 0; i < 4; i++)
+		assert_int_equal(order.received[i], i);
+	uiUninit();
+}
+
+struct queueProducer {
+	int *calls;
+	int count;
+	int *finished;
+};
+
+static void queuedProducerFinished(void *data)
+{
+	int *finished = data;
+
+	(*finished)++;
+	if (*finished == 2)
+		uiQuit();
+}
+
+static void *enqueueFromThread(void *data)
+{
+	struct queueProducer *producer = data;
+	int i;
+
+	for (i = 0; i < producer->count; i++)
+		uiQueueMain(queuedCallback, producer->calls);
+	uiQueueMain(queuedProducerFinished, producer->finished);
+	return NULL;
+}
+
+static void queuedCallbacksFromMultipleThreads(void **state)
+{
+	uiInitOptions o = {0};
+	struct queueProducer producer;
+	pthread_t threads[2];
+	int calls = 0;
+	int finished = 0;
+	int i;
+
+	assert_null(uiInit(&o));
+	producer.calls = &calls;
+	producer.count = 1000;
+	producer.finished = &finished;
+	for (i = 0; i < 2; i++)
+		assert_int_equal(pthread_create(&threads[i], NULL, enqueueFromThread, &producer), 0);
+	uiMain();
+	for (i = 0; i < 2; i++)
+		assert_int_equal(pthread_join(threads[i], NULL), 0);
+	assert_int_equal(finished, 2);
+	assert_int_equal(calls, 2 * producer.count);
 	uiUninit();
 }
 #endif
@@ -184,6 +285,8 @@ int initRunUnitTests(void)
 		cmocka_unit_test(initUninitTwice),
 #if !defined(_WIN32)
 		cmocka_unit_test(queuedCallbacksDoNotSurviveUninit),
+		cmocka_unit_test(queuedCallbacksKeepOrderWhenReentered),
+		cmocka_unit_test(queuedCallbacksFromMultipleThreads),
 #endif
 		cmocka_unit_test(mainFlushesDeferredDestroysBeforeReturning),
 		cmocka_unit_test(mainStepsFlushDeferredDestroysBeforeReturning),
