@@ -9,6 +9,8 @@ struct uiEntry {
 	void (*onChanged)(uiEntry *, void *);
 	void *onChangedData;
 	gulong onChangedSignal;
+	gboolean settingText;
+	gboolean searchChangeFromUser;
 };
 
 uiUnixControlAllDefaults(uiEntry)
@@ -32,7 +34,17 @@ static void onSearchChanged(GtkSearchEntry *entry, gpointer data)
 {
 	uiEntry *e = uiEntry(data);
 
+	if (!e->searchChangeFromUser)
+		return;
+	e->searchChangeFromUser = FALSE;
 	sendChanged(e);
+}
+
+static void onSearchTextChanged(GtkEditable *editable, gpointer data)
+{
+	uiEntry *e = uiEntry(data);
+
+	e->searchChangeFromUser = !e->settingText;
 }
 
 static void defaultOnChanged(uiEntry *e, void *data)
@@ -47,10 +59,15 @@ char *uiEntryText(uiEntry *e)
 
 void uiEntrySetText(uiEntry *e, const char *text)
 {
+	// SearchEntry emits ::search-changed after this function returns. Mark
+	// any pending notification so it cannot report this setter as user input.
+	e->searchChangeFromUser = FALSE;
+	e->settingText = TRUE;
 	// we need to inhibit sending of ::changed because this WILL send a ::changed otherwise
 	g_signal_handler_block(e->editable, e->onChangedSignal);
 	gtk_entry_set_text(e->entry, text);
 	g_signal_handler_unblock(e->editable, e->onChangedSignal);
+	e->settingText = FALSE;
 	// don't queue the control for resize; entry sizes are independent of their contents
 }
 
@@ -118,6 +135,7 @@ uiEntry *uiNewSearchEntry(void)
 	uiEntry *e;
 
 	e = finishNewEntry(gtk_search_entry_new());
+	g_signal_connect(e->editable, "changed", G_CALLBACK(onSearchTextChanged), e);
 	e->onChangedSignal = g_signal_connect(e->widget, "search-changed", G_CALLBACK(onSearchChanged), e);
 	return e;
 }
