@@ -40,6 +40,8 @@ extern WCHAR *ftoutf16(double d);
 extern WCHAR *itoutf16(int i);
 
 // debug.cpp
+// These helpers only report an error and return it. Callers must recover,
+// return the failure, or terminate explicitly before using invalid state.
 // see http://stackoverflow.com/questions/14421656/is-there-widely-available-wide-character-variant-of-file
 // we turn __LINE__ into a string because PRIiMAX can't be converted to a wide string in MSVC (it seems to be defined as "ll" "i" according to the compiler errors)
 // also note the use of __FUNCTION__ here; __func__ doesn't seem to work for some reason

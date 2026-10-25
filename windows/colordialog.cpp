@@ -1,6 +1,7 @@
 // 16 may 2016
 #include "uipriv_windows.hpp"
 #include "draw.hpp"
+#include <cstdlib>
 
 // TODO should the d2dscratch programs capture mouse?
 
@@ -1066,16 +1067,20 @@ fail:
 		uiWindowsEnsureDestroyWindow(c->preview);
 	if (c->opacitySlider != NULL)
 		uiWindowsEnsureDestroyWindow(c->opacitySlider);
-	if (EndDialog(hwnd, 0) == 0)
+	if (EndDialog(hwnd, 0) == 0) {
 		logLastError(L"error ending color dialog after initialization failure");
+		std::abort();
+	}
 	uiprivFree(c);
 	return NULL;
 }
 
 static void endColorDialog(struct colorDialog *c, INT_PTR code)
 {
-	if (EndDialog(c->hwnd, code) == 0)
+	if (EndDialog(c->hwnd, code) == 0) {
 		logLastError(L"error ending color dialog");
+		std::abort();		// the live dialog still references c
+	}
 	uiprivFree(c);
 }
 

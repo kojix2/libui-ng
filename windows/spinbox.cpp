@@ -1,5 +1,6 @@
 // 8 april 2015
 #include "uipriv_windows.hpp"
+#include <cstdlib>
 
 struct uiSpinbox {
 	uiWindowsControl c;
@@ -142,8 +143,10 @@ static void createUpDown(uiSpinbox *s)
 		// this is important; it's necessary for autosizing to work
 		0, 0, 0, 0,
 		s->hwnd, NULL, hInstance, NULL);
-	if (s->updown == NULL)
+	if (s->updown == NULL) {
 		logLastError(L"error creating updown");
+		std::abort();
+	}
 	SendMessageW(s->updown, UDM_SETBUDDY, (WPARAM) (s->edit), 0);
 }
 

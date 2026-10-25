@@ -1,5 +1,6 @@
 // 17 june 2018
 #include "uipriv_windows.hpp"
+#include <cstdlib>
 #include "table.hpp"
 
 // TODO make clicking the item being edited cancel editing instead of restarting it
@@ -206,7 +207,7 @@ HRESULT uiprivTableAbortEditingText(uiTable *t)
 
 	if (DestroyWindow(edit) == 0) {
 		logLastError(L"DestroyWindow()");
-		return E_FAIL;
+		std::abort();		// t->edit no longer tracks the live HWND
 	}
 	return S_OK;
 }

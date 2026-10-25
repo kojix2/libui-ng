@@ -1,5 +1,6 @@
 // 20 may 2015
 #include "uipriv_windows.hpp"
+#include <cstdlib>
 
 // we as Common Controls 6 users don't need to worry about the height of comboboxes; see http://blogs.msdn.com/b/oldnewthing/archive/2006/03/10/548537.aspx
 
@@ -19,8 +20,10 @@ static BOOL onWM_COMMAND(uiControl *cc, HWND hwnd, WORD code, LRESULT *lResult)
 		if (PostMessage(parentOf(hwnd),
 			WM_COMMAND,
 			MAKEWPARAM(GetWindowLongPtrW(hwnd, GWLP_ID), CBN_EDITCHANGE),
-			(LPARAM) hwnd) == 0)
+			(LPARAM) hwnd) == 0) {
 			logLastError(L"error posting CBN_EDITCHANGE after CBN_SELCHANGE");
+			std::abort();		// the change callback cannot otherwise be delivered
+		}
 		*lResult = 0;
 		return TRUE;
 	}

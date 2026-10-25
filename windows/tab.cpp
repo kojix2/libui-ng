@@ -1,5 +1,6 @@
 // 16 may 2015
 #include "uipriv_windows.hpp"
+#include <cstdlib>
 #include <limits.h>
 
 // You don't add controls directly to a tab control on Windows; instead you make them siblings and swap between them on a TCN_SELCHANGING/TCN_SELCHANGE notification pair.
@@ -303,8 +304,10 @@ void uiTabDelete(uiTab *t, int n)
 		showHidePage(t, old, 1);
 	// first delete the tab from the tab control
 	// if this was the current tab, select and show another page below
-	if (SendMessageW(t->tabHWND, TCM_DELETEITEM, (WPARAM) n, 0) == FALSE)
+	if (SendMessageW(t->tabHWND, TCM_DELETEITEM, (WPARAM) n, 0) == FALSE) {
 		logLastError(L"error deleting uiTab tab");
+		std::abort();
+	}
 
 	// now delete the page itself
 	page = tabPage(t, n);

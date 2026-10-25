@@ -1,5 +1,6 @@
 // 14 june 2018
 #include "uipriv_windows.hpp"
+#include <cstdlib>
 #include "table.hpp"
 
 // TODOs:
@@ -270,6 +271,10 @@ static HRESULT drawTextPart(HRESULT hr, struct drawState *s)
 	prevMode = SetBkMode(s->dc, TRANSPARENT);
 	if (prevMode == 0) {
 		logLastError(L"SetBkMode()");
+		if (SetTextColor(s->dc, prevText) == CLR_INVALID) {
+			logLastError(L"restoring text color after SetBkMode() failure");
+			std::abort();
+		}
 		return E_FAIL;
 	}
 
@@ -289,11 +294,11 @@ static HRESULT drawTextPart(HRESULT hr, struct drawState *s)
 	// TRANSPARENT and s->textColor respectively, so compare against those.
 	if (SetBkMode(s->dc, prevMode) != TRANSPARENT) {
 		logLastError(L"SetBkMode() prev");
-		return E_FAIL;
+		std::abort();
 	}
 	if (SetTextColor(s->dc, prevText) != s->textColor) {
 		logLastError(L"SetTextColor() prev");
-		return E_FAIL;
+		std::abort();
 	}
 	if (drawResult == 0)
 		return E_FAIL;

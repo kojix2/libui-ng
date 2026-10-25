@@ -1,4 +1,5 @@
 #include "uipriv_windows.hpp"
+#include <cstdlib>
 #include <limits.h>
 
 // TODO:
@@ -118,7 +119,7 @@ void uiImageAppend(uiImage *i, const void *pixels, int pixelWidth, int pixelHeig
 		&b);
 	if (hr != S_OK) {
 		logHRESULT(L"error calling CreateBitmap() in uiImageAppend()", hr);
-		return;
+		std::abort();		// uiImageAppend() cannot report a missing representation
 	}
 	r.X = 0;
 	r.Y = 0;
@@ -128,7 +129,7 @@ void uiImageAppend(uiImage *i, const void *pixels, int pixelWidth, int pixelHeig
 	if (hr != S_OK) {
 		logHRESULT(L"error calling Lock() in uiImageAppend()", hr);
 		b->Release();
-		return;
+		std::abort();
 	}
 
 	pix = (const uint8_t *) pixels;
@@ -137,7 +138,7 @@ void uiImageAppend(uiImage *i, const void *pixels, int pixelWidth, int pixelHeig
 		logHRESULT(L"error calling GetDataPointer() in uiImageAppend()", hr);
 		l->Release();
 		b->Release();
-		return;
+		std::abort();
 	}
 	data = (uint8_t *) dipp;
 	hr = l->GetStride(&realStride);
@@ -145,7 +146,7 @@ void uiImageAppend(uiImage *i, const void *pixels, int pixelWidth, int pixelHeig
 		logHRESULT(L"error calling GetStride() in uiImageAppend()", hr);
 		l->Release();
 		b->Release();
-		return;
+		std::abort();
 	}
 	destinationSize = (uint64_t) (pixelHeight - 1) * realStride +
 		(uint64_t) pixelWidth * 4;
@@ -153,7 +154,7 @@ void uiImageAppend(uiImage *i, const void *pixels, int pixelWidth, int pixelHeig
 		logHRESULT(L"WIC returned an invalid buffer layout in uiImageAppend()", E_FAIL);
 		l->Release();
 		b->Release();
-		return;
+		std::abort();
 	}
 	for (y = 0; y < pixelHeight; y++) {
 		for (x = 0; x < pixelWidth * 4; x += 4) {

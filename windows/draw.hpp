@@ -31,7 +31,9 @@ struct uiDrawContext {
 	std::vector<struct drawState> *states;
 	ID2D1Geometry *currentClip;
 };
-extern ID2D1Layer *uiprivApplyClip(uiDrawContext *c);
+// Returns FALSE when a requested clip could not be applied. On success,
+// *layer is NULL if there is no clip.
+extern BOOL uiprivApplyClip(uiDrawContext *c, ID2D1Layer **layer);
 extern void uiprivUnapplyClip(uiDrawContext *c, ID2D1Layer *layer);
 
 // drawpath.cpp

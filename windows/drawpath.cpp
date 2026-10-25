@@ -1,5 +1,6 @@
 // 7 september 2015
 #include "uipriv_windows.hpp"
+#include <cstdlib>
 #include "draw.hpp"
 
 // TODO test transform-then-clip and clip-then-transform against GTK and Cocoa.
@@ -259,8 +260,10 @@ void uiDrawPathEnd(uiDrawPath *p)
 		p->inFigure = FALSE;
 	}
 	hr = p->sink->Close();
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error closing path", hr);
+		std::abort();		// uiDrawEndPath() cannot report an invalid path
+	}
 	p->sink->Release();
 	// also needed for uiDrawFreePath()
 	p->sink = NULL;

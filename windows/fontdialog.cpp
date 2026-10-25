@@ -2,6 +2,7 @@
 #include "uipriv_windows.hpp"
 #include "attrstr.hpp"
 #include "draw.hpp"
+#include <cstdlib>
 
 // Remaining font dialog work:
 // TODO quote the Choose Font sample here for reference
@@ -51,19 +52,26 @@ static LRESULT cbInsertString(HWND cb, const WCHAR *str, WPARAM pos)
 	LRESULT lr;
 
 	lr = SendMessageW(cb, CB_INSERTSTRING, pos, (LPARAM) str);
-	if (lr != (LRESULT) pos)
+	if (lr != (LRESULT) pos) {
 		logLastError(L"error inserting item to combobox");
+		std::abort();		// size positions index defaultSizes[]
+	}
 	return lr;
 }
+
+static LRESULT cbGetCount(HWND cb);
 
 static LRESULT cbGetItemData(HWND cb, WPARAM item)
 {
 	LRESULT data;
 
+	// A missing selection is normal while the user edits a family or style.
+	if (item >= (WPARAM) cbGetCount(cb))
+		return 0;
 	data = SendMessageW(cb, CB_GETITEMDATA, item, 0);
 	if (data == (LRESULT) CB_ERR) {
 		logLastError(L"error getting combobox item data for font dialog");
-		return 0;
+		std::abort();
 	}
 	return data;
 }
@@ -79,8 +87,10 @@ static BOOL cbSetItemData(HWND cb, WPARAM item, LPARAM data)
 
 static void cbDeleteString(HWND cb, WPARAM item)
 {
-	if (SendMessageW(cb, CB_DELETESTRING, item, 0) == (LRESULT) CB_ERR)
+	if (SendMessageW(cb, CB_DELETESTRING, item, 0) == (LRESULT) CB_ERR) {
 		logLastError(L"error deleting item from combobox");
+		std::abort();
+	}
 }
 
 static BOOL cbGetCurSel(HWND cb, LRESULT *sel)
@@ -97,8 +107,10 @@ static BOOL cbGetCurSel(HWND cb, LRESULT *sel)
 
 static void cbSetCurSel(HWND cb, WPARAM item)
 {
-	if (SendMessageW(cb, CB_SETCURSEL, item, 0) != (LRESULT) item)
+	if (SendMessageW(cb, CB_SETCURSEL, item, 0) != (LRESULT) item) {
 		logLastError(L"error selecting combobox item");
+		std::abort();
+	}
 }
 
 static LRESULT cbGetCount(HWND cb)
@@ -106,8 +118,10 @@ static LRESULT cbGetCount(HWND cb)
 	LRESULT n;
 
 	n = SendMessageW(cb, CB_GETCOUNT, 0, 0);
-	if (n == (LRESULT) CB_ERR)
+	if (n == (LRESULT) CB_ERR) {
 		logLastError(L"error getting combobox item count");
+		std::abort();
+	}
 	return n;
 }
 
@@ -132,11 +146,16 @@ static WCHAR *cbGetItemText(HWND cb, WPARAM item)
 
 	// note: neither message includes the terminating L'\0'
 	len = SendMessageW(cb, CB_GETLBTEXTLEN, item, 0);
-	if (len == (LRESULT) CB_ERR)
+	if (len == (LRESULT) CB_ERR) {
 		logLastError(L"error getting item text length from combobox");
+		return emptyUTF16();
+	}
 	text = (WCHAR *) uiprivAlloc((len + 1) * sizeof (WCHAR), "WCHAR[]");
-	if (SendMessageW(cb, CB_GETLBTEXT, item, (LPARAM) text) != len)
+	if (SendMessageW(cb, CB_GETLBTEXT, item, (LPARAM) text) != len) {
 		logLastError(L"error getting item text from combobox");
+		uiprivFree(text);
+		return emptyUTF16();
+	}
 	return text;
 }
 
@@ -501,6 +520,8 @@ static void setupInitialFontDialogState(struct fontDialog *f)
 	familyEdited(f);
 }
 
+static void endFontDialog(struct fontDialog *f, INT_PTR code);
+
 static struct fontDialog *beginFontDialog(HWND hwnd, LPARAM lParam)
 {
 	struct fontDialog *f;
@@ -521,8 +542,11 @@ static struct fontDialog *beginFontDialog(HWND hwnd, LPARAM lParam)
 
 	f->fc = uiprivLoadFontCollection();
 	if (f->fc == NULL) {
+		if (EndDialog(hwnd, 1) == 0) {
+			logLastError(L"error ending font dialog after initialization failure");
+			std::abort();
+		}
 		uiprivFree(f);
-		EndDialog(hwnd, 1);
 		return NULL;
 	}
 	nFamilies = f->fc->fonts->GetFontFamilyCount();
@@ -553,6 +577,10 @@ static struct fontDialog *beginFontDialog(HWND hwnd, LPARAM lParam)
 	mapWindowRect(NULL, f->hwnd, &(f->sampleRect));
 	uiWindowsEnsureDestroyWindow(samplePlacement);
 	f->sampleBox = newD2DScratch(f->hwnd, &(f->sampleRect), (HMENU) (INT_PTR) rcFontSamplePlacement, fontDialogSampleSubProc, (DWORD_PTR) f);
+	if (f->sampleBox == NULL) {
+		endFontDialog(f, 1);
+		return NULL;
+	}
 
 	setupInitialFontDialogState(f);
 	return f;
@@ -563,8 +591,10 @@ static void endFontDialog(struct fontDialog *f, INT_PTR code)
 	wipeStylesBox(f);
 	cbWipeAndReleaseData(f->familyCombobox);
 	uiprivFontCollectionFree(f->fc);
-	if (EndDialog(f->hwnd, code) == 0)
+	if (EndDialog(f->hwnd, code) == 0) {
 		logLastError(L"error ending font dialog");
+		std::abort();		// its window can still reference f
+	}
 	uiprivFree(f);
 }
 
@@ -771,6 +801,7 @@ BOOL uiprivShowFontDialog(HWND parent, struct fontDialogParams *params)
 		break;
 	default:
 		logLastError(L"error running font dialog");
+		return FALSE;
 	}
 	return TRUE;
 }

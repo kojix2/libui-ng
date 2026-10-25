@@ -1,5 +1,6 @@
 // 24 april 2015
 #include "uipriv_windows.hpp"
+#include <cstdlib>
 
 // LONGTERM migrate to std::vector
 
@@ -62,8 +63,10 @@ static void sync(uiMenuItem *item)
 		mi.fState |= MFS_CHECKED;
 
 	for (i = 0; i < item->len; i++)
-		if (SetMenuItemInfo(item->hmenus[i], item->id, FALSE, &mi) == 0)
+		if (SetMenuItemInfo(item->hmenus[i], item->id, FALSE, &mi) == 0) {
 			logLastError(L"error synchronizing menu items");
+			std::abort();		// native and registered item state must agree
+		}
 }
 
 static void defaultOnClicked(uiMenuItem *item, uiWindow *w, void *data)
@@ -242,7 +245,7 @@ static void appendMenuItem(HMENU menu, uiMenuItem *item)
 	}
 	if (AppendMenuW(menu, uFlags, item->id, item->name) == 0) {
 		logLastError(L"error appending menu item in appendMenuItem()");
-		return;
+		std::abort();		// the menu must match the registered item list
 	}
 
 	if (item->len >= item->cap) {
@@ -261,7 +264,7 @@ static HMENU makeMenu(uiMenu *m)
 	menu = CreatePopupMenu();
 	if (menu == NULL) {
 		logLastError(L"error creating popup menu");
-		return NULL;
+		std::abort();
 	}
 	for (i = 0; i < m->len; i++)
 		appendMenuItem(menu, m->items[i]);
@@ -281,18 +284,14 @@ HMENU makeMenubar(void)
 	menubar = CreateMenu();
 	if (menubar == NULL) {
 		logLastError(L"error creating menubar");
-		return NULL;
+		std::abort();
 	}
 
 	for (i = 0; i < len; i++) {
 		menu = makeMenu(menus[i]);
-		if (menu == NULL)
-			continue;
 		if (AppendMenuW(menubar, MF_POPUP | MF_STRING, (UINT_PTR) menu, menus[i]->name) == 0) {
 			logLastError(L"error appending menu to menubar");
-			freeMenu(menus[i], menu);
-			if (DestroyMenu(menu) == 0)
-				logLastError(L"error destroying unattached popup menu");
+			std::abort();
 		}
 	}
 
@@ -379,15 +378,17 @@ void freeMenubar(HMENU menubar)
 	count = GetMenuItemCount(menubar);
 	if (count == -1) {
 		logLastError(L"error getting menubar item count");
-		return;
+		std::abort();		// menu references cannot be released
 	}
 
 	for (i = 0; i < count; i++) {
 		ZeroMemory(&mi, sizeof (MENUITEMINFOW));
 		mi.cbSize = sizeof (MENUITEMINFOW);
 		mi.fMask = MIIM_SUBMENU;
-		if (GetMenuItemInfoW(menubar, i, TRUE, &mi) == 0)
+		if (GetMenuItemInfoW(menubar, i, TRUE, &mi) == 0) {
 			logLastError(L"error getting menu to delete item references from");
+			std::abort();
+		}
 		m = findMenuForSubmenu(mi.hSubMenu);
 		if (m != NULL)
 			freeMenu(m, mi.hSubMenu);

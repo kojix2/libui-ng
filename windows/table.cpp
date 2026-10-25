@@ -1,5 +1,6 @@
 #include "uipriv_windows.hpp"
 #include "table.hpp"
+#include <cstdlib>
 #include <strsafe.h>
 
 // Known limitations and follow-up work:
@@ -90,8 +91,10 @@ void uiTableModelRowInserted(uiTableModel *m, int newIndex)
 		if (t->edit != NULL && newIndex <= t->editedItem)
 			t->editedItem++;
 		shiftIndeterminateProgressRows(t, newIndex, 1);
-		if (ListView_InsertItem(t->hwnd, &item) == -1)
+		if (ListView_InsertItem(t->hwnd, &item) == -1) {
 			logLastError(L"error calling ListView_InsertItem in uiTableModelRowInserted()");
+			std::abort();		// the native and model row indexes must agree
+		}
 		// redraw every row from the new row down to simulate adding it
 		if (ListView_RedrawItems(t->hwnd, newIndex, ListView_GetItemCount(t->hwnd)-1) == FALSE)
 			logLastError(L"error calling ListView_RedrawItems in uiTableModelRowInserted()");
@@ -116,8 +119,10 @@ void uiTableModelRowDeleted(uiTableModel *m, int oldIndex)
 				t->editedItem--;
 		}
 		removeIndeterminateProgressRow(t, oldIndex);
-		if (ListView_DeleteItem(t->hwnd, oldIndex) == FALSE)
+		if (ListView_DeleteItem(t->hwnd, oldIndex) == FALSE) {
 			logLastError(L"error calling ListView_DeleteItem() in uiTableModelRowDeleted()");
+			std::abort();
+		}
 		// redraw every row from the new nth row down to simulate removing the old nth row
 		if (ListView_RedrawItems(t->hwnd, oldIndex, ListView_GetItemCount(t->hwnd)-1) == FALSE)
 			logLastError(L"error calling ListView_RedrawItems() in uiTableModelRowDeleted()");
@@ -819,8 +824,10 @@ static uiprivTableColumnParams *appendColumn(uiTable *t, const char *name, int c
 	lvc.cx = 120;			// initial width in pixels; callers can resize the column later
 	wstr = toUTF16(name);
 	lvc.pszText = wstr;
-	if (SendMessageW(t->hwnd, LVM_INSERTCOLUMNW, t->nColumns, (LPARAM) (&lvc)) == (LRESULT) (-1))
+	if (SendMessageW(t->hwnd, LVM_INSERTCOLUMNW, t->nColumns, (LPARAM) (&lvc)) == (LRESULT) (-1)) {
 		logLastError(L"error calling LVM_INSERTCOLUMNW in appendColumn()");
+		std::abort();
+	}
 	t->nColumns++;
 
 	p = uiprivNew(uiprivTableColumnParams);
@@ -1011,8 +1018,10 @@ uiTable *uiNewTable(uiTableParams *p)
 		(WPARAM) (LVS_EX_FULLROWSELECT | LVS_EX_LABELTIP | LVS_EX_SUBITEMIMAGES),
 		(LPARAM) (LVS_EX_FULLROWSELECT | LVS_EX_LABELTIP | LVS_EX_SUBITEMIMAGES));
 	n = uiprivTableModelNumRows(t->model);
-	if (SendMessageW(t->hwnd, LVM_SETITEMCOUNT, (WPARAM) n, 0) == 0)
+	if (SendMessageW(t->hwnd, LVM_SETITEMCOUNT, (WPARAM) n, 0) == 0) {
 		logLastError(L"error calling LVM_SETITEMCOUNT in uiNewTable()");
+		std::abort();
+	}
 
 	hr = uiprivUpdateImageListSize(t);
 	if (hr != S_OK) {
@@ -1020,8 +1029,10 @@ uiTable *uiNewTable(uiTableParams *p)
 	}
 
 	t->indeterminatePositions = new std::map<std::pair<int, int>, LONG>;
-	if (SetWindowSubclass(t->hwnd, tableSubProc, 0, (DWORD_PTR) t) == FALSE)
+	if (SetWindowSubclass(t->hwnd, tableSubProc, 0, (DWORD_PTR) t) == FALSE) {
 		logLastError(L"SetWindowSubclass()");
+		std::abort();
+	}
 
 	uiTableOnRowClicked(t, defaultOnRowClicked, NULL);
 	uiTableOnRowDoubleClicked(t, defaultOnRowDoubleClicked, NULL);

@@ -1,5 +1,6 @@
 // 22 may 2015
 #include "uipriv_windows.hpp"
+#include <cstdlib>
 
 // File and message dialogs are application-modal: disable the other libui
 // windows while they are open.
@@ -133,8 +134,16 @@ static void msgbox(HWND parent, const char *title, const char *description, TASK
 	wdescription = toUTF16(description);
 
 	hr = TaskDialog(parent, NULL, NULL, wtitle, wdescription, buttons, icon, NULL);
-	if (hr != S_OK)
+	if (hr != S_OK) {
 		logHRESULT(L"error showing task dialog", hr);
+		UINT flags = MB_OK;
+		if (icon == TD_ERROR_ICON)
+			flags |= MB_ICONERROR;
+		if (MessageBoxW(parent, wdescription, wtitle, flags) == 0) {
+			logLastError(L"error showing fallback message box");
+			std::abort();
+		}
+	}
 
 	uiprivFree(wdescription);
 	uiprivFree(wtitle);

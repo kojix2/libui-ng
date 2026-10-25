@@ -491,23 +491,31 @@ void uiWindowSetFullscreen(uiWindow *w, int fullscreen)
 	if (w->fullscreen) {
 		ZeroMemory(&(w->fsPrevPlacement), sizeof (WINDOWPLACEMENT));
 		w->fsPrevPlacement.length = sizeof (WINDOWPLACEMENT);
-		if (GetWindowPlacement(w->hwnd, &(w->fsPrevPlacement)) == 0)
+		if (GetWindowPlacement(w->hwnd, &(w->fsPrevPlacement)) == 0) {
 			logLastError(L"error getting old window placement");
+			std::abort();
+		}
 		windowMonitorRect(w->hwnd, &r);
 		updateWindowStyle(w);
 		if (SetWindowPos(w->hwnd, HWND_TOP,
 			r.left, r.top,
 			r.right - r.left, r.bottom - r.top,
-			SWP_FRAMECHANGED | SWP_NOOWNERZORDER) == 0)
+			SWP_FRAMECHANGED | SWP_NOOWNERZORDER) == 0) {
 			logLastError(L"error making window fullscreen");
+			std::abort();
+		}
 	} else {
 		updateWindowStyle(w);
-		if (SetWindowPlacement(w->hwnd, &(w->fsPrevPlacement)) == 0)
+		if (SetWindowPlacement(w->hwnd, &(w->fsPrevPlacement)) == 0) {
 			logLastError(L"error leaving fullscreen");
+			std::abort();
+		}
 		if (SetWindowPos(w->hwnd, NULL,
 			0, 0, 0, 0,
-			SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOOWNERZORDER | SWP_NOSIZE | SWP_NOZORDER) == 0)
+			SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOOWNERZORDER | SWP_NOSIZE | SWP_NOZORDER) == 0) {
 			logLastError(L"error restoring window border after fullscreen");
+			std::abort();
+		}
 	}
 	w->changingSize = FALSE;
 }

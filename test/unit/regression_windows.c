@@ -74,6 +74,36 @@ static void deferredDestroyTimerWaitsForCallback(void **state)
 	assert_int_equal(destroyed, 1);
 	uiUninit();
 }
+
+static void deferredDestroyTimerRunsInNativeLoop(void **state)
+{
+	uiInitOptions options = {0};
+	uiButton *button;
+	int destroyed = 0;
+	ULONGLONG deadline;
+	MSG msg;
+
+	assert_null(uiInit(&options));
+	button = uiNewButton("native timer retry");
+	uiControlOnDestroyed(uiControl(button), countDestroyedControl, &destroyed);
+	uiprivWindowsFailNextDestroyPostForTests();
+	uiprivUserCallbackEnter(NULL);
+	uiControlDestroy(uiControl(button));
+	uiprivUserCallbackLeave();
+	deadline = GetTickCount64() + 3000;
+	while (destroyed == 0 && GetTickCount64() < deadline) {
+		if (!PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE)) {
+			Sleep(1);
+			continue;
+		}
+		if (msg.message == WM_QUIT)
+			fail_msg("%s", "unexpected WM_QUIT while awaiting retry timer");
+		TranslateMessage(&msg);
+		DispatchMessageW(&msg);
+	}
+	assert_int_equal(destroyed, 1);
+	uiUninit();
+}
 #endif
 
 struct tableState {
@@ -745,6 +775,7 @@ int main(void)
 		cmocka_unit_test(errorLogsReturnWithoutBreaking),
 		cmocka_unit_test(deferredDestroySurvivesFailedPost),
 		cmocka_unit_test(deferredDestroyTimerWaitsForCallback),
+		cmocka_unit_test(deferredDestroyTimerRunsInNativeLoop),
 #endif
 		cmocka_unit_test_setup_teardown(editFollowsInsertedRow, tableSetup, tableTeardown),
 		cmocka_unit_test_setup_teardown(editSetterRunsOnceUnderResizeReentry, tableSetup, tableTeardown),

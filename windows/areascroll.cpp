@@ -76,16 +76,20 @@ static void scroll(uiArea *a, int which, struct scrollParams *p, WPARAM wParam, 
 		ZeroMemory(&si, sizeof (SCROLLINFO));
 		si.cbSize = sizeof (SCROLLINFO);
 		si.fMask = SIF_POS;
-		if (GetScrollInfo(a->hwnd, which, &si) == 0)
+		if (GetScrollInfo(a->hwnd, which, &si) == 0) {
 			logLastError(L"error getting thumb position for area");
+			return;
+		}
 		pos = si.nPos;
 		break;
 	case SB_THUMBTRACK:
 		ZeroMemory(&si, sizeof (SCROLLINFO));
 		si.cbSize = sizeof (SCROLLINFO);
 		si.fMask = SIF_TRACKPOS;
-		if (GetScrollInfo(a->hwnd, which, &si) == 0)
+		if (GetScrollInfo(a->hwnd, which, &si) == 0) {
 			logLastError(L"error getting thumb track position for area");
+			return;
+		}
 		pos = si.nTrackPos;
 		break;
 	}

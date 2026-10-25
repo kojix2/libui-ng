@@ -672,7 +672,10 @@ void uiDrawText(uiDrawContext *c, uiDrawTextLayout *tl, double x, double y)
 	if (black == NULL)
 		return;
 
-	cliplayer = uiprivApplyClip(c);
+	if (!uiprivApplyClip(c, &cliplayer)) {
+		black->Release();
+		return;
+	}
 	for (auto p : *(tl->backgroundParams)) {
 		hr = drawTextBackground(c, tl, p, x, y);
 		if (hr != S_OK)

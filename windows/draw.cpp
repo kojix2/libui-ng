@@ -1,6 +1,7 @@
 // 7 september 2015
 #include "uipriv_windows.hpp"
 #include "draw.hpp"
+#include <cstdlib>
 
 ID2D1Factory *d2dfactory = NULL;
 
@@ -36,7 +37,7 @@ ID2D1HwndRenderTarget *makeHWNDRenderTarget(HWND hwnd)
 	dc = GetDC(hwnd);
 	if (dc == NULL) {
 		logLastError(L"error getting DC to find DPI");
-		return NULL;
+		std::abort();		// an HWND render target cannot be created
 	}
 
 	ZeroMemory(&props, sizeof (D2D1_RENDER_TARGET_PROPERTIES));
@@ -66,7 +67,7 @@ ID2D1HwndRenderTarget *makeHWNDRenderTarget(HWND hwnd)
 		&rt);
 	if (hr != S_OK) {
 		logHRESULT(L"error creating HWND render target", hr);
-		return NULL;
+		std::abort();		// retrying on every window message would spin
 	}
 	return rt;
 }
@@ -290,23 +291,23 @@ static ID2D1Brush *makeBrush(uiDrawBrush *b, ID2D1RenderTarget *rt)
 // - Save takes another reference; Restore transfers that saved reference to the context
 // uiDrawFreePath() can therefore release the source path independently of the clip
 
-ID2D1Layer *uiprivApplyClip(uiDrawContext *c)
+BOOL uiprivApplyClip(uiDrawContext *c, ID2D1Layer **layer)
 {
-	ID2D1Layer *layer = NULL;
 	D2D1_LAYER_PARAMETERS params;
 	D2D1_MATRIX_3X2_F savedTransform, identity;
 	HRESULT hr;
 
 	// if no clip, don't do anything
+	*layer = NULL;
 	if (c->currentClip == NULL)
-		return NULL;
+		return TRUE;
 
 	// create a layer for clipping
 	// we have to explicitly make the layer because we're still targeting Windows 7
-	hr = c->rt->CreateLayer(NULL, &layer);
+	hr = c->rt->CreateLayer(NULL, layer);
 	if (hr != S_OK) {
 		logHRESULT(L"error creating clip layer", hr);
-		return NULL;
+		return FALSE;
 	}
 
 	// apply it as the clip
@@ -335,11 +336,10 @@ ID2D1Layer *uiprivApplyClip(uiDrawContext *c)
 	identity._11 = 1;
 	identity._22 = 1;
 	c->rt->SetTransform(&identity);
-	c->rt->PushLayer(&params, layer);
+	c->rt->PushLayer(&params, *layer);
 	c->rt->SetTransform(&savedTransform);
 
-	// return the layer so it can be freed later
-	return layer;
+	return TRUE;
 }
 
 void uiprivUnapplyClip(uiDrawContext *c, ID2D1Layer *layer)
@@ -425,7 +425,11 @@ void uiDrawStroke(uiDrawContext *c, uiDrawPath *p, uiDrawBrush *b, uiDrawStrokeP
 	if (sp->NumDashes != 0)
 		uiprivFree(dashes);
 
-	cliplayer = uiprivApplyClip(c);
+	if (!uiprivApplyClip(c, &cliplayer)) {
+		style->Release();
+		brush->Release();
+		return;
+	}
 	c->rt->DrawGeometry(
 		pathGeometry(p),
 		brush,
@@ -445,7 +449,10 @@ void uiDrawFill(uiDrawContext *c, uiDrawPath *p, uiDrawBrush *b)
 	brush = makeBrush(b, c->rt);
 	if (brush == NULL)
 		return;
-	cliplayer = uiprivApplyClip(c);
+	if (!uiprivApplyClip(c, &cliplayer)) {
+		brush->Release();
+		return;
+	}
 	c->rt->FillGeometry(
 		pathGeometry(p),
 		brush,
@@ -479,7 +486,7 @@ void uiDrawClip(uiDrawContext *c, uiDrawPath *path)
 		&transform, &transformedPath);
 	if (hr != S_OK) {
 		logHRESULT(L"error transforming clip geometry", hr);
-		return;
+		std::abort();		// drawing without the requested clip is unsafe
 	}
 	// Store the clip in target coordinates at the moment it is set.
 	if (c->currentClip == NULL) {
@@ -493,14 +500,14 @@ void uiDrawClip(uiDrawContext *c, uiDrawPath *path)
 	if (hr != S_OK) {
 		logHRESULT(L"error creating new path", hr);
 		transformedPath->Release();
-		return;
+		std::abort();
 	}
 	hr = newPath->Open(&newSink);
 	if (hr != S_OK) {
 		logHRESULT(L"error opening new path", hr);
 		newPath->Release();
 		transformedPath->Release();
-		return;
+		std::abort();
 	}
 	hr = c->currentClip->CombineWithGeometry(
 		transformedPath,
@@ -514,7 +521,7 @@ void uiDrawClip(uiDrawContext *c, uiDrawPath *path)
 		newSink->Release();
 		newPath->Release();
 		transformedPath->Release();
-		return;
+		std::abort();
 	}
 	transformedPath->Release();
 	hr = newSink->Close();
@@ -522,7 +529,7 @@ void uiDrawClip(uiDrawContext *c, uiDrawPath *path)
 	if (hr != S_OK) {
 		logHRESULT(L"error closing new path", hr);
 		newPath->Release();
-		return;
+		std::abort();
 	}
 
 	// okay we have the new clip; we just need to replace the old one with it
@@ -545,7 +552,8 @@ void uiDrawSave(uiDrawContext *c)
 		&(state.dsb));
 	if (hr != S_OK) {
 		logHRESULT(L"error creating drawing state block", hr);
-		return;
+		// A later balanced Restore would otherwise pop an empty stack.
+		std::abort();
 	}
 	c->rt->SaveDrawingState(state.dsb);
 
