@@ -21,6 +21,24 @@ static void defaultOnSelected(uiTab *t, void *data)
 	// do nothing
 }
 
+static GtkWidget *selectedPage(uiTab *t)
+{
+	int selected;
+
+	selected = gtk_notebook_get_current_page(t->notebook);
+	if (selected < 0)
+		return NULL;
+	return gtk_notebook_get_nth_page(t->notebook, selected);
+}
+
+static void sendSelected(uiTab *t)
+{
+	if (!uiprivUserCallbackEnter(uiControl(t)))
+		return;
+	(*(t->onSelected))(t, t->onSelectedData);
+	uiprivUserCallbackLeave();
+}
+
 static void uiTabDestroy(uiControl *c)
 {
 	uiTab *t = uiTab(c);
@@ -46,6 +64,12 @@ void uiTabAppend(uiTab *t, const char *name, uiControl *child)
 void uiTabInsertAt(uiTab *t, const char *name, int n, uiControl *child)
 {
 	uiprivChild *page;
+	GtkWidget *previous;
+
+	previous = selectedPage(t);
+	// GTK can select a page synchronously while it is added or reordered.
+	// Notify only after the native pages and our array agree again.
+	g_signal_handler_block(t->notebook, t->onSelectedSignal);
 
 	// this will create a tab, because of gtk_container_add()
 	page = uiprivNewChildWithBox(child, uiControl(t), t->container, 0);
@@ -54,16 +78,26 @@ void uiTabInsertAt(uiTab *t, const char *name, int n, uiControl *child)
 	gtk_notebook_reorder_child(t->notebook, uiprivChildBox(page), n);
 
 	g_array_insert_val(t->pages, n, page);
+	g_signal_handler_unblock(t->notebook, t->onSelectedSignal);
+	if (selectedPage(t) != previous)
+		sendSelected(t);
 }
 
 void uiTabDelete(uiTab *t, int n)
 {
 	uiprivChild *page;
+	GtkWidget *previous;
 
+	previous = selectedPage(t);
 	page = g_array_index(t->pages, uiprivChild *, n);
+	// A shifted index is not a new selection; compare page identity below.
+	g_signal_handler_block(t->notebook, t->onSelectedSignal);
 	// this will remove the tab, because gtk_widget_destroy() calls gtk_container_remove()
 	uiprivChildRemove(page);
 	g_array_remove_index(t->pages, n);
+	g_signal_handler_unblock(t->notebook, t->onSelectedSignal);
+	if (selectedPage(t) != previous)
+		sendSelected(t);
 }
 
 int uiTabNumPages(uiTab *t)
@@ -91,10 +125,8 @@ void uiTabSetMargined(uiTab *t, int n, int margined)
 static void onSelected(GtkNotebook* notebook, GtkWidget *page, guint index, gpointer data)
 {
 	uiTab *t = uiTab(data);
-	if (!uiprivUserCallbackEnter(uiControl(t)))
-		return;
-	(*(t->onSelected))(t, t->onSelectedData);
-	uiprivUserCallbackLeave();
+
+	sendSelected(t);
 }
 
 int uiTabSelected(uiTab *t)
