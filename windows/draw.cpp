@@ -605,7 +605,7 @@ void uiDrawImage(uiDrawContext *c, const uiImage *img, double x, double y, doubl
 	IWICBitmap *bitmap;
 	ID2D1Bitmap *d2dBitmap;
 	D2D1_RECT_F destRect;
-	ID2D1Layer *cliplayer;
+	ID2D1Layer *cliplayer = NULL;
 	FLOAT dpiX = 96.0f, dpiY = 96.0f;
 	int targetWidth, targetHeight;
 	double right, bottom;
@@ -654,7 +654,10 @@ void uiDrawImage(uiDrawContext *c, const uiImage *img, double x, double y, doubl
 		return;
 	}
 
-	cliplayer = uiprivApplyClip(c);
+	if (!uiprivApplyClip(c, &cliplayer)) {
+		d2dBitmap->Release();
+		return;
+	}
 
 	c->rt->DrawBitmap(d2dBitmap, &destRect, 1.0f,
 	                  D2D1_BITMAP_INTERPOLATION_MODE_LINEAR, NULL);
