@@ -1,5 +1,6 @@
 // 14 may 2015
 #include "uipriv_windows.hpp"
+#include <cstdlib>
 
 // The utility window is a special window that performs certain tasks internal to libui.
 // It is not a message-only window, and it is always hidden and disabled.
@@ -14,6 +15,25 @@
 #define utilWindowClass L"libui_utilWindowClass"
 
 HWND utilWindow;
+
+// Timer IDs for uiTimer() are allocated pointers, so 1 is reserved for
+// retrying a deferred-destruction notification when PostMessageW() fails.
+static const UINT_PTR destroyFlushRetryTimerID = 1;
+static uintptr_t destroyFlushRetryID;
+
+#ifdef _UI_STATIC
+static BOOL failNextDestroyPostForTests;
+
+extern "C" void uiprivWindowsFailNextDestroyPostForTests(void)
+{
+	failNextDestroyPostForTests = TRUE;
+}
+
+extern "C" void uiprivWindowsDeliverDestroyRetryTimerForTests(void)
+{
+	SendMessageW(utilWindow, WM_TIMER, destroyFlushRetryTimerID, 0);
+}
+#endif
 
 static LRESULT CALLBACK utilWindowWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
@@ -45,6 +65,16 @@ static LRESULT CALLBACK utilWindowWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, L
 		uiprivControlDestroyFlush((uintptr_t) wParam);
 		return 0;
 	case WM_TIMER:
+		if (wParam == destroyFlushRetryTimerID) {
+			uintptr_t id = destroyFlushRetryID;
+			if (id == 0)
+				return 0;
+			destroyFlushRetryID = 0;
+			if (KillTimer(utilWindow, destroyFlushRetryTimerID) == 0)
+				logLastError(L"error stopping deferred destruction retry timer");
+			uiprivControlDestroyFlush(id);
+			return 0;
+		}
 		timer = (uiprivTimer *) wParam;
 		if (!uiprivTimerBeginCallback(timer))
 			return 0;
@@ -64,8 +94,41 @@ static LRESULT CALLBACK utilWindowWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, L
 
 void uiprivScheduleControlDestroyFlush(uintptr_t id)
 {
-	if (PostMessageW(utilWindow, msgControlDestroyFlush, (WPARAM) id, 0) == 0)
+	BOOL posted;
+
+#ifdef _UI_STATIC
+	if (failNextDestroyPostForTests) {
+		failNextDestroyPostForTests = FALSE;
+		SetLastError(ERROR_NOT_ENOUGH_QUOTA);
+		posted = FALSE;
+	} else
+#endif
+		posted = PostMessageW(utilWindow, msgControlDestroyFlush, (WPARAM) id, 0);
+	if (!posted) {
 		logLastError(L"error queueing deferred control destruction");
+		// WM_TIMER is synthesized by the message loop rather than using a
+		// posted-message slot. It can recover from a full posted queue.
+		destroyFlushRetryID = id;
+		if (SetTimer(utilWindow, destroyFlushRetryTimerID,
+			USER_TIMER_MINIMUM, NULL) == 0) {
+			logLastError(L"error scheduling deferred destruction retry timer");
+			std::abort();
+		}
+	}
+}
+
+void uiprivFlushFailedControlDestroyPost(void)
+{
+	uintptr_t id = destroyFlushRetryID;
+
+	if (id == 0)
+		return;
+	if (uiprivControlDestroyFlushAtMainLoopBoundary() &&
+		destroyFlushRetryID == id) {
+		destroyFlushRetryID = 0;
+		if (KillTimer(utilWindow, destroyFlushRetryTimerID) == 0)
+			logLastError(L"error stopping deferred destruction retry timer");
+	}
 }
 
 const char *initUtilWindow(HICON hDefaultIcon, HCURSOR hDefaultCursor)
@@ -98,6 +161,11 @@ const char *initUtilWindow(HICON hDefaultIcon, HCURSOR hDefaultCursor)
 
 void uninitUtilWindow(void)
 {
+	if (destroyFlushRetryID != 0) {
+		destroyFlushRetryID = 0;
+		if (KillTimer(utilWindow, destroyFlushRetryTimerID) == 0)
+			logLastError(L"error stopping deferred destruction retry timer");
+	}
 	if (DestroyWindow(utilWindow) == 0)
 		logLastError(L"error destroying utility window");
 	if (UnregisterClass(utilWindowClass, hInstance) == 0)

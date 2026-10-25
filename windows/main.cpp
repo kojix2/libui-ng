@@ -1,5 +1,6 @@
 // 6 april 2015
 #include "uipriv_windows.hpp"
+#include <cstdlib>
 
 static HHOOK filter;
 
@@ -65,7 +66,7 @@ static int waitMessage(MSG *msg)
 	res = GetMessageW(msg, NULL, 0, 0);
 	if (res < 0) {
 		logLastError(L"error calling GetMessage()");
-		return 0;		// bail out on error
+		std::abort();		// uiMainStep() cannot distinguish this from WM_QUIT
 	}
 	return res != 0;		// returns false on WM_QUIT
 }
@@ -97,6 +98,10 @@ int uiMainStep(int wait)
 {
 	MSG msg;
 
+	// A full posted-message queue may have forced deferred destruction onto
+	// a timer. This is also a safe point to flush it before the next wait.
+	uiprivFlushFailedControlDestroyPost();
+
 	if (wait) {
 		if (!waitMessage(&msg)) {
 			uiprivControlDestroyMainLoopExit();
@@ -126,9 +131,12 @@ void uiQuit(void)
 
 void uiQueueMain(void (*f)(void *data), void *data)
 {
-	if (PostMessageW(utilWindow, msgQueued, (WPARAM) f, (LPARAM) data) == 0)
-		// LONGTERM this is likely not safe to call across threads (allocates memory)
+	if (PostMessageW(utilWindow, msgQueued, (WPARAM) f, (LPARAM) data) == 0) {
 		logLastError(L"error queueing function to run on main thread");
+		// There is no error return in uiQueueMain(), and returning here would
+		// silently discard the caller's callback and data.
+		std::abort();
+	}
 }
 
 static std::map<uiprivTimer *, bool> timers;
@@ -164,8 +172,8 @@ void uiTimer(int milliseconds, int (*f)(void *data), void *data)
 	// note that timer IDs are pointer sized precisely so we can use them as timer IDs; see https://blogs.msdn.microsoft.com/oldnewthing/20150924-00/?p=91521
 	if (SetTimer(utilWindow, (UINT_PTR) timer, milliseconds, NULL) == 0) {
 		logLastError(L"error calling SetTimer() in uiTimer()");
-		uiprivFree(timer);
-		return;
+		// uiTimer() has no way to report that the callback was not installed.
+		std::abort();
 	}
 	timers[timer] = false;
 }

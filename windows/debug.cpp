@@ -1,7 +1,7 @@
 // 25 february 2015
 #include "uipriv_windows.hpp"
-
-// LONGTERM disable logging and stopping on no-debug builds
+#include <cstdlib>
+#include <strsafe.h>
 
 static void printDebug(const WCHAR *msg)
 {
@@ -14,23 +14,21 @@ static void printDebug(const WCHAR *msg)
 HRESULT _logLastError(debugargs, const WCHAR *s)
 {
 	DWORD le;
-	WCHAR *msg;
-	WCHAR *formatted;
-	BOOL useFormatted;
+	WCHAR msg[2048];
+	WCHAR formatted[512];
 
 	le = GetLastError();
 
-	useFormatted = FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, le, 0, (LPWSTR) (&formatted), 0, NULL) != 0;
-	if (!useFormatted)
-		formatted = (WCHAR *) L"\n";
-	msg = strf(L"[libui] %s:%s:%s() %s: GetLastError() == %I32u %s",
+	// Logging can run on a uiQueueMain() producer thread. Keep it independent
+	// of libui's unsynchronized allocation tracker.
+	if (FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+		NULL, le, 0, formatted, ARRAYSIZE(formatted), NULL) == 0)
+		StringCchCopyW(formatted, ARRAYSIZE(formatted), L"(message unavailable)\n");
+	StringCchPrintfW(msg, ARRAYSIZE(msg),
+		L"[libui] %s:%s:%s() %s: GetLastError() == %lu %s",
 		file, line, func,
 		s, le, formatted);
-	if (useFormatted)
-		LocalFree(formatted);		// ignore error
 	printDebug(msg);
-	uiprivFree(msg);
-	DebugBreak();
 
 	SetLastError(le);
 	// a function does not have to set a last error
@@ -43,24 +41,41 @@ HRESULT _logLastError(debugargs, const WCHAR *s)
 
 HRESULT _logHRESULT(debugargs, const WCHAR *s, HRESULT hr)
 {
-	WCHAR *msg;
-	WCHAR *formatted;
-	BOOL useFormatted;
+	DWORD le;
+	WCHAR msg[2048];
+	WCHAR formatted[512];
 
-	useFormatted = FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, hr, 0, (LPWSTR) (&formatted), 0, NULL) != 0;
-	if (!useFormatted)
-		formatted = (WCHAR *) L"\n";
-	msg = strf(L"[libui] %s:%s:%s() %s: HRESULT == 0x%08I32X %s",
+	le = GetLastError();
+	if (FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+		NULL, hr, 0, formatted, ARRAYSIZE(formatted), NULL) == 0)
+		StringCchCopyW(formatted, ARRAYSIZE(formatted), L"(message unavailable)\n");
+	StringCchPrintfW(msg, ARRAYSIZE(msg),
+		L"[libui] %s:%s:%s() %s: HRESULT == 0x%08lX %s",
 		file, line, func,
-		s, hr, formatted);
-	if (useFormatted)
-		LocalFree(formatted);		// ignore error
+		s, (unsigned long) hr, formatted);
 	printDebug(msg);
-	uiprivFree(msg);
-	DebugBreak();
 
+	SetLastError(le);
 	return hr;
 }
+
+#ifdef _UI_STATIC
+extern "C" HRESULT uiprivWindowsLogLastErrorForTests(DWORD error, DWORD *after)
+{
+	SetLastError(error);
+	HRESULT hr = _logLastError(L"test", L"1", L"test", L"injected failure");
+	*after = GetLastError();
+	return hr;
+}
+
+extern "C" HRESULT uiprivWindowsLogHRESULTForTests(HRESULT error, DWORD *after)
+{
+	SetLastError(ERROR_ACCESS_DENIED);
+	HRESULT hr = _logHRESULT(L"test", L"1", L"test", L"injected failure", error);
+	*after = GetLastError();
+	return hr;
+}
+#endif
 
 void uiprivRealBug(const char *file, const char *line, const char *func, const char *prefix, const char *format, va_list ap)
 {
@@ -83,5 +98,9 @@ void uiprivRealBug(const char *file, const char *line, const char *func, const c
 	printDebug(final);
 	uiprivFree(final);
 
-	DebugBreak();
+	// An explicit API or implementation invariant violation is fatal. A
+	// debugger may inspect it first; continuing must not return to bad state.
+	if (IsDebuggerPresent())
+		DebugBreak();
+	std::abort();
 }

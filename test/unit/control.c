@@ -279,6 +279,28 @@ static void scheduledFlushChecksIDAndWaitsForOutermostLeave(void **state)
 	assert_int_equal(destroyCount, 1);
 }
 
+static void mainLoopBoundaryOnlyFlushesOutsideCallback(void **state)
+{
+	int destroyCount = 0;
+	testControl *tc = newTestControl(&destroyCount);
+	uintptr_t id;
+
+	uiprivUserCallbackEnter(NULL);
+	uiControlDestroy(uiControl(tc));
+	uiprivUserCallbackLeave();
+	id = scheduledID;
+	uiprivUserCallbackEnter(NULL);
+	assert_int_equal(uiprivControlDestroyFlushAtMainLoopBoundary(), 0);
+	assert_int_equal(destroyCount, 0);
+	uiprivUserCallbackLeave();
+	assert_int_equal(uiprivControlDestroyFlushAtMainLoopBoundary(), 1);
+	assert_int_equal(destroyCount, 1);
+	// A previously scheduled notification cannot run the destructor twice.
+	uiprivControlDestroyFlush(id);
+	assert_int_equal(uiprivControlDestroyFlushAtMainLoopBoundary(), 0);
+	assert_int_equal(destroyCount, 1);
+}
+
 static void destroyedHandlerRunsAtFree(void **state)
 {
 	int destroyCount = 0;
@@ -489,6 +511,7 @@ int controlRunUnitTests(void)
 		cmocka_unit_test(pendingAncestorMakesChildPending),
 		cmocka_unit_test(callbackDuringFlushAppendsDestroy),
 		cmocka_unit_test(scheduledFlushChecksIDAndWaitsForOutermostLeave),
+		cmocka_unit_test(mainLoopBoundaryOnlyFlushesOutsideCallback),
 		cmocka_unit_test(destroyedHandlerRunsAtFree),
 		cmocka_unit_test(parentDestroyNotifiesForChild),
 		cmocka_unit_test(destroyedHandlerCanBeReplacedAndRemoved),

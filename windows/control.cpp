@@ -1,5 +1,6 @@
 // 16 august 2015
 #include "uipriv_windows.hpp"
+#include <cstdlib>
 
 // choose a value distinct from uiWindowSignature
 #define uiWindowsControlSignature 0x4D53576E
@@ -86,7 +87,8 @@ HWND uiWindowsEnsureCreateControlHWND(DWORD dwExStyle, LPCWSTR lpClassName, LPCW
 		utilWindow, NULL, instance, lpParam);
 	if (hwnd == NULL) {
 		logLastError(L"error creating window");
-		// TODO return a decoy window
+		// Callers require a real HWND and have no error return to propagate.
+		std::abort();
 	}
 	if (useStandardControlFont)
 		SendMessageW(hwnd, WM_SETFONT, (WPARAM) hMessageFont, (LPARAM) TRUE);

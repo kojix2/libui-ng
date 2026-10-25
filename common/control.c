@@ -170,7 +170,7 @@ void uiprivUserCallbackLeave(void)
 
 void uiprivControlDestroyFlush(uintptr_t id)
 {
-	if (id != pendingControlDestroyFlushID)
+	if (id == 0 || id != pendingControlDestroyFlushID)
 		return;
 	pendingControlDestroyFlushID = 0;
 	if (userCallbackDepth != 0)
@@ -186,6 +186,15 @@ void uiprivControlDestroyFlushPending(void)
 	// Invalidate an already queued backend flush before flushing synchronously.
 	pendingControlDestroyFlushID = 0;
 	flushPendingControlDestroys();
+}
+
+int uiprivControlDestroyFlushAtMainLoopBoundary(void)
+{
+	if (userCallbackDepth != 0 || flushingPendingControlDestroys ||
+		pendingDestroys == NULL)
+		return 0;
+	uiprivControlDestroyFlushPending();
+	return 1;
 }
 
 void uiprivControlDestroyMainLoopExit(void)

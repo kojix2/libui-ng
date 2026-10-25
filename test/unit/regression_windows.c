@@ -6,6 +6,75 @@
 #include <stdlib.h>
 #include <string.h>
 #include "../../ui.h"
+#ifdef _UI_STATIC
+#include "../../common/uipriv.h"
+
+extern void uiprivWindowsFailNextDestroyPostForTests(void);
+extern void uiprivWindowsDeliverDestroyRetryTimerForTests(void);
+extern HRESULT uiprivWindowsLogLastErrorForTests(DWORD error, DWORD *after);
+extern HRESULT uiprivWindowsLogHRESULTForTests(HRESULT error, DWORD *after);
+
+static void errorLogsReturnWithoutBreaking(void **state)
+{
+	DWORD after;
+
+	assert_int_equal(uiprivWindowsLogLastErrorForTests(ERROR_ACCESS_DENIED, &after),
+		HRESULT_FROM_WIN32(ERROR_ACCESS_DENIED));
+	assert_int_equal(after, ERROR_ACCESS_DENIED);
+	assert_int_equal(uiprivWindowsLogLastErrorForTests(ERROR_SUCCESS, &after), E_FAIL);
+	assert_int_equal(after, ERROR_SUCCESS);
+	assert_int_equal(uiprivWindowsLogHRESULTForTests(E_INVALIDARG, &after), E_INVALIDARG);
+	assert_int_equal(after, ERROR_ACCESS_DENIED);
+}
+
+static void countDestroyedControl(uiControl *c, void *data)
+{
+	(*(int *) data)++;
+}
+
+static void deferredDestroySurvivesFailedPost(void **state)
+{
+	uiInitOptions options = {0};
+	uiButton *button;
+	int destroyed = 0;
+
+	assert_null(uiInit(&options));
+	button = uiNewButton("boundary retry");
+	uiControlOnDestroyed(uiControl(button), countDestroyedControl, &destroyed);
+	uiprivWindowsFailNextDestroyPostForTests();
+	uiprivUserCallbackEnter(NULL);
+	uiControlDestroy(uiControl(button));
+	uiprivUserCallbackLeave();
+	assert_int_equal(destroyed, 0);
+	uiMainStep(0);
+	assert_int_equal(destroyed, 1);
+	uiUninit();
+}
+
+static void deferredDestroyTimerWaitsForCallback(void **state)
+{
+	uiInitOptions options = {0};
+	uiButton *button;
+	int destroyed = 0;
+	int i;
+
+	assert_null(uiInit(&options));
+	button = uiNewButton("timer retry");
+	uiControlOnDestroyed(uiControl(button), countDestroyedControl, &destroyed);
+	uiprivWindowsFailNextDestroyPostForTests();
+	uiprivUserCallbackEnter(NULL);
+	uiControlDestroy(uiControl(button));
+	uiprivUserCallbackLeave();
+	uiprivUserCallbackEnter(NULL);
+	uiprivWindowsDeliverDestroyRetryTimerForTests();
+	assert_int_equal(destroyed, 0);
+	uiprivUserCallbackLeave();
+	for (i = 0; i < 100 && destroyed == 0; i++)
+		uiMainStep(0);
+	assert_int_equal(destroyed, 1);
+	uiUninit();
+}
+#endif
 
 struct tableState {
 	uiTableModelHandler mh;
@@ -672,6 +741,11 @@ static void unwrappedAlignedTextIsVisible(void **data)
 int main(void)
 {
 	const struct CMUnitTest tests[] = {
+#ifdef _UI_STATIC
+		cmocka_unit_test(errorLogsReturnWithoutBreaking),
+		cmocka_unit_test(deferredDestroySurvivesFailedPost),
+		cmocka_unit_test(deferredDestroyTimerWaitsForCallback),
+#endif
 		cmocka_unit_test_setup_teardown(editFollowsInsertedRow, tableSetup, tableTeardown),
 		cmocka_unit_test_setup_teardown(editSetterRunsOnceUnderResizeReentry, tableSetup, tableTeardown),
 		cmocka_unit_test_setup_teardown(editFollowsDeletedEarlierRow, tableSetup, tableTeardown),

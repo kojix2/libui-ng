@@ -90,6 +90,7 @@ extern uiInitOptions options;
 extern HWND utilWindow;
 extern const char *initUtilWindow(HICON hDefaultIcon, HCURSOR hDefaultCursor);
 extern void uninitUtilWindow(void);
+extern void uiprivFlushFailedControlDestroyPost(void);
 
 // main.cpp
 typedef struct uiprivTimer uiprivTimer;

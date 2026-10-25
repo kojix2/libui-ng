@@ -1,18 +1,26 @@
 // 6 april 2015
 #include "uipriv_windows.hpp"
+#include <cstdlib>
 
 void uiWindowsEnsureDestroyWindow(HWND hwnd)
 {
-	if (DestroyWindow(hwnd) == 0)
+	if (DestroyWindow(hwnd) == 0) {
 		logLastError(L"error destroying window");
+		// The control wrapper will be freed after this call.
+		std::abort();
+	}
 }
 
 void uiWindowsEnsureSetParentHWND(HWND hwnd, HWND parent)
 {
 	if (parent == NULL)
 		parent = utilWindow;
-	if (SetParent(hwnd, parent) == 0)
+	// A NULL return can also mean that the window had no previous parent.
+	SetLastError(ERROR_SUCCESS);
+	if (SetParent(hwnd, parent) == NULL && GetLastError() != ERROR_SUCCESS) {
 		logLastError(L"error setting window parent");
+		std::abort();
+	}
 }
 
 void uiWindowsEnsureAssignControlIDZOrder(HWND hwnd, LONG_PTR *controlID, HWND *insertAfter)

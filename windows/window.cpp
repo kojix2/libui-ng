@@ -1,5 +1,6 @@
 // 27 april 2015
 #include "uipriv_windows.hpp"
+#include <cstdlib>
 
 #define windowClass L"libui_uiWindowClass"
 
@@ -619,8 +620,10 @@ uiWindow *uiNewWindow(const char *title, int width, int height, int hasMenubar)
 		// even if it doesn't, we're adjusting it later
 		width, height,
 		NULL, NULL, hInstance, w);
-	if (w->hwnd == NULL)
+	if (w->hwnd == NULL) {
 		logLastError(L"error creating window");
+		std::abort();
+	}
 	uiprivFree(wtitle);
 
 	if (hasMenubar) {

@@ -52,6 +52,9 @@ extern int uiprivUserCallbackDeferFree(void *, void (*)(void *));
 extern int uiprivControlDestroyPending(uiControl *);
 extern void uiprivControlDestroyFlush(uintptr_t);
 extern void uiprivControlDestroyFlushPending(void);
+// At a native message-loop boundary, flush if no user callback is active.
+// Returns nonzero when pending work was flushed.
+extern int uiprivControlDestroyFlushAtMainLoopBoundary(void);
 // Completes pending work when an outer event loop stops. A nested loop that
 // returns inside a user callback leaves the work for that callback's Leave().
 extern void uiprivControlDestroyMainLoopExit(void);
