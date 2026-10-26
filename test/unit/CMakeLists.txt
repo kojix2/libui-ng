@@ -102,6 +102,8 @@ if(APPLE)
 	if(NOT LIBUI_TEST_APPKIT_FRAMEWORK)
 		message(FATAL_ERROR "AppKit is required for Darwin layout tests")
 	endif()
+	target_sources(unit PRIVATE area_darwin.m)
+	target_link_libraries(unit PRIVATE ${LIBUI_TEST_APPKIT_FRAMEWORK})
 	libui_add_test(layout-darwin layout_darwin.m)
 	set_tests_properties(layout-darwin PROPERTIES LABELS "backend;gui;darwin;${unit_linkage}")
 	target_link_libraries(layout-darwin PRIVATE libui::ui cmocka::cmocka
