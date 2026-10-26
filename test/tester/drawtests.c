@@ -1754,6 +1754,39 @@ static void drawCSRoundRect(uiAreaDrawParams *p)
 	uiDrawFreePath(path);
 }
 
+static void drawRoundedRectPrimitive(uiAreaDrawParams *p)
+{
+	uiDrawPath *path;
+	uiDrawBrush brush;
+	uiDrawStrokeParams sp;
+
+	path = uiDrawNewPath(uiDrawFillModeWinding);
+	uiDrawPathAddRoundedRectangle(path, 30, 30, 160, 90, 0);
+	uiDrawPathAddRoundedRectangle(path, 230, 30, 160, 90, 24);
+	uiDrawPathAddRoundedRectangle(path, 30, 170, 200, 70, 100);
+	uiDrawPathAddRectangle(path, 270, 170, 70, 70);
+	uiDrawPathEnd(path);
+
+	memset(&brush, 0, sizeof (brush));
+	brush.Type = uiDrawBrushTypeSolid;
+	brush.R = 0.45;
+	brush.G = 0.7;
+	brush.B = 1;
+	brush.A = 1;
+	uiDrawFill(p->Context, path, &brush);
+
+	memset(&sp, 0, sizeof (sp));
+	sp.Cap = uiDrawLineCapFlat;
+	sp.Join = uiDrawLineJoinMiter;
+	sp.Thickness = 3;
+	sp.MiterLimit = uiDrawDefaultMiterLimit;
+	brush.R = 0.1;
+	brush.G = 0.2;
+	brush.B = 0.5;
+	uiDrawStroke(p->Context, path, &brush, &sp);
+	uiDrawFreePath(path);
+}
+
 // set line cap
 static void drawCSSetLineCap(uiAreaDrawParams *p)
 {
@@ -1931,6 +1964,7 @@ static const struct drawtest tests[] = {
 	{ "cairo samples: fill style", drawCSFillStyle },
 	{ "cairo samples: multi segment caps", drawCSMultiCaps },
 	{ "cairo samples: rounded rectangle", drawCSRoundRect },
+	{ "Rounded rectangle primitive", drawRoundedRectPrimitive },
 	{ "cairo samples: set line cap", drawCSSetLineCap },
 	{ "cairo samples: set line join", drawCSSetLineJoin },
 	{ "Quartz 2D PG: Creating a Window Graphics Context in Mac OS X", drawQ2DCreateWindowGC },
