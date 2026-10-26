@@ -50,6 +50,7 @@ int main(int argc, char **argv)
 		{ "toolbar", toolbarRunUnitTests },
 		{ "imageview", imageViewRunUnitTests },
 		{ "tooltip", tooltipRunUnitTests },
+		{ "focus", focusRunUnitTests },
 	};
 
 	/* Preserve the full runner and its order; optional names select components. */

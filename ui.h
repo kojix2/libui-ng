@@ -297,6 +297,34 @@ _UI_EXTERN void uiControlEnable(uiControl *c);
 _UI_EXTERN void uiControlDisable(uiControl *c);
 
 /**
+ * Requests keyboard focus for a control.
+ *
+ * Requires a supported input control attached to a visible window, with the
+ * control and its ancestors visible and enabled. Otherwise, or if destruction
+ * is pending, does nothing. Existing internal focus is preserved.
+ * Native focus rules may reject the request; check with uiControlFocused().
+ *
+ * @param c A non-NULL, live control.
+ * @note Must be called on the main UI thread.
+ * @memberof uiControl
+ */
+_UI_EXTERN void uiControlSetFocus(uiControl *c);
+
+/**
+ * Returns whether the control owns keyboard focus.
+ *
+ * Internal widgets count as part of a composite control; child uiControls do
+ * not. Returns zero if the conditions for uiControlSetFocus() are not met.
+ * Window activation is queried separately with uiWindowFocused().
+ *
+ * @param c A non-NULL, live control.
+ * @returns Nonzero if the control owns focus, zero otherwise.
+ * @note Must be called on the main UI thread.
+ * @memberof uiControl
+ */
+_UI_EXTERN int uiControlFocused(uiControl *c);
+
+/**
  * Overrides a control's minimum layout size.
  *
  * This changes the minimum size requested from the control's parent; it does

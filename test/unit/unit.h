@@ -42,5 +42,6 @@ int tableRunUnitTests(void);
 int toolbarRunUnitTests(void);
 int imageViewRunUnitTests(void);
 int tooltipRunUnitTests(void);
+int focusRunUnitTests(void);
 
 #endif
