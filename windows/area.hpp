@@ -39,6 +39,7 @@ extern void areaUpdateScroll(uiArea *a);
 
 // areaevents.cpp
 extern BOOL areaDoEvents(uiArea *a, UINT uMsg, WPARAM wParam, LPARAM lParam, LRESULT *lResult);
+extern BOOL areaDoWheel(uiArea *a, UINT uMsg, WPARAM wParam, LPARAM lParam, LRESULT *lResult);
 
 // areautil.cpp
 extern void loadAreaSize(uiArea *a, ID2D1RenderTarget *rt, double *width, double *height);

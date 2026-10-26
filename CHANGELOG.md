@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Area wheel and trackpad input now uses the optional `uiAreaHandler.ScrollEvent` callback instead of `uiAreaOnScroll()`. Applications must rebuild and initialize the added handler field; this changes the `uiAreaHandler` ABI.
 - CMake is now the primary build system and provides the `libui::ui` target for source and installed-package consumers.
 - The legacy Meson build definitions and CI workflow have been removed.
 - Release archives are now relocatable CMake/CPack SDKs with standard `include`, `lib`, and `bin` install directories and native toolchain library names.
