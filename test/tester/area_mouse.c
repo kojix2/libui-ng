@@ -3,6 +3,8 @@
 
 static uiArea *area;
 static uiCheckbox *label;
+static uiCheckbox *consumeScroll;
+static uiLabel *scrollInfo;
 
 struct handler {
 	uiAreaHandler ah;
@@ -21,6 +23,16 @@ static void handlerMouseEvent(uiAreaHandler *a, uiArea *area, uiAreaMouseEvent *
 
 	snprintf(pos, sizeof pos, "X %g Y %g", e->X, e->Y);
 	uiCheckboxSetText(label, pos);
+}
+
+static int handlerScroll(uiAreaHandler *ah, uiArea *a, uiAreaScrollEvent *e)
+{
+	char text[128];
+
+	snprintf(text, sizeof text, "Scroll X %g Y %g at %g, %g",
+		e->DeltaX, e->DeltaY, e->X, e->Y);
+	uiLabelSetText(scrollInfo, text);
+	return uiCheckboxChecked(consumeScroll);
 }
 
 static void handlerMouseCrossed(uiAreaHandler *ah, uiArea *a, int left)
@@ -53,6 +65,7 @@ uiGroup *makeAreaMouse(void)
 	handler.ah.MouseCrossed = handlerMouseCrossed;
 	handler.ah.DragBroken = handlerDragBroken;
 	handler.ah.KeyEvent = handlerKeyEvent;
+	handler.ah.ScrollEvent = handlerScroll;
 
 	group = newGroup("Scrolling Mouse Test");
 
@@ -64,6 +77,10 @@ uiGroup *makeAreaMouse(void)
 
 	label = uiNewCheckbox("Move the pointer over the area to see coordinates");
 	uiBoxAppend(box, uiControl(label), 0);
+	scrollInfo = uiNewLabel("Scroll the area to see X and Y deltas");
+	uiBoxAppend(box, uiControl(scrollInfo), 0);
+	consumeScroll = uiNewCheckbox("Handle scroll without moving the area");
+	uiBoxAppend(box, uiControl(consumeScroll), 0);
 
 	return group;
 }

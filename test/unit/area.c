@@ -2,6 +2,19 @@
 
 int dragBrokenCalls;
 
+int scrollCalls;
+int scrollHandled;
+uiAreaScrollEvent lastScroll;
+
+int areaScroll(uiAreaHandler *ah, uiArea *area,
+	uiAreaScrollEvent *event)
+{
+	assert_ptr_equal(ah, &handler);
+	scrollCalls++;
+	lastScroll = *event;
+	return scrollHandled;
+}
+
 static void areaDraw(uiAreaHandler *handler, uiArea *area,
 	uiAreaDrawParams *params)
 {
@@ -27,12 +40,13 @@ static int areaKeyEvent(uiAreaHandler *handler, uiArea *area,
 	return 0;
 }
 
-static uiAreaHandler handler = {
+uiAreaHandler handler = {
 	.Draw = areaDraw,
 	.MouseEvent = areaMouseEvent,
 	.MouseCrossed = areaMouseCrossed,
 	.DragBroken = areaDragBroken,
 	.KeyEvent = areaKeyEvent,
+	.ScrollEvent = areaScroll,
 };
 
 static int areaSetup(void **state)
@@ -91,7 +105,19 @@ int areaRunUnitTests(void)
 		UNIT_TEST_NAMED("scrollingAreaSetSizeAndScroll",
 			scrollingAreaSetSizeAndScroll,
 			scrollingAreaSetup, unitTestTeardown),
+#ifdef __APPLE__
+		UNIT_TEST_NAMED("areaDarwinScrollEvents", areaDarwinScrollEvents,
+			areaSetup, unitTestTeardownHidden),
+		UNIT_TEST_NAMED("scrollingAreaDarwinScrollEvents", scrollingAreaDarwinScrollEvents,
+			scrollingAreaSetup, unitTestTeardownHidden),
+		UNIT_TEST_NAMED("areaDarwinScrollDestroysWindow", areaDarwinScrollDestroysWindow,
+			scrollingAreaSetup, unitTestTeardownHidden),
+#endif
 #if !defined(_WIN32) && !defined(__APPLE__)
+		UNIT_TEST_NAMED("areaScrollEvents", areaScrollEvents,
+			areaSetup, unitTestTeardown),
+		UNIT_TEST_NAMED("scrollingAreaScrollEvents", scrollingAreaScrollEvents,
+			scrollingAreaSetup, unitTestTeardown),
 		UNIT_TEST_NAMED("scrollingAreaScrollAfterSetSize",
 			scrollingAreaScrollAfterSetSize,
 			scrollingAreaSetup, unitTestTeardownHidden),
