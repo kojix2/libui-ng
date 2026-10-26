@@ -2295,6 +2295,7 @@ typedef struct uiArea uiArea;
 typedef struct uiAreaHandler uiAreaHandler;
 typedef struct uiAreaDrawParams uiAreaDrawParams;
 typedef struct uiAreaMouseEvent uiAreaMouseEvent;
+typedef struct uiAreaScrollEvent uiAreaScrollEvent;
 typedef struct uiAreaKeyEvent uiAreaKeyEvent;
 
 typedef struct uiDrawContext uiDrawContext;
@@ -2310,6 +2311,8 @@ struct uiAreaHandler {
 	void (*MouseCrossed)(uiAreaHandler *, uiArea *, int left);
 	void (*DragBroken)(uiAreaHandler *, uiArea *);
 	int (*KeyEvent)(uiAreaHandler *, uiArea *, uiAreaKeyEvent *);
+	// NULL if unused; return nonzero to consume, zero for normal scrolling.
+	int (*ScrollEvent)(uiAreaHandler *, uiArea *, uiAreaScrollEvent *);
 };
 
 // TODO RTL layouts?
@@ -3150,6 +3153,16 @@ struct uiAreaMouseEvent {
 	uiModifiers Modifiers;
 
 	uint64_t Held1To64;
+};
+
+struct uiAreaScrollEvent {
+	// Coordinates in the area's drawing space, including the scroll offset.
+	double X;
+	double Y;
+	// Positive is right/down. Units vary by device/platform; Windows detent = 1.
+	double DeltaX;
+	double DeltaY;
+	uiModifiers Modifiers;
 };
 
 _UI_ENUM(uiExtKey) {
