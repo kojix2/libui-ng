@@ -30,6 +30,12 @@ static void onChanged(uiEntry *e, void *data)
 	printf("onChanged()\n");
 }
 
+static void focusEntry(uiButton *b, void *data)
+{
+	uiControlSetFocus(uiControl(entry));
+	printf("Entry focused: %d\n", uiControlFocused(uiControl(entry)));
+}
+
 static void toggleSpaced(uiCheckbox *c, void *data)
 {
 	setSpaced(uiCheckboxChecked(spaced));
@@ -71,6 +77,9 @@ uiBox *makeProperties(uiWindow *w, uiGroup *group, uiTab *layoutTab)
 	entry = uiNewEntry();
 	uiEntryOnChanged(entry, onChanged, NULL);
 	uiBoxAppend(page, uiControl(entry), 0);
+	getButton = uiNewButton("Focus Entry");
+	uiButtonOnClicked(getButton, focusEntry, NULL);
+	uiBoxAppend(page, uiControl(getButton), 0);
 
 	spaced = uiNewCheckbox("Spaced");
 	uiCheckboxOnToggled(spaced, toggleSpaced, NULL);

@@ -17,7 +17,7 @@ set(unit_sources
 	drawmatrix.c drawimage.c attrstr.c imageview.c window.c box.c group.c
 	editablecombobox.c multilineentry.c
 	separator.c fontdescriptor.c fontbutton.c colorbutton.c form.c area.c image.c table.c tooltip.c
-	toolbar.c
+	toolbar.c focus.c
 )
 list(APPEND unit_sources table_fixture.c table_value.c table_width.c)
 if(NOT BUILD_SHARED_LIBS)

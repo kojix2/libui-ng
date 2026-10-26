@@ -77,6 +77,10 @@ extern void uiprivControlMinimumSizeApply(uiControl *, int *, int *, int);
 extern int uiprivMinimumSizeAdd(int, int);
 extern int uiprivMinimumSizeMultiply(int, int);
 
+// controlfocus.c (platform implementation)
+extern void uiprivControlSetFocus(uiControl *);
+extern int uiprivControlFocused(uiControl *);
+
 // gridutil.c
 // Validates the dimensions of the dense native grid implementations.
 extern int uiprivGridDimensions(int, int, int, int, int *, int *, int *);
