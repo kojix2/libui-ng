@@ -124,13 +124,6 @@ void uiAreaQueueRedrawAll(uiArea *a)
 	invalidateRect(a->hwnd, NULL, FALSE);
 }
 
-void uiAreaOnScroll(uiArea *a,
-	int (*f)(uiArea *, uiAreaScrollEvent *, void *), void *data)
-{
-	a->onScroll = f;
-	a->onScrollData = data;
-}
-
 void uiAreaScrollTo(uiArea *a, double x, double y, double width, double height)
 {
 	if (!a->scrolling)

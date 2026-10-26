@@ -30,7 +30,7 @@ BOOL areaDoWheel(uiArea *a, UINT uMsg, WPARAM wParam, LPARAM lParam, LRESULT *lR
 
 	if (uMsg != WM_MOUSEWHEEL && uMsg != WM_MOUSEHWHEEL)
 		return FALSE;
-	if (a->onScroll == NULL)
+	if (a->ah->ScrollEvent == NULL)
 		return FALSE;
 	point.x = GET_X_LPARAM(lParam);
 	point.y = GET_Y_LPARAM(lParam);
@@ -58,7 +58,7 @@ BOOL areaDoWheel(uiArea *a, UINT uMsg, WPARAM wParam, LPARAM lParam, LRESULT *lR
 		*lResult = 0;
 		return TRUE;
 	}
-	handled = (*(a->onScroll))(a, &se, a->onScrollData);
+	handled = (*(a->ah->ScrollEvent))(a->ah, a, &se);
 	if (uiprivControlDestroyPending(uiControl(a)))
 		handled = 1;
 	uiprivUserCallbackLeave();
