@@ -722,6 +722,9 @@ struct areaState {
 	int queueInDraw;
 	int leaveCalls;
 	int keyCalls;
+	int scrollCalls;
+	int consumeScroll;
+	uiAreaScrollEvent lastScroll;
 	int destroyCallbackRan;
 	int clipTest;
 	uiDrawTextAlign textAlign;
@@ -796,6 +799,16 @@ static int areaKey(uiAreaHandler *handler, uiArea *area, uiAreaKeyEvent *event)
 	return 0;
 }
 
+static int areaScroll(uiAreaHandler *handler, uiArea *area,
+	uiAreaScrollEvent *event)
+{
+	struct areaState *s = (struct areaState *) handler;
+
+	s->scrollCalls++;
+	s->lastScroll = *event;
+	return s->consumeScroll;
+}
+
 static int areaSetup(void **data)
 {
 	uiInitOptions options = {0};
@@ -809,6 +822,7 @@ static int areaSetup(void **data)
 	s->handler.MouseCrossed = areaCrossed;
 	s->handler.DragBroken = areaDragBroken;
 	s->handler.KeyEvent = areaKey;
+	s->handler.ScrollEvent = areaScroll;
 	s->window = uiNewWindow("Windows audit area", 420, 220, 0);
 	s->area = uiNewScrollingArea(&s->handler, 300, 300);
 	uiWindowSetChild(s->window, uiControl(s->area));
@@ -866,6 +880,36 @@ static void horizontalWheelMovesRight(void **data)
 	si.fMask = SIF_POS;
 	assert_true(GetScrollInfo(areaHWND(s), SB_HORZ, &si));
 	assert_true(si.nPos > 0);
+}
+
+static void wheelCallbackCanConsume(void **data)
+{
+	struct areaState *s = *data;
+	SCROLLINFO si = {0};
+
+	uiAreaSetSize(s->area, 1000, 1000);
+	s->consumeScroll = 1;
+	SendMessageW(areaHWND(s), WM_MOUSEHWHEEL, MAKEWPARAM(0, 120), 0);
+	assert_int_equal(s->scrollCalls, 1);
+	assert_true(s->lastScroll.DeltaX == 1 && s->lastScroll.DeltaY == 0);
+	si.cbSize = sizeof si;
+	si.fMask = SIF_POS;
+	assert_true(GetScrollInfo(areaHWND(s), SB_HORZ, &si));
+	assert_int_equal(si.nPos, 0);
+
+	s->consumeScroll = 0;
+	SendMessageW(areaHWND(s), WM_MOUSEHWHEEL, MAKEWPARAM(0, 120), 0);
+	assert_int_equal(s->scrollCalls, 2);
+	assert_true(GetScrollInfo(areaHWND(s), SB_HORZ, &si));
+	assert_true(si.nPos > 0);
+	SendMessageW(areaHWND(s), WM_MOUSEWHEEL,
+		MAKEWPARAM(0, (WORD) (SHORT) -60), 0);
+	assert_int_equal(s->scrollCalls, 3);
+	assert_true(s->lastScroll.DeltaX == 0 && s->lastScroll.DeltaY == 0.5);
+
+	s->handler.ScrollEvent = NULL;
+	SendMessageW(areaHWND(s), WM_MOUSEHWHEEL, MAKEWPARAM(0, 120), 0);
+	assert_int_equal(s->scrollCalls, 3);
 }
 
 static void redrawQueuedInsideDrawSurvives(void **data)
@@ -1038,6 +1082,7 @@ int main(void)
 		cmocka_unit_test(enabledStateAfterReparent),
 		cmocka_unit_test_setup_teardown(mouseTrackingResumesAfterClick, areaSetup, areaTeardown),
 		cmocka_unit_test_setup_teardown(horizontalWheelMovesRight, areaSetup, areaTeardown),
+		cmocka_unit_test_setup_teardown(wheelCallbackCanConsume, areaSetup, areaTeardown),
 		cmocka_unit_test_setup_teardown(redrawQueuedInsideDrawSurvives, areaSetup, areaTeardown),
 		cmocka_unit_test_setup_teardown(largeScrollCoordinatesClamp, areaSetup, areaTeardown),
 		cmocka_unit_test_setup_teardown(pendingDestroySuppressesKey, areaSetup, areaTeardown),

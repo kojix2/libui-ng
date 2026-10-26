@@ -55,6 +55,8 @@ static LRESULT CALLBACK areaWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
 		return 0;
 	}
 
+	if (areaDoWheel(a, uMsg, wParam, lParam, &lResult) != FALSE)
+		return lResult;
 	if (areaDoScroll(a, uMsg, wParam, lParam, &lResult) != FALSE)
 		return lResult;
 	if (areaDoEvents(a, uMsg, wParam, lParam, &lResult) != FALSE)

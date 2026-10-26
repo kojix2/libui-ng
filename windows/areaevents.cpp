@@ -22,6 +22,52 @@ static uiModifiers getModifiers(void)
 	return m;
 }
 
+BOOL areaDoWheel(uiArea *a, UINT uMsg, WPARAM wParam, LPARAM lParam, LRESULT *lResult)
+{
+	uiAreaScrollEvent se;
+	POINT point;
+	int handled;
+
+	if (uMsg != WM_MOUSEWHEEL && uMsg != WM_MOUSEHWHEEL)
+		return FALSE;
+	if (a->ah->ScrollEvent == NULL)
+		return FALSE;
+	point.x = GET_X_LPARAM(lParam);
+	point.y = GET_Y_LPARAM(lParam);
+	if (ScreenToClient(a->hwnd, &point) == 0) {
+		logLastError(L"error locating area wheel event");
+		return FALSE;
+	}
+	se.X = point.x;
+	se.Y = point.y;
+	pixelsToDIP(a, &(se.X), &(se.Y));
+	if (a->scrolling) {
+		se.X += a->hscrollpos;
+		se.Y += a->vscrollpos;
+	}
+	se.DeltaX = 0;
+	se.DeltaY = 0;
+	if (uMsg == WM_MOUSEHWHEEL)
+		se.DeltaX = (double) GET_WHEEL_DELTA_WPARAM(wParam) / WHEEL_DELTA;
+	else
+		se.DeltaY = -(double) GET_WHEEL_DELTA_WPARAM(wParam) / WHEEL_DELTA;
+	if (se.DeltaX == 0 && se.DeltaY == 0)
+		return FALSE;
+	se.Modifiers = getModifiers();
+	if (!uiprivUserCallbackEnter(uiControl(a))) {
+		*lResult = 0;
+		return TRUE;
+	}
+	handled = (*(a->ah->ScrollEvent))(a->ah, a, &se);
+	if (uiprivControlDestroyPending(uiControl(a)))
+		handled = 1;
+	uiprivUserCallbackLeave();
+	if (!handled)
+		return FALSE;
+	*lResult = 0;
+	return TRUE;
+}
+
 /*
 Windows doesn't natively support mouse crossing events.
 
