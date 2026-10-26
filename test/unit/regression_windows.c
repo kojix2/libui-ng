@@ -556,9 +556,10 @@ static int areaKey(uiAreaHandler *handler, uiArea *area, uiAreaKeyEvent *event)
 	return 0;
 }
 
-static int areaScroll(uiArea *area, uiAreaScrollEvent *event, void *data)
+static int areaScroll(uiAreaHandler *handler, uiArea *area,
+	uiAreaScrollEvent *event)
 {
-	struct areaState *s = data;
+	struct areaState *s = (struct areaState *) handler;
 
 	s->scrollCalls++;
 	s->lastScroll = *event;
@@ -578,6 +579,7 @@ static int areaSetup(void **data)
 	s->handler.MouseCrossed = areaCrossed;
 	s->handler.DragBroken = areaDragBroken;
 	s->handler.KeyEvent = areaKey;
+	s->handler.ScrollEvent = areaScroll;
 	s->window = uiNewWindow("Windows audit area", 420, 220, 0);
 	s->area = uiNewScrollingArea(&s->handler, 300, 300);
 	uiWindowSetChild(s->window, uiControl(s->area));
@@ -643,7 +645,6 @@ static void wheelCallbackCanConsume(void **data)
 	SCROLLINFO si = {0};
 
 	uiAreaSetSize(s->area, 1000, 1000);
-	uiAreaOnScroll(s->area, areaScroll, s);
 	s->consumeScroll = 1;
 	SendMessageW(areaHWND(s), WM_MOUSEHWHEEL, MAKEWPARAM(0, 120), 0);
 	assert_int_equal(s->scrollCalls, 1);
@@ -663,7 +664,7 @@ static void wheelCallbackCanConsume(void **data)
 	assert_int_equal(s->scrollCalls, 3);
 	assert_true(s->lastScroll.DeltaX == 0 && s->lastScroll.DeltaY == 0.5);
 
-	uiAreaOnScroll(s->area, NULL, NULL);
+	s->handler.ScrollEvent = NULL;
 	SendMessageW(areaHWND(s), WM_MOUSEHWHEEL, MAKEWPARAM(0, 120), 0);
 	assert_int_equal(s->scrollCalls, 3);
 }

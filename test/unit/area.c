@@ -9,19 +9,19 @@
 
 static int dragBrokenCalls;
 
-#if !defined(_WIN32) && !defined(__APPLE__)
 static int scrollCalls;
 static int scrollHandled;
 static uiAreaScrollEvent lastScroll;
+static uiAreaHandler handler;
 
-static int areaScroll(uiArea *area, uiAreaScrollEvent *event, void *data)
+static int areaScroll(uiAreaHandler *ah, uiArea *area,
+	uiAreaScrollEvent *event)
 {
-	assert_ptr_equal(data, &scrollCalls);
+	assert_ptr_equal(ah, &handler);
 	scrollCalls++;
 	lastScroll = *event;
 	return scrollHandled;
 }
-#endif
 
 static void areaDraw(uiAreaHandler *handler, uiArea *area,
 	uiAreaDrawParams *params)
@@ -54,6 +54,7 @@ static uiAreaHandler handler = {
 	.MouseCrossed = areaMouseCrossed,
 	.DragBroken = areaDragBroken,
 	.KeyEvent = areaKeyEvent,
+	.ScrollEvent = areaScroll,
 };
 
 static int areaSetup(void **state)
@@ -126,7 +127,6 @@ static void areaScrollEvents(void **state)
 
 	scrollCalls = 0;
 	scrollHandled = 0;
-	uiAreaOnScroll(area, areaScroll, &scrollCalls);
 	assert_false(emitScroll(widget, GDK_SCROLL_DOWN, 0, 0));
 	assert_int_equal(scrollCalls, 1);
 	assert_true(lastScroll.DeltaX == 0 && lastScroll.DeltaY == 1);
@@ -140,9 +140,10 @@ static void areaScrollEvents(void **state)
 	assert_false(emitScroll(widget, GDK_SCROLL_SMOOTH, 0, 0));
 	assert_int_equal(scrollCalls, 2);
 
-	uiAreaOnScroll(area, NULL, NULL);
+	handler.ScrollEvent = NULL;
 	assert_false(emitScroll(widget, GDK_SCROLL_UP, 0, 0));
 	assert_int_equal(scrollCalls, 2);
+	handler.ScrollEvent = areaScroll;
 }
 
 static void scrollingAreaScrollEvents(void **state)
@@ -156,7 +157,6 @@ static void scrollingAreaScrollEvents(void **state)
 	assert_true(GTK_IS_DRAWING_AREA(widget));
 	scrollCalls = 0;
 	scrollHandled = 1;
-	uiAreaOnScroll(area, areaScroll, &scrollCalls);
 	assert_true(emitScroll(widget, GDK_SCROLL_LEFT, 0, 0));
 	assert_int_equal(scrollCalls, 1);
 	assert_true(lastScroll.DeltaX == -1 && lastScroll.DeltaY == 0);

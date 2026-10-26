@@ -25,7 +25,7 @@ static void handlerMouseEvent(uiAreaHandler *a, uiArea *area, uiAreaMouseEvent *
 	uiCheckboxSetText(label, pos);
 }
 
-static int handlerScroll(uiArea *a, uiAreaScrollEvent *e, void *data)
+static int handlerScroll(uiAreaHandler *ah, uiArea *a, uiAreaScrollEvent *e)
 {
 	char text[128];
 
@@ -65,6 +65,7 @@ uiGroup *makePage7b(void)
 	handler.ah.MouseCrossed = handlerMouseCrossed;
 	handler.ah.DragBroken = handlerDragBroken;
 	handler.ah.KeyEvent = handlerKeyEvent;
+	handler.ah.ScrollEvent = handlerScroll;
 
 	group = newGroup("Scrolling Mouse Test");
 
@@ -80,7 +81,6 @@ uiGroup *makePage7b(void)
 	uiBoxAppend(box, uiControl(scrollInfo), 0);
 	consumeScroll = uiNewCheckbox("Handle scroll without moving the area");
 	uiBoxAppend(box, uiControl(consumeScroll), 0);
-	uiAreaOnScroll(area, handlerScroll, NULL);
 
 	return group;
 }

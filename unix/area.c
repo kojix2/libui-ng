@@ -35,8 +35,6 @@ struct uiArea {
 	areaWidget *area;
 
 	uiAreaHandler *ah;
-	int (*onScroll)(uiArea *, uiAreaScrollEvent *, void *);
-	void *onScrollData;
 
 	gboolean scrolling;
 	int scrollWidth;
@@ -338,7 +336,7 @@ static gboolean areaWidget_scroll_event(GtkWidget *w, GdkEventScroll *e)
 	uiAreaScrollEvent se;
 	int handled;
 
-	if (a->onScroll == NULL)
+	if (a->ah->ScrollEvent == NULL)
 		return GDK_EVENT_PROPAGATE;
 	se.DeltaX = 0;
 	se.DeltaY = 0;
@@ -367,7 +365,7 @@ static gboolean areaWidget_scroll_event(GtkWidget *w, GdkEventScroll *e)
 	se.Modifiers = toModifiers(translateModifiers(e->state, e->window));
 	if (!uiprivUserCallbackEnter(uiControl(a)))
 		return GDK_EVENT_STOP;
-	handled = (*(a->onScroll))(a, &se, a->onScrollData);
+	handled = (*(a->ah->ScrollEvent))(a->ah, a, &se);
 	if (uiprivControlDestroyPending(uiControl(a)))
 		handled = 1;
 	uiprivUserCallbackLeave();
@@ -618,13 +616,6 @@ void uiAreaSetSize(uiArea *a, int width, int height)
 void uiAreaQueueRedrawAll(uiArea *a)
 {
 	gtk_widget_queue_draw(a->areaWidget);
-}
-
-void uiAreaOnScroll(uiArea *a,
-	int (*f)(uiArea *, uiAreaScrollEvent *, void *), void *data)
-{
-	a->onScroll = f;
-	a->onScrollData = data;
 }
 
 static void clampAdjustmentPage(GtkAdjustment *adj, double start, double size)
