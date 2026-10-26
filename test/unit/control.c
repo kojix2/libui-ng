@@ -388,6 +388,8 @@ static void pendingControlIsHiddenAndSuppressesCallbacks(void **state)
 	uiControlDestroy(uiControl(tc));
 	assert_int_equal(tc->hideCount, 1);
 	assert_false(uiprivUserCallbackEnter(uiControl(tc)));
+	uiControlSetFocus(uiControl(tc));
+	assert_false(uiControlFocused(uiControl(tc)));
 	uiprivUserCallbackLeave();
 	uiprivControlDestroyFlushPending();
 	assert_int_equal(destroyCount, 1);
@@ -405,6 +407,8 @@ static void pendingAncestorSuppressesChildCallbacks(void **state)
 	uiprivUserCallbackEnter(NULL);
 	uiControlDestroy(uiControl(parent));
 	assert_false(uiprivUserCallbackEnter(uiControl(child)));
+	uiControlSetFocus(uiControl(child));
+	assert_false(uiControlFocused(uiControl(child)));
 	uiprivUserCallbackLeave();
 	uiprivControlDestroyFlushPending();
 	assert_int_equal(parentDestroyCount, 1);

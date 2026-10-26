@@ -12,6 +12,7 @@ struct uiRadioButtons {
 	uiWindowsControl c;
 	HWND hwnd;					// of the container
 	std::vector<HWND> *hwnds;		// of the buttons
+	BOOL settingFocus;
 	void (*onSelected)(uiRadioButtons *, void *);
 	void *onSelectedData;
 };
@@ -25,6 +26,8 @@ static BOOL onWM_COMMAND(uiControl *c, HWND clicked, WORD code, LRESULT *lResult
 		return FALSE;
 
 	*lResult = 0;
+	if (r->settingFocus)
+		return TRUE;
 	for (const HWND &hwnd : *(r->hwnds)) {
 		check = BST_UNCHECKED;
 		if (clicked == hwnd) {
@@ -219,6 +222,26 @@ void uiRadioButtonsOnSelected(uiRadioButtons *r, void (*f)(uiRadioButtons *, voi
 {
 	r->onSelected = f;
 	r->onSelectedData = data;
+}
+
+void uiprivRadioButtonsSetFocus(uiRadioButtons *r)
+{
+	int selected;
+	HWND target;
+	BOOL wasSettingFocus;
+
+	if (r->hwnds->empty())
+		return;
+	selected = uiRadioButtonsSelected(r);
+	target = (*(r->hwnds))[selected < 0 ? 0 : selected];
+	if (!IsWindowVisible(target) || !IsWindowEnabled(target))
+		return;
+	// Native radio buttons send BN_CLICKED on WM_SETFOCUS. A focus request
+	// must not select an item or notify the application's selection handler.
+	wasSettingFocus = r->settingFocus;
+	r->settingFocus = TRUE;
+	SetFocus(target);
+	r->settingFocus = wasSettingFocus;
 }
 
 static void onResize(uiWindowsControl *c)
