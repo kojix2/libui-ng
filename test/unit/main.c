@@ -94,6 +94,7 @@ int main(void)
 		{ toolbarRunUnitTests },
 		{ imageViewRunUnitTests },
 		{ tooltipRunUnitTests },
+		{ focusRunUnitTests },
 	};
 
 	for (i = 0; i < sizeof(unitTests)/sizeof(*unitTests); ++i) {
