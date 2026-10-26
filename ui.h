@@ -2267,6 +2267,7 @@ typedef struct uiArea uiArea;
 typedef struct uiAreaHandler uiAreaHandler;
 typedef struct uiAreaDrawParams uiAreaDrawParams;
 typedef struct uiAreaMouseEvent uiAreaMouseEvent;
+typedef struct uiAreaScrollEvent uiAreaScrollEvent;
 typedef struct uiAreaKeyEvent uiAreaKeyEvent;
 
 typedef struct uiDrawContext uiDrawContext;
@@ -2344,6 +2345,22 @@ _UI_EXTERN void uiAreaBeginUserWindowMove(uiArea *a);
 _UI_EXTERN void uiAreaBeginUserWindowResize(uiArea *a, uiWindowResizeEdge edge);
 _UI_EXTERN uiArea *uiNewArea(uiAreaHandler *ah);
 _UI_EXTERN uiArea *uiNewScrollingArea(uiAreaHandler *ah, int width, int height);
+
+/**
+ * Registers a scroll callback for either kind of uiArea. Passing NULL for f
+ * removes the callback. The callback receives wheel and trackpad movement;
+ * nonzero means handled and prevents the area's normal scrolling. Returning
+ * zero lets a scrolling area perform its usual scrolling.
+ *
+ * DeltaX and DeltaY are signed scroll amounts, not drawing-space distances.
+ * Their magnitudes can vary by device and platform; fractional values preserve
+ * smooth scrolling. On Windows, one wheel detent is 1. Positive values mean
+ * right and down.
+ *
+ * @memberof uiArea
+ */
+_UI_EXTERN void uiAreaOnScroll(uiArea *a,
+	int (*f)(uiArea *a, uiAreaScrollEvent *event, void *data), void *data);
 
 struct uiAreaDrawParams {
 	uiDrawContext *Context;
@@ -3122,6 +3139,15 @@ struct uiAreaMouseEvent {
 	uiModifiers Modifiers;
 
 	uint64_t Held1To64;
+};
+
+struct uiAreaScrollEvent {
+	// Coordinates in the area's drawing space, including the scroll offset.
+	double X;
+	double Y;
+	double DeltaX;
+	double DeltaY;
+	uiModifiers Modifiers;
 };
 
 _UI_ENUM(uiExtKey) {
