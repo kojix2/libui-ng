@@ -29,6 +29,8 @@ struct uiArea {
 	NSScrollView *sv;
 	areaView *area;
 	uiAreaHandler *ah;
+	int (*onScroll)(uiArea *, uiAreaScrollEvent *, void *);
+	void *onScrollData;
 	BOOL scrolling;
 	NSEvent *mouseDownEvent;
 };
@@ -239,6 +241,37 @@ mouseEvent(mouseUp)
 mouseEvent(rightMouseUp)
 mouseEvent(otherMouseUp)
 
+- (void)scrollWheel:(NSEvent *)e
+{
+	uiArea *a = self->libui_a;
+	uiAreaScrollEvent se;
+	NSPoint point;
+	int handled;
+
+	if (!self->libui_enabled || a->onScroll == NULL) {
+		[super scrollWheel:e];
+		return;
+	}
+	se.DeltaX = -[e scrollingDeltaX];
+	se.DeltaY = -[e scrollingDeltaY];
+	if (se.DeltaX == 0 && se.DeltaY == 0) {
+		[super scrollWheel:e];
+		return;
+	}
+	point = [self convertPoint:[e locationInWindow] fromView:nil];
+	se.X = point.x;
+	se.Y = point.y;
+	se.Modifiers = [self parseModifiers:e];
+	if (!uiprivUserCallbackEnter(uiControl(a)))
+		return;
+	handled = (*(a->onScroll))(a, &se, a->onScrollData);
+	if (uiprivControlDestroyPending(uiControl(a)))
+		handled = 1;
+	uiprivUserCallbackLeave();
+	if (!handled)
+		[super scrollWheel:e];
+}
+
 - (void)mouseEntered:(NSEvent *)e
 {
 	uiArea *a = self->libui_a;
@@ -439,6 +472,13 @@ void uiAreaSetSize(uiArea *a, int width, int height)
 void uiAreaQueueRedrawAll(uiArea *a)
 {
 	[a->area setNeedsDisplay:YES];
+}
+
+void uiAreaOnScroll(uiArea *a,
+	int (*f)(uiArea *, uiAreaScrollEvent *, void *), void *data)
+{
+	a->onScroll = f;
+	a->onScrollData = data;
 }
 
 void uiAreaScrollTo(uiArea *a, double x, double y, double width, double height)

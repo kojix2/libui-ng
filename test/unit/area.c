@@ -9,6 +9,20 @@
 
 static int dragBrokenCalls;
 
+#if !defined(_WIN32) && !defined(__APPLE__)
+static int scrollCalls;
+static int scrollHandled;
+static uiAreaScrollEvent lastScroll;
+
+static int areaScroll(uiArea *area, uiAreaScrollEvent *event, void *data)
+{
+	assert_ptr_equal(data, &scrollCalls);
+	scrollCalls++;
+	lastScroll = *event;
+	return scrollHandled;
+}
+#endif
+
 static void areaDraw(uiAreaHandler *handler, uiArea *area,
 	uiAreaDrawParams *params)
 {
@@ -85,6 +99,69 @@ static void scrollingAreaSetSizeAndScroll(void **state)
 }
 
 #if !defined(_WIN32) && !defined(__APPLE__)
+static gboolean emitScroll(GtkWidget *widget, GdkScrollDirection direction,
+	double deltaX, double deltaY)
+{
+	GdkEvent *event;
+	gboolean handled;
+
+	event = gdk_event_new(GDK_SCROLL);
+	event->scroll.window = g_object_ref(gdk_get_default_root_window());
+	event->scroll.direction = direction;
+	event->scroll.delta_x = deltaX;
+	event->scroll.delta_y = deltaY;
+	event->scroll.x = 22;
+	event->scroll.y = 33;
+	event->scroll.state = GDK_SHIFT_MASK;
+	handled = FALSE;
+	g_signal_emit_by_name(widget, "scroll-event", event, &handled);
+	gdk_event_free(event);
+	return handled;
+}
+
+static void areaScrollEvents(void **state)
+{
+	uiArea *area = uiAreaFromState(state);
+	GtkWidget *widget = (GtkWidget *) uiControlHandle(uiControl(area));
+
+	scrollCalls = 0;
+	scrollHandled = 0;
+	uiAreaOnScroll(area, areaScroll, &scrollCalls);
+	assert_false(emitScroll(widget, GDK_SCROLL_DOWN, 0, 0));
+	assert_int_equal(scrollCalls, 1);
+	assert_true(lastScroll.DeltaX == 0 && lastScroll.DeltaY == 1);
+	assert_true(lastScroll.X == 22 && lastScroll.Y == 33);
+	assert_true((lastScroll.Modifiers & uiModifierShift) != 0);
+
+	scrollHandled = 1;
+	assert_true(emitScroll(widget, GDK_SCROLL_SMOOTH, 0.25, -0.5));
+	assert_int_equal(scrollCalls, 2);
+	assert_true(lastScroll.DeltaX == 0.25 && lastScroll.DeltaY == -0.5);
+	assert_false(emitScroll(widget, GDK_SCROLL_SMOOTH, 0, 0));
+	assert_int_equal(scrollCalls, 2);
+
+	uiAreaOnScroll(area, NULL, NULL);
+	assert_false(emitScroll(widget, GDK_SCROLL_UP, 0, 0));
+	assert_int_equal(scrollCalls, 2);
+}
+
+static void scrollingAreaScrollEvents(void **state)
+{
+	uiArea *area = uiAreaFromState(state);
+	GtkWidget *widget = (GtkWidget *) uiControlHandle(uiControl(area));
+
+	widget = gtk_bin_get_child(GTK_BIN(widget));
+	assert_true(GTK_IS_VIEWPORT(widget));
+	widget = gtk_bin_get_child(GTK_BIN(widget));
+	assert_true(GTK_IS_DRAWING_AREA(widget));
+	scrollCalls = 0;
+	scrollHandled = 1;
+	uiAreaOnScroll(area, areaScroll, &scrollCalls);
+	assert_true(emitScroll(widget, GDK_SCROLL_LEFT, 0, 0));
+	assert_int_equal(scrollCalls, 1);
+	assert_true(lastScroll.DeltaX == -1 && lastScroll.DeltaY == 0);
+}
+
 static void scrollingAreaScrollAfterSetSize(void **state)
 {
 	uiArea *area = uiAreaFromState(state);
@@ -171,6 +248,10 @@ int areaRunUnitTests(void)
 			scrollingAreaSetSizeAndScroll,
 			scrollingAreaSetup, unitTestTeardown),
 #if !defined(_WIN32) && !defined(__APPLE__)
+		UNIT_TEST_NAMED("areaScrollEvents", areaScrollEvents,
+			areaSetup, unitTestTeardown),
+		UNIT_TEST_NAMED("scrollingAreaScrollEvents", scrollingAreaScrollEvents,
+			scrollingAreaSetup, unitTestTeardown),
 		UNIT_TEST_NAMED("scrollingAreaScrollAfterSetSize",
 			scrollingAreaScrollAfterSetSize,
 			scrollingAreaSetup, unitTestTeardown),

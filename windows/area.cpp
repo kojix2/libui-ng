@@ -55,6 +55,8 @@ static LRESULT CALLBACK areaWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
 		return 0;
 	}
 
+	if (areaDoWheel(a, uMsg, wParam, lParam, &lResult) != FALSE)
+		return lResult;
 	if (areaDoScroll(a, uMsg, wParam, lParam, &lResult) != FALSE)
 		return lResult;
 	if (areaDoEvents(a, uMsg, wParam, lParam, &lResult) != FALSE)
@@ -120,6 +122,13 @@ void uiAreaQueueRedrawAll(uiArea *a)
 {
 	// don't erase the background; we do that ourselves in doPaint()
 	invalidateRect(a->hwnd, NULL, FALSE);
+}
+
+void uiAreaOnScroll(uiArea *a,
+	int (*f)(uiArea *, uiAreaScrollEvent *, void *), void *data)
+{
+	a->onScroll = f;
+	a->onScrollData = data;
 }
 
 void uiAreaScrollTo(uiArea *a, double x, double y, double width, double height)
