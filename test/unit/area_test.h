@@ -10,8 +10,15 @@
  * These symbols belong to the test executable, never the libui SDK.
  */
 extern int dragBrokenCalls;
+extern int scrollCalls;
+extern int scrollHandled;
+extern uiAreaScrollEvent lastScroll;
+extern uiAreaHandler handler;
+int areaScroll(uiAreaHandler *ah, uiArea *area, uiAreaScrollEvent *event);
 
 #if !defined(_WIN32) && !defined(__APPLE__)
+void areaScrollEvents(void **state);
+void scrollingAreaScrollEvents(void **state);
 void scrollingAreaScrollAfterSetSize(void **state);
 void areaDragBrokenForImplicitPointerGrab(void **state);
 #endif

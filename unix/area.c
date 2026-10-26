@@ -68,6 +68,8 @@ static void areaWidget_init(areaWidget *aw)
 		GDK_BUTTON_MOTION_MASK |
 		GDK_BUTTON_PRESS_MASK |
 		GDK_BUTTON_RELEASE_MASK |
+		GDK_SCROLL_MASK |
+		GDK_SMOOTH_SCROLL_MASK |
 		GDK_KEY_PRESS_MASK |
 		GDK_KEY_RELEASE_MASK |
 		GDK_ENTER_NOTIFY_MASK |
@@ -328,6 +330,48 @@ static gboolean areaWidget_motion_notify_event(GtkWidget *w, GdkEventMotion *e)
 	return GDK_EVENT_PROPAGATE;
 }
 
+static gboolean areaWidget_scroll_event(GtkWidget *w, GdkEventScroll *e)
+{
+	uiArea *a = areaWidget(w)->a;
+	uiAreaScrollEvent se;
+	int handled;
+
+	if (a->ah->ScrollEvent == NULL)
+		return GDK_EVENT_PROPAGATE;
+	se.DeltaX = 0;
+	se.DeltaY = 0;
+	switch (e->direction) {
+	case GDK_SCROLL_UP:
+		se.DeltaY = -1;
+		break;
+	case GDK_SCROLL_DOWN:
+		se.DeltaY = 1;
+		break;
+	case GDK_SCROLL_LEFT:
+		se.DeltaX = -1;
+		break;
+	case GDK_SCROLL_RIGHT:
+		se.DeltaX = 1;
+		break;
+	case GDK_SCROLL_SMOOTH:
+		gdk_event_get_scroll_deltas((GdkEvent *) e,
+			&(se.DeltaX), &(se.DeltaY));
+		break;
+	}
+	if (se.DeltaX == 0 && se.DeltaY == 0)
+		return GDK_EVENT_PROPAGATE;
+	se.X = e->x;
+	se.Y = e->y;
+	se.Modifiers = toModifiers(translateModifiers(e->state, e->window));
+	if (!uiprivUserCallbackEnter(uiControl(a)))
+		return GDK_EVENT_STOP;
+	handled = (*(a->ah->ScrollEvent))(a->ah, a, &se);
+	if (uiprivControlDestroyPending(uiControl(a)))
+		handled = 1;
+	uiprivUserCallbackLeave();
+	return handled ? GDK_EVENT_STOP : GDK_EVENT_PROPAGATE;
+}
+
 // we want switching away from the control to reset the double-click counter, like with WM_ACTIVATE on Windows
 // according to tristan in irc.gimp.net/#gtk+, doing this on both enter-notify-event and leave-notify-event is correct (and it seems to be true in my own tests; plus the events DO get sent when switching programs with the keyboard (just pointing that out))
 static gboolean onCrossing(areaWidget *aw, int left)
@@ -531,6 +575,7 @@ static void areaWidget_class_init(areaWidgetClass *class)
 	GTK_WIDGET_CLASS(class)->button_press_event = areaWidget_button_press_event;
 	GTK_WIDGET_CLASS(class)->button_release_event = areaWidget_button_release_event;
 	GTK_WIDGET_CLASS(class)->motion_notify_event = areaWidget_motion_notify_event;
+	GTK_WIDGET_CLASS(class)->scroll_event = areaWidget_scroll_event;
 	GTK_WIDGET_CLASS(class)->enter_notify_event = areaWidget_enter_notify_event;
 	GTK_WIDGET_CLASS(class)->leave_notify_event = areaWidget_leave_notify_event;
 	GTK_WIDGET_CLASS(class)->grab_broken_event = areaWidget_grab_broken_event;

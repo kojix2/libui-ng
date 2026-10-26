@@ -239,6 +239,37 @@ mouseEvent(mouseUp)
 mouseEvent(rightMouseUp)
 mouseEvent(otherMouseUp)
 
+- (void)scrollWheel:(NSEvent *)e
+{
+	uiArea *a = self->libui_a;
+	uiAreaScrollEvent se;
+	NSPoint point;
+	int handled;
+
+	if (!self->libui_enabled || a->ah->ScrollEvent == NULL) {
+		[super scrollWheel:e];
+		return;
+	}
+	se.DeltaX = -[e scrollingDeltaX];
+	se.DeltaY = -[e scrollingDeltaY];
+	if (se.DeltaX == 0 && se.DeltaY == 0) {
+		[super scrollWheel:e];
+		return;
+	}
+	point = [self convertPoint:[e locationInWindow] fromView:nil];
+	se.X = point.x;
+	se.Y = point.y;
+	se.Modifiers = [self parseModifiers:e];
+	if (!uiprivUserCallbackEnter(uiControl(a)))
+		return;
+	handled = (*(a->ah->ScrollEvent))(a->ah, a, &se);
+	if (uiprivControlDestroyPending(uiControl(a)))
+		handled = 1;
+	uiprivUserCallbackLeave();
+	if (!handled)
+		[super scrollWheel:e];
+}
+
 - (void)mouseEntered:(NSEvent *)e
 {
 	uiArea *a = self->libui_a;
