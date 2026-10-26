@@ -186,6 +186,9 @@ extern IWICBitmap *uiprivImageAppropriateForSize(const uiImage *i,
 	int pixelWidth, int pixelHeight);
 extern HRESULT uiprivWICToGDI(IWICBitmap *b, HDC dc, int width, int height, HBITMAP *hb);
 
+// radiobuttons.cpp
+extern void uiprivRadioButtonsSetFocus(uiRadioButtons *);
+
 // tooltip.cpp
 extern void uiprivDestroyTooltip(uiControl *c);
 extern void uiprivAddTooltipToHWND(uiControl *c, HWND hwnd);

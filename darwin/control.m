@@ -2,6 +2,65 @@
 #import "uipriv_darwin.h"
 #import <objc/runtime.h>
 
+static NSView *focusTarget(NSView *view)
+{
+	NSView *child, *target;
+
+	if ([view isHiddenOrHasHiddenAncestor])
+		return nil;
+	if ([view respondsToSelector:@selector(isEnabled)] && ![(id)view isEnabled])
+		return nil;
+	if ([view isKindOfClass:[NSScrollView class]])
+		return focusTarget([(NSScrollView *)view documentView]);
+	if ([view acceptsFirstResponder])
+		return view;
+	for (child in [view subviews]) {
+		target = focusTarget(child);
+		if (target != nil)
+			return target;
+	}
+	return nil;
+}
+
+static BOOL focusedInView(NSView *view, NSResponder *responder)
+{
+	NSView *child;
+
+	if (responder == view)
+		return YES;
+	// NSTextField and NSComboBox use a shared field editor, which need not
+	// be a descendant of the control's view.
+	if ([view isKindOfClass:[NSControl class]] &&
+		[(NSControl *)view currentEditor] == responder)
+		return YES;
+	for (child in [view subviews])
+		if (focusedInView(child, responder))
+			return YES;
+	return NO;
+}
+
+void uiprivControlSetFocus(uiControl *c)
+{
+	NSView *view, *target;
+
+	view = (NSView *) uiControlHandle(c);
+	target = focusTarget(view);
+	if (target != nil)
+		[[view window] makeFirstResponder:target];
+}
+
+int uiprivControlFocused(uiControl *c)
+{
+	NSView *view;
+	NSResponder *responder;
+
+	view = (NSView *) uiControlHandle(c);
+	if ([view isHiddenOrHasHiddenAncestor])
+		return 0;
+	responder = [[view window] firstResponder];
+	return responder != nil && focusedInView(view, responder);
+}
+
 typedef struct minimumSizeAxis minimumSizeAxis;
 struct minimumSizeAxis {
 	NSLayoutConstraint *constraint;
