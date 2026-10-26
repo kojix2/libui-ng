@@ -5,8 +5,6 @@ struct uiArea {
 	uiWindowsControl c;
 	HWND hwnd;
 	uiAreaHandler *ah;
-	int (*onScroll)(uiArea *, uiAreaScrollEvent *, void *);
-	void *onScrollData;
 
 	BOOL scrolling;
 	int scrollWidth;
