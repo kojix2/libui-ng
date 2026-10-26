@@ -5,6 +5,51 @@
 // choose a value distinct from uiWindowSignature
 #define uiWindowsControlSignature 0x4D53576E
 
+static HWND focusTarget(HWND hwnd)
+{
+	HWND child, target;
+
+	if (!IsWindowVisible(hwnd) || !IsWindowEnabled(hwnd))
+		return NULL;
+	if ((GetWindowLongPtrW(hwnd, GWL_STYLE) & WS_TABSTOP) != 0)
+		return hwnd;
+	for (child = GetWindow(hwnd, GW_CHILD); child != NULL;
+		child = GetWindow(child, GW_HWNDNEXT)) {
+		target = focusTarget(child);
+		if (target != NULL)
+			return target;
+	}
+	return NULL;
+}
+
+void uiprivControlSetFocus(uiControl *c)
+{
+	HWND target;
+
+	if (c->TypeSignature == uiRadioButtonsSignature) {
+		uiprivRadioButtonsSetFocus(uiRadioButtons(c));
+		return;
+	}
+	// Areas accept keyboard input but intentionally are not native tab stops.
+	if (c->TypeSignature == uiAreaSignature)
+		target = (HWND) uiControlHandle(c);
+	else
+		target = focusTarget((HWND) uiControlHandle(c));
+	if (target != NULL && IsWindowVisible(target) && IsWindowEnabled(target))
+		SetFocus(target);
+}
+
+int uiprivControlFocused(uiControl *c)
+{
+	HWND hwnd, focused;
+
+	hwnd = (HWND) uiControlHandle(c);
+	if (!IsWindowVisible(hwnd))
+		return 0;
+	focused = GetFocus();
+	return focused != NULL && (focused == hwnd || IsChild(hwnd, focused));
+}
+
 static int isContainerControl(uiControl *c)
 {
 	switch (c->TypeSignature) {
