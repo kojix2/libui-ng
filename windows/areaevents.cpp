@@ -9,15 +9,15 @@ static uiModifiers getModifiers(void)
 {
 	uiModifiers m = 0;
 
-	if ((GetKeyState(VK_CONTROL) & 0x80) != 0)
+	if ((GetKeyState(VK_CONTROL) & 0x8000) != 0)
 		m |= uiModifierCtrl;
-	if ((GetKeyState(VK_MENU) & 0x80) != 0)
+	if ((GetKeyState(VK_MENU) & 0x8000) != 0)
 		m |= uiModifierAlt;
-	if ((GetKeyState(VK_SHIFT) & 0x80) != 0)
+	if ((GetKeyState(VK_SHIFT) & 0x8000) != 0)
 		m |= uiModifierShift;
-	if ((GetKeyState(VK_LWIN) & 0x80) != 0)
+	if ((GetKeyState(VK_LWIN) & 0x8000) != 0)
 		m |= uiModifierSuper;
-	if ((GetKeyState(VK_RWIN) & 0x80) != 0)
+	if ((GetKeyState(VK_RWIN) & 0x8000) != 0)
 		m |= uiModifierSuper;
 	return m;
 }

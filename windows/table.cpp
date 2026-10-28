@@ -505,9 +505,9 @@ static BOOL handleSelectionZeroOrOne(uiTable *t, NMLISTVIEW *nm,
 	/* Ignore CTRL+SHIFT+SPACE on the focused item if selected
 	 * as it immediately does a reselect again */
 	if (nm->iItem == t->lastFocusedItem && t->lastFocusedItemIsSelected &&
-	    HIBYTE(GetKeyState(VK_CONTROL)) &&
-	    HIBYTE(GetKeyState(VK_SHIFT)) &&
-	    HIBYTE(GetKeyState(VK_SPACE)))
+	    (GetKeyState(VK_CONTROL) & 0x8000) != 0 &&
+	    (GetKeyState(VK_SHIFT) & 0x8000) != 0 &&
+	    (GetKeyState(VK_SPACE) & 0x8000) != 0)
 		return TRUE;
 	if (nm->iItem == t->lastFocusedItem && t->lastFocusedItemIsSelected &&
 	    oldSelected && !newSelected) {
@@ -535,9 +535,9 @@ static BOOL handleSelectionZeroOrMany(uiTable *t, NMLISTVIEW *nm,
 		return TRUE;
 	/* CTRL+SHIFT+SPACE on the focused item */
 	if (nm->iItem == t->lastFocusedItem &&
-	    HIBYTE(GetKeyState(VK_CONTROL)) &&
-	    HIBYTE(GetKeyState(VK_SHIFT)) &&
-	    HIBYTE(GetKeyState(VK_SPACE))) {
+	    (GetKeyState(VK_CONTROL) & 0x8000) != 0 &&
+	    (GetKeyState(VK_SHIFT) & 0x8000) != 0 &&
+	    (GetKeyState(VK_SPACE) & 0x8000) != 0) {
 		/* Do not signal deselect as it immediately
 		 * does a reselect again */
 		if (t->lastFocusedItemIsSelected) {
@@ -566,7 +566,7 @@ static BOOL handleSelectionZeroOrMany(uiTable *t, NMLISTVIEW *nm,
 	if ((!oldSelected && newSelected) ||
 	    (oldSelected && !newSelected) ||
 	    // SHIFT multi select
-	    (!oldFocused && newFocused && HIBYTE(GetKeyState(VK_SHIFT)) &&
+	    (!oldFocused && newFocused && (GetKeyState(VK_SHIFT) & 0x8000) != 0 &&
 	     nm->iItem != ListView_GetSelectionMark(t->hwnd)))
 		if (!signalOnSelectionChanged(t))
 			return FALSE;
