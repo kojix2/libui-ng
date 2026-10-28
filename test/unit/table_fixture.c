@@ -18,14 +18,14 @@ static uiTableValueType tableColumnType(uiTableModelHandler *mh, uiTableModel *m
 
 static int tableNumRows(uiTableModelHandler *mh, uiTableModel *m)
 {
-	struct tableTestState *state = (struct tableTestState *) mh;
+	struct tableTestState *state = (struct tableTestState *) mh->UserData;
 
 	return state->numRows;
 }
 
 static uiTableValue *tableCellValue(uiTableModelHandler *mh, uiTableModel *m, int row, int column)
 {
-	struct tableTestState *state = (struct tableTestState *) mh;
+	struct tableTestState *state = (struct tableTestState *) mh->UserData;
 
 	if (column == 1)
 		return uiNewTableValueImage(state->image);
@@ -57,6 +57,7 @@ int tableTestSetup(void **data)
 	state->mh.NumRows = tableNumRows;
 	state->mh.CellValue = tableCellValue;
 	state->mh.SetCellValue = tableSetCellValue;
+	state->mh.UserData = state;
 	state->image = uiNewImage(16, 16);
 	uiImageAppend(state->image, pixels, 16, 16, 16 * 4);
 	state->model = uiNewTableModel(&state->mh);

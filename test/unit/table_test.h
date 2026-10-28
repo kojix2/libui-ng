@@ -5,16 +5,16 @@
 
 /* Private to the Table tests. The window owns its attached table. Teardown
  * destroys the window before releasing the model and image, then uninitializes
- * libui. Keep the handler first: callbacks recover the fixture from its address.
+ * libui. The handler UserData points to this per-case fixture.
  */
 struct tableTestState {
-	uiTableModelHandler mh;
 	uiTableModel *model;
 	uiWindow *window;
 	uiTable *table;
 	uiImage *image;
 	const char *rows[2];
 	int numRows;
+	uiTableModelHandler mh;
 };
 
 int tableTestSetup(void **data);
