@@ -29,11 +29,14 @@ CTest labels describe independent attributes:
 | Platform | `portable`, `gtk`, `windows`, `darwin` | Portable source or selected native implementation |
 | libui linkage | `static`, `shared` | Tests linked to that libui variant; standalone source tests have neither label |
 
-`alloc-unix` links GTK but does not need a display. `unit` combines API and
+`alloc-unix` and the `dev` Cairo image-buffer tests link GTK but do not need
+a display. The `dev` DND adapter test `drop-gtk` does need a display and
+returns 77 (a CTest skip) when GTK cannot initialize. `drop-windows` exercises
+COM data objects and routing with mocks, without opening a native window. `unit` combines API and
 backend cases and therefore has both subject labels. Select individual tests
 with `-R` when an executable has several subjects. CTest's `--show-only=json-v1`
 also reports labels and timeouts. Platform conditions exclude unavailable
-executables at configuration time; they are not runtime skips. Current
+executables at configuration time; they are not runtime skips. The
 `pre-build` tests treat GUI initialization failures as failures, not skips.
 
 The existing `unit` executable still runs every component by default. Its
@@ -216,3 +219,15 @@ images and Windows resources/manifests. Build with
 them on the target OS and record the control, operation and expected display
 or behavior. A forced termination only establishes that a program started;
 it does not establish correct shutdown or visual behavior.
+
+## Image-buffer sources (`dev`)
+
+`unit/imagebuffer.c` exercises the shared implementation with a mock backend.
+It includes `common/imagebuffer.c` under allocation substitutions for failure
+injection; that include deliberately avoids adding a production allocator hook.
+`unit/imagebuffer_cairo.c` checks the real linked Cairo backend, including
+submitted draws after update/free and native surface references. They have
+separate `main()` functions and retain the CTest names `imagebuffer-unit`
+(8 cases) and `imagebuffer-cairo` (5 cases). Neither needs a display. Target
+resources, static-only definitions, native libraries and skip code 77 for
+`drop-gtk` remain at their CMake call sites.
