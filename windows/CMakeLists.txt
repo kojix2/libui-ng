@@ -6,7 +6,7 @@ target_sources(libui_ui PRIVATE
 	alloc.cpp area.cpp areadraw.cpp areaevents.cpp areascroll.cpp areautil.cpp
 	attrstr.cpp box.cpp button.cpp checkbox.cpp colorbutton.cpp colordialog.cpp
 	combobox.cpp container.cpp control.cpp d2dscratch.cpp datetimepicker.cpp debug.cpp
-	draw.cpp drawmatrix.cpp drawpath.cpp drawtext.cpp dwrite.cpp editablecombo.cpp
+	drop.cpp draw.cpp drawmatrix.cpp drawpath.cpp drawtext.cpp dwrite.cpp editablecombo.cpp
 	entry.cpp events.cpp fontbutton.cpp fontdialog.cpp fontmatch.cpp form.cpp
 	graphemes.cpp grid.cpp group.cpp image.cpp imageview.cpp init.cpp label.cpp main.cpp menu.cpp
 	multilineentry.cpp opentype.cpp parent.cpp progressbar.cpp radiobuttons.cpp

@@ -1,5 +1,6 @@
 // 9 september 2015
 #import "uipriv_darwin.h"
+#include "drop.h"
 
 @interface areaView : NSView {
 	uiArea *libui_a;
@@ -25,6 +26,7 @@
 
 struct uiArea {
 	uiDarwinControl c;
+	uiprivDropEndpoint *drop;
 	NSView *view;			// either sv or area depending on whether it is scrolling
 	NSScrollView *sv;
 	areaView *area;
@@ -34,6 +36,27 @@ struct uiArea {
 };
 
 @implementation areaView
+
+- (NSDragOperation)draggingEntered:(id<NSDraggingInfo>)sender
+{
+	return uiprivDarwinDropOver(self->libui_a->drop, sender, self, NO);
+}
+- (NSDragOperation)draggingUpdated:(id<NSDraggingInfo>)sender
+{
+	return [self draggingEntered:sender];
+}
+- (void)draggingExited:(id<NSDraggingInfo>)sender
+{
+	uiprivDarwinDropLeave(self->libui_a->drop, sender);
+}
+- (BOOL)prepareForDragOperation:(id<NSDraggingInfo>)sender
+{
+	return uiprivDarwinDropPrepare(self->libui_a->drop, sender);
+}
+- (BOOL)performDragOperation:(id<NSDraggingInfo>)sender
+{
+	return uiprivDarwinDropPerform(self->libui_a->drop, sender, self, NO);
+}
 
 - (id)initWithFrame:(NSRect)r area:(uiArea *)a
 {
@@ -422,6 +445,9 @@ static void uiAreaDestroy(uiControl *c)
 {
 	uiArea *a = uiArea(c);
 
+	uiprivDropDestroy(a->drop);
+	a->drop = NULL;
+
 	[a->area release];
 	if (a->scrolling)
 		[a->sv release];
@@ -559,4 +585,20 @@ uiArea *uiNewScrollingArea(uiAreaHandler *ah, int width, int height)
 	a->view = a->sv;
 
 	return a;
+}
+
+uiDropStatus uiAreaSetDropHandler(uiArea *a, unsigned int formats,
+	const uiDropHandler *handler, void *data)
+{
+	uiDropStatus status = uiprivDropValidate(formats, handler, data);
+	if (a == NULL || status != uiDropStatusOK)
+		return uiDropStatusInvalidArgument;
+	if (uiprivControlDestroyPending(uiControl(a)))
+		return uiDropStatusUnavailable;
+	if (a->drop == NULL) {
+		if (handler == NULL)
+			return uiDropStatusOK;
+		a->drop = uiprivDarwinDropNew(uiControl(a), a->area);
+	}
+	return uiprivDropSetHandler(a->drop, formats, handler, data);
 }

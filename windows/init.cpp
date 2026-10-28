@@ -109,34 +109,61 @@ const char *uiInit(uiInitOptions *o)
 	if (InitCommonControlsEx(&icc) == 0)
 		return ieLastErr("initializing Common Controls");
 
-	hr = CoInitialize(NULL);
+	hr = OleInitialize(NULL);
 	if (hr != S_OK && hr != S_FALSE)
-		return ieHRESULT("initializing COM", hr);
+		return ieHRESULT("initializing OLE on the UI thread (STA required)", hr);
 	// LONGTERM initialize COM security
 	// LONGTERM (windows vista) turn off COM exception handling
 
 	hr = initDraw();
-	if (hr != S_OK)
-		return ieHRESULT("initializing Direct2D", hr);
+	if (hr != S_OK) {
+		ce = ieHRESULT("initializing Direct2D", hr);
+		goto failOLE;
+	}
 
 	hr = uiprivInitDrawText();
-	if (hr != S_OK)
-		return ieHRESULT("initializing DirectWrite", hr);
+	if (hr != S_OK) {
+		ce = ieHRESULT("initializing DirectWrite", hr);
+		goto failDraw;
+	}
 
-	if (registerAreaClass(hDefaultIcon, hDefaultCursor) == 0)
-		return ieLastErr("registering uiArea window class");
+	if (registerAreaClass(hDefaultIcon, hDefaultCursor) == 0) {
+		ce = ieLastErr("registering uiArea window class");
+		goto failDrawText;
+	}
 
-	if (registerMessageFilter() == 0)
-		return ieLastErr("registering libui message filter");
+	if (registerMessageFilter() == 0) {
+		ce = ieLastErr("registering libui message filter");
+		goto failArea;
+	}
 
-	if (registerD2DScratchClass(hDefaultIcon, hDefaultCursor) == 0)
-		return ieLastErr("initializing D2D scratch window class");
+	if (registerD2DScratchClass(hDefaultIcon, hDefaultCursor) == 0) {
+		ce = ieLastErr("initializing D2D scratch window class");
+		goto failFilter;
+	}
 
 	hr = uiprivInitImage();
-	if (hr != S_OK)
-		return ieHRESULT("initializing WIC", hr);
+	if (hr != S_OK) {
+		ce = ieHRESULT("initializing WIC", hr);
+		goto failScratch;
+	}
 
 	return NULL;
+
+failScratch:
+	unregisterD2DScratchClass();
+failFilter:
+	unregisterMessageFilter();
+failArea:
+	unregisterArea();
+failDrawText:
+	uiprivUninitDrawText();
+failDraw:
+	uninitDraw();
+failOLE:
+	// Both S_OK and S_FALSE own an OLE initialization count.
+	OleUninitialize();
+	return ce;
 }
 
 void uiUninit(void)
@@ -151,7 +178,7 @@ void uiUninit(void)
 	unregisterArea();
 	uiprivUninitDrawText();
 	uninitDraw();
-	CoUninitialize();
+	OleUninitialize();
 	hollowBrush = NULL;
 	uninitContainer();
 	if (DeleteObject(hMessageFont) == 0)

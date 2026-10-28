@@ -1,9 +1,11 @@
 // 11 june 2015
 #include "uipriv_unix.h"
+#include "drop.h"
 #include "../common/toolbar.h"
 
 struct uiWindow {
 	uiUnixControl c;
+	uiprivDropEndpoint *drop;
 
 	GtkWidget *widget;
 	GtkContainer *container;
@@ -165,6 +167,9 @@ static void defaultOnFocusChanged(uiWindow *w, void *data)
 static void uiWindowDestroy(uiControl *c)
 {
 	uiWindow *w = uiWindow(c);
+
+	uiprivDropDestroy(w->drop);
+	w->drop = NULL;
 
 	// first hide ourselves
 	gtk_widget_hide(w->widget);
@@ -440,4 +445,20 @@ uiWindow *uiNewWindow(const char *title, int width, int height, int hasMenubar)
 	uiWindowOnPositionChanged(w, defaultOnPositionContentSizeChanged, NULL);
 
 	return w;
+}
+
+uiDropStatus uiWindowSetDropHandler(uiWindow *w, unsigned int formats,
+	const uiDropHandler *handler, void *data)
+{
+	uiDropStatus status = uiprivDropValidate(formats, handler, data);
+	if (w == NULL || status != uiDropStatusOK)
+		return uiDropStatusInvalidArgument;
+	if (uiprivControlDestroyPending(uiControl(w)))
+		return uiDropStatusUnavailable;
+	if (w->drop == NULL) {
+		if (handler == NULL)
+			return uiDropStatusOK;
+		w->drop = uiprivUnixDropNew(uiControl(w), w->childHolderWidget, w->widget);
+	}
+	return uiprivDropSetHandler(w->drop, formats, handler, data);
 }

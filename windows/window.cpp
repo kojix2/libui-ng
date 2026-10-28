@@ -1,5 +1,6 @@
 // 27 april 2015
 #include "uipriv_windows.hpp"
+#include "drop.hpp"
 #include <cstdlib>
 #include "../common/toolbar.h"
 
@@ -7,6 +8,7 @@
 
 struct uiWindow {
 	uiWindowsControl c;
+	uiprivDropEndpoint *drop;
 	HWND hwnd;
 	HMENU menubar;
 	uiControl *child;
@@ -301,6 +303,9 @@ static void defaultOnFocusChanged(uiWindow *w, void *data)
 static void uiWindowDestroy(uiControl *c)
 {
 	uiWindow *w = uiWindow(c);
+
+	uiprivDropDestroy(w->drop);
+	w->drop = NULL;
 
 	// first hide ourselves
 	ShowWindow(w->hwnd, SW_HIDE);
@@ -754,4 +759,35 @@ void enableAllWindowsExcept(uiWindow *which)
 			continue;
 		EnableWindow(w->hwnd, TRUE);
 	}
+}
+
+static int dropPosition(uiControl *c, POINTL screen, double *x, double *y)
+{
+	uiWindow *w = uiWindow(c);
+	POINT p = {screen.x, screen.y};
+	RECT client;
+	if (!ScreenToClient(w->hwnd, &p) || !GetClientRect(w->hwnd, &client) || !PtInRect(&client, p)) return 0;
+	*x = p.x; *y = p.y;
+
+	if (w->toolbar != NULL && p.y < uiprivToolbarWindowsHeight(w->toolbar)) return 0;
+
+	return 1;
+}
+
+uiDropStatus uiWindowSetDropHandler(uiWindow *w, unsigned int formats,
+	const uiDropHandler *handler, void *data)
+{
+	uiDropStatus status = uiprivDropValidate(formats, handler, data);
+	if (w == NULL || status != uiDropStatusOK)
+		return uiDropStatusInvalidArgument;
+	if (uiprivControlDestroyPending(uiControl(w)))
+		return uiDropStatusUnavailable;
+	if (w->drop == NULL) {
+		if (handler == NULL)
+			return uiDropStatusOK;
+		w->drop = uiprivWindowsDropNew(uiControl(w), w->hwnd, dropPosition);
+		if (w->drop == NULL)
+			return uiDropStatusNativeError;
+	}
+	return uiprivDropSetHandler(w->drop, formats, handler, data);
 }
