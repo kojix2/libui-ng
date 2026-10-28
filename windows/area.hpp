@@ -1,8 +1,11 @@
 #ifndef __LIBUI_AREA_HPP__
 #define __LIBUI_AREA_HPP__
 
+#include "drop.hpp"
+
 struct uiArea {
 	uiWindowsControl c;
+	uiprivDropEndpoint *drop;
 	HWND hwnd;
 	uiAreaHandler *ah;
 
