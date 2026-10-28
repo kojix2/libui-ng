@@ -132,3 +132,39 @@ target_include_directories(imageviewrect-unit PRIVATE ../.. ../../common)
 libui_apply_internal_options(imageviewrect-unit)
 add_test(NAME imageviewrect-unit COMMAND imageviewrect-unit)
 set_tests_properties(imageviewrect-unit PROPERTIES TIMEOUT 60)
+
+add_executable(drop-unit drop.c ../../common/drop.c ../../common/control.c
+	../../common/utf.c ../../common/textarray.c)
+target_link_libraries(drop-unit PRIVATE cmocka::cmocka)
+libui_apply_internal_options(drop-unit)
+add_test(NAME drop-unit COMMAND drop-unit)
+set_tests_properties(drop-unit PROPERTIES TIMEOUT 60)
+
+if(APPLE)
+	add_executable(drop-darwin drop_darwin.m)
+	target_link_libraries(drop-darwin PRIVATE libui::ui cmocka::cmocka
+		${LIBUI_TEST_APPKIT_FRAMEWORK})
+	libui_apply_internal_options(drop-darwin)
+	add_test(NAME drop-darwin COMMAND drop-darwin)
+	set_tests_properties(drop-darwin PROPERTIES TIMEOUT 60)
+endif()
+
+if(UNIX AND NOT APPLE)
+	add_executable(drop-gtk drop_gtk.c ../../common/drop.c ../../common/control.c
+		../../common/utf.c ../../common/textarray.c)
+	target_link_libraries(drop-gtk PRIVATE cmocka::cmocka PkgConfig::GTK3)
+	target_compile_definitions(drop-gtk PRIVATE _POSIX_C_SOURCE=200809L)
+	libui_apply_internal_options(drop-gtk)
+	add_test(NAME drop-gtk COMMAND drop-gtk)
+	set_tests_properties(drop-gtk PROPERTIES TIMEOUT 60 SKIP_RETURN_CODE 77)
+endif()
+
+if(WIN32)
+	add_executable(drop-windows drop_windows.cpp ../../common/drop.c ../../common/control.c
+		../../common/utf.c ../../common/textarray.c)
+	target_link_libraries(drop-windows PRIVATE cmocka::cmocka ole32 uuid)
+	target_compile_definitions(drop-windows PRIVATE _UI_STATIC)
+	libui_apply_internal_options(drop-windows)
+	add_test(NAME drop-windows COMMAND drop-windows)
+	set_tests_properties(drop-windows PROPERTIES TIMEOUT 60)
+endif()

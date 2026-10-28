@@ -1,5 +1,6 @@
 // 4 september 2015
 #include "uipriv_unix.h"
+#include "drop.h"
 
 // notes:
 // - G_DECLARE_DERIVABLE/FINAL_INTERFACE() requires glib 2.44 and that's starting with debian stretch (testing) (GTK+ 3.18) and ubuntu 15.04 (GTK+ 3.14) - debian jessie has 2.42 (GTK+ 3.14)
@@ -24,6 +25,7 @@ struct areaWidgetClass {
 
 struct uiArea {
 	uiUnixControl c;
+	uiprivDropEndpoint *drop;
 	GtkWidget *widget;		// either swidget or areaWidget depending on whether it is scrolling
 
 	GtkWidget *swidget;
@@ -597,6 +599,9 @@ static void uiAreaDestroy(uiControl *c)
 {
 	uiArea *a = uiArea(c);
 
+	uiprivDropDestroy(a->drop);
+	a->drop = NULL;
+
 	if (a->pendingScrollIdle != 0)
 		g_source_remove(a->pendingScrollIdle);
 	g_object_unref(a->widget);
@@ -784,4 +789,20 @@ uiArea *uiNewScrollingArea(uiAreaHandler *ah, int width, int height)
 	gtk_widget_show(a->areaWidget);
 
 	return a;
+}
+
+uiDropStatus uiAreaSetDropHandler(uiArea *a, unsigned int formats,
+	const uiDropHandler *handler, void *data)
+{
+	uiDropStatus status = uiprivDropValidate(formats, handler, data);
+	if (a == NULL || status != uiDropStatusOK)
+		return uiDropStatusInvalidArgument;
+	if (uiprivControlDestroyPending(uiControl(a)))
+		return uiDropStatusUnavailable;
+	if (a->drop == NULL) {
+		if (handler == NULL)
+			return uiDropStatusOK;
+		a->drop = uiprivUnixDropNew(uiControl(a), a->areaWidget, a->areaWidget);
+	}
+	return uiprivDropSetHandler(a->drop, formats, handler, data);
 }
