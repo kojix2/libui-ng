@@ -34,11 +34,13 @@ libui_add_test(unit ${unit_sources})
 target_link_libraries(unit PRIVATE libui_test_support)
 if(WIN32)
 	target_link_libraries(unit PRIVATE user32 comctl32)
-	add_executable(tooltip-windows-unit tooltip_windows.c resources.rc)
+	libui_add_test(tooltip-windows-unit tooltip_windows.c resources.rc)
+	set_tests_properties(tooltip-windows-unit PROPERTIES LABELS "contract;backend;gui;windows;${unit_linkage}")
 	target_link_libraries(tooltip-windows-unit PRIVATE libui::ui)
-	libui_apply_internal_options(tooltip-windows-unit)
-	add_test(NAME tooltip-windows-unit COMMAND tooltip-windows-unit)
-	set_tests_properties(tooltip-windows-unit PROPERTIES TIMEOUT 60)
+	libui_add_test(imagebuffer-windows imagebuffer_windows.cpp resources.rc)
+	set_tests_properties(imagebuffer-windows PROPERTIES LABELS "contract;backend;gui;windows;${unit_linkage}")
+	target_link_libraries(imagebuffer-windows PRIVATE libui::ui cmocka::cmocka
+		d2d1 windowscodecs ole32 uuid)
 endif()
 set_tests_properties(unit PROPERTIES
 	TIMEOUT 180 LABELS "contract;backend;gui;${unit_backend};${unit_linkage}")
@@ -57,11 +59,9 @@ libui_add_test(allocsize-unit allocsize.c)
 set_tests_properties(allocsize-unit PROPERTIES LABELS "logic;portable")
 target_link_libraries(allocsize-unit PRIVATE cmocka::cmocka)
 
-add_executable(textarray-unit textarray.c ../../common/textarray.c)
+libui_add_test(textarray-unit textarray.c ../../common/textarray.c)
+set_tests_properties(textarray-unit PROPERTIES LABELS "logic;portable")
 target_link_libraries(textarray-unit PRIVATE cmocka::cmocka)
-libui_apply_internal_options(textarray-unit)
-add_test(NAME textarray-unit COMMAND textarray-unit)
-set_tests_properties(textarray-unit PROPERTIES TIMEOUT 60)
 
 libui_add_test(shouldquit-unit shouldquit.c ../../common/shouldquit.c)
 set_tests_properties(shouldquit-unit PROPERTIES LABELS "logic;portable")
@@ -72,6 +72,17 @@ libui_add_test(imagerep-unit imagerep.c ../../common/imagerep.c)
 set_tests_properties(imagerep-unit PROPERTIES LABELS "logic;portable")
 target_link_libraries(imagerep-unit PRIVATE cmocka::cmocka)
 target_include_directories(imagerep-unit PRIVATE ../.. ../../common)
+
+libui_add_test(imagebuffer-unit imagebuffer.c ../../common/imagerep.c)
+set_tests_properties(imagebuffer-unit PROPERTIES LABELS "logic;contract;fault;portable")
+target_link_libraries(imagebuffer-unit PRIVATE cmocka::cmocka)
+target_compile_definitions(imagebuffer-unit PRIVATE _UI_STATIC)
+
+if(UNIX AND NOT APPLE)
+	libui_add_test(imagebuffer-cairo imagebuffer_cairo.c)
+	set_tests_properties(imagebuffer-cairo PROPERTIES LABELS "contract;backend;gtk;${unit_linkage}")
+	target_link_libraries(imagebuffer-cairo PRIVATE libui::ui cmocka::cmocka)
+endif()
 
 libui_add_test(gridutil-unit gridutil.c ../../common/gridutil.c)
 set_tests_properties(gridutil-unit PROPERTIES LABELS "logic;portable")
@@ -113,58 +124,47 @@ if(APPLE)
 	target_link_libraries(alloc-darwin PRIVATE cmocka::cmocka
 		${LIBUI_TEST_APPKIT_FRAMEWORK})
 
-	add_executable(toolbar-darwin toolbar_darwin.m)
+	libui_add_test(toolbar-darwin toolbar_darwin.m)
+	set_tests_properties(toolbar-darwin PROPERTIES LABELS "contract;backend;gui;darwin;${unit_linkage}")
 	target_link_libraries(toolbar-darwin PRIVATE libui::ui cmocka::cmocka
 		${LIBUI_TEST_APPKIT_FRAMEWORK})
-	libui_apply_internal_options(toolbar-darwin)
-	add_test(NAME toolbar-darwin COMMAND toolbar-darwin)
-	set_tests_properties(toolbar-darwin PROPERTIES TIMEOUT 60)
 endif()
 
-add_executable(imageviewrect-unit
+libui_add_test(imageviewrect-unit
 	imageviewrect.c ../../common/imageview.c ../../common/imagerep.c
 )
+set_tests_properties(imageviewrect-unit PROPERTIES LABELS "logic;portable")
 target_link_libraries(imageviewrect-unit PRIVATE cmocka::cmocka)
 if(UNIX)
 	target_link_libraries(imageviewrect-unit PRIVATE m)
 endif()
 target_include_directories(imageviewrect-unit PRIVATE ../.. ../../common)
-libui_apply_internal_options(imageviewrect-unit)
-add_test(NAME imageviewrect-unit COMMAND imageviewrect-unit)
-set_tests_properties(imageviewrect-unit PROPERTIES TIMEOUT 60)
 
-add_executable(drop-unit drop.c ../../common/drop.c ../../common/control.c
+libui_add_test(drop-unit drop.c ../../common/drop.c ../../common/control.c
 	../../common/utf.c ../../common/textarray.c)
+set_tests_properties(drop-unit PROPERTIES LABELS "logic;contract;fault;portable")
 target_link_libraries(drop-unit PRIVATE cmocka::cmocka)
-libui_apply_internal_options(drop-unit)
-add_test(NAME drop-unit COMMAND drop-unit)
-set_tests_properties(drop-unit PROPERTIES TIMEOUT 60)
 
 if(APPLE)
-	add_executable(drop-darwin drop_darwin.m)
+	libui_add_test(drop-darwin drop_darwin.m)
+	set_tests_properties(drop-darwin PROPERTIES LABELS "contract;backend;fault;gui;darwin;${unit_linkage}")
 	target_link_libraries(drop-darwin PRIVATE libui::ui cmocka::cmocka
 		${LIBUI_TEST_APPKIT_FRAMEWORK})
-	libui_apply_internal_options(drop-darwin)
-	add_test(NAME drop-darwin COMMAND drop-darwin)
-	set_tests_properties(drop-darwin PROPERTIES TIMEOUT 60)
 endif()
 
 if(UNIX AND NOT APPLE)
-	add_executable(drop-gtk drop_gtk.c ../../common/drop.c ../../common/control.c
+	libui_add_test(drop-gtk drop_gtk.c ../../common/drop.c ../../common/control.c
 		../../common/utf.c ../../common/textarray.c)
+	set_tests_properties(drop-gtk PROPERTIES LABELS "backend;fault;gui;gtk")
 	target_link_libraries(drop-gtk PRIVATE cmocka::cmocka PkgConfig::GTK3)
 	target_compile_definitions(drop-gtk PRIVATE _POSIX_C_SOURCE=200809L)
-	libui_apply_internal_options(drop-gtk)
-	add_test(NAME drop-gtk COMMAND drop-gtk)
-	set_tests_properties(drop-gtk PROPERTIES TIMEOUT 60 SKIP_RETURN_CODE 77)
+	set_tests_properties(drop-gtk PROPERTIES SKIP_RETURN_CODE 77)
 endif()
 
 if(WIN32)
-	add_executable(drop-windows drop_windows.cpp ../../common/drop.c ../../common/control.c
+	libui_add_test(drop-windows drop_windows.cpp ../../common/drop.c ../../common/control.c
 		../../common/utf.c ../../common/textarray.c)
+	set_tests_properties(drop-windows PROPERTIES LABELS "backend;fault;windows")
 	target_link_libraries(drop-windows PRIVATE cmocka::cmocka ole32 uuid)
 	target_compile_definitions(drop-windows PRIVATE _UI_STATIC)
-	libui_apply_internal_options(drop-windows)
-	add_test(NAME drop-windows COMMAND drop-windows)
-	set_tests_properties(drop-windows PROPERTIES TIMEOUT 60)
 endif()
