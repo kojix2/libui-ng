@@ -1,6 +1,7 @@
 #include "uipriv_windows.hpp"
 #include <cstdlib>
 #include <limits.h>
+#include <algorithm>
 
 // TODO:
 // - is the alpha channel ignored when drawing images in tables?
@@ -377,4 +378,175 @@ fail:
 	}
 	src->Release();
 	return hr;
+}
+
+struct imageBufferBitmap {
+	imageBufferBitmap *next;
+	ID2D1RenderTarget *target;
+	ID2D1Bitmap *bitmap;
+	int x, y, width, height;
+	D2D1_RECT_U dirty; // Bitmap-local union of CPU updates not yet uploaded.
+};
+
+struct imageBufferNative {
+	imageBufferNative *next;
+	imageBufferBitmap *bitmaps;
+};
+
+// UI-thread only. Native Areas retire target resources on destruction/device
+// loss; buffers also release all their resources when explicitly freed.
+static imageBufferNative *imageBuffers;
+
+static void freeBufferBitmap(imageBufferBitmap *cached)
+{
+	cached->bitmap->Release();
+	cached->target->Release();
+	free(cached);
+}
+
+void uiprivImageBufferForgetRenderTarget(ID2D1RenderTarget *target)
+{
+	for (imageBufferNative *native = imageBuffers; native != NULL; native = native->next) {
+		imageBufferBitmap **p = &native->bitmaps;
+		while (*p != NULL) {
+			imageBufferBitmap *cached = *p;
+			if (cached->target == target) {
+				*p = cached->next;
+				freeBufferBitmap(cached);
+			} else p = &cached->next;
+		}
+	}
+}
+
+int uiprivImageBufferCreate(uiImageBuffer *buffer)
+{
+	// Common construction already checked the dimensions and storage extent.
+	if (buffer->stride > UINT32_MAX)
+		return 0;
+	buffer->pixels = (unsigned char *) calloc((size_t) buffer->height, buffer->stride);
+	if (buffer->pixels == NULL)
+		return 0;
+	imageBufferNative *native = (imageBufferNative *) calloc(1, sizeof *native);
+	if (native == NULL) {
+		free(buffer->pixels);
+		return 0;
+	}
+	native->next = imageBuffers;
+	imageBuffers = native;
+	buffer->native = native;
+	buffer->order = uiprivImageBufferBGRA;
+	return 1;
+}
+
+void uiprivImageBufferDestroy(uiImageBuffer *buffer)
+{
+	imageBufferNative *native = (imageBufferNative *) buffer->native;
+	imageBufferNative **p = &imageBuffers;
+	while (*p != native) p = &(*p)->next;
+	*p = native->next;
+	while (native->bitmaps != NULL) {
+		imageBufferBitmap *cached = native->bitmaps;
+		native->bitmaps = cached->next;
+		freeBufferBitmap(cached);
+	}
+	free(native);
+	free(buffer->pixels);
+}
+
+int uiprivImageBufferPrepareUpdate(uiImageBuffer *buffer)
+{
+	return 1;
+}
+
+void uiprivImageBufferUpdated(uiImageBuffer *buffer, int x, int y, int width, int height)
+{
+	imageBufferNative *native = (imageBufferNative *) buffer->native;
+	for (imageBufferBitmap *cached = native->bitmaps; cached != NULL; cached = cached->next) {
+		int left = (std::max)(x, cached->x), top = (std::max)(y, cached->y);
+		int right = (std::min)(x + width, cached->x + cached->width);
+		int bottom = (std::min)(y + height, cached->y + cached->height);
+		if (right <= left || bottom <= top) continue;
+		D2D1_RECT_U dirty = {(UINT32) (left - cached->x), (UINT32) (top - cached->y),
+			(UINT32) (right - cached->x), (UINT32) (bottom - cached->y)};
+		if (cached->dirty.right > cached->dirty.left) {
+			dirty.left = (std::min)(dirty.left, cached->dirty.left);
+			dirty.top = (std::min)(dirty.top, cached->dirty.top);
+			dirty.right = (std::max)(dirty.right, cached->dirty.right);
+			dirty.bottom = (std::max)(dirty.bottom, cached->dirty.bottom);
+		}
+		cached->dirty = dirty;
+	}
+}
+
+ID2D1Bitmap *uiprivImageBufferBitmap(const uiImageBuffer *buffer, ID2D1RenderTarget *target,
+	const uiDrawImageBufferParams *params, D2D1_RECT_F *source)
+{
+	imageBufferNative *native = (imageBufferNative *) buffer->native;
+	int x = 0, y = 0, right = buffer->width, bottom = buffer->height;
+	UINT32 maximum = target->GetMaximumBitmapSize();
+	if ((UINT32) right > maximum || (UINT32) bottom > maximum) {
+		x = params->SourceX; y = params->SourceY;
+		right = x + params->SourceWidth; bottom = y + params->SourceHeight;
+		if (params->Interpolation == uiImageBufferInterpolationSmooth) {
+			if (x > 0 && (UINT32) (right - x) < maximum) x--;
+			if (right < buffer->width && (UINT32) (right - x) < maximum) right++;
+			if (y > 0 && (UINT32) (bottom - y) < maximum) y--;
+			if (bottom < buffer->height && (UINT32) (bottom - y) < maximum) bottom++;
+		}
+	}
+	if ((UINT32) (right - x) > maximum || (UINT32) (bottom - y) > maximum) {
+		logHRESULT(L"ImageBuffer source rectangle exceeds render target bitmap size limit", E_INVALIDARG);
+		return NULL;
+	}
+	imageBufferBitmap *cached;
+	for (cached = native->bitmaps; cached != NULL; cached = cached->next)
+		if (cached->target == target) break;
+	if (cached == NULL || x < cached->x || y < cached->y ||
+		right > cached->x + cached->width || bottom > cached->y + cached->height) {
+		ID2D1Bitmap *bitmap = NULL;
+		D2D1_BITMAP_PROPERTIES p = {};
+		p.pixelFormat.format = DXGI_FORMAT_B8G8R8A8_UNORM;
+		p.pixelFormat.alphaMode = D2D1_ALPHA_MODE_PREMULTIPLIED;
+		p.dpiX = p.dpiY = 96;
+		D2D1_SIZE_U size = {(UINT32) (right - x), (UINT32) (bottom - y)};
+		HRESULT hr = target->CreateBitmap(size,
+			buffer->pixels + (size_t) y * buffer->stride + (size_t) x * 4,
+			(UINT32) buffer->stride, &p, &bitmap);
+		if (FAILED(hr)) {
+			logHRESULT(L"error creating ImageBuffer bitmap", hr);
+			return NULL;
+		}
+		if (cached == NULL) {
+			cached = (imageBufferBitmap *) calloc(1, sizeof *cached);
+			if (cached == NULL) { bitmap->Release(); return NULL; }
+			cached->target = target;
+			target->AddRef(); // Prevent target identity reuse until retirement.
+			cached->next = native->bitmaps;
+			native->bitmaps = cached;
+		} else cached->bitmap->Release();
+		cached->bitmap = bitmap;
+		cached->x = x; cached->y = y;
+		cached->width = right - x; cached->height = bottom - y;
+		cached->dirty = {};
+	} else if (cached->dirty.right > cached->dirty.left) {
+		const D2D1_RECT_U &dirty = cached->dirty;
+		// CopyFromMemory flushes pending draws that use this bitmap before
+		// changing it. Earlier draws therefore keep their submitted pixels.
+		HRESULT hr = cached->bitmap->CopyFromMemory(&dirty, buffer->pixels +
+			((size_t) cached->y + dirty.top) * buffer->stride +
+			((size_t) cached->x + dirty.left) * 4, (UINT32) buffer->stride);
+		if (FAILED(hr)) {
+			logHRESULT(L"error updating ImageBuffer bitmap", hr);
+			return NULL;
+		}
+		cached->dirty = {};
+	}
+	x = params->SourceX - cached->x; y = params->SourceY - cached->y;
+	right = x + params->SourceWidth; bottom = y + params->SourceHeight;
+	source->left = (FLOAT) x; source->top = (FLOAT) y;
+	source->right = (FLOAT) right; source->bottom = (FLOAT) bottom;
+	if ((double) source->left != x || (double) source->top != y ||
+		(double) source->right != right || (double) source->bottom != bottom)
+		return NULL;
+	return cached->bitmap;
 }
