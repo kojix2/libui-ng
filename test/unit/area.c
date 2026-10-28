@@ -10,6 +10,7 @@ int areaScroll(uiAreaHandler *ah, uiArea *area,
 	uiAreaScrollEvent *event)
 {
 	assert_ptr_equal(ah, &handler);
+	assert_ptr_equal(((struct state *) ah->UserData)->c, area);
 	scrollCalls++;
 	lastScroll = *event;
 	return scrollHandled;
@@ -18,6 +19,7 @@ int areaScroll(uiAreaHandler *ah, uiArea *area,
 static void areaDraw(uiAreaHandler *handler, uiArea *area,
 	uiAreaDrawParams *params)
 {
+	assert_non_null(handler->UserData);
 }
 
 static void areaMouseEvent(uiAreaHandler *handler, uiArea *area,
@@ -57,6 +59,7 @@ static int areaSetup(void **state)
 		return -1;
 	dragBrokenCalls = 0;
 	s = (struct state *) *state;
+	handler.UserData = s;
 	s->c = uiControl(uiNewArea(&handler));
 	return 0;
 }
@@ -68,6 +71,7 @@ static int scrollingAreaSetup(void **state)
 	if (unitTestSetup(state) != 0)
 		return -1;
 	s = (struct state *) *state;
+	handler.UserData = s;
 	s->c = uiControl(uiNewScrollingArea(&handler, 640, 480));
 	return 0;
 }
