@@ -7,7 +7,7 @@ endif()
 
 target_sources(libui_ui PRIVATE
 	alloc.m area.m areaevents.m attrstr.m autolayout.m box.m button.m checkbox.m
-	colorbutton.m combobox.m control.m datetimepicker.m debug.m draw.m drawtext.m
+	colorbutton.m combobox.m control.m datetimepicker.m debug.m drop.m draw.m drawtext.m
 	editablecombo.m entry.m event.m fontbutton.m fontmatch.m fonttraits.m
 	fontvariation.m form.m graphemes.m grid.m group.m image.m imageview.m label.m main.m menu.m
 	multilineentry.m opentype.m progressbar.m radiobuttons.m scrollview.m separator.m

@@ -41,6 +41,7 @@ See the [cross-platform example screenshots](../doc/screenshots.md).
 | `open-file.c` | Open a file dialog and free the returned path. |
 | `open-folder.c` | Open a folder dialog and free the returned path. |
 | `save-file.c` | Open a save file dialog and free the returned path. |
+| `drop.c` | Receive files/text on a Window or Area, with hover feedback. |
 | `message-box.c` | Show a message dialog. |
 | `error-message-box.c` | Show an error message dialog. |
 | `timer.c` | Run a repeating timer callback. |
