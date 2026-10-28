@@ -4572,6 +4572,119 @@ _UI_EXTERN void uiTableSetSelection(uiTable *t, uiTableSelection *sel);
  */
 _UI_EXTERN void uiFreeTableSelection(uiTableSelection* s);
 
+/* Drag and drop destinations. All calls and callbacks require the UI thread.
+ * Receive Text (UTF-8) or filesystem paths, Copy only. Window targets cover
+ * content not handled by native child targets; registered Areas are exclusive
+ * drop zones. Payloads are limited to 64 MiB and 65536 paths; no file I/O is
+ * performed. Over rejection or conversion failure never retries another target.
+ */
+typedef struct uiDropInfo uiDropInfo;
+typedef struct uiDropData uiDropData;
+
+_UI_ENUM(uiDropFormat) {
+	uiDropFormatNone = 0,
+	uiDropFormatText = 1,
+	uiDropFormatFiles = 2
+};
+
+_UI_ENUM(uiDropAction) {
+	uiDropActionNone = 0,
+	uiDropActionCopy = 1
+};
+
+_UI_ENUM(uiDropResult) {
+	uiDropRejected = 0,
+	uiDropAccepted = 1
+};
+
+_UI_ENUM(uiDropStatus) {
+	uiDropStatusOK = 0,
+	uiDropStatusInvalidArgument,
+	uiDropStatusUnavailable,
+	uiDropStatusNativeError
+};
+
+typedef struct uiDropHandler {
+	size_t Size;
+
+	/* Required. Info, payload, and getter-returned strings are borrowed for
+	 * this call only. Return Accepted only after consuming/copying the data.
+	 * No native receive operation is performed by any getter.
+	 */
+	uiDropResult (*Drop)(const uiDropInfo *info,
+		const uiDropData *payload, void *userData);
+
+	/* Optional. NULL selects Copy for compatible offers, provided the source
+	 * permits Copy. May run repeatedly; no file contents/names are promised.
+	 * A matching offer may still fail conversion or be rejected at Drop.
+	 */
+	uiDropAction (*Over)(const uiDropInfo *info, void *userData);
+
+	/* Optional. End of hover feedback, NOT cancellation of pending data.
+	 * Native GTK can emit Leave before Drop. Destruction/explicit removal
+	 * need not invoke this interaction callback.
+	 */
+	void (*Leave)(void *userData);
+
+	/* Optional cleanup notification, exactly once for each successful
+	 * registration when retired AND all its active callbacks have returned.
+	 * Never called for a failed registration. UI thread; no control argument:
+	 * do not touch a possibly destroyed native control here. Bindings release
+	 * callback roots/handles here. Its own trampoline must remain alive until
+	 * this function returns. Retired transfers must not indefinitely pin it.
+	 */
+	void (*ReleaseUserData)(void *userData);
+} uiDropHandler;
+
+/* Registration is copied; the caller may discard the handler struct.
+ * Accepted formats are a bit mask. Unknown bits are rejected in v1.
+ * On failure the previous registration remains installed.
+ * Passing (0, NULL, NULL) removes a handler and is idempotent.
+ * On replacement/removal no NEW old-handler callback may start. An already
+ * executing callback can finish; cleanup follows its return.
+ * Only the current callback's result may be used after self-removal.
+ * Replaced registrations do not receive an old in-flight transfer.
+ */
+_UI_EXTERN uiDropStatus uiWindowSetDropHandler(uiWindow *window,
+	unsigned int acceptedFormats, const uiDropHandler *handler, void *userData);
+_UI_EXTERN uiDropStatus uiAreaSetDropHandler(uiArea *area,
+	unsigned int acceptedFormats, const uiDropHandler *handler, void *userData);
+
+/* Offer metadata, available in Over and Drop. No native I/O in getters.
+ * Files is preferred to Text when both are offered and enabled. A conversion
+ * failure does not silently retry another representation or another target.
+ */
+_UI_EXTERN unsigned int uiDropInfoFormats(const uiDropInfo *info);
+_UI_EXTERN uiDropFormat uiDropInfoFormat(const uiDropInfo *info);
+
+/* Area: existing uiAreaMouseEvent drawing coordinates, including scrolling.
+ * Window: top-left local coordinates in the existing WindowContentSize units,
+ * NOT an assumption that every backend uses the same unit as uiArea.
+ * Physical drop coordinates are captured before asynchronous reception.
+ */
+_UI_EXTERN void uiDropInfoPosition(const uiDropInfo *info, double *x, double *y);
+
+/* Payload getters: no allocations, all returned pointers borrowed.
+ * Wrong-format string getters / out-of-range file indices return NULL.
+ * Wrong-format lengths/counts return zero.
+ * Text: valid UTF-8, NUL-terminated; length excludes terminator.
+ * Files: filesystem paths, not URI strings; Unix path bytes need not be UTF-8.
+ * File order is preserved; paths may identify directories or network mounts.
+ */
+_UI_EXTERN uiDropFormat uiDropDataFormat(const uiDropData *payload);
+_UI_EXTERN const char *uiDropDataText(const uiDropData *payload);
+_UI_EXTERN size_t uiDropDataTextLength(const uiDropData *payload);
+_UI_EXTERN size_t uiDropDataFileCount(const uiDropData *payload);
+_UI_EXTERN const char *uiDropDataFilePath(const uiDropData *payload, size_t index);
+
+/* Convenience functions returning independent C copies.
+ * The borrowed payload itself has no public free function.
+ * Free on the UI thread before uiUninit(), with the existing matching APIs.
+ * To use a worker, copy into application/runtime-owned memory instead.
+ */
+_UI_EXTERN char *uiDropDataCopyText(const uiDropData *payload);   /* uiFreeText */
+_UI_EXTERN char **uiDropDataCopyFiles(const uiDropData *payload); /* uiFreeTextArray */
+
 #ifdef __cplusplus
 }
 #endif
