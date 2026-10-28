@@ -1,5 +1,6 @@
 // 8 september 2015
 #include "uipriv_windows.hpp"
+#include "drop.hpp"
 #include "area.hpp"
 
 // TODO audit other Direct2D-backed windows for render-target cleanup
@@ -71,6 +72,9 @@ static LRESULT CALLBACK areaWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
 static void uiAreaDestroy(uiControl *c)
 {
 	uiArea *a = uiArea(c);
+
+	uiprivDropDestroy(a->drop);
+	a->drop = NULL;
 
 	uiprivDestroyTooltip(c);
 	uiWindowsEnsureDestroyWindow(a->hwnd);
@@ -236,4 +240,36 @@ uiArea *uiNewScrollingArea(uiAreaHandler *ah, int width, int height)
 	areaUpdateScroll(a);
 
 	return a;
+}
+
+static int dropPosition(uiControl *c, POINTL screen, double *x, double *y)
+{
+	uiArea *a = uiArea(c);
+	POINT p = {screen.x, screen.y};
+	RECT client;
+	if (!ScreenToClient(a->hwnd, &p) || !GetClientRect(a->hwnd, &client) || !PtInRect(&client, p)) return 0;
+	*x = p.x; *y = p.y;
+
+	pixelsToDIP(a, x, y);
+	if (a->scrolling) { *x += a->hscrollpos; *y += a->vscrollpos; }
+
+	return 1;
+}
+
+uiDropStatus uiAreaSetDropHandler(uiArea *a, unsigned int formats,
+	const uiDropHandler *handler, void *data)
+{
+	uiDropStatus status = uiprivDropValidate(formats, handler, data);
+	if (a == NULL || status != uiDropStatusOK)
+		return uiDropStatusInvalidArgument;
+	if (uiprivControlDestroyPending(uiControl(a)))
+		return uiDropStatusUnavailable;
+	if (a->drop == NULL) {
+		if (handler == NULL)
+			return uiDropStatusOK;
+		a->drop = uiprivWindowsDropNew(uiControl(a), a->hwnd, dropPosition);
+		if (a->drop == NULL)
+			return uiDropStatusNativeError;
+	}
+	return uiprivDropSetHandler(a->drop, formats, handler, data);
 }

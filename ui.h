@@ -4572,6 +4572,112 @@ _UI_EXTERN void uiTableSetSelection(uiTable *t, uiTableSelection *sel);
  */
 _UI_EXTERN void uiFreeTableSelection(uiTableSelection* s);
 
+/* Experimental drag and drop; all calls and callbacks require the UI thread.
+ * Receive UTF-8 text or filesystem paths, Copy only; no file I/O is performed.
+ * Payloads are limited to 64 MiB and 65536 paths.
+ */
+typedef struct uiDropInfo uiDropInfo;
+typedef struct uiDropData uiDropData;
+
+_UI_ENUM(uiDropFormat) {
+	uiDropFormatNone = 0,
+	uiDropFormatText = 1,
+	uiDropFormatFiles = 2
+};
+
+/* Offer metadata, borrowed during Over and Drop. */
+struct uiDropInfo {
+	/* Bit mask of offered formats, including formats not enabled by the target. */
+	unsigned int Formats;
+	/* Selected format; Files takes precedence over Text. */
+	uiDropFormat Format;
+
+	/* Area: mouse event drawing coordinates, including scrolling.
+	 * Window: top-left local coordinates in uiWindowContentSize() units.
+	 * Captured before asynchronous reception.
+	 */
+	double X;
+	double Y;
+};
+
+/* Received data and its pointers are borrowed until Drop returns.
+ * Do not modify or free them. Retaining data requires copying the strings
+ * and array elements; copying this structure alone is insufficient.
+ */
+struct uiDropData {
+	uiDropFormat Format;
+
+	/* Text: valid UTF-8, NUL-terminated; length is in bytes, excluding NUL.
+	 * Empty text has a non-NULL Text pointer and zero TextLength.
+	 * For Files, Text is NULL and TextLength is zero.
+	 */
+	const char *Text;
+	size_t TextLength;
+
+	/* Files: NUL-terminated filesystem paths, followed by a NULL array entry
+	 * at Files[FileCount]. Unix path bytes need not be UTF-8.
+	 * For Text, Files is NULL and FileCount is zero.
+	 */
+	const char *const *Files;
+	size_t FileCount;
+};
+
+_UI_ENUM(uiDropAction) {
+	uiDropActionNone = 0,
+	uiDropActionCopy = 1
+};
+
+_UI_ENUM(uiDropResult) {
+	uiDropRejected = 0,
+	uiDropAccepted = 1
+};
+
+_UI_ENUM(uiDropStatus) {
+	uiDropStatusOK = 0,
+	uiDropStatusInvalidArgument,
+	uiDropStatusUnavailable,
+	uiDropStatusNativeError
+};
+
+typedef struct uiDropHandler {
+	size_t Size;
+
+	/* Required. Return Accepted after consuming/copying the received data. */
+	uiDropResult (*Drop)(const uiDropInfo *info,
+		const uiDropData *payload, void *userData);
+
+	/* Optional. NULL accepts compatible Copy offers. Metadata only;
+	 * acceptance here does not guarantee successful reception in Drop.
+	 */
+	uiDropAction (*Over)(const uiDropInfo *info, void *userData);
+
+	/* Optional. Ends hover feedback; GTK may emit Leave before Drop.
+	 * Removal/destruction need not invoke it.
+	 */
+	void (*Leave)(void *userData);
+
+	/* Optional. Called once per successful registration, after retirement
+	 * and active callbacks return. Bindings release callback roots here;
+	 * keep this trampoline alive until it returns. The control may be gone.
+	 */
+	void (*ReleaseUserData)(void *userData);
+} uiDropHandler;
+
+/* Copies the handler; acceptedFormats is a bit mask. Failure preserves the
+ * previous handler. Passing (0, NULL, NULL) removes it. Replacement/removal
+ * stops new callbacks and discards old transfers; active callbacks may finish.
+ */
+_UI_EXTERN uiDropStatus uiWindowSetDropHandler(uiWindow *window,
+	unsigned int acceptedFormats, const uiDropHandler *handler, void *userData);
+_UI_EXTERN uiDropStatus uiAreaSetDropHandler(uiArea *area,
+	unsigned int acceptedFormats, const uiDropHandler *handler, void *userData);
+
+/* Independent C copies; NULL for the wrong format. Free on the UI thread
+ * before uiUninit() with the matching functions below.
+ */
+_UI_EXTERN char *uiDropDataCopyText(const uiDropData *payload);   /* uiFreeText */
+_UI_EXTERN char **uiDropDataCopyFiles(const uiDropData *payload); /* uiFreeTextArray */
+
 #ifdef __cplusplus
 }
 #endif

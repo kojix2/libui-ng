@@ -1,11 +1,13 @@
 // 15 august 2015
 #import "uipriv_darwin.h"
+#include "drop.h"
 #include "../common/toolbar.h"
 
 #define defaultStyleMask (NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskResizable)
 
 struct uiWindow {
 	uiDarwinControl c;
+	uiprivDropEndpoint *drop;
 	NSWindow *window;
 	uiControl *child;
 	uiToolbar *toolbar;
@@ -38,6 +40,27 @@ static NSWindowStyleMask windowStyleMask(uiWindow *w)
 }
 
 @implementation uiprivNSWindow
+
+- (NSDragOperation)draggingEntered:(id<NSDraggingInfo>)sender
+{
+	return uiprivDarwinDropOver(self->window->drop, sender, [self contentView], YES);
+}
+- (NSDragOperation)draggingUpdated:(id<NSDraggingInfo>)sender
+{
+	return [self draggingEntered:sender];
+}
+- (void)draggingExited:(id<NSDraggingInfo>)sender
+{
+	uiprivDarwinDropLeave(self->window->drop, sender);
+}
+- (BOOL)prepareForDragOperation:(id<NSDraggingInfo>)sender
+{
+	return uiprivDarwinDropPrepare(self->window->drop, sender);
+}
+- (BOOL)performDragOperation:(id<NSDraggingInfo>)sender
+{
+	return uiprivDarwinDropPerform(self->window->drop, sender, [self contentView], YES);
+}
 
 - (void)uiprivDoMove:(NSEvent *)initialEvent
 {
@@ -164,6 +187,9 @@ static void removeConstraints(uiWindow *w)
 static void uiWindowDestroy(uiControl *c)
 {
 	uiWindow *w = uiWindow(c);
+
+	uiprivDropDestroy(w->drop);
+	w->drop = NULL;
 
 	// hide the window
 	[w->window orderOut:w->window];
@@ -509,4 +535,20 @@ uiWindow *uiprivWindowFromNSWindow(NSWindow *w)
 		return NULL;
 
 	return [(uiprivNSWindow *)w window];
+}
+
+uiDropStatus uiWindowSetDropHandler(uiWindow *w, unsigned int formats,
+	const uiDropHandler *handler, void *data)
+{
+	uiDropStatus status = uiprivDropValidate(formats, handler, data);
+	if (w == NULL || status != uiDropStatusOK)
+		return uiDropStatusInvalidArgument;
+	if (uiprivControlDestroyPending(uiControl(w)))
+		return uiDropStatusUnavailable;
+	if (w->drop == NULL) {
+		if (handler == NULL)
+			return uiDropStatusOK;
+		w->drop = uiprivDarwinDropNew(uiControl(w), w->window);
+	}
+	return uiprivDropSetHandler(w->drop, formats, handler, data);
 }
