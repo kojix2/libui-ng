@@ -563,3 +563,36 @@ void uiDrawImage(uiDrawContext *c, const uiImage *img, double x, double y, doubl
 	// Restore graphics state
 	CGContextRestoreGState(c->c);
 }
+
+void uiDrawImageBufferWithParams(uiDrawContext *c, const uiImageBuffer *buffer,
+	const uiDrawImageBufferParams *params)
+{
+	CGImageRef image;
+	CGImageRef cropped = NULL;
+
+	if (!uiprivImageBufferDrawParamsValid(c, buffer, params))
+		return;
+	image = uiprivImageBufferImage(buffer);
+	if (image == NULL)
+		return;
+	if (params->SourceX != 0 || params->SourceY != 0 ||
+		params->SourceWidth != buffer->width || params->SourceHeight != buffer->height) {
+		cropped = CGImageCreateWithImageInRect(image, CGRectMake(params->SourceX,
+			params->SourceY, params->SourceWidth, params->SourceHeight));
+		if (cropped == NULL)
+			return;
+		image = cropped;
+	}
+	CGContextSaveGState(c->c);
+	CGContextSetInterpolationQuality(c->c, params->Interpolation == uiImageBufferInterpolationNearest ?
+		kCGInterpolationNone : kCGInterpolationHigh);
+	CGContextSetBlendMode(c->c, kCGBlendModeNormal);
+	// Area contexts have a top-left origin. Use local coordinates to avoid an
+	// overflowing 2*y+height translation for otherwise valid rectangles.
+	CGContextTranslateCTM(c->c, params->X, params->Y + params->Height);
+	CGContextScaleCTM(c->c, 1, -1);
+	CGContextDrawImage(c->c, CGRectMake(0, 0, params->Width, params->Height), image);
+	CGContextRestoreGState(c->c);
+	if (cropped != NULL)
+		CGImageRelease(cropped);
+}

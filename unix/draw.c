@@ -240,3 +240,66 @@ void uiDrawImage(uiDrawContext *c, const uiImage *img, double x, double y, doubl
 	cairo_pattern_destroy(pattern);
 	cairo_restore(c->cr);
 }
+
+void uiDrawImageBufferWithParams(uiDrawContext *c, const uiImageBuffer *buffer,
+	const uiDrawImageBufferParams *params)
+{
+	cairo_surface_t *surface;
+	cairo_pattern_t *pattern;
+	cairo_matrix_t matrix;
+	cairo_matrix_t translated;
+	double x, y, width, height, scaleX, scaleY;
+
+	if (!uiprivImageBufferDrawParamsValid(c, buffer, params))
+		return;
+	x = params->X;
+	y = params->Y;
+	width = params->Width;
+	height = params->Height;
+	scaleX = width / params->SourceWidth;
+	scaleY = height / params->SourceHeight;
+	// Avoid poisoning the context with a singular/non-finite pattern transform.
+	if (!uiprivImagePositiveFinite(scaleX) || !uiprivImagePositiveFinite(scaleY) ||
+		!uiprivImagePositiveFinite(1 / scaleX) || !uiprivImagePositiveFinite(1 / scaleY))
+		return;
+	surface = (cairo_surface_t *) buffer->native;
+	if (cairo_surface_status(surface) != CAIRO_STATUS_SUCCESS)
+		return;
+	pattern = cairo_pattern_create_for_surface(surface);
+	if (cairo_pattern_status(pattern) != CAIRO_STATUS_SUCCESS) {
+		cairo_pattern_destroy(pattern);
+		return;
+	}
+	cairo_pattern_set_filter(pattern, params->Interpolation == uiImageBufferInterpolationNearest ?
+		CAIRO_FILTER_NEAREST : CAIRO_FILTER_BILINEAR);
+	cairo_pattern_set_extend(pattern, CAIRO_EXTEND_PAD);
+	// Express scaling in the pattern, then translate only for placement.
+	cairo_matrix_init(&matrix, 1 / scaleX, 0, 0, 1 / scaleY,
+		params->SourceX, params->SourceY);
+	cairo_pattern_set_matrix(pattern, &matrix);
+	cairo_get_matrix(c->cr, &translated);
+	cairo_matrix_translate(&translated, x, y);
+	if (cairo_pattern_status(pattern) != CAIRO_STATUS_SUCCESS ||
+		!uiprivImageFinite(translated.x0) || !uiprivImageFinite(translated.y0)) {
+		cairo_pattern_destroy(pattern);
+		return;
+	}
+	cairo_save(c->cr);
+	cairo_translate(c->cr, x, y);
+	cairo_set_source(c->cr, pattern);
+	cairo_set_operator(c->cr, CAIRO_OPERATOR_OVER);
+	// fill does not alter the caller's current path; save/restore alone would
+	// not preserve a path consumed by cairo_clip().
+	{
+		cairo_path_t *path = cairo_copy_path(c->cr);
+		if (path->status == CAIRO_STATUS_SUCCESS) {
+			cairo_new_path(c->cr);
+			cairo_rectangle(c->cr, 0, 0, width, height);
+			cairo_fill(c->cr);
+			cairo_append_path(c->cr, path);
+		}
+		cairo_path_destroy(path);
+	}
+	cairo_restore(c->cr);
+	cairo_pattern_destroy(pattern);
+}

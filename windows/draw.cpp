@@ -666,3 +666,38 @@ void uiDrawImage(uiDrawContext *c, const uiImage *img, double x, double y, doubl
 
 	d2dBitmap->Release();
 }
+
+void uiDrawImageBufferWithParams(uiDrawContext *c, const uiImageBuffer *buffer,
+	const uiDrawImageBufferParams *params)
+{
+	ID2D1Layer *layer = NULL;
+	D2D1_RECT_F rect;
+	D2D1_RECT_F source;
+	double x, y, width, height;
+
+	if (!uiprivImageBufferDrawParamsValid(c, buffer, params))
+		return;
+	x = params->X;
+	y = params->Y;
+	width = params->Width;
+	height = params->Height;
+	if (fabs(x) > FLT_MAX || fabs(y) > FLT_MAX ||
+		fabs(x + width) > FLT_MAX || fabs(y + height) > FLT_MAX)
+		return;
+	rect.left = (FLOAT) x;
+	rect.top = (FLOAT) y;
+	rect.right = (FLOAT) (x + width);
+	rect.bottom = (FLOAT) (y + height);
+	if (!(rect.right > rect.left) || !(rect.bottom > rect.top))
+		return;
+	ID2D1Bitmap *bitmap = uiprivImageBufferBitmap(buffer, c->rt, params, &source);
+	if (bitmap == NULL)
+		return;
+	if (uiprivApplyClip(c, &layer)) {
+		c->rt->DrawBitmap(bitmap, &rect, 1.0f,
+			params->Interpolation == uiImageBufferInterpolationNearest ?
+			D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR :
+			D2D1_BITMAP_INTERPOLATION_MODE_LINEAR, &source);
+		uiprivUnapplyClip(c, layer);
+	}
+}

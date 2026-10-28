@@ -7,6 +7,7 @@
 static void releaseAreaRenderTarget(uiArea *a)
 {
 	if (a->rt != NULL) {
+		uiprivImageBufferForgetRenderTarget(a->rt);
 		a->rt->Release();
 		a->rt = NULL;
 	}

@@ -113,6 +113,48 @@ extern void uiprivImageViewComputeRect(double viewWidth, double viewHeight,
 	double imageWidth, double imageHeight, uiImageViewContentMode mode,
 	double *x, double *y, double *width, double *height);
 
+// imagebuffer.c and platform image implementations
+// CPU contents are authoritative. Native resources and their lifetimes remain
+// backend private; future caches must not change the public ownership contract.
+typedef enum uiprivImageBufferOrder {
+	uiprivImageBufferBGRA,
+	uiprivImageBufferRGBA,
+	uiprivImageBufferARGB32
+} uiprivImageBufferOrder;
+
+struct uiImageBuffer {
+	int width;
+	int height;
+	uiImageBufferFormat format;
+	size_t stride;
+	unsigned char *pixels;
+	uiprivImageBufferOrder order;
+	void *native;
+};
+
+// Whole-image and rectangle operations share span validation and row conversion.
+int uiprivImageBufferInputSpan(int width, int height, size_t stride, size_t *span);
+int uiprivImageBufferStorageSize(int width, int height, size_t stride, size_t *size);
+int uiprivImageBufferRectValid(const uiImageBuffer *buffer,
+	int x, int y, int width, int height);
+void uiprivImageBufferConvert(unsigned char *dest, size_t destStride,
+	const unsigned char *source, size_t sourceStride, int width, int height,
+	uiImageBufferFormat format, uiprivImageBufferOrder order);
+int uiprivImageBufferDrawValid(const uiDrawContext *c, const uiImageBuffer *buffer,
+	double x, double y, double width, double height,
+	uiImageBufferInterpolation interpolation);
+int uiprivImageBufferDrawParamsValid(const uiDrawContext *c,
+	const uiImageBuffer *buffer, const uiDrawImageBufferParams *params);
+
+// Create establishes pixels/stride/order/native and cleans up on failure.
+// Destroy releases CPU storage too (Cairo owns its image-surface data).
+int uiprivImageBufferCreate(uiImageBuffer *buffer);
+void uiprivImageBufferDestroy(uiImageBuffer *buffer);
+// Prepare must finish any fallible work before the first pixel is overwritten.
+int uiprivImageBufferPrepareUpdate(uiImageBuffer *buffer);
+void uiprivImageBufferUpdated(uiImageBuffer *buffer, int x, int y, int width, int height);
+
+
 // imagerep.c
 extern int uiprivImageFinite(double value);
 extern int uiprivImagePositiveFinite(double value);

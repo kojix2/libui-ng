@@ -459,6 +459,13 @@ normal WM_DELETE_WINDOW event, reaches uiUninit and exits zero without a native
 allocator leak diagnostic. These are startup/shutdown checks, not visual QA.
 Tests-off and nested-consumer configurations still omit tester.
 
+Dev likewise passes static/shared Debug builds of tester and all seventeen
+CTest entries, with unchanged names/commands/properties. Both tester variants
+display and close normally through uiUninit with exit zero. All 32 moved dev
+files match their preceding dev versions apart from the two path updates, so
+rounded-rectangle, focus, shortcut, dialog and scroll additions remain intact.
+Production/API, unit-test and QA sources match the preceding dev tree.
+
 MinGW windres compiles both static/shared manifest variants before and after
 the move to byte-identical resources. Native Windows/macOS builds and execution
 of this directory change remain unverified locally; their CI configuration is
@@ -480,3 +487,100 @@ After removal, Linux static/shared Debug tester builds display and close normall
 through uiUninit with exit zero on pre-build. CTest registrations, commands and
 properties are unchanged. No unit implementation changed, so the unit suites
 were not rerun for this cleanup. Logs are in `/tmp/libui-cleanup/`.
+
+## Second organization: `dev` image buffers and test registration
+
+The inherited common fixture was validated after rebase: shared 16/16
+(336 cmocka cases), static 16/16 (357), and ASan/UBSan static 16/16 (357).
+This supersedes the initial snapshot's unmeasured sanitizer entry above;
+`dev` coverage remains unmeasured. Leak detection was disabled.
+
+Starting from `128881ad`, the mock program remains in `imagebuffer.c` and the
+real Cairo program moves to `imagebuffer_cairo.c`. The outer
+`IMAGEBUFFER_CAIRO_TEST` program selector and its compile definition are removed;
+all program bodies, test names and registration order are preserved. All
+additional `dev` targets use `libui_add_test` and carry subject/platform labels.
+Independent mocks have no libui linkage label; the linked Cairo test has a
+linkage label and no `gui` label. `drop-gtk` retains skip return code 77.
+
+Validation of this split: shared and static both passed 16/16, with the same
+336/357 case names and order as the inherited baseline. The 11 non-GUI
+executables also passed with DISPLAY and WAYLAND_DISPLAY unset. Native
+Windows/macOS execution of these registration changes remains pending.
+
+After applying the common Table split and preserving the `dev` UserData model
+callbacks, the combined shared/static/ASan+UBSan static suites each passed
+16/16 (336/357/357 cmocka cases). Original case names/order and CTest
+names/order/timeouts/skip conditions remain unchanged; the non-GUI selection
+again passed 11/11 without display environment variables. All 29 Table function
+bodies and fixture fields match the original `dev` source when distributed
+across the new files. Production/API sources are unchanged in both branches.
+The named `pre-build` branch is advanced only after `dev` has been rebased onto
+its tested common commit, preserving the required ancestry throughout.
+
+## `dev` Area and Focus failure cleanup
+
+Area restores its temporarily disabled ScrollEvent handler before asserting the
+native result. Focus's fixture tracks its detached Entry until ownership moves
+to the box, destroying it during teardown when a case fails before that move.
+Linux static/shared Debug and static ASan + UBSan pass all nine Area and nine Focus cases;
+leak detection is disabled for these GTK sanitizer runs. Case counts and order
+are unchanged, and no production/API source changes.
+
+A temporary forced handled result fails Area's disabled-handler assertion. The
+old test then also fails the next scrolling case (two failures); the corrected
+case restores the handler and the next case passes (one intended failure).
+A forced failure while Focus still owns a detached Entry completes teardown and
+all following cases under ASan + UBSan, without a native allocator leak report.
+The temporary mutations are restored and their binaries rebuilt. Windows/macOS
+execution of this Focus fixture change remains pending.
+
+## Initial `dev` coverage measurement
+
+The dev cleanup working tree (later committed as `26847609`, with unchanged
+production sources from `36083ec2`) was configured in a fresh Linux static Debug
+build using GCC/gcov 15, C/C++ `--coverage -O0`, GTK 3.24.52 and cmocka 2.0.2.
+Only the seventeen CTest targets and their dependencies were built; no examples
+or dependency downloads were needed. With initially empty execution data, the
+full Xvfb CTest suite passed 17/17 (369 cmocka cases). This does not count the
+three optional Python aggregation checks as CTest or cmocka cases.
+
+The measured objects include normal library linkage, separately compiled common
+sources, and direct includes of `common/imagebuffer.c` and `unix/drop.c`. All
+100 production source records merge into 75 unique common/GTK source/header
+paths using the one-off helper from commit `78a5b6c3`; no implementation is
+counted once per object.
+Zero-hit records remain in the denominator. Tests, examples, dependency files,
+separate generated sources and inactive backends are excluded. Macro-generated
+functions attributed to production source lines remain distinct in that source.
+
+| Production scope | Lines hit / instrumented | Functions hit / instrumented | Branch edges hit / instrumented |
+| --- | --- | --- | --- |
+| `common/` | 1730 / 2081 | 220 / 245 | 766 / 1083 |
+| `unix/` | 3438 / 4964 | 650 / 891 | 793 / 1611 |
+| Combined | 5168 / 7045 | 870 / 1136 | 1559 / 2694 |
+
+Reaggregating the preceding pre-build OpenType/attribute run with the same
+corrected method yields 4037/5556 lines, 692/978 functions and 1034/1762 branch
+edges. This reuses its archived reports, not a new pre-build execution. Branch
+and configuration scopes differ, so these are separate baselines, not evidence
+that one branch has better or worse test coverage.
+
+The included fault tests replace allocator/protocol callees. Their hits show
+execution of production source logic; they do not establish native allocation
+or end-to-end drag routing. Shape checks pass for all overlapping per-function
+branch lists despite shifted GCC block IDs. Native OpenType CSS conversion
+remains unexecuted. Windows/macOS and shared-build coverage remain unmeasured.
+Raw reports, compiler/configuration output, test logs and summary JSON for this
+measurement are in `/tmp/libui-followup/`; they are local measurement artifacts,
+not installed SDK files. Rebases for this measurement preserved its production
+and unit-test sources; subsequent tester maintenance is recorded separately.
+
+
+Cleanup validation on dev: static/shared Debug tester builds also display,
+receive the normal close event and exit zero through uiUninit. CTest entries,
+commands and properties remain unchanged. Production/API, unit and QA sources
+match the pre-cleanup dev tree. Temporary mutation sources/binaries, duplicate
+inspection snapshots, manifest compilation outputs and configuration-only scratch
+trees were deleted; raw measurements, summary JSON, successful validation logs
+and reusable test builds remain. No cleanup helper is added to the repository.

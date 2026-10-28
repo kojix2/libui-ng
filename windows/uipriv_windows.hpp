@@ -185,6 +185,9 @@ extern IWICBitmap *uiprivImageAppropriateForDC(const uiImage *i, HDC dc);
 extern IWICBitmap *uiprivImageAppropriateForSize(const uiImage *i,
 	int pixelWidth, int pixelHeight);
 extern HRESULT uiprivWICToGDI(IWICBitmap *b, HDC dc, int width, int height, HBITMAP *hb);
+extern ID2D1Bitmap *uiprivImageBufferBitmap(const uiImageBuffer *, ID2D1RenderTarget *,
+	const uiDrawImageBufferParams *, D2D1_RECT_F *);
+extern void uiprivImageBufferForgetRenderTarget(ID2D1RenderTarget *);
 
 // radiobuttons.cpp
 extern void uiprivRadioButtonsSetFocus(uiRadioButtons *);
