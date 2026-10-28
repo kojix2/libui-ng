@@ -61,7 +61,7 @@ static int closing(uiWindow *w, void *data) { uiQuit(); return 1; }
 int main(void)
 {
 	uiInitOptions options = {0};
-	uiAreaHandler areaHandler = {draw, mouse, crossed, broken, key, NULL};
+	uiAreaHandler areaHandler = {draw, mouse, crossed, broken, key, NULL, NULL};
 	uiDropHandler dropHandler = {0};
 	uiBox *box;
 	uiEntry *entry;
