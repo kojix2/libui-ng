@@ -121,9 +121,9 @@ const char *uiInit(uiInitOptions *o)
 		goto failContainer;
 	}
 
-	hr = CoInitialize(NULL);
+	hr = OleInitialize(NULL);
 	if (hr != S_OK && hr != S_FALSE) {
-		ce = ieHRESULT("initializing COM", hr);
+		ce = ieHRESULT("initializing OLE on the UI thread (STA required)", hr);
 		goto failContainer;
 	}
 	// LONGTERM initialize COM security
@@ -132,7 +132,7 @@ const char *uiInit(uiInitOptions *o)
 	hr = initDraw();
 	if (hr != S_OK) {
 		ce = ieHRESULT("initializing Direct2D", hr);
-		goto failCOM;
+		goto failOLE;
 	}
 
 	hr = uiprivInitDrawText();
@@ -174,8 +174,9 @@ failDrawText:
 	uiprivUninitDrawText();
 failDraw:
 	uninitDraw();
-failCOM:
-	CoUninitialize();
+failOLE:
+	// Both S_OK and S_FALSE own an OLE initialization count.
+	OleUninitialize();
 failContainer:
 	hollowBrush = NULL;
 	uninitContainer();
@@ -204,7 +205,7 @@ void uiUninit(void)
 	unregisterArea();
 	uiprivUninitDrawText();
 	uninitDraw();
-	CoUninitialize();
+	OleUninitialize();
 	hollowBrush = NULL;
 	uninitContainer();
 	if (DeleteObject(hMessageFont) == 0)
