@@ -8,8 +8,8 @@ Portable GUI library for C.
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/kojix2/libui-ng)
 
 This repository provides unofficial kojix2 builds of libui-ng.
-It builds and distributes patched binaries while maintaining API compatibility
-with upstream libui-ng.
+The `pre-build` branch maintains API and ABI compatibility with upstream libui-ng
+while providing patched binaries and compatible API additions.
 
 Releases are available at https://github.com/kojix2/libui-ng/releases.
 
@@ -28,6 +28,11 @@ Upstream projects:
 - `dev`: development branch based on `pre-build`, with additional fixes and
   experimental APIs (`uiToolbar`, `uiImageView`, `uiDrawImage`). Tags use
   `commit-xxxxxxx-experimental`.
+
+> **Warning:** Since October 26, 2026, scroll event support on `dev` has
+> broken `uiAreaHandler` ABI compatibility. Applications and bindings using
+> `uiArea` need updating. Drag-and-drop support is also being considered,
+> and further API/ABI changes may follow.
 
 Pre-build branches may be rebased or force-pushed. Use release tags when you
 need a stable reference. Build details and included changes are tracked by the
