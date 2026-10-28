@@ -59,6 +59,7 @@ static uiAreaHandler drawImageHandler = {
 	drawImageDragBroken,
 	drawImageKeyEvent,
 	NULL,
+	NULL,
 };
 
 static uiImage *newDrawImage(void)

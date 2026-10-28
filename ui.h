@@ -2313,6 +2313,13 @@ struct uiAreaHandler {
 	int (*KeyEvent)(uiAreaHandler *, uiArea *, uiAreaKeyEvent *);
 	// NULL if unused; return nonzero to consume, zero for normal scrolling.
 	int (*ScrollEvent)(uiAreaHandler *, uiArea *, uiAreaScrollEvent *);
+
+	/* Optional caller-owned context, available to every callback through the
+	 * handler pointer. The library does not read, modify, or free this field.
+	 * Keep the handler and any context used by callbacks alive until the Area
+	 * is destroyed and its active callbacks have returned.
+	 */
+	void *UserData;
 };
 
 // TODO RTL layouts?
@@ -4031,6 +4038,13 @@ struct uiTableModelHandler {
 	 * set by a uiTable.
 	 */
 	void (*SetCellValue)(uiTableModelHandler *, uiTableModel *, int, int, const uiTableValue *);
+
+	/* Optional caller-owned context, available to every callback through the
+	 * handler pointer. The library does not read, modify, or free this field.
+	 * Keep the handler and any context used by callbacks alive until the model
+	 * is freed and its active callbacks have returned.
+	 */
+	void *UserData;
 };
 
 /**

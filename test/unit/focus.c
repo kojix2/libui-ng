@@ -253,7 +253,7 @@ static int key(uiAreaHandler *h, uiArea *a, uiAreaKeyEvent *e) { return 0; }
 static void areasFocusTheirDrawingSurface(void **state)
 {
 	focusState *s = *state;
-	static uiAreaHandler handler = {draw, mouse, crossed, broken, key, NULL};
+	static uiAreaHandler handler = {draw, mouse, crossed, broken, key, NULL, NULL};
 	uiArea *areas[2];
 	size_t i;
 
