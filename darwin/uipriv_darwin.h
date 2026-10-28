@@ -149,6 +149,7 @@ extern NSTextField *uiprivNewLabel(NSString *str);
 
 // image.m
 extern NSImage *uiprivImageNSImage(const uiImage *);
+extern CGImageRef uiprivImageBufferImage(const uiImageBuffer *);
 
 // winmoveresize.m
 extern void uiprivDoManualMove(NSWindow *w, NSEvent *initialEvent);
