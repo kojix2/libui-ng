@@ -1,6 +1,6 @@
 target_sources(libui_ui PRIVATE
 	alloc.c area.c attrstr.c box.c button.c cellrendererbutton.c checkbox.c child.c
-	colorbutton.c combobox.c control.c controlsize.c datetimepicker.c debug.c draw.c drawmatrix.c
+	colorbutton.c combobox.c control.c controlsize.c datetimepicker.c debug.c drop.c draw.c drawmatrix.c
 	drawpath.c drawtext.c editablecombo.c entry.c fontbutton.c fontmatch.c form.c
 	future.c graphemes.c grid.c group.c image.c imageview.c label.c main.c menu.c multilineentry.c
 	opentype.c progressbar.c radiobuttons.c separator.c slider.c spinbox.c stddialogs.c
