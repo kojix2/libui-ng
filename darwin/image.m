@@ -2,6 +2,7 @@
 #import "uipriv_darwin.h"
 #include <float.h>
 #include <limits.h>
+#include <stdlib.h>
 
 struct uiImage {
 	NSImage *i;
@@ -147,4 +148,137 @@ NSImage *uiprivImageNSImage(const uiImage *i)
 	if (i == NULL)
 		return nil;
 	return i->i;
+}
+
+struct imageBufferStorage {
+	unsigned int references;
+	unsigned char *pixels;
+};
+
+struct imageBufferNative {
+	CGImageRef image;
+	CGColorSpaceRef color;
+	struct imageBufferStorage *storage;
+};
+
+static struct imageBufferStorage *newImageBufferStorage(size_t size, int clear)
+{
+	struct imageBufferStorage *storage = malloc(sizeof *storage);
+
+	if (storage == NULL)
+		return NULL;
+	storage->pixels = clear ? calloc(1, size) : malloc(size);
+	if (storage->pixels == NULL) {
+		free(storage);
+		return NULL;
+	}
+	storage->references = 1;
+	return storage;
+}
+
+static void releaseImageBufferStorage(struct imageBufferStorage *storage)
+{
+	// CoreGraphics may release a provider on a worker thread. The buffer's
+	// reference keeps storage alive while the UI thread checks for readers.
+	if (__atomic_sub_fetch(&storage->references, 1, __ATOMIC_ACQ_REL) == 0) {
+		free(storage->pixels);
+		free(storage);
+	}
+}
+
+static void releaseImageBufferData(void *info, const void *data, size_t size)
+{
+	releaseImageBufferStorage(info);
+}
+
+int uiprivImageBufferCreate(uiImageBuffer *buffer)
+{
+	struct imageBufferNative *native;
+	size_t size;
+
+	if (!uiprivImageBufferStorageSize(buffer->width, buffer->height, buffer->stride, &size))
+		return 0;
+	native = calloc(1, sizeof *native);
+	if (native == NULL)
+		return 0;
+	native->color = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
+	if (native->color == NULL) {
+		free(native);
+		return 0;
+	}
+	native->storage = newImageBufferStorage(size, 1);
+	if (native->storage == NULL) {
+		CGColorSpaceRelease(native->color);
+		free(native);
+		return 0;
+	}
+	buffer->pixels = native->storage->pixels;
+	buffer->native = native;
+	buffer->order = uiprivImageBufferRGBA;
+	return 1;
+}
+
+void uiprivImageBufferDestroy(uiImageBuffer *buffer)
+{
+	struct imageBufferNative *native = buffer->native;
+
+	if (native->image != NULL)
+		CGImageRelease(native->image);
+	releaseImageBufferStorage(native->storage);
+	CGColorSpaceRelease(native->color);
+	free(native);
+}
+
+int uiprivImageBufferPrepareUpdate(uiImageBuffer *buffer)
+{
+	struct imageBufferNative *native = buffer->native;
+	struct imageBufferStorage *storage;
+	size_t size = buffer->stride * (size_t) buffer->height;
+
+	// Drop our cached image before checking for external readers. Synchronous
+	// bitmap draws normally release the provider here, allowing in-place edits.
+	if (native->image != NULL) {
+		CGImageRelease(native->image);
+		native->image = NULL;
+	}
+	if (__atomic_load_n(&native->storage->references, __ATOMIC_ACQUIRE) > 1) {
+		// PDF/retained images may still use these bytes. Copy only when an old
+		// version survives; allocation failure leaves the previous pixels intact.
+		storage = newImageBufferStorage(size, 0);
+		if (storage == NULL)
+			return 0;
+		memcpy(storage->pixels, buffer->pixels, size);
+		releaseImageBufferStorage(native->storage);
+		native->storage = storage;
+		buffer->pixels = storage->pixels;
+	}
+	return 1;
+}
+
+void uiprivImageBufferUpdated(uiImageBuffer *buffer, int x, int y, int width, int height)
+{
+	// PrepareUpdate already invalidated the cached image.
+}
+
+CGImageRef uiprivImageBufferImage(const uiImageBuffer *buffer)
+{
+	struct imageBufferNative *native = buffer->native;
+	CGDataProviderRef provider;
+	CGImageRef image = NULL;
+
+	if (native->image != NULL)
+		return native->image;
+	provider = CGDataProviderCreateWithData(native->storage, buffer->pixels,
+		buffer->stride * (size_t) buffer->height, releaseImageBufferData);
+	if (provider == NULL)
+		return NULL;
+	__atomic_add_fetch(&native->storage->references, 1, __ATOMIC_RELAXED);
+	image = CGImageCreate(buffer->width, buffer->height, 8, 32,
+		buffer->stride, native->color, kCGBitmapByteOrder32Big | kCGImageAlphaPremultipliedLast,
+		provider, NULL, false, kCGRenderingIntentDefault);
+	CGDataProviderRelease(provider);
+	if (image == NULL)
+		return NULL;
+	native->image = image;
+	return image;
 }
