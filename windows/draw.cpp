@@ -666,3 +666,69 @@ void uiDrawImage(uiDrawContext *c, const uiImage *img, double x, double y, doubl
 
 	d2dBitmap->Release();
 }
+
+void uiDrawImageBufferWithParams(uiDrawContext *c, const uiImageBuffer *buffer,
+	const uiDrawImageBufferParams *params)
+{
+	ID2D1Bitmap *bitmap = NULL;
+	ID2D1Layer *layer = NULL;
+	D2D1_RECT_F rect;
+	D2D1_RECT_F source;
+	D2D1_BITMAP_PROPERTIES properties;
+	D2D1_SIZE_U size;
+	UINT32 maximum;
+	HRESULT hr;
+	double x, y, width, height;
+
+	if (!uiprivImageBufferDrawParamsValid(c, buffer, params))
+		return;
+	x = params->X;
+	y = params->Y;
+	width = params->Width;
+	height = params->Height;
+	if (fabs(x) > FLT_MAX || fabs(y) > FLT_MAX ||
+		fabs(x + width) > FLT_MAX || fabs(y + height) > FLT_MAX ||
+		buffer->stride > UINT32_MAX)
+		return;
+	rect.left = (FLOAT) x;
+	rect.top = (FLOAT) y;
+	rect.right = (FLOAT) (x + width);
+	rect.bottom = (FLOAT) (y + height);
+	if (!(rect.right > rect.left) || !(rect.bottom > rect.top))
+		return;
+	maximum = c->rt->GetMaximumBitmapSize();
+	if ((UINT32) buffer->width > maximum || (UINT32) buffer->height > maximum) {
+		logHRESULT(L"ImageBuffer exceeds render target bitmap size limit", E_INVALIDARG);
+		return;
+	}
+	source.left = (FLOAT) params->SourceX;
+	source.top = (FLOAT) params->SourceY;
+	source.right = (FLOAT) (params->SourceX + params->SourceWidth);
+	source.bottom = (FLOAT) (params->SourceY + params->SourceHeight);
+	if ((double) source.left != params->SourceX || (double) source.top != params->SourceY ||
+		(double) source.right != params->SourceX + params->SourceWidth ||
+		(double) source.bottom != params->SourceY + params->SourceHeight)
+		return;
+	size.width = (UINT32) buffer->width;
+	size.height = (UINT32) buffer->height;
+	properties.pixelFormat.format = DXGI_FORMAT_B8G8R8A8_UNORM;
+	properties.pixelFormat.alphaMode = D2D1_ALPHA_MODE_PREMULTIPLIED;
+	properties.dpiX = 96;
+	properties.dpiY = 96;
+	// Each submitted draw owns different native pixels. Later CPU updates cannot
+	// change this bitmap. Direct2D retains its own references for pending draws.
+	hr = c->rt->CreateBitmap(size, buffer->pixels, (UINT32) buffer->stride,
+		&properties, &bitmap);
+	if (FAILED(hr)) {
+		logHRESULT(L"error creating ImageBuffer bitmap", hr);
+		return;
+	}
+	if (uiprivApplyClip(c, &layer)) {
+		c->rt->DrawBitmap(bitmap, &rect, 1.0f,
+			params->Interpolation == uiImageBufferInterpolationNearest ?
+			D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR :
+			D2D1_BITMAP_INTERPOLATION_MODE_LINEAR, &source);
+		uiprivUnapplyClip(c, layer);
+	}
+	bitmap->Release();
+}

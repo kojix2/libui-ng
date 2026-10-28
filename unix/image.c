@@ -222,3 +222,42 @@ cairo_surface_t *uiprivImageAppropriateSurfaceForTable(const uiImage *i, GtkWidg
 		width / i->width, height / i->height);
 	return surface;
 }
+
+int uiprivImageBufferCreate(uiImageBuffer *buffer)
+{
+	cairo_surface_t *surface;
+
+	if (cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, buffer->width) < 0)
+		return 0;
+	surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32,
+		buffer->width, buffer->height);
+	if (cairo_surface_status(surface) != CAIRO_STATUS_SUCCESS) {
+		cairo_surface_destroy(surface);
+		return 0;
+	}
+	buffer->pixels = cairo_image_surface_get_data(surface);
+	buffer->stride = (size_t) cairo_image_surface_get_stride(surface);
+	buffer->order = uiprivImageBufferARGB32;
+	buffer->native = surface;
+	return 1;
+}
+
+void uiprivImageBufferDestroy(uiImageBuffer *buffer)
+{
+	// Cairo retains the surface (including its storage) for submitted draws.
+	cairo_surface_destroy((cairo_surface_t *) buffer->native);
+}
+
+int uiprivImageBufferPrepareUpdate(uiImageBuffer *buffer)
+{
+	cairo_surface_t *surface = (cairo_surface_t *) buffer->native;
+
+	// Detach snapshots held by recording/deferred targets before writing pixels.
+	cairo_surface_flush(surface);
+	return cairo_surface_status(surface) == CAIRO_STATUS_SUCCESS;
+}
+
+void uiprivImageBufferUpdated(uiImageBuffer *buffer)
+{
+	cairo_surface_mark_dirty((cairo_surface_t *) buffer->native);
+}

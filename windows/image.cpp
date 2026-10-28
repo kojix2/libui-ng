@@ -378,3 +378,29 @@ fail:
 	src->Release();
 	return hr;
 }
+
+int uiprivImageBufferCreate(uiImageBuffer *buffer)
+{
+	size_t size;
+
+	if (buffer->stride > UINT32_MAX ||
+		!uiprivImageBufferStorageSize(buffer->width, buffer->height, buffer->stride, &size))
+		return 0;
+	buffer->pixels = (unsigned char *) calloc(1, size);
+	buffer->order = uiprivImageBufferBGRA;
+	return buffer->pixels != NULL;
+}
+
+void uiprivImageBufferDestroy(uiImageBuffer *buffer)
+{
+	free(buffer->pixels);
+}
+
+int uiprivImageBufferPrepareUpdate(uiImageBuffer *buffer)
+{
+	return 1;
+}
+
+void uiprivImageBufferUpdated(uiImageBuffer *buffer)
+{
+}

@@ -2,6 +2,7 @@
 #import "uipriv_darwin.h"
 #include <float.h>
 #include <limits.h>
+#include <stdlib.h>
 
 struct uiImage {
 	NSImage *i;
@@ -147,4 +148,89 @@ NSImage *uiprivImageNSImage(const uiImage *i)
 	if (i == NULL)
 		return nil;
 	return i->i;
+}
+
+struct imageBufferNative {
+	CGImageRef image;
+	int dirty;
+};
+
+int uiprivImageBufferCreate(uiImageBuffer *buffer)
+{
+	struct imageBufferNative *native;
+	size_t size;
+
+	if (!uiprivImageBufferStorageSize(buffer->width, buffer->height, buffer->stride, &size) ||
+		size > LONG_MAX)
+		return 0;
+	native = calloc(1, sizeof *native);
+	if (native == NULL)
+		return 0;
+	buffer->pixels = calloc(1, size);
+	if (buffer->pixels == NULL) {
+		free(native);
+		return 0;
+	}
+	native->dirty = 1;
+	buffer->native = native;
+	buffer->order = uiprivImageBufferRGBA;
+	return 1;
+}
+
+void uiprivImageBufferDestroy(uiImageBuffer *buffer)
+{
+	struct imageBufferNative *native = buffer->native;
+
+	if (native->image != NULL)
+		CGImageRelease(native->image);
+	free(native);
+	free(buffer->pixels);
+}
+
+int uiprivImageBufferPrepareUpdate(uiImageBuffer *buffer)
+{
+	return 1;
+}
+
+void uiprivImageBufferUpdated(uiImageBuffer *buffer)
+{
+	struct imageBufferNative *native = buffer->native;
+
+	native->dirty = 1;
+}
+
+CGImageRef uiprivImageBufferImage(const uiImageBuffer *buffer)
+{
+	struct imageBufferNative *native = buffer->native;
+	CFDataRef data;
+	CGDataProviderRef provider;
+	CGColorSpaceRef color;
+	CGImageRef image = NULL;
+
+	if (!native->dirty)
+		return native->image;
+	// CFData makes an independent copy. A submitted image never borrows mutable
+	// CPU backing, including after Update or Free in the same Draw callback.
+	data = CFDataCreate(kCFAllocatorDefault, buffer->pixels,
+		(CFIndex) (buffer->stride * buffer->height));
+	if (data == NULL)
+		return NULL;
+	provider = CGDataProviderCreateWithCFData(data);
+	color = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
+	if (provider != NULL && color != NULL)
+		image = CGImageCreate(buffer->width, buffer->height, 8, 32,
+			buffer->stride, color, kCGBitmapByteOrder32Big | kCGImageAlphaPremultipliedLast,
+			provider, NULL, false, kCGRenderingIntentDefault);
+	if (color != NULL)
+		CGColorSpaceRelease(color);
+	if (provider != NULL)
+		CGDataProviderRelease(provider);
+	CFRelease(data);
+	if (image == NULL)
+		return NULL;
+	if (native->image != NULL)
+		CGImageRelease(native->image);
+	native->image = image;
+	native->dirty = 0;
+	return image;
 }

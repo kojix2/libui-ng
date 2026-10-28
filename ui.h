@@ -3080,6 +3080,120 @@ _UI_EXTERN void uiDrawTextLayoutExtents(uiDrawTextLayout *tl, double *width, dou
 _UI_EXTERN void uiDrawImage(uiDrawContext *c, const uiImage *img, double x, double y, double width, double height);
 
 /**
+ * A fixed pixel size, mutable image independent of any Area or drawing context.
+ *
+ * All ImageBuffer operations must run on the UI thread between uiInit() and
+ * uiUninit(). A buffer can be drawn in multiple Areas. Unlike uiImage, it has
+ * one pixel resolution and an explicit input alpha format.
+ */
+typedef struct uiImageBuffer uiImageBuffer;
+
+/** Input bytes are R, G, B, A, independent of host endianness. */
+typedef enum uiImageBufferFormat {
+	uiImageBufferRGBA8Straight = 0,
+	uiImageBufferRGBA8Premultiplied = 1
+} uiImageBufferFormat;
+
+typedef enum uiImageBufferInterpolation {
+	uiImageBufferInterpolationSmooth = 0,
+	uiImageBufferInterpolationNearest = 1
+} uiImageBufferInterpolation;
+
+/**
+ * Creates a transparent black buffer. Dimensions must be positive pixels;
+ * dimensions and input format remain fixed. Returns NULL for invalid arguments
+ * or recoverable allocation/native construction failures. No context is needed.
+ */
+_UI_EXTERN uiImageBuffer *uiNewImageBuffer(int pixelWidth, int pixelHeight,
+	uiImageBufferFormat format);
+
+/**
+ * Frees a buffer. NULL is allowed. Submitted draws remain valid, including when
+ * freed inside a Draw callback. A non-NULL buffer must only be freed once.
+ */
+_UI_EXTERN void uiFreeImageBuffer(uiImageBuffer *buffer);
+
+/** Returns pixel dimensions. buffer and both output pointers must be non-NULL. */
+_UI_EXTERN void uiImageBufferGetSize(const uiImageBuffer *buffer,
+	int *pixelWidth, int *pixelHeight);
+
+/**
+ * Replaces the entire image without alpha compositing or requesting a redraw.
+ * Rows run top to bottom from the top left. No alignment is required.
+ * byteStride must be at least pixelWidth * 4. byteLength must cover
+ * (pixelHeight - 1) * byteStride + pixelWidth * 4; last-row padding is not read.
+ * pixels is borrowed only until return and can then be reused or freed.
+ *
+ * Straight input is premultiplied using (component * alpha + 127) / 255.
+ * Premultiplied input requires R,G,B <= A. Components are sRGB encoded;
+ * linear-light blending and identical color management across OSes are not
+ * guaranteed. Returns 1 on success, 0 on invalid input or recoverable failure;
+ * failure preserves the previous CPU pixels. Success does not guarantee GPU
+ * upload or presentation. The pointer's actual allocation length cannot be
+ * checked by C; the caller must supply the real readable byteLength.
+ */
+_UI_EXTERN int uiImageBufferUpdate(uiImageBuffer *buffer, const void *pixels,
+	size_t byteLength, size_t byteStride);
+
+/**
+ * Replaces a rectangle, preserving every pixel outside it. The positive-sized
+ * rectangle must fit completely in the buffer; invalid rectangles are rejected
+ * without clipping. x/y are nonnegative pixel coordinates from the top left.
+ * pixels points to the patch's top-left pixel, not the full input image's start.
+ * byteStride >= width * 4 and
+ * byteLength >= (height - 1) * byteStride + width * 4 are required.
+ * Input ownership, format, return values, failure atomicity, and explicit redraw
+ * follow uiImageBufferUpdate(). Partial GPU upload is not guaranteed.
+ */
+_UI_EXTERN int uiImageBufferUpdateRect(uiImageBuffer *buffer,
+	int x, int y, int width, int height, const void *pixels,
+	size_t byteLength, size_t byteStride);
+
+/** Source pixels and destination user coordinates for a cropped image draw. */
+typedef struct uiDrawImageBufferParams {
+	size_t Size;
+	int SourceX;
+	int SourceY;
+	int SourceWidth;
+	int SourceHeight;
+	double X;
+	double Y;
+	double Width;
+	double Height;
+	uiImageBufferInterpolation Interpolation;
+} uiDrawImageBufferParams;
+
+/**
+ * Draws the whole buffer using source-over in a valid Area Draw context.
+ * x/y and positive width/height must be finite user coordinates. Existing clip,
+ * transform, scroll, and Save/Restore state are respected. Smooth interpolation
+ * kernels can differ across OSes. Update after Draw cannot change that draw;
+ * e.g. red/Draw(left)/blue/Draw(right) produces red on the left and blue on the
+ * right. Do not retain c beyond its callback. The const buffer may update a
+ * private native cache. Invalid drawing arguments are ignored, as in uiDrawImage.
+ * Windows currently creates a temporary native bitmap on every draw.
+ */
+_UI_EXTERN void uiDrawImageBuffer(uiDrawContext *c, const uiImageBuffer *buffer,
+	double x, double y, double width, double height,
+	uiImageBufferInterpolation interpolation);
+
+/**
+ * Draws a source rectangle with the same ownership, state, and ordering rules
+ * as uiDrawImageBuffer(). Set Size = sizeof(uiDrawImageBufferParams) and fill
+ * every field. Size must cover all fields through Interpolation; larger structs
+ * are accepted and unknown trailing fields are ignored. params is borrowed only
+ * during the call. NULL or invalid params produce no drawing.
+ *
+ * SourceX/Y are nonnegative integer pixels from the top left. SourceWidth/Height
+ * must be positive and the source rectangle must fit completely in the buffer.
+ * X/Y/Width/Height describe the destination in user coordinates. Smooth may
+ * sample neighboring pixels outside the source rectangle; use padding, Nearest,
+ * or a separate buffer when strict atlas boundaries are required.
+ */
+_UI_EXTERN void uiDrawImageBufferWithParams(uiDrawContext *c,
+	const uiImageBuffer *buffer, const uiDrawImageBufferParams *params);
+
+/**
  * A button-like control that opens a font chooser when clicked.
  *
  * @ŧodo SetFont, mechanics
