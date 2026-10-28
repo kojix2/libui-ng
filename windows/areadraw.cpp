@@ -116,6 +116,7 @@ static void onWM_PAINT(uiArea *a)
 		break;
 	case (HRESULT)D2DERR_RECREATE_TARGET:
 		// A new render target has no retained contents, so redraw everything.
+		uiprivImageBufferForgetRenderTarget(a->rt);
 		a->rt->Release();
 		a->rt = NULL;
 		invalidateRect(a->hwnd, NULL, FALSE);
@@ -147,6 +148,7 @@ static void onWM_PRINTCLIENT(uiArea *a, HDC dc)
 	hr = doPaint(a, rt, &client);
 	if (hr != S_OK)
 		logHRESULT(L"error printing uiArea client area", hr);
+	uiprivImageBufferForgetRenderTarget(rt);
 	rt->Release();
 	uiprivUserCallbackLeave();
 }
