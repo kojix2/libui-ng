@@ -38,9 +38,6 @@ static void onTabSelected(uiTab *t , void* data) {
 	printf("Tab with index %d selected\n", index);
 }
 
-uiBox *mainBox;
-uiTab *mainTab;
-
 uiBox *(*newhbox)(void);
 uiBox *(*newvbox)(void);
 
@@ -50,15 +47,10 @@ int main(int argc, char *argv[])
 	int i;
 	const char *err;
 	uiWindow *w;
-	uiBox *page2, *page3, *page4, *page5;
-	uiBox *page6, *page7, *page10;
-	uiBox *page12, *page13;
-	uiTab *page14;
-	uiBox *page15;
-	uiBox *page16;
-	uiBox *page17;
-	uiTab *outerTab;
-	uiTab *innerTab;
+	uiBox *mainBox;
+	uiBox *properties;
+	uiGroup *movingGroup;
+	uiTab *categories, *controls, *layout, *drawing, *windows, *tables;
 	int nomenus = 0;
 	int startspaced = 0;
 	int steps = 0;
@@ -101,68 +93,51 @@ int main(int argc, char *argv[])
 	mainBox = newHorizontalBox();
 	uiWindowSetChild(w, uiControl(mainBox));
 
-	outerTab = newTab();
-	uiBoxAppend(mainBox, uiControl(outerTab), 1);
+	categories = newTab();
+	uiBoxAppend(mainBox, uiControl(categories), 1);
 
-	mainTab = newTab();
-	uiTabAppend(outerTab, "Pages 1-5", uiControl(mainTab));
+	controls = newTab();
+	uiTabAppend(categories, "Controls", uiControl(controls));
+	uiTabAppend(controls, "Entries", uiControl(makeEntries()));
+	uiTabAppend(controls, "Multiline", uiControl(makeMultiline()));
+	uiTabAppend(controls, "Numbers", uiControl(makeNumbers()));
+	uiTabAppend(controls, "Selection", uiControl(makeSelection()));
+	uiTabAppend(controls, "Date/Time", uiControl(makeDateTime()));
+	uiTabAppend(controls, "State", uiControl(makeControlState()));
 
-	// page 1 uses page 2's uiGroup
-	page2 = makePage2();
+	layout = newTab();
+	uiTabAppend(categories, "Layout", uiControl(layout));
+	// Keep Properties first: Parenting removes and reinserts this tab.
+	movingGroup = newGroup("Moving Label");
+	properties = makeProperties(w, movingGroup, layout);
+	uiTabAppend(layout, "Properties", uiControl(properties));
+	uiTabAppend(layout, "Parenting", uiControl(makeLayoutParenting(
+		mainBox, layout, properties, movingGroup)));
+	uiTabAppend(layout, "Visibility", uiControl(makeLayoutVisibility()));
+	uiTabAppend(layout, "Sizes", uiControl(makeLayoutSizes()));
+	uiTabAppend(layout, "Form", uiControl(makeLayoutForm()));
+	uiTabAppend(layout, "Grid", uiControl(makeLayoutGrid()));
+	uiTabAppend(layout, "Empty", uiControl(uiNewHorizontalBox()));
 
-	makePage1(w);
-	uiTabAppend(mainTab, "Page 1", uiControl(page1));
+	drawing = newTab();
+	uiTabAppend(categories, "Drawing", uiControl(drawing));
+	uiTabAppend(drawing, "Area", uiControl(makeArea()));
+	uiTabAppend(drawing, "Arc", uiControl(makeAreaArc()));
+	uiTabAppend(drawing, "Mouse", uiControl(makeAreaMouse()));
+	uiTabAppend(drawing, "Scroll", uiControl(makeAreaScroll()));
+	uiTabAppend(drawing, "Text", uiControl(makeText()));
 
-	uiTabAppend(mainTab, "Page 2", uiControl(page2));
+	windows = newTab();
+	uiTabAppend(categories, "Windows", uiControl(windows));
+	uiTabAppend(windows, "Geometry & Focus", uiControl(makeWindows(w)));
+	uiTabAppend(windows, "Dialogs", uiControl(makeDialogs(w)));
 
-	uiTabAppend(mainTab, "Empty Page", uiControl(uiNewHorizontalBox()));
+	tables = newTab();
+	uiTabAppend(categories, "Tables", uiControl(tables));
+	uiTabAppend(tables, "Columns & Selection", uiControl(makeTable()));
+	uiTabAppend(tables, "Model Updates", uiControl(makeTableModel()));
 
-	page3 = makePage3();
-	uiTabAppend(mainTab, "Page 3", uiControl(page3));
-
-	page4 = makePage4();
-	uiTabAppend(mainTab, "Page 4", uiControl(page4));
-
-	page5 = makePage5(w);
-	uiTabAppend(mainTab, "Page 5", uiControl(page5));
-
-	innerTab = newTab();
-	uiTabAppend(outerTab, "Pages 6-10", uiControl(innerTab));
-
-	page6 = makePage6();
-	uiTabAppend(innerTab, "Page 6", uiControl(page6));
-
-	page7 = makePage7();
-	uiTabAppend(innerTab, "Page 7", uiControl(page7));
-
-	page10 = makePage10();
-	uiTabAppend(innerTab, "Page 10", uiControl(page10));
-
-	innerTab = newTab();
-	uiTabAppend(outerTab, "Pages 11-15", uiControl(innerTab));
-
-	page12 = makePage12();
-	uiTabAppend(innerTab, "Page 12", uiControl(page12));
-
-	page13 = makePage13();
-	uiTabAppend(innerTab, "Page 13", uiControl(page13));
-
-	page14 = makePage14();
-	uiTabAppend(innerTab, "Page 14", uiControl(page14));
-
-	page15 = makePage15(w);
-	uiTabAppend(innerTab, "Page 15", uiControl(page15));
-
-	innerTab = newTab();
-	uiTabAppend(outerTab, "Pages 16-?", uiControl(innerTab));
-
-	uiTabOnSelected(outerTab, onTabSelected, NULL);
-
-	page16 = makePage16();
-	uiTabAppend(innerTab, "Page 16", uiControl(page16));
-
-	page17 = makePage17();
-	uiTabAppend(innerTab, "Page 17", uiControl(page17));
+	uiTabOnSelected(categories, onTabSelected, NULL);
 
 	if (startspaced)
 		setSpaced(1);
@@ -176,8 +151,9 @@ int main(int argc, char *argv[])
 			;
 	}
 	printf("after uiMain()\n");
-	freePage17();
-	freePage16();
+	freeLayoutForm();
+	freeTableModel();
+	freeTable();
 	uiUninit();
 	printf("after uiUninit()\n");
 	return 0;

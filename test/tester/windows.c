@@ -248,17 +248,54 @@ static void borderless(uiCheckbox *c, void *data)
 	uiWindowSetBorderless(w, uiCheckboxChecked(c));
 }
 
-uiBox *makePage15(uiWindow *w)
+static void openAnotherWindow(uiButton *bb, void *data)
 {
-	uiBox *page15;
+	uiWindow *w;
+	uiBox *b;
+
+	w = uiNewWindow("Another Window", 100, 100, data != NULL);
+	if (data != NULL) {
+		b = uiNewVerticalBox();
+		uiBoxAppend(b, uiControl(uiNewEntry()), 0);
+		uiBoxAppend(b, uiControl(uiNewButton("Button")), 0);
+		uiBoxSetPadded(b, 1);
+		uiWindowSetChild(w, uiControl(b));
+	} else
+		uiWindowSetChild(w, uiControl(makeArea()));
+	uiWindowSetMargined(w, 1);
+	uiControlShow(uiControl(w));
+}
+
+static void openAnotherDisabledWindow(uiButton *b, void *data)
+{
+	uiWindow *w;
+
+	w = uiNewWindow("Another Window", 100, 100, data != NULL);
+	uiControlDisable(uiControl(w));
+	uiControlShow(uiControl(w));
+}
+
+static void onFocusChanged(uiWindow *w, void *data)
+{
+	if (uiWindowFocused(w)) {
+		uiLabelSetText(uiLabel(data), "Window is focused");
+	} else {
+		uiLabelSetText(uiLabel(data), "Window is not focused");
+	}
+}
+
+uiBox *makeWindows(uiWindow *w)
+{
+	uiBox *page;
 	uiBox *hbox;
 	uiButton *button;
 	uiCheckbox *checkbox;
+	uiLabel *focusLabel;
 
-	page15 = newVerticalBox();
+	page = newVerticalBox();
 
 	hbox = newHorizontalBox();
-	uiBoxAppend(page15, uiControl(hbox), 0);
+	uiBoxAppend(page, uiControl(hbox), 0);
 
 	uiBoxAppend(hbox, uiControl(uiNewLabel("Size")), 0);
 	width = uiNewSpinbox(0, INT_MAX);
@@ -270,7 +307,7 @@ uiBox *makePage15(uiWindow *w)
 	uiSpinboxOnChanged(height, sizeHeight, w);
 
 	hbox = newHorizontalBox();
-	uiBoxAppend(page15, uiControl(hbox), 0);
+	uiBoxAppend(page, uiControl(hbox), 0);
 
 	uiBoxAppend(hbox, uiControl(uiNewLabel("Position")), 0);
 	posX = uiNewSpinbox(INT_MIN, INT_MAX);
@@ -284,7 +321,7 @@ uiBox *makePage15(uiWindow *w)
 
 	uiBoxAppend(hbox, uiControl(posY), 1);
 	fullscreen = uiNewCheckbox("Fullscreen");
-	uiBoxAppend(page15, uiControl(fullscreen), 0);
+	uiBoxAppend(page, uiControl(fullscreen), 0);
 
 	uiCheckboxOnToggled(fullscreen, setFullscreen, w);
 	uiWindowOnContentSizeChanged(w, onSize, NULL);
@@ -292,16 +329,36 @@ uiBox *makePage15(uiWindow *w)
 
 	checkbox = uiNewCheckbox("Borderless");
 	uiCheckboxOnToggled(checkbox, borderless, w);
-	uiBoxAppend(page15, uiControl(checkbox), 0);
+	uiBoxAppend(page, uiControl(checkbox), 0);
 
 	button = uiNewButton("Borderless Resizes");
 	uiButtonOnClicked(button, borderWindowOpen, NULL);
-	uiBoxAppend(page15, uiControl(button), 0);
+	uiBoxAppend(page, uiControl(button), 0);
 
 	hbox = newHorizontalBox();
-	uiBoxAppend(page15, uiControl(hbox), 1);
+	uiBoxAppend(page, uiControl(hbox), 1);
 
 	uiBoxAppend(hbox, uiControl(uiNewVerticalSeparator()), 0);
 
-	return page15;
+	hbox = newHorizontalBox();
+	uiBoxAppend(hbox, uiControl(uiNewLabel("Label Alignment Test")), 0);
+	button = uiNewButton("Open Menued Window");
+	uiButtonOnClicked(button, openAnotherWindow, button);
+	uiBoxAppend(hbox, uiControl(button), 0);
+	button = uiNewButton("Open Menuless Window");
+	uiButtonOnClicked(button, openAnotherWindow, NULL);
+	uiBoxAppend(hbox, uiControl(button), 0);
+	button = uiNewButton("Disabled Menued");
+	uiButtonOnClicked(button, openAnotherDisabledWindow, button);
+	uiBoxAppend(hbox, uiControl(button), 0);
+	button = uiNewButton("Disabled Menuless");
+	uiButtonOnClicked(button, openAnotherDisabledWindow, NULL);
+	uiBoxAppend(hbox, uiControl(button), 0);
+	uiBoxAppend(page, uiControl(hbox), 0);
+
+	focusLabel = uiNewLabel("");
+	uiBoxAppend(page, uiControl(focusLabel), 0);
+	uiWindowOnFocusChanged(w, onFocusChanged, focusLabel);
+
+	return page;
 }

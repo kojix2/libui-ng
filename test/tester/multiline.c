@@ -25,6 +25,7 @@ static uiBox *half(uiMultilineEntry *(*mk)(void), const char *which)
 	uiButton *button;
 
 	vbox = newVerticalBox();
+	uiBoxAppend(vbox, uiControl(uiNewLabel(which)), 0);
 
 	me = (*mk)();
 	uiMultilineEntryOnChanged(me, meChanged, (void *) which);
@@ -44,17 +45,17 @@ static uiBox *half(uiMultilineEntry *(*mk)(void), const char *which)
 	return vbox;
 }
 
-uiBox *makePage12(void)
+uiBox *makeMultiline(void)
 {
-	uiBox *page12;
+	uiBox *page;
 	uiBox *b;
 
-	page12 = newHorizontalBox();
+	page = newHorizontalBox();
 
 	b = half(uiNewMultilineEntry, "wrap");
-	uiBoxAppend(page12, uiControl(b), 1);
+	uiBoxAppend(page, uiControl(b), 1);
 	b = half(uiNewNonWrappingMultilineEntry, "no wrap");
-	uiBoxAppend(page12, uiControl(b), 1);
+	uiBoxAppend(page, uiControl(b), 1);
 
-	return page12;
+	return page;
 }

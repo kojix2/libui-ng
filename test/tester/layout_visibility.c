@@ -31,15 +31,15 @@ static uiBox *makeSet(int omit, int hidden, int stretch)
 	return hbox;
 }
 
-uiBox *makePage3(void)
+uiBox *makeLayoutVisibility(void)
 {
-	uiBox *page3;
+	uiBox *page;
 	uiBox *hbox;
 	uiBox *hbox2;
 	uiBox *vbox;
 	int hidden;
 
-	page3 = newVerticalBox();
+	page = newVerticalBox();
 
 	// first the non-stretchy type
 	for (hidden = 0; hidden < 4; hidden++) {
@@ -56,14 +56,14 @@ uiBox *makePage3(void)
 		uiBoxAppend(hbox2, uiControl(vbox), 0);
 		// and have a button in there for showing right margins
 		uiBoxAppend(hbox2, uiControl(uiNewButton("Right Margin Test")), 1);
-		uiBoxAppend(page3, uiControl(hbox2), 0);
+		uiBoxAppend(page, uiControl(hbox2), 0);
 	}
 
 	// then the stretchy type
 	for (hidden = 0; hidden < 4; hidden++) {
 		hbox = makeSet(-1, hidden, 1);
-		uiBoxAppend(page3, uiControl(hbox), 0);
+		uiBoxAppend(page, uiControl(hbox), 0);
 	}
 
-	return page3;
+	return page;
 }

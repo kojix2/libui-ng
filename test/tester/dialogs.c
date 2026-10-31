@@ -66,28 +66,16 @@ static void msgBoxError(uiButton *b, void *data)
 	uiFreeText(t);
 }
 
-void onFocusChanged(uiWindow *w, void *data)
+uiBox *makeDialogs(uiWindow *pw)
 {
-	if (uiWindowFocused(w)) {
-		uiLabelSetText(uiLabel(data), "Window is focused");
-	} else {
-		uiLabelSetText(uiLabel(data), "Window is not focused");
-	}
-}
-
-
-
-uiBox *makePage5(uiWindow *pw)
-{
-	uiBox *page5;
+	uiBox *page;
 	uiBox *hbox;
 	uiButton *button;
 	uiLabel *label;
-	uiLabel *focusLabel;
 
 	parent = pw;
 
-	page5 = newVerticalBox();
+	page = newVerticalBox();
 
 #define D(n, f) \
 	hbox = newHorizontalBox(); \
@@ -96,7 +84,7 @@ uiBox *makePage5(uiWindow *pw)
 	uiButtonOnClicked(button, f, label); \
 	uiBoxAppend(hbox, uiControl(button), 0); \
 	uiBoxAppend(hbox, uiControl(label), 0); \
-	uiBoxAppend(page5, uiControl(hbox), 0);
+	uiBoxAppend(page, uiControl(hbox), 0);
 
 	D("Open File", openFile);
 	D("Open Folder", openFolder);
@@ -112,19 +100,14 @@ uiBox *makePage5(uiWindow *pw)
 	uiButtonOnClicked(button, msgBox, NULL);
 	uiBoxAppend(hbox, uiControl(button), 0);
 	uiBoxAppend(hbox, uiControl(title), 0);
-	uiBoxAppend(page5, uiControl(hbox), 0);
+	uiBoxAppend(page, uiControl(hbox), 0);
 
 	hbox = newHorizontalBox();
 	button = uiNewButton("Error Box");
 	uiButtonOnClicked(button, msgBoxError, NULL);
 	uiBoxAppend(hbox, uiControl(button), 0);
 	uiBoxAppend(hbox, uiControl(description), 0);
-	uiBoxAppend(page5, uiControl(hbox), 0);
+	uiBoxAppend(page, uiControl(hbox), 0);
 
-	focusLabel = uiNewLabel("");
-	uiBoxAppend(page5, uiControl(focusLabel), 0);
-
-	uiWindowOnFocusChanged(parent, onFocusChanged, focusLabel);
-
-	return page5;
+	return page;
 }

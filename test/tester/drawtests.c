@@ -1857,7 +1857,7 @@ static void drawCSSetLineJoin(uiAreaDrawParams *p)
 
 // TODO text align center
 
-// Text drawing and extents are covered by page10.
+// Text drawing and extents are covered by text.c.
 
 // Quartz 2D Programming Guide
 

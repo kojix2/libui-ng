@@ -335,17 +335,17 @@ static const struct {
 	{ NULL, NULL },
 };
 
-uiTab *makePage14(void)
+uiTab *makeLayoutGrid(void)
 {
-	uiTab *page14;
+	uiTab *page;
 	int i;
 
-	page14 = newTab();
+	page = newTab();
 
 	for (i = 0; pages[i].name != NULL; i++)
-		uiTabAppend(page14,
+		uiTabAppend(page,
 			pages[i].name,
 			(*(pages[i].f))());
 
-	return page14;
+	return page;
 }

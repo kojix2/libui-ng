@@ -58,25 +58,19 @@ SHED(hide, Hide)
 SHED(enable, Enable)
 SHED(disable, Disable)
 
-uiBox *page1;
-
-void goToPage2(uiButton *b, void *data)
-{
-	uiTabSetSelected(mainTab, 1);
-}
-
-void makePage1(uiWindow *w)
+uiBox *makeProperties(uiWindow *w, uiGroup *group, uiTab *layoutTab)
 {
 	uiButton *getButton, *setButton, *nextButton;
+	uiBox *page;
 	uiBox *hbox;
 	uiBox *testBox;
 	uiLabel *label;
 
-	page1 = newVerticalBox();
+	page = newVerticalBox();
 
 	entry = uiNewEntry();
 	uiEntryOnChanged(entry, onChanged, NULL);
-	uiBoxAppend(page1, uiControl(entry), 0);
+	uiBoxAppend(page, uiControl(entry), 0);
 
 	spaced = uiNewCheckbox("Spaced");
 	uiCheckboxOnToggled(spaced, toggleSpaced, NULL);
@@ -89,7 +83,7 @@ void makePage1(uiWindow *w)
 	uiButtonOnClicked(setButton, setWindowText, w);
 	uiBoxAppend(hbox, uiControl(getButton), 1);
 	uiBoxAppend(hbox, uiControl(setButton), 1);
-	uiBoxAppend(page1, uiControl(hbox), 0);
+	uiBoxAppend(page, uiControl(hbox), 0);
 
 	hbox = newHorizontalBox();
 	getButton = uiNewButton("Get Button Text");
@@ -98,7 +92,7 @@ void makePage1(uiWindow *w)
 	uiButtonOnClicked(setButton, setButtonText, getButton);
 	uiBoxAppend(hbox, uiControl(getButton), 1);
 	uiBoxAppend(hbox, uiControl(setButton), 1);
-	uiBoxAppend(page1, uiControl(hbox), 0);
+	uiBoxAppend(page, uiControl(hbox), 0);
 
 	hbox = newHorizontalBox();
 	getButton = uiNewButton("Get Checkbox Text");
@@ -107,7 +101,7 @@ void makePage1(uiWindow *w)
 	uiButtonOnClicked(setButton, setCheckboxText, spaced);
 	uiBoxAppend(hbox, uiControl(getButton), 1);
 	uiBoxAppend(hbox, uiControl(setButton), 1);
-	uiBoxAppend(page1, uiControl(hbox), 0);
+	uiBoxAppend(page, uiControl(hbox), 0);
 
 	hbox = newHorizontalBox();
 	getButton = uiNewButton("Get Label Text");
@@ -116,16 +110,16 @@ void makePage1(uiWindow *w)
 	uiButtonOnClicked(setButton, setLabelText, label);
 	uiBoxAppend(hbox, uiControl(getButton), 1);
 	uiBoxAppend(hbox, uiControl(setButton), 1);
-	uiBoxAppend(page1, uiControl(hbox), 0);
+	uiBoxAppend(page, uiControl(hbox), 0);
 
 	hbox = newHorizontalBox();
 	getButton = uiNewButton("Get Group Text");
-	uiButtonOnClicked(getButton, getGroupText, page2group);
+	uiButtonOnClicked(getButton, getGroupText, group);
 	setButton = uiNewButton("Set Group Text");
-	uiButtonOnClicked(setButton, setGroupText, page2group);
+	uiButtonOnClicked(setButton, setGroupText, group);
 	uiBoxAppend(hbox, uiControl(getButton), 1);
 	uiBoxAppend(hbox, uiControl(setButton), 1);
-	uiBoxAppend(page1, uiControl(hbox), 0);
+	uiBoxAppend(page, uiControl(hbox), 0);
 
 	hbox = newHorizontalBox();
 	uiBoxAppend(hbox, uiControl(spaced), 1);
@@ -138,7 +132,7 @@ void makePage1(uiWindow *w)
 	getButton = uiNewButton("Show");
 	uiButtonOnClicked(getButton, showSpaced, NULL);
 	uiBoxAppend(hbox, uiControl(getButton), 0);
-	uiBoxAppend(page1, uiControl(hbox), 0);
+	uiBoxAppend(page, uiControl(hbox), 0);
 
 	testBox = newHorizontalBox();
 	setButton = uiNewButton("Button");
@@ -155,7 +149,7 @@ void makePage1(uiWindow *w)
 	getButton = uiNewButton("Disable");
 	uiButtonOnClicked(getButton, disableControl, setButton);
 	uiBoxAppend(testBox, uiControl(getButton), 0);
-	uiBoxAppend(page1, uiControl(testBox), 0);
+	uiBoxAppend(page, uiControl(testBox), 0);
 
 	hbox = newHorizontalBox();
 	getButton = uiNewButton("Show Box");
@@ -170,10 +164,12 @@ void makePage1(uiWindow *w)
 	getButton = uiNewButton("Disable Box");
 	uiButtonOnClicked(getButton, disableControl, testBox);
 	uiBoxAppend(hbox, uiControl(getButton), 1);
-	uiBoxAppend(page1, uiControl(hbox), 0);
+	uiBoxAppend(page, uiControl(hbox), 0);
 
-	nextButton = uiNewButton("Go to Page 2");
-	uiButtonOnClicked(nextButton, goToPage2, NULL);
-	uiBoxAppend(page1, uiControl(nextButton), 0);
-	uiBoxAppend(page1, uiControl(label), 0);
+	nextButton = uiNewButton("Go to Parenting");
+	uiButtonOnClicked(nextButton, selectParenting, layoutTab);
+	uiBoxAppend(page, uiControl(nextButton), 0);
+	uiBoxAppend(page, uiControl(label), 0);
+
+	return page;
 }

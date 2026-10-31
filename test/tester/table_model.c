@@ -217,9 +217,9 @@ static uiTableModelHandler mh = {
 	.SetCellValue = modelSetCellValue,
 };
 
-uiBox *makePage17(void)
+uiBox *makeTableModel(void)
 {
-	uiBox *page17;
+	uiBox *page;
 	uiBox *controls;
 	uiButton *insert, *delete;
 	uiTable *t;
@@ -234,10 +234,10 @@ uiBox *makePage17(void)
 	appendImageNamed(img[1], "tango-icon-theme-0.8.90_16x16_x-office-spreadsheet.png");
 	appendImageNamed(img[1], "tango-icon-theme-0.8.90_32x32_x-office-spreadsheet.png");
 
-	page17 = newVerticalBox();
+	page = newVerticalBox();
 
 	controls = newHorizontalBox();
-	uiBoxAppend(page17, uiControl(controls), 0);
+	uiBoxAppend(page, uiControl(controls), 0);
 	input = uiNewEntry();
 	uiEntrySetText(input, "Index #");
 	uiBoxAppend(controls, uiControl(input), 0);
@@ -258,7 +258,7 @@ uiBox *makePage17(void)
 	p.Model = m;
 	p.RowBackgroundColorModelColumn = 3;
 	t = uiNewTable(&p);
-	uiBoxAppend(page17, uiControl(t), 1);
+	uiBoxAppend(page, uiControl(t), 1);
 
 	uiTableAppendTextColumn(t, "Column 1",
 		0, uiTableModelColumnNeverEditable, NULL);
@@ -279,7 +279,7 @@ uiBox *makePage17(void)
 		8);
 
 	t2 = uiNewTable(&p);
-	uiBoxAppend(page17, uiControl(t2), 1);
+	uiBoxAppend(page, uiControl(t2), 1);
 	uiTableAppendTextColumn(t2, "Column 1",
 		0, uiTableModelColumnNeverEditable, NULL);
 	uiTableAppendImageTextColumn(t2, "Column 2",
@@ -290,10 +290,10 @@ uiBox *makePage17(void)
 	uiTableAppendCheckboxColumn(t2, "Checkboxes",
 		7, uiTableModelColumnAlwaysEditable);
 
-	return page17;
+	return page;
 }
 
-void freePage17(void)
+void freeTableModel(void)
 {
 	int row;
 	for (row = 0; row < data.numRows; ++row) {

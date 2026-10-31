@@ -80,9 +80,9 @@ static void enableArea(uiButton *b, void *data)
 		uiControlDisable(uiControl(area));
 }
 
-uiBox *makePage6(void)
+uiBox *makeArea(void)
 {
-	uiBox *page6;
+	uiBox *page;
 	uiBox *hbox;
 	uiButton *button;
 
@@ -92,10 +92,10 @@ uiBox *makePage6(void)
 	handler.ah.DragBroken = handlerDragBroken;
 	handler.ah.KeyEvent = handlerKeyEvent;
 
-	page6 = newVerticalBox();
+	page = newVerticalBox();
 
 	hbox = newHorizontalBox();
-	uiBoxAppend(page6, uiControl(hbox), 0);
+	uiBoxAppend(page, uiControl(hbox), 0);
 
 	which = uiNewCombobox();
 	populateComboboxWithTests(which);
@@ -106,10 +106,10 @@ uiBox *makePage6(void)
 	uiBoxAppend(hbox, uiControl(which), 0);
 
 	area = uiNewArea((uiAreaHandler *) (&handler));
-	uiBoxAppend(page6, uiControl(area), 1);
+	uiBoxAppend(page, uiControl(area), 1);
 
 	hbox = newHorizontalBox();
-	uiBoxAppend(page6, uiControl(hbox), 0);
+	uiBoxAppend(page, uiControl(hbox), 0);
 
 	swallowKeys = uiNewCheckbox("Consider key events handled");
 	uiBoxAppend(hbox, uiControl(swallowKeys), 1);
@@ -122,5 +122,5 @@ uiBox *makePage6(void)
 	uiButtonOnClicked(button, enableArea, NULL);
 	uiBoxAppend(hbox, uiControl(button), 0);
 
-	return page6;
+	return page;
 }

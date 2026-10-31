@@ -204,10 +204,13 @@ and platform-extension consumers. These checks and direct C linkage are run by
 `.github/workflows/cmake.yml` outside the unit CTest list. Existing CI retains
 its OS, architecture, Debug/Release and static/shared matrix.
 
-`tester/` contains the interactive `tester` program: its page sources, drawing
-scenarios, embedded image data and source images, plus Windows resources and
-manifests. Build with `cmake --build build --target tester`; the executable
-remains `build/artifacts/<configuration>/tester` (`tester.exe` on Windows).
+`tester/` contains the interactive `tester` program, organized into Controls,
+Layout, Drawing, Windows and Tables. Its [scenario map](tester/README.md) links
+those screens to their sources and previous page numbers, and lists manual
+checks and command-line options. It also contains embedded image data, source
+images and Windows resources/manifests. Build with
+`cmake --build build --target tester`; the executable remains
+`build/artifacts/<configuration>/tester` (`tester.exe` on Windows).
 
 `tester`, `qa`, and examples are interactive programs, not CTest cases. Run
 them on the target OS and record the control, operation and expected display

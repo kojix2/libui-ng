@@ -43,7 +43,7 @@ static int handlerKeyEvent(uiAreaHandler *ah, uiArea *a, uiAreaKeyEvent *e)
 	return 0;
 }
 
-uiGroup *makePage7b(void)
+uiGroup *makeAreaMouse(void)
 {
 	uiGroup *group;
 	uiBox *box;
@@ -62,7 +62,7 @@ uiGroup *makePage7b(void)
 	area = uiNewScrollingArea((uiAreaHandler *) (&handler), 5000, 5000);
 	uiBoxAppend(box, uiControl(area), 1);
 
-	label = uiNewCheckbox("");
+	label = uiNewCheckbox("Move the pointer over the area to see coordinates");
 	uiBoxAppend(box, uiControl(label), 0);
 
 	return group;

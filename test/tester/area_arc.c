@@ -92,7 +92,7 @@ static void checkboxToggled(uiCheckbox *c, void *data)
 	uiAreaQueueRedrawAll(area);
 }
 
-uiGroup *makePage7a(void)
+uiGroup *makeAreaArc(void)
 {
 	uiGroup *group;
 	uiBox *box, *box2;
@@ -116,6 +116,7 @@ uiGroup *makePage7a(void)
 
 	uiBoxAppend(box2, uiControl(uiNewLabel("Start Angle")), 0);
 	startAngle = uiNewEntry();
+	uiEntrySetText(startAngle, "0");
 	uiEntryOnChanged(startAngle, entryChanged, NULL);
 	uiBoxAppend(box2, uiControl(startAngle), 1);
 
@@ -124,6 +125,7 @@ uiGroup *makePage7a(void)
 
 	uiBoxAppend(box2, uiControl(uiNewLabel("Sweep")), 0);
 	sweep = uiNewEntry();
+	uiEntrySetText(sweep, "270");
 	uiEntryOnChanged(sweep, entryChanged, NULL);
 	uiBoxAppend(box2, uiControl(sweep), 1);
 

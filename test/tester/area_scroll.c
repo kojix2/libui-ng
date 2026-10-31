@@ -113,9 +113,20 @@ static int handlerKeyEvent(uiAreaHandler *ah, uiArea *a, uiAreaKeyEvent *e)
 	return 0;
 }
 
-uiGroup *makePage7c(void)
+static void largeContentToggled(uiCheckbox *c, void *data)
+{
+	int size;
+
+	size = uiCheckboxChecked(c) ? 2000 : areaSize;
+	uiAreaSetSize(area, size, size);
+	uiAreaQueueRedrawAll(area);
+}
+
+uiGroup *makeAreaScroll(void)
 {
 	uiGroup *group;
+	uiBox *box;
+	uiCheckbox *largeContent;
 
 	handler.ah.Draw = handlerDraw;
 	handler.ah.MouseEvent = handlerMouseEvent;
@@ -124,10 +135,15 @@ uiGroup *makePage7c(void)
 	handler.ah.KeyEvent = handlerKeyEvent;
 
 	group = newGroup("Scrolling Drawing Test");
+	box = newVerticalBox();
+	uiGroupSetChild(group, uiControl(box));
+	largeContent = uiNewCheckbox("Large content (2000 x 2000): enable to test scrolling");
+	uiCheckboxOnToggled(largeContent, largeContentToggled, NULL);
+	uiBoxAppend(box, uiControl(largeContent), 0);
 
 	area = uiNewScrollingArea((uiAreaHandler *) (&handler),
 		areaSize, areaSize);
-	uiGroupSetChild(group, uiControl(area));
+	uiBoxAppend(box, uiControl(area), 1);
 
 	return group;
 }

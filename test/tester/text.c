@@ -1,7 +1,6 @@
 // 22 december 2015
 #include "test.h"
 
-static uiEntry *textString;
 static uiFontButton *textFontButton;
 static uiColorButton *textColorButton;
 static uiEntry *textWidth;
@@ -135,22 +134,19 @@ static void onTextApply(uiButton *b, void *data)
 	uiAreaQueueRedrawAll(textArea);
 }
 
-uiBox *makePage10(void)
+uiBox *makeText(void)
 {
-	uiBox *page10;
+	uiBox *page;
 	uiBox *vbox;
 	uiBox *hbox;
 
-	page10 = newVerticalBox();
-	vbox = page10;
+	page = newVerticalBox();
+	vbox = page;
 
 	hbox = newHorizontalBox();
 	uiBoxAppend(vbox, uiControl(hbox), 0);
 
-	textString = uiNewEntry();
-	// TODO make it placeholder
-	uiEntrySetText(textString, "Enter text here");
-	uiBoxAppend(hbox, uiControl(textString), 1);
+	uiBoxAppend(hbox, uiControl(uiNewLabel("Fixed attributed text and Unicode samples")), 1);
 
 	textFontButton = uiNewFontButton();
 	uiFontButtonOnChanged(textFontButton, onFontChanged, NULL);
@@ -163,10 +159,11 @@ uiBox *makePage10(void)
 	hbox = newHorizontalBox();
 	uiBoxAppend(vbox, uiControl(hbox), 0);
 
-	textApply = uiNewButton("Apply");
+	textApply = uiNewButton("Redraw");
 	uiButtonOnClicked(textApply, onTextApply, NULL);
 	uiBoxAppend(hbox, uiControl(textApply), 1);
 
+	uiBoxAppend(hbox, uiControl(uiNewLabel("Width (-1 = unbounded)")), 0);
 	textWidth = uiNewEntry();
 	uiEntrySetText(textWidth, "-1");
 	uiBoxAppend(hbox, uiControl(textWidth), 1);
@@ -189,5 +186,5 @@ uiBox *makePage10(void)
 	uiBoxAppend(hbox, uiControl(uiNewFontButton()), 1);
 	uiBoxAppend(hbox, uiControl(uiNewColorButton()), 1);
 
-	return page10;
+	return page;
 }

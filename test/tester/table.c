@@ -211,9 +211,9 @@ static void selectChecked(uiButton *b, void *data)
 	uiTableSetSelection(t, &sel);
 }
 
-uiBox *makePage16(void)
+uiBox *makeTable(void)
 {
-	uiBox *page16;
+	uiBox *page;
 	uiBox *controls;
 	uiBox *stats;
 	uiCheckbox *headerVisible;
@@ -234,10 +234,10 @@ uiBox *makePage16(void)
 
 	memset(checkStates, 0, 15 * sizeof (int));
 
-	page16 = newVerticalBox();
+	page = newVerticalBox();
 	controls = newHorizontalBox();
 	uiBoxSetPadded(controls, 1);
-	uiBoxAppend(page16, uiControl(controls), 0);
+	uiBoxAppend(page, uiControl(controls), 0);
 
 	mh.NumColumns = modelNumColumns;
 	mh.ColumnType = modelColumnType;
@@ -250,7 +250,7 @@ uiBox *makePage16(void)
 	p.Model = m;
 	p.RowBackgroundColorModelColumn = 3;
 	t = uiNewTable(&p);
-	uiBoxAppend(page16, uiControl(t), 1);
+	uiBoxAppend(page, uiControl(t), 1);
 
 	uiTableAppendTextColumn(t, "Column 1",
 		0, uiTableModelColumnNeverEditable, NULL);
@@ -309,7 +309,7 @@ uiBox *makePage16(void)
 
 	stats = newHorizontalBox();
 	uiBoxSetPadded(stats, 1);
-	uiBoxAppend(page16, uiControl(stats), 0);
+	uiBoxAppend(page, uiControl(stats), 0);
 
 	lblRowClicked = uiNewLabel("Clicked row -");
 	uiBoxAppend(stats, uiControl(lblRowClicked), 0);
@@ -329,10 +329,10 @@ uiBox *makePage16(void)
 	lblCountSelectionChanged = uiNewLabel("");
 	uiBoxAppend(stats, uiControl(lblCountSelectionChanged), 0);
 
-	return page16;
+	return page;
 }
 
-void freePage16(void)
+void freeTable(void)
 {
 	uiFreeTableModel(m);
 	uiFreeImage(img[1]);

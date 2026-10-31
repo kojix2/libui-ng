@@ -10,8 +10,6 @@
 
 // main.c
 extern void die(const char *, ...);
-extern uiBox *mainBox;
-extern uiTab *mainTab;
 extern uiBox *(*newhbox)(void);
 extern uiBox *(*newvbox)(void);
 
@@ -30,64 +28,42 @@ extern uiGrid *newGrid(void);
 extern uiMenuItem *shouldQuitItem;
 extern void initMenus(void);
 
-// page1.c
-extern uiBox *page1;
-extern void makePage1(uiWindow *);
+// Control scenarios
+extern uiBox *makeEntries(void);
+extern uiBox *makeMultiline(void);
+extern uiBox *makeNumbers(void);
+extern uiBox *makeSelection(void);
+extern uiBox *makeDateTime(void);
+extern uiBox *makeControlState(void);
 
-// page2.c
-extern uiGroup *page2group;
-extern uiBox *makePage2(void);
+// Layout scenarios. Properties is the movable first tab of the supplied tab.
+extern uiBox *makeProperties(uiWindow *, uiGroup *, uiTab *);
+extern void selectParenting(uiButton *, void *);
+extern uiBox *makeLayoutParenting(uiBox *, uiTab *, uiBox *, uiGroup *);
+extern uiBox *makeLayoutVisibility(void);
+extern uiBox *makeLayoutSizes(void);
+extern uiBox *makeLayoutForm(void);
+extern void freeLayoutForm(void);
+extern uiTab *makeLayoutGrid(void);
 
-// page3.c
-extern uiBox *makePage3(void);
-
-// page4.c
-extern uiBox *makePage4(void);
-
-// page5.c
-extern uiBox *makePage5(uiWindow *);
-
-// page6.c
-extern uiBox *makePage6(void);
-
-// drawtests.c
+// Drawing and input scenarios
+extern uiBox *makeArea(void);
+extern uiGroup *makeAreaArc(void);
+extern uiGroup *makeAreaMouse(void);
+extern uiGroup *makeAreaScroll(void);
+extern uiBox *makeText(void);
 extern void runDrawTest(int, uiAreaDrawParams *);
 extern void populateComboboxWithTests(uiCombobox *);
 
-// page7.c
-extern uiBox *makePage7(void);
+// Window scenarios
+extern uiBox *makeWindows(uiWindow *);
+extern uiBox *makeDialogs(uiWindow *);
 
-// page7a.c
-extern uiGroup *makePage7a(void);
-
-// page7b.c
-extern uiGroup *makePage7b(void);
-
-// page7c.c
-extern uiGroup *makePage7c(void);
-
-// page10.c
-extern uiBox *makePage10(void);
-
-// page12.c
-extern uiBox *makePage12(void);
-
-// page13.c
-extern uiBox *makePage13(void);
-
-// page14.c
-extern uiTab *makePage14(void);
-
-// page15.c
-extern uiBox *makePage15(uiWindow *);
-
-// page16.c
-extern uiBox *makePage16(void);
-extern void freePage16(void);
-
-// page17.c
-extern uiBox *makePage17(void);
-extern void freePage17(void);
+// Table resources outlive their controls and are freed after uiMain().
+extern uiBox *makeTable(void);
+extern void freeTable(void);
+extern uiBox *makeTableModel(void);
+extern void freeTableModel(void);
 
 // images.c
 extern void appendImageNamed(uiImage *img, const char *name);
