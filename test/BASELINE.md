@@ -361,6 +361,15 @@ Linux Debug validation (GCC 15, GTK 3.24.52, system cmocka 2.0.2):
 | pre-build | static | 11 | 286 | Passed |
 | pre-build | shared | 11 | 267 | Passed |
 | pre-build | static, ASan + UBSan | 11 | 286 | Passed; leak detection disabled |
+| dev | static | 17 | 369 | Passed |
+| dev | shared | 17 | 348 | Passed |
+| dev | static, ASan + UBSan | 17 | 369 | Passed; leak detection disabled |
+
+The rebased dev tree preserves its original production sources and public
+headers byte for byte. `git range-diff` shows only the changed Area teardown /
+helper context and appended baseline context for its fourteen development
+commits. No development API change is dropped. Current local commits have not
+yet run hosted CI; the successful runs above apply to the named earlier tips.
 
 Minimum cmocka 1.1.8 also passes the eight headless cases and the seven Area /
 thirteen attrstr cases. The headless executable independently passes ASan +
