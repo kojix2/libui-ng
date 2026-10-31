@@ -65,8 +65,8 @@ static void emitGrabBroken(uiArea *area, int keyboard, int implicit)
 	handled = FALSE;
 	widget = GTK_WIDGET((void *) uiControlHandle(uiControl(area)));
 	g_signal_emit_by_name(widget, "grab-broken-event", event, &handled);
-	assert_false(handled);
 	gdk_event_free(event);
+	assert_false(handled);
 }
 
 void areaDragBrokenForImplicitPointerGrab(void **state)

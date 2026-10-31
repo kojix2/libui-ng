@@ -395,3 +395,10 @@ its distinct/equal values are checked through attributed-string run boundaries.
 Not every equality branch is covered. `unix/opentype.c`'s native CSS conversion
 still does not execute in these tests; native font shaping and Windows/macOS
 execution of the new cases remain unverified.
+
+## GTK event cleanup on assertion failure
+
+The grab-broken helper frees its temporary GdkEvent before asserting the signal's
+handled result. A failed result assertion can no longer bypass event release.
+The seven pre-build Area cases pass in Linux static Debug and ASan + UBSan
+(`detect_leaks=0`); production sources, registration and case counts are unchanged.
