@@ -95,6 +95,8 @@ ctest --test-dir build --output-on-failure
 ```
 
 Manual QA tests are under `test/qa`.
+See the [test guide](test/README.md) for component selection, labels, fixtures,
+and the branch-specific validation baseline.
 Linux GUI tests can be run headlessly with
 `xvfb-run ctest --test-dir build --output-on-failure`.
 

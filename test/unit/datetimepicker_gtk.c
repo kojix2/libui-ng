@@ -1,8 +1,6 @@
-#include "unit.h"
+#include "../support/fixture.h"
 #include <gtk/gtk.h>
 #include <string.h>
-
-static uiWindow *window;
 
 static GtkWidget *findHours(GtkWidget *widget)
 {
@@ -23,31 +21,31 @@ static GtkWidget *findHours(GtkWidget *widget)
 
 static int setup(void **state)
 {
-	uiInitOptions options = {0};
-	uiDateTimePicker *picker;
-	GtkMenuButton *button;
+	struct state *s = *state;
+	int result = unitTestSetup(state);
 
-	assert_null(uiInit(&options));
-	window = uiNewWindow("Date/time input tests", 300, 100, 0);
-	picker = uiNewTimePicker();
-	uiWindowSetChild(window, uiControl(picker));
-	button = GTK_MENU_BUTTON((void *) uiControlHandle(uiControl(picker)));
-	*state = findHours(GTK_WIDGET(gtk_menu_button_get_popover(button)));
-	assert_non_null(*state);
+	if (result != 0)
+		return result;
+	s->c = uiControl(uiNewTimePicker());
+	uiWindowSetChild(s->w, s->c);
 	return 0;
 }
 
-static int teardown(void **state)
+static GtkSpinButton *hoursFromState(void **state)
 {
-	(void) state;
-	uiControlDestroy(uiControl(window));
-	uiUninit();
-	return 0;
+	struct state *s = *state;
+	GtkMenuButton *button;
+	GtkWidget *hours;
+
+	button = GTK_MENU_BUTTON((void *) uiControlHandle(s->c));
+	hours = findHours(GTK_WIDGET(gtk_menu_button_get_popover(button)));
+	assert_non_null(hours);
+	return GTK_SPIN_BUTTON(hours);
 }
 
 static void hoursInputAcceptsValidHours(void **state)
 {
-	GtkSpinButton *hours = GTK_SPIN_BUTTON(*state);
+	GtkSpinButton *hours = hoursFromState(state);
 	const char *inputs[] = {"0", "1", "11", "12"};
 	const int expected[] = {0, 1, 11, 0};
 	size_t i;
@@ -65,7 +63,7 @@ static void hoursInputAcceptsValidHours(void **state)
 
 static void hoursInputRejectsOutOfRangeNumbers(void **state)
 {
-	GtkSpinButton *hours = GTK_SPIN_BUTTON(*state);
+	GtkSpinButton *hours = hoursFromState(state);
 	char overflow[512];
 	const char *inputs[] = {"13", "999999999999999999999999999999999", overflow};
 	size_t i;
@@ -88,9 +86,11 @@ static void hoursInputRejectsOutOfRangeNumbers(void **state)
 int main(void)
 {
 	const struct CMUnitTest tests[] = {
-		cmocka_unit_test(hoursInputAcceptsValidHours),
-		cmocka_unit_test(hoursInputRejectsOutOfRangeNumbers),
+		cmocka_unit_test_setup_teardown(hoursInputAcceptsValidHours,
+			setup, unitTestTeardownHidden),
+		cmocka_unit_test_setup_teardown(hoursInputRejectsOutOfRangeNumbers,
+			setup, unitTestTeardownHidden),
 	};
 
-	return cmocka_run_group_tests(tests, setup, teardown);
+	return cmocka_run_group_tests(tests, unitTestsSetup, unitTestsTeardown);
 }

@@ -1,98 +1,79 @@
 #include <stdio.h>
+#include <string.h>
 
 #include "unit.h"
 
-int unitWindowOnClosingQuit(uiWindow *w, void *data)
-{
-	uiQuit();
-	return 1;
-}
-
-int unitTestsSetup(void **state)
-{
-	*state = malloc(sizeof(struct state));
-	assert_non_null(*state);
-	return 0;
-}
-
-int unitTestsTeardown(void **state)
-{
-	free(*state);
-	return 0;
-}
-
-int unitTestSetup(void **_state)
-{
-	struct state *state = *_state;
-	uiInitOptions o = {0};
-
-	assert_null(uiInit(&o));
-	state->c = NULL;
-	state->w = uiNewWindow(UNIT_TEST_WINDOW_TITLE, UNIT_TEST_WINDOW_WIDTH, UNIT_TEST_WINDOW_HEIGHT, 0);
-	uiWindowOnClosing(state->w, unitWindowOnClosingQuit, NULL);
-	return 0;
-}
-
-int unitTestTeardown(void **_state)
-{
-	struct state *state = *_state;
-
-	if (state->c != NULL)
-		uiWindowSetChild(state->w, uiControl(state->c));
-	uiControlShow(uiControl(state->w));
-	//uiMain();
-	uiMainSteps();
-	uiMainStep(1);
-	uiControlDestroy(uiControl(state->w));
-	uiUninit();
-	return 0;
-}
-
 struct unitTest {
+	const char *name;
 	int (*fn)(void);
 };
 
-int main(void)
+int main(int argc, char **argv)
 {
 	size_t i;
 	int failedTests = 0;
 	int failedComponents = 0;
 	struct unitTest unitTests[] = {
-		{ initRunUnitTests },
+		{ "init", initRunUnitTests },
 #ifdef _UI_STATIC
-		{ controlRunUnitTests },
+		{ "control", controlRunUnitTests },
 #endif
-		{ windowRunUnitTests },
-		{ boxRunUnitTests },
-		{ groupRunUnitTests },
-		{ menuRunUnitTests },
-		{ sliderRunUnitTests },
-		{ spinboxRunUnitTests },
-		{ labelRunUnitTests },
-		{ buttonRunUnitTests },
-		{ comboboxRunUnitTests },
-		{ editableComboboxRunUnitTests },
-		{ checkboxRunUnitTests },
-		{ radioButtonsRunUnitTests },
-		{ tabRunUnitTests },
-		{ entryRunUnitTests },
-		{ multilineEntryRunUnitTests },
-		{ progressBarRunUnitTests },
-		{ dateTimePickerRunUnitTests },
-		{ separatorRunUnitTests },
-		{ fontDescriptorRunUnitTests },
-		{ fontButtonRunUnitTests },
-		{ colorButtonRunUnitTests },
-		{ formRunUnitTests },
-		{ areaRunUnitTests },
-		{ imageRunUnitTests },
-		{ gridRunUnitTests },
-		{ drawMatrixRunUnitTests },
-		{ attrstrRunUnitTests },
-		{ tableRunUnitTests },
+		{ "window", windowRunUnitTests },
+		{ "box", boxRunUnitTests },
+		{ "group", groupRunUnitTests },
+		{ "menu", menuRunUnitTests },
+		{ "slider", sliderRunUnitTests },
+		{ "spinbox", spinboxRunUnitTests },
+		{ "label", labelRunUnitTests },
+		{ "button", buttonRunUnitTests },
+		{ "combobox", comboboxRunUnitTests },
+		{ "editablecombobox", editableComboboxRunUnitTests },
+		{ "checkbox", checkboxRunUnitTests },
+		{ "radiobuttons", radioButtonsRunUnitTests },
+		{ "tab", tabRunUnitTests },
+		{ "entry", entryRunUnitTests },
+		{ "multilineentry", multilineEntryRunUnitTests },
+		{ "progressbar", progressBarRunUnitTests },
+		{ "datetimepicker", dateTimePickerRunUnitTests },
+		{ "separator", separatorRunUnitTests },
+		{ "fontdescriptor", fontDescriptorRunUnitTests },
+		{ "fontbutton", fontButtonRunUnitTests },
+		{ "colorbutton", colorButtonRunUnitTests },
+		{ "form", formRunUnitTests },
+		{ "area", areaRunUnitTests },
+		{ "image", imageRunUnitTests },
+		{ "grid", gridRunUnitTests },
+		{ "drawmatrix", drawMatrixRunUnitTests },
+		{ "attrstr", attrstrRunUnitTests },
+		{ "table", tableRunUnitTests },
 	};
 
+	/* Preserve the full runner and its order; optional names select components. */
+	if (argc == 2 && strcmp(argv[1], "--list") == 0) {
+		for (i = 0; i < sizeof(unitTests)/sizeof(*unitTests); ++i)
+			puts(unitTests[i].name);
+		return 0;
+	}
+	for (int arg = 1; arg < argc; ++arg) {
+		for (i = 0; i < sizeof(unitTests)/sizeof(*unitTests); ++i)
+			if (strcmp(argv[arg], unitTests[i].name) == 0)
+				break;
+		if (i == sizeof(unitTests)/sizeof(*unitTests)) {
+			fprintf(stderr, "Unknown component: %s (use --list)\n", argv[arg]);
+			return EXIT_FAILURE;
+		}
+	}
+
 	for (i = 0; i < sizeof(unitTests)/sizeof(*unitTests); ++i) {
+		if (argc > 1) {
+			int arg;
+			for (arg = 1; arg < argc; ++arg)
+				if (strcmp(argv[arg], unitTests[i].name) == 0)
+					break;
+			if (arg == argc)
+				continue;
+		}
+
 		int fails = (unitTests[i].fn)();
 		failedTests += fails;
 		if (fails > 0)

@@ -54,5 +54,7 @@ add_executable(tester ${tester_sources})
 target_link_libraries(tester PRIVATE libui::ui)
 libui_apply_internal_options(tester)
 
+include(AddTest.cmake)
+add_subdirectory(support)
 add_subdirectory(unit)
 add_subdirectory(qa)

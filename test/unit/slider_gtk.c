@@ -1,7 +1,5 @@
-#include "unit.h"
+#include "../support/fixture.h"
 #include <gtk/gtk.h>
-
-static uiWindow *window;
 
 static void onChanged(uiSlider *slider, void *data)
 {
@@ -12,23 +10,16 @@ static void onChanged(uiSlider *slider, void *data)
 
 static int setup(void **state)
 {
-	uiInitOptions options = {0};
+	struct state *s = *state;
 	uiSlider *slider;
+	int result = unitTestSetup(state);
 
-	assert_null(uiInit(&options));
-	window = uiNewWindow("Slider tooltip tests", 300, 100, 0);
+	if (result != 0)
+		return result;
 	slider = uiNewSlider(0, 100);
-	uiWindowSetChild(window, uiControl(slider));
+	s->c = uiControl(slider);
+	uiWindowSetChild(s->w, s->c);
 	uiSliderOnChanged(slider, onChanged, NULL);
-	*state = slider;
-	return 0;
-}
-
-static int teardown(void **state)
-{
-	(void) state;
-	uiControlDestroy(uiControl(window));
-	uiUninit();
 	return 0;
 }
 
@@ -46,7 +37,7 @@ static void assertTooltip(uiSlider *slider, const char *expected)
 
 static void rangeChangesRefreshValueTooltip(void **state)
 {
-	uiSlider *slider = *state;
+	uiSlider *slider = (uiSlider *) ((struct state *) *state)->c;
 
 	uiSliderSetValue(slider, 90);
 	assertTooltip(slider, "90");
@@ -66,7 +57,7 @@ static void rangeChangesRefreshValueTooltip(void **state)
 
 static void rangeChangesKeepTooltipDisabled(void **state)
 {
-	uiSlider *slider = *state;
+	uiSlider *slider = (uiSlider *) ((struct state *) *state)->c;
 
 	uiSliderSetHasToolTip(slider, 0);
 	uiSliderSetRange(slider, 200, 300);
@@ -78,9 +69,11 @@ static void rangeChangesKeepTooltipDisabled(void **state)
 int main(void)
 {
 	const struct CMUnitTest tests[] = {
-		cmocka_unit_test(rangeChangesRefreshValueTooltip),
-		cmocka_unit_test(rangeChangesKeepTooltipDisabled),
+		cmocka_unit_test_setup_teardown(rangeChangesRefreshValueTooltip,
+			setup, unitTestTeardownHidden),
+		cmocka_unit_test_setup_teardown(rangeChangesKeepTooltipDisabled,
+			setup, unitTestTeardownHidden),
 	};
 
-	return cmocka_run_group_tests(tests, setup, teardown);
+	return cmocka_run_group_tests(tests, unitTestsSetup, unitTestsTeardown);
 }
