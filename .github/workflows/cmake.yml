@@ -73,6 +73,47 @@ jobs:
           path: packages/*.zip
           if-no-files-found: error
 
+  cmake-linux-sanitizers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        libtype: [static, shared]
+    name: Linux-${{ matrix.libtype }}-ASan-UBSan
+    env:
+      # Leak auditing is separate from address/undefined behavior checks.
+      ASAN_OPTIONS: detect_leaks=0
+      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+      GDK_BACKEND: x11
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y cmake ninja-build libgtk-3-dev libcmocka-dev xvfb
+      - name: Configure instrumented library, tests, and examples
+        run: >-
+          cmake -S . -B build-sanitizers -G Ninja
+          -DCMAKE_BUILD_TYPE=Debug
+          -DBUILD_SHARED_LIBS=${{ matrix.libtype == 'shared' && 'ON' || 'OFF' }}
+          -DLIBUI_FETCH_TEST_DEPS=ON
+          "-DCMAKE_C_FLAGS=-fsanitize=address,undefined -fno-omit-frame-pointer"
+          "-DCMAKE_CXX_FLAGS=-fsanitize=address,undefined -fno-omit-frame-pointer"
+      - name: Build and test
+        run: |
+          cmake --build build-sanitizers --parallel 2
+          xvfb-run -a ctest --test-dir build-sanitizers --output-on-failure
+      - name: Upload sanitizer test logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: linux-sanitizers-${{ matrix.libtype }}-logs
+          path: |
+            build-sanitizers/CMakeCache.txt
+            build-sanitizers/Testing/Temporary/
+          if-no-files-found: ignore
+
   cmake-linux-multiarch:
     strategy:
       fail-fast: false
@@ -328,7 +369,7 @@ jobs:
           cmake --build build-clang
 
   release:
-    needs: [cmake-linux, cmake-linux-multiarch, cmake-windows, cmake-msys2, cmake-macos]
+    needs: [cmake-linux, cmake-linux-sanitizers, cmake-linux-multiarch, cmake-windows, cmake-msys2, cmake-macos]
     if: github.ref_type == 'tag' || github.ref_name == 'pre-build' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:

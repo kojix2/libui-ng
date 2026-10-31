@@ -100,13 +100,22 @@ cmake -S . -B build-asan -DCMAKE_BUILD_TYPE=Debug -DBUILD_SHARED_LIBS=OFF \
   '-DCMAKE_C_FLAGS=-fsanitize=address,undefined -fno-omit-frame-pointer' \
   '-DCMAKE_CXX_FLAGS=-fsanitize=address,undefined -fno-omit-frame-pointer'
 cmake --build build-asan
-ASAN_OPTIONS=detect_leaks=0 UBSAN_OPTIONS=halt_on_error=1 \
+ASAN_OPTIONS=detect_leaks=0 UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1 \
   xvfb-run -a ctest --test-dir build-asan --output-on-failure
 ```
 
-This checks address/undefined behavior errors, including instrumented test and
-example sources. `detect_leaks=0` is not a leak check. Record leak analysis
-separately, with reasons for any external-library suppressions.
+The `cmake-linux-sanitizers` job in `.github/workflows/cmake.yml` runs this
+configuration for static and shared Debug builds on Linux. It instruments the
+library, all tests and example sources with both sanitizers, then runs the full
+CTest suite under Xvfb. Example execution and visual checks remain separate.
+UBSan uses `halt_on_error=1:print_stacktrace=1` so a report fails the job with a
+stack trace. Build/test logs and CMake configuration are retained as
+`linux-sanitizers-<static|shared>-logs` artifacts when available. The release job
+also depends on these checks; the sanitizer builds do not produce SDK archives.
+
+`detect_leaks=0` is not a leak check. Record leak analysis separately, with
+reasons for any external-library suppressions. Existing OS, architecture,
+Debug/Release and static/shared CI jobs retain their configurations.
 
 For GCC coverage, configure a separate static Debug build with
 `-DCMAKE_C_FLAGS='--coverage -O0'`, build, and run CTest. Clear that build's

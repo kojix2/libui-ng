@@ -172,6 +172,34 @@ static/shared Debug/Release jobs, along with the minimum-CMake job. This
 supersedes the earlier source-only CI inventory for those commits. Execution of
 the new source/registration changes on Windows/macOS remains pending.
 
+## CI confirmation after the second organization
+
+The exact organized tips completed their existing CI successfully:
+[pre-build `48fae4c8`](https://github.com/kojix2/libui-ng/actions/runs/41189747256)
+finished all 40 jobs successfully. [dev `c7f193ba`](https://github.com/kojix2/libui-ng/actions/runs/41189768602)
+finished successfully with 39 successful jobs and the conditional release job
+skipped. This confirms the Table/registration changes on the native Windows
+and macOS matrices, along with the other existing configurations; it supersedes
+the earlier pending-CI statements for these tips. Manual visual behavior and
+leak auditing are not established by these runs.
+
+The subsequent `cmake-linux-sanitizers` job adds static/shared Debug ASan+UBSan
+checks on Linux without changing existing jobs or matrices. C/C++ flags cover
+libui, tests and examples; the full CTest suite runs under Xvfb with leak
+detection disabled and UBSan configured to halt with a stack trace. Diagnostic
+artifacts contain logs/configuration, not SDK packages. Release depends on the
+new sanitizer job as well as its previous prerequisites.
+
+The workflow passes actionlint 1.7.12. Its parsed configuration preserves every
+existing job and matrix, except for the explicit sanitizer prerequisite added
+to release. Locally, the new commands passed both static and shared pre-build
+CTest suites (10/10; 274/255 cases) under ASan/UBSan, with original case names
+and order. The same static/shared sanitizer commands passed dev 16/16 with
+357/336 cases, also preserving case names/order and CTest properties. Compile
+commands in both branches confirm instrumentation in common/GTK production
+sources, tests, and all examples, including the C++ example. These are local
+checks of the new job; its hosted execution is still pending.
+
 ## Coverage baseline
 
 GCC 15/gcov 15, static Debug, `--coverage -O0`, full Linux CTest suite. The same
