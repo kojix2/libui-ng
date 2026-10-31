@@ -176,6 +176,33 @@ static void drawMatrixMultiply(void **state)
 	assertMatrixEqual(&expected, m);
 }
 
+/* Integer inputs keep these expected coordinates exact on every backend. */
+static void drawMatrixTransformPoint(void **state)
+{
+	uiDrawMatrix *m = *state;
+	uiDrawMatrix transform = {2, 3, 5, 7, 11, 13};
+	double x = 17, y = 19;
+
+	*m = transform;
+	uiDrawMatrixTransformPoint(m, &x, &y);
+	if (x != 140 || y != 197)
+		fail_msg("point (17, 19): expected (140, 197), got (%.17g, %.17g)", x, y);
+	assertMatrixEqual(&transform, m);
+}
+
+static void drawMatrixTransformSize(void **state)
+{
+	uiDrawMatrix *m = *state;
+	uiDrawMatrix transform = {2, 3, 5, 7, 11, 13};
+	double x = 17, y = 19;
+
+	*m = transform;
+	uiDrawMatrixTransformSize(m, &x, &y);
+	if (x != 129 || y != 184)
+		fail_msg("size (17, 19): expected (129, 184), got (%.17g, %.17g)", x, y);
+	assertMatrixEqual(&transform, m);
+}
+
 static void drawMatrixInvertIdentity(void **state)
 {
 	uiDrawMatrix *m = *state;
@@ -234,6 +261,8 @@ int drawMatrixRunUnitTests(void)
 		drawMatrixUnitTest(drawMatrixSkew, &matrix),
 		drawMatrixUnitTest(drawMatrixTRS, &matrix),
 		drawMatrixUnitTest(drawMatrixMultiply, &matrix),
+		drawMatrixUnitTest(drawMatrixTransformPoint, &matrix),
+		drawMatrixUnitTest(drawMatrixTransformSize, &matrix),
 		drawMatrixUnitTest(drawMatrixInvertIdentity, &matrix),
 		drawMatrixUnitTest(drawMatrixInvertSelfInverse, &matrix),
 		drawMatrixUnitTest(drawMatrixInvertSingular, &matrix),

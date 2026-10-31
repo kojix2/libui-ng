@@ -82,6 +82,13 @@ Native-widget discovery assertions belong in the case so teardown still runs
 if discovery fails. Setup failure is not the same as a case assertion failure;
 do not rely on per-case teardown after a failed setup.
 
+The matrix component uses one runner-owned stack value, reset to identity
+before each case through cmocka's initial-state support. It needs no GUI
+initialization (`unit drawmatrix`). Matrix comparisons retain the relative
+`1e-5` tolerance, report each differing component at double precision, and
+preserve the assertion's caller location. Point/size cases verify coordinates,
+the different treatment of translation, and that the input matrix is unchanged.
+
 ## Entry and Area backend boundaries
 
 `unit/entry.c` and `unit/area.c` retain their public-API cases, fixture setup

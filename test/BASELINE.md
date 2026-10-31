@@ -43,7 +43,8 @@ Paths below are relative to the repository. Case names are in each source's
 registration array. All 30 defined component runners are registered in
 `test/unit/main.c` and their files are listed by CMake; `control` is the one
 static-only component. There are no unregistered component runners. The shared
-`unit` executable runs 230 cases, and static runs 249. Except for the stated
+`unit` executable initially ran 230 cases, and static 249 (now 232/251
+after the two matrix contracts below). Except for the stated
 internal references, components call the public API through linked libui.
 Counts in this table are Linux counts; platform guards can change them.
 
@@ -76,7 +77,7 @@ Counts in this table are Linux counts; platform guards can change them.
 | `area.c`, `area_gtk.c` | Events and ownership, including GTK observations | `common/areaevents.c`, `unix/area.c` | 7 / 7 |
 | `image.c` | Representations and lifetime | `unix/image.c`, `common/imagerep.c` | 4 / 4 |
 | `grid.c` | Insertion, padding, sizing and lifetime | `unix/grid.c`, `common/gridutil.c` | 8 / 8 |
-| `drawmatrix.c` | Matrix operations and inversion | `common/matrix.c`, `unix/drawmatrix.c` | 10 / 10 |
+| `drawmatrix.c` | Matrix operations, point/size conversion and inversion | `common/matrix.c`, `unix/drawmatrix.c` | 10 / 10 initially; 12 / 12 now |
 | `attrstr.c` | Attribute overlap, self-editing, graphemes | `common/attrstr.c`, `common/attrlist.c`, `common/attribute.c`, `unix/attrstr.c` | 11 / 11 |
 | `table.c`, `table_value.c`, `table_width.c` | Values, columns, selection, model notifications, widths | `common/table*.c`, `unix/table*.c` | 11 / 11 |
 
@@ -111,7 +112,8 @@ All 35 component runners are registered and included in CMake, with the same
 static-only `control` exclusion. Relative to the Linux map above, `unit` changes
 label to 10 cases, multilineentry to 18 and Area to 9. It adds `drawimage.c`
 (2), `imageview.c` (4), `toolbar.c` (5 shared / 7 static), `tooltip.c` (5) and
-`focus.c` (9). Its `unit` total is 269 shared / 290 static. Toolbar has additional
+`focus.c` (9). Its initial `unit` total is 269 shared / 290 static (now 271/292 after
+the two matrix contracts below). Toolbar has additional
 Windows-only cases not represented by these Linux totals.
 
 | CTest entry / file | Feature / implementation connection | Linux cases | GUI / condition |
@@ -218,7 +220,11 @@ including ScrollEvent and UserData assertions. Its normal shared/static and
 ASan+UBSan static/shared suites each passed 16/16 (336/357/357/336 cases), with
 original names/order and CTest properties. The native source additions are
 the only CMake change; all production/API sources are unchanged.
-Execution of this new separation on Windows/macOS remains pending.
+The Entry/Area separation subsequently passed its full hosted matrices:
+[pre-build `9ab9dc86`](https://github.com/kojix2/libui-ng/actions/runs/41191966650)
+and [dev `7ba345a9`](https://github.com/kojix2/libui-ng/actions/runs/41191975927)
+both completed successfully. This does not establish hosted execution of the
+later matrix cases below.
 
 The preceding sanitizer-CI change has now also passed hosted validation:
 [pre-build `3dec36c8`](https://github.com/kojix2/libui-ng/actions/runs/41190806796)
@@ -229,7 +235,47 @@ Both static/shared ASan+UBSan jobs succeeded in each run. This supersedes the
 sanitizer job's earlier pending-hosted-check note, and does not establish native
 execution of the subsequent Entry/Area move.
 
-## Coverage baseline
+## Matrix fixtures, diagnostics and missing contracts
+
+Starting from `pre-build` `9ab9dc86` / `dev` `7ba345a9`, matrix-only heap
+fixtures and empty teardown hooks are replaced by a runner-owned value with
+per-case identity initialization. One comparison helper retains scaled `1e-5`
+tolerance and caller locations, while printing component names and full-precision
+expected/actual values. All original ten cases and their relative order remain.
+Two separate cases verify point/size coordinates and unchanged matrix input;
+the integral non-diagonal matrix includes translation, which only points apply.
+No file, target, dependency or production code is added. The file is 272 lines,
+compared with 277 before cleanup and the two added contracts.
+
+A temporary no-op replacement for both transforms makes exactly the two new
+cases fail with input/expected/actual coordinates; the original ten still pass.
+The complete matrix component also passes with minimum cmocka 1.1.8 without
+GUI initialization. These checks are separate from the ordinary test results.
+
+Fresh static Debug GCC 15/gcov 15 runs with `--coverage -O0` used the same full
+CTest suite and aggregation rules, clearing execution data before each run:
+
+| Production measurement | Before | After |
+| --- | --- | --- |
+| `uiDrawMatrixTransformPoint` calls | 0 | 1 |
+| `uiDrawMatrixTransformSize` calls | 0 | 1 |
+| Combined lines hit / instrumented | 3872 / 5556 | 3880 / 5556 |
+| Combined functions hit / instrumented | 663 / 978 | 665 / 978 |
+| Combined branch edges hit / instrumented | 997 / 1752 | 997 / 1752 |
+
+Common-source counts are unchanged; the added hits are in the GTK matrix
+backend. Windows/macOS execution and coverage of these new cases remain
+unconfirmed. Linux fallback-size coverage is not implied by GTK's native path.
+The two cases increase pre-build cmocka totals to 257 shared / 276 static,
+and dev totals to 338 shared / 359 static. CTest executable counts are unchanged.
+Pre-build normal shared/static and ASan+UBSan static/shared each passed 10/10;
+all earlier cases retain their relative order and only the two intended cases
+are added. CTest names, labels, timeouts and skip conditions are unchanged.
+Dev normal shared/static and ASan+UBSan static/shared likewise passed 16/16
+(338/359/359/338 cases), with only these two case additions and all original
+cases in their prior order. The hosted run for this matrix change is pending.
+
+## Initial coverage baseline
 
 GCC 15/gcov 15, static Debug, `--coverage -O0`, full Linux CTest suite. The same
 configuration and aggregation were used before and after; all measured hits
@@ -250,7 +296,7 @@ index; a key is hit if any copy executed it. There are no direct production
 `.c` includes in this `pre-build` test snapshot. `dev` does use direct includes;
 its aggregation has not been validated and is not represented by these totals.
 
-Remaining measured gaps include all functions in `common/opentype.c` and
+In this initial measurement, gaps included all functions in `common/opentype.c` and
 `unix/opentype.c`, matrix point/size transforms, and size/weight/italic/stretch/
 background/underline/features attribute construction and access. Attribute
 family/color operations do execute. These are candidates for separate contract
