@@ -1,0 +1,73 @@
+#include "area_test.h"
+#include <gtk/gtk.h>
+#include "../../ui_unix.h"
+
+void scrollingAreaScrollAfterSetSize(void **state)
+{
+	uiArea *area = uiAreaFromState(state);
+	GtkWidget *window;
+	GtkWidget *widget;
+	GtkScrolledWindow *sw;
+	GtkAdjustment *hadj;
+	double value, page;
+	int i;
+
+	sw = GTK_SCROLLED_WINDOW((void *) uiControlHandle(uiControl(area)));
+	widget = uiprivUnixControlPrepareWidget(uiUnixControl(area));
+	window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+	gtk_window_set_default_size(GTK_WINDOW(window), 200, 150);
+	gtk_container_add(GTK_CONTAINER(window), widget);
+	gtk_widget_show_all(window);
+	uiMainSteps();
+	for (i = 0; i < 30; i++) {
+		while (g_main_context_pending(NULL))
+			g_main_context_iteration(NULL, FALSE);
+		g_usleep(10000);
+	}
+	hadj = gtk_scrolled_window_get_hadjustment(sw);
+
+	uiAreaSetSize(area, 1000, 480);
+	uiAreaScrollTo(area, 800, 0, 20, 20);
+	uiAreaScrollTo(area, 900, 0, 20, 20);
+	for (i = 0; i < 30; i++) {
+		while (g_main_context_pending(NULL))
+			g_main_context_iteration(NULL, FALSE);
+		g_usleep(10000);
+	}
+
+	page = gtk_adjustment_get_page_size(hadj);
+	value = gtk_adjustment_get_value(hadj);
+	assert_true(gtk_adjustment_get_upper(hadj) >= 1000);
+	assert_true(page > 0);
+	assert_true(value + page >= 920);
+	assert_true(value <= 900);
+	gtk_container_remove(GTK_CONTAINER(window), widget);
+	gtk_widget_destroy(window);
+}
+
+static void emitGrabBroken(uiArea *area, int keyboard, int implicit)
+{
+	GdkEvent *event;
+	gboolean handled;
+	GtkWidget *widget;
+
+	event = gdk_event_new(GDK_GRAB_BROKEN);
+	event->grab_broken.keyboard = keyboard;
+	event->grab_broken.implicit = implicit;
+	handled = FALSE;
+	widget = GTK_WIDGET((void *) uiControlHandle(uiControl(area)));
+	g_signal_emit_by_name(widget, "grab-broken-event", event, &handled);
+	assert_false(handled);
+	gdk_event_free(event);
+}
+
+void areaDragBrokenForImplicitPointerGrab(void **state)
+{
+	uiArea *area = uiAreaFromState(state);
+
+	emitGrabBroken(area, 1, 1);
+	emitGrabBroken(area, 0, 0);
+	assert_int_equal(dragBrokenCalls, 0);
+	emitGrabBroken(area, 0, 1);
+	assert_int_equal(dragBrokenCalls, 1);
+}

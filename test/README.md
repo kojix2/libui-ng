@@ -82,6 +82,24 @@ Native-widget discovery assertions belong in the case so teardown still runs
 if discovery fails. Setup failure is not the same as a case assertion failure;
 do not rely on per-case teardown after a failed setup.
 
+## Entry and Area backend boundaries
+
+`unit/entry.c` and `unit/area.c` retain their public-API cases, fixture setup
+and registration arrays. GTK-dependent regressions live in `entry_gtk.c`
+(search-entry input and delayed notifications) and `area_gtk.c` (native scroll
+adjustments and grab-broken events). CMake adds those sources to `unit` only
+for non-Apple Unix builds. The private `entry_test.h`/`area_test.h` headers
+provide state-access macros and declarations, without GTK headers in the
+common files. Area's existing observation state is shared only with its native
+cases, with the same reset points and storage lifetime; no production hook or
+new shared state is introduced.
+
+The CTest entry remains `unit`; `unit entry area` selects these components.
+On GTK, Entry still has 20 cases and Area 7 (`dev`: Area 9). Registration names,
+order, initialization, teardown, native widget ownership and the existing
+bounded waits are unchanged. This source separation still requires a GUI
+session for these fixtures; it does not make the API cases headless.
+
 ## Table test boundaries
 
 `unit/table.c` retains the existing `table` component runner and the column,

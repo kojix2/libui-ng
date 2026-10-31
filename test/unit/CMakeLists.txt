@@ -58,6 +58,8 @@ target_link_libraries(gridutil-unit PRIVATE cmocka::cmocka)
 target_include_directories(gridutil-unit PRIVATE ../.. ../../common)
 
 if(UNIX AND NOT APPLE)
+	target_sources(unit PRIVATE entry_gtk.c area_gtk.c)
+
 	libui_add_test(alloc-unix alloc_backend.c ../../unix/alloc.c)
 	set_tests_properties(alloc-unix PROPERTIES LABELS "backend;fault;gtk")
 	target_link_libraries(alloc-unix PRIVATE cmocka::cmocka PkgConfig::GTK3)

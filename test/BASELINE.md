@@ -64,7 +64,7 @@ Counts in this table are Linux counts; platform guards can change them.
 | `checkbox.c` | Text and checked state | `unix/checkbox.c` | 6 / 6 |
 | `radiobuttons.c` | Items and selection | `unix/radiobuttons.c` | 7 / 7 |
 | `tab.c` | Pages, margins and ownership | `unix/tab.c` | 8 / 8 |
-| `entry.c` | Normal/password/search text, native search events | `unix/entry.c` | 20 / 20 |
+| `entry.c`, `entry_gtk.c` | Normal/password/search text, native search events | `unix/entry.c` | 20 / 20 |
 | `multilineentry.c` | Text, readonly and callbacks | `unix/multilineentry.c` | 10 / 10 |
 | `progressbar.c` | Default and changed values | `unix/progressbar.c` | 4 / 4 |
 | `datetimepicker.c` | Picker construction variants | `unix/datetimepicker.c` | 3 / 3 |
@@ -73,7 +73,7 @@ Counts in this table are Linux counts; platform guards can change them.
 | `fontbutton.c` | Font and notification | `unix/fontbutton.c` | 4 / 4 |
 | `colorbutton.c` | Color and notification | `unix/colorbutton.c` | 3 / 3 |
 | `form.c` | Rows, padding and lifetime | `unix/form.c` | 5 / 5 |
-| `area.c` | Events and ownership, including GTK observations | `common/areaevents.c`, `unix/area.c` | 7 / 7 |
+| `area.c`, `area_gtk.c` | Events and ownership, including GTK observations | `common/areaevents.c`, `unix/area.c` | 7 / 7 |
 | `image.c` | Representations and lifetime | `unix/image.c`, `common/imagerep.c` | 4 / 4 |
 | `grid.c` | Insertion, padding, sizing and lifetime | `unix/grid.c`, `common/gridutil.c` | 8 / 8 |
 | `drawmatrix.c` | Matrix operations and inversion | `common/matrix.c`, `unix/drawmatrix.c` | 10 / 10 |
@@ -199,6 +199,35 @@ and order. The same static/shared sanitizer commands passed dev 16/16 with
 commands in both branches confirm instrumentation in common/GTK production
 sources, tests, and all examples, including the C++ example. These are local
 checks of the new job; its hosted execution is still pending.
+
+## Entry and Area source separation
+
+Starting from `pre-build` `3dec36c8` and `dev` `84645869`, the existing native
+search-entry scenarios move to `entry_gtk.c`, and GTK Area scenarios/helpers
+move to `area_gtk.c`. Common files retain setup, API cases and their unchanged
+registration arrays. `entry_test.h`/`area_test.h` are private to this component;
+Area's existing observation state keeps its original reset points and lifetime.
+Only the GTK build adds the two sources, and no CTest entry or production API
+is added. Existing wait loops and widget destruction are deliberately preserved.
+The initial pre-build move preserves all 15 Entry and 14 Area function bodies,
+including registration; common sources contain no GTK headers/types/operations.
+Local pre-build shared/static and ASan+UBSan static/shared each passed 10/10
+(255/274/274/255 cases), preserving case names/order and CTest properties.
+The combined dev move preserves 15 Entry and 18 Area function bodies,
+including ScrollEvent and UserData assertions. Its normal shared/static and
+ASan+UBSan static/shared suites each passed 16/16 (336/357/357/336 cases), with
+original names/order and CTest properties. The native source additions are
+the only CMake change; all production/API sources are unchanged.
+Execution of this new separation on Windows/macOS remains pending.
+
+The preceding sanitizer-CI change has now also passed hosted validation:
+[pre-build `3dec36c8`](https://github.com/kojix2/libui-ng/actions/runs/41190806796)
+completed all 42 jobs successfully, and
+[dev `84645869`](https://github.com/kojix2/libui-ng/actions/runs/41190818235)
+completed with 41 successful jobs and the conditional release job skipped.
+Both static/shared ASan+UBSan jobs succeeded in each run. This supersedes the
+sanitizer job's earlier pending-hosted-check note, and does not establish native
+execution of the subsequent Entry/Area move.
 
 ## Coverage baseline
 
