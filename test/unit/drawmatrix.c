@@ -1,51 +1,41 @@
+#include <math.h>
 #include "unit.h"
 
-#ifndef ABS
-#define ABS(a) ((a) >= 0 ? (a) : -(a))
-#endif
-#ifndef MAX
-#define MAX(a, b) ((a) > (b) ? (a) : (b))
-#endif
 #define EPSILON 0.00001
 
-static int compareDouble(double a, double b, double epsilon)
+static void assertMatrixEqualAt(const uiDrawMatrix *expected,
+	const uiDrawMatrix *actual, const char *file, int line)
 {
-	double diff = ABS(a - b);
-	double eps_scale = MAX(1.0, MAX(ABS(a), ABS(b)));
-	return diff <= epsilon * eps_scale;
-}
-
-// Check if a == b without aborting the test.
-static int expectDoubleEqual(double a, double b, int first_error, const char* error_prefix)
-{
-	// Function only used by assertMatrixEqual() macro below right now.
-	const char* func_prefix = first_error ? "(assertMatrixEqual)\n" : "";
-	int equal = compareDouble(a, b, EPSILON);
-	if (!equal) {
-		if (error_prefix == NULL)
-			print_error("%s%f != %f\n", func_prefix, a, b);
-		else
-			print_error("%s%s%f != %f\n", func_prefix, error_prefix, a, b);
-	}
-	return equal;
-}
-
-// Assertion for uiDrawMatrix.
-// It works in the same way as the assert_* variants of cmocka.
-#define assertMatrixEqual(a, b) \
-	_assertMatrixEqual((uiDrawMatrix*)a, (uiDrawMatrix*)b, __FILE__, __LINE__)
-
-static void _assertMatrixEqual(uiDrawMatrix *a, uiDrawMatrix *b, const char * const file, const int line)
-{
+	const char *fields[] = {"M11", "M12", "M21", "M22", "M31", "M32"};
+	const double a[] = {expected->M11, expected->M12, expected->M21,
+		expected->M22, expected->M31, expected->M32};
+	const double b[] = {actual->M11, actual->M12, actual->M21,
+		actual->M22, actual->M31, actual->M32};
 	int equal = 1;
-	equal &= expectDoubleEqual(a->M11, b->M11, equal, "M11: ");
-	equal &= expectDoubleEqual(a->M12, b->M12, equal, "M12: ");
-	equal &= expectDoubleEqual(a->M21, b->M21, equal, "M21: ");
-	equal &= expectDoubleEqual(a->M22, b->M22, equal, "M22: ");
-	equal &= expectDoubleEqual(a->M31, b->M31, equal, "M31: ");
-	equal &= expectDoubleEqual(a->M32, b->M32, equal, "M32: ");
+
+	for (size_t i = 0; i < sizeof a / sizeof *a; i++) {
+		double scale = fabs(a[i]);
+		if (fabs(b[i]) > scale)
+			scale = fabs(b[i]);
+		if (scale < 1.0)
+			scale = 1.0;
+		if (!(fabs(a[i] - b[i]) <= EPSILON * scale)) {
+			print_error("%s: expected %.17g, got %.17g\n", fields[i], a[i], b[i]);
+			equal = 0;
+		}
+	}
 	if (!equal)
 		_fail(file, line);
+}
+
+#define assertMatrixEqual(a, b) \
+	assertMatrixEqualAt((a), (b), __FILE__, __LINE__)
+
+static int drawMatrixTestSetup(void **state)
+{
+	uiDrawMatrix *m = *state;
+	uiDrawMatrixSetIdentity(m);
+	return 0;
 }
 
 static void drawMatrixIdentity(void **state)
@@ -230,48 +220,24 @@ static void drawMatrixInvertSingular(void **state)
 	assertMatrixEqual(&expected, m);
 }
 
-static int drawMatrixTestsSetup(void **state)
-{
-	*state = malloc(sizeof(uiDrawMatrix));
-	assert_non_null(*state);
-	return 0;
-}
-
-static int drawMatrixTestsTeardown(void **state)
-{
-	free(*state);
-	return 0;
-}
-
-int drawMatrixTestSetup(void **state)
-{
-	uiDrawMatrix *m = *state;
-	uiDrawMatrixSetIdentity(m);
-	return 0;
-}
-
-int drawMatrixTestTeardown(void **state)
-{
-	return 0;
-}
-
-#define drawMatrixUnitTest(f) cmocka_unit_test_setup_teardown((f), \
-		drawMatrixTestSetup, drawMatrixTestTeardown)
+#define drawMatrixUnitTest(f, matrix) \
+	cmocka_unit_test_prestate_setup_teardown((f), drawMatrixTestSetup, NULL, (matrix))
 
 int drawMatrixRunUnitTests(void)
 {
+	uiDrawMatrix matrix;
 	const struct CMUnitTest tests[] = {
-		drawMatrixUnitTest(drawMatrixIdentity),
-		drawMatrixUnitTest(drawMatrixTranslate),
-		drawMatrixUnitTest(drawMatrixScale),
-		drawMatrixUnitTest(drawMatrixRotate),
-		drawMatrixUnitTest(drawMatrixSkew),
-		drawMatrixUnitTest(drawMatrixTRS),
-		drawMatrixUnitTest(drawMatrixMultiply),
-		drawMatrixUnitTest(drawMatrixInvertIdentity),
-		drawMatrixUnitTest(drawMatrixInvertSelfInverse),
-		drawMatrixUnitTest(drawMatrixInvertSingular),
+		drawMatrixUnitTest(drawMatrixIdentity, &matrix),
+		drawMatrixUnitTest(drawMatrixTranslate, &matrix),
+		drawMatrixUnitTest(drawMatrixScale, &matrix),
+		drawMatrixUnitTest(drawMatrixRotate, &matrix),
+		drawMatrixUnitTest(drawMatrixSkew, &matrix),
+		drawMatrixUnitTest(drawMatrixTRS, &matrix),
+		drawMatrixUnitTest(drawMatrixMultiply, &matrix),
+		drawMatrixUnitTest(drawMatrixInvertIdentity, &matrix),
+		drawMatrixUnitTest(drawMatrixInvertSelfInverse, &matrix),
+		drawMatrixUnitTest(drawMatrixInvertSingular, &matrix),
 	};
 
-	return cmocka_run_group_tests_name("uiDrawMatrix", tests, drawMatrixTestsSetup, drawMatrixTestsTeardown);
+	return cmocka_run_group_tests_name("uiDrawMatrix", tests, NULL, NULL);
 }
