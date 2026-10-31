@@ -146,14 +146,40 @@ reasons for any external-library suppressions. Existing OS, architecture,
 Debug/Release and static/shared CI jobs retain their configurations.
 
 For GCC coverage, configure a separate static Debug build with
-`-DCMAKE_C_FLAGS='--coverage -O0'`, build, and run CTest. Clear that build's
-`.gcda` files before an independent measurement. Use matching `gcov` with
-`--json-format --branch-counts --branch-probabilities --preserve-paths` on all
-`.gcno` files. Count production `common/` and the active backend only; exclude
-tests, examples, dependencies and generated `version.c`. Merge repeated source
-records by source path and line/function/branch identity before counting hits;
-do not count the library and standalone source copies twice. Keep detailed JSON
-and logs in the build directory and record comparable totals in the baseline.
+`-DCMAKE_C_FLAGS='--coverage -O0'` and matching C++ flags, build the CTest
+targets, clear that build's `.gcda` files, then run CTest. Use matching `gcov`
+on **all** `.gcno` files, including standalone tests and direct includes; missing
+`.gcda` records remain in the denominator as unexecuted. From a clean report
+directory, for example:
+
+```sh
+find ../build-coverage -name '*.gcno' -exec gcov --json-format --branch-counts \
+  --branch-probabilities --preserve-paths {} + > gcov.log 2>&1
+python3 ../test/coverage.py . --backend unix --output summary.json
+python3 ../test/test_coverage.py
+```
+
+Adjust paths to the actual build/source tree. The optional Python script uses
+only the standard library and is not a build or CTest dependency. Its default
+source root is the repository containing the script. Process reports from one
+source snapshot, compiler version and configuration; do not mix stale reports.
+Only `common/` and the selected backend under that root count, including their
+internal headers. Tests, examples, dependencies, separate generated sources
+(including `version.c`) and inactive backends are excluded.
+
+Line hits merge by source path and line. Functions merge by name and full
+source span; macro-generated functions on the same line remain distinct.
+Branches merge by that function identity, source line and edge position. GCC
+block IDs can shift between library and fault-test copies, so the script checks
+that overlapping edge lists have matching lengths/fallthrough/throw flags and
+rejects incompatible lists instead of inventing a total. Current direct includes
+rename allocator/protocol callees, not production function definitions. If a
+future test renames definitions, normalize those aliases explicitly before
+aggregation; do not infer aliases from coordinates shared by macro functions.
+
+A key is hit if any copy executes it; execution counts are not added across
+copies. The JSON records merged totals, per-source counts and copy counts.
+Keep original gcov reports/logs and record the tested revision separately.
 
 ## OpenType and attribute contracts
 

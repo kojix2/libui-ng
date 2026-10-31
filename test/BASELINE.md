@@ -261,7 +261,7 @@ CTest suite and aggregation rules, clearing execution data before each run:
 | `uiDrawMatrixTransformSize` calls | 0 | 1 |
 | Combined lines hit / instrumented | 3872 / 5556 | 3880 / 5556 |
 | Combined functions hit / instrumented | 663 / 978 | 665 / 978 |
-| Combined branch edges hit / instrumented | 997 / 1752 | 997 / 1752 |
+| Combined branch edges hit / instrumented | 1002 / 1762 | 1002 / 1762 |
 
 Common-source counts are unchanged; the added hits are in the GTK matrix
 backend. Windows/macOS execution and coverage of these new cases remain
@@ -298,14 +298,14 @@ and totals are unchanged:
 | Production scope | Lines hit / instrumented | Functions hit / instrumented | Branch edges hit / instrumented |
 | --- | --- | --- | --- |
 | `common/` | 1053 / 1448 | 127 / 172 | 412 / 615 |
-| `unix/` | 2819 / 4108 | 536 / 806 | 585 / 1137 |
-| Combined | 3872 / 5556 | 663 / 978 | 997 / 1752 |
+| `unix/` | 2819 / 4108 | 536 / 806 | 590 / 1147 |
+| Combined | 3872 / 5556 | 663 / 978 | 1002 / 1762 |
 
 The denominator includes instrumented production C sources and internal
 headers in these two directories, including zero-hit records. It excludes
 tests, examples, dependencies, generated version source, and all inactive OS
 sources. gcov JSON records from repeated compilation of one source were merged
-by canonical source path: line number, function start/name, and line/branch
+by canonical source path: line number, function start/name, and function identity plus line/branch
 index; a key is hit if any copy executed it. There are no direct production
 `.c` includes in this `pre-build` test snapshot. `dev` does use direct includes;
 its aggregation has not been validated and is not represented by these totals.
@@ -402,3 +402,41 @@ The grab-broken helper frees its temporary GdkEvent before asserting the signal'
 handled result. A failed result assertion can no longer bypass event release.
 The seven pre-build Area cases pass in Linux static Debug and ASan + UBSan
 (`detect_leaks=0`); production sources, registration and case counts are unchanged.
+
+## Coverage aggregation correction
+
+`test/coverage.py` adds reproducible aggregation of GCC gcov JSON without a new
+build dependency. Its three standalone checks cover duplicate direct-included
+copies, unexecuted denominators, distinct macro-generated functions sharing all
+source coordinates, inactive/test/generated source exclusion, and incompatible
+branch lists. Replaying every report in the measured dev dataset twice leaves
+all hit/total results unchanged while doubling source-copy counts.
+
+The previous temporary summarizer keyed branches only by source/line/edge index.
+Five GTK type-definition macros each generate distinct branch-bearing functions
+on the same source line, causing ten edges (five hit) to be merged incorrectly.
+Reprocessing the archived pre-build initial reports preserves the line/function
+totals and corrects GTK branches to 590/1147 and combined branches to 1002/1762.
+The initial and matrix tables above now use these corrected branch totals; this
+is a reporting correction, not a new test run or production change.
+
+Function identity now includes name and source span, preserving macro-generated
+functions with identical coordinates. Branch identity also includes that function
+and the line/edge index. Block IDs themselves differ in native versus fault-test
+copies and are not comparable. Overlapping edge lists agree in this dataset;
+the script rejects incompatible edge-list shapes. Current direct includes change
+`calloc`/`free` and `gtk_drag_finish` callees, with no renamed production function
+definitions. Future definition aliases require explicit normalization.
+
+## Hosted confirmation of OpenType contracts and Area waits
+
+The exact preceding tips completed Build + Release successfully:
+[pre-build `1ce35c58`](https://github.com/kojix2/libui-ng/actions/runs/41200057416)
+passed all 42 jobs, and
+[dev `36083ec2`](https://github.com/kojix2/libui-ng/actions/runs/41200089048)
+passed 41 jobs with the conditional release job skipped. These runs include
+the native Windows/macOS configurations and Linux static/shared sanitizer jobs.
+They supersede the pending hosted checks for the eight OpenType/attribute value
+cases, two attrstr integration cases and conditional GTK Area wait change.
+They do not cover the subsequent event/handler/Focus cleanup changes or the
+optional coverage-report script added in this follow-up.
