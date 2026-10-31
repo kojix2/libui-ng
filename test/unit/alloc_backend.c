@@ -10,6 +10,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/resource.h>
+#ifdef __linux__
+#include <sys/prctl.h>
+#endif
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -108,6 +111,13 @@ int runAllocatorBackendTests(int argc, char **argv)
 	unsigned char *bytes;
 
 	if (argc == 2) {
+#ifdef __linux__
+		/* RLIMIT_CORE does not disable Linux's piped core dump collectors. */
+		if (prctl(PR_SET_DUMPABLE, 0L) != 0) {
+			perror("prctl(PR_SET_DUMPABLE)");
+			return 2;
+		}
+#endif
 		setrlimit(RLIMIT_CORE, &noCore);
 		uiprivInitAlloc();
 		if (strcmp(argv[1], "alloc-overflow") == 0)

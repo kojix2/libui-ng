@@ -275,6 +275,20 @@ Dev normal shared/static and ASan+UBSan static/shared likewise passed 16/16
 (338/359/359/338 cases), with only these two case additions and all original
 cases in their prior order. The hosted run for this matrix change is pending.
 
+## Allocator death-test runtime
+
+Linux overflow-test children now disable dumping with `PR_SET_DUMPABLE` before
+triggering the expected abort. `RLIMIT_CORE=0` alone does not prevent piped
+core collectors; this host uses Apport. The four invalid allocation requests,
+`SIGABRT` checks and diagnostic checks are unchanged. Other platforms retain
+their existing behavior.
+
+On this host, three standalone runs fell from 4.364–4.372 seconds to
+0.0043–0.0050 seconds. The same pre-build static Debug, serial Xvfb CTest run
+fell from 7.21 to 2.85 seconds, with all 10 executables passing. The allocator
+tests also passed with ASan + UBSan. These timings depend on the host's core
+collector configuration; GUI waits and test counts are unchanged.
+
 ## Initial coverage baseline
 
 GCC 15/gcov 15, static Debug, `--coverage -O0`, full Linux CTest suite. The same
