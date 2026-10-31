@@ -38,6 +38,11 @@ set_tests_properties(utf-unit PROPERTIES LABELS "logic;portable")
 target_link_libraries(utf-unit PRIVATE cmocka::cmocka)
 target_include_directories(utf-unit PRIVATE ../../common)
 
+libui_add_test(opentype-unit opentype.c ../../common/opentype.c ../../common/attribute.c)
+set_tests_properties(opentype-unit PROPERTIES LABELS "logic;contract;portable")
+target_link_libraries(opentype-unit PRIVATE cmocka::cmocka)
+target_compile_definitions(opentype-unit PRIVATE _UI_STATIC)
+
 libui_add_test(allocsize-unit allocsize.c)
 set_tests_properties(allocsize-unit PROPERTIES LABELS "logic;portable")
 target_link_libraries(allocsize-unit PRIVATE cmocka::cmocka)

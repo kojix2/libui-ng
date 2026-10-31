@@ -9,6 +9,8 @@ struct expectedAttribute {
 	double g;
 	double b;
 	double a;
+	uint32_t kern;
+	int hasLiga;
 };
 
 struct attributeCollector {
@@ -37,6 +39,16 @@ static uiForEach checkAttribute(const uiAttributedString *s, const uiAttribute *
 		assert_true(e->g == g);
 		assert_true(e->b == b);
 		assert_true(e->a == alpha);
+	}
+	if (e->type == uiAttributeTypeFeatures) {
+		const uiOpenTypeFeatures *features = uiAttributeFeatures(a);
+		uint32_t value;
+
+		assert_true(uiOpenTypeFeaturesGet(features, 'k', 'e', 'r', 'n', &value));
+		assert_int_equal(value, e->kern);
+		assert_int_equal(uiOpenTypeFeaturesGet(features, 'l', 'i', 'g', 'a', &value), e->hasLiga);
+		if (e->hasLiga)
+			assert_int_equal(value, 1);
 	}
 	c->n++;
 	return uiForEachContinue;
@@ -69,12 +81,26 @@ static int attrstrTeardown(void **state)
 	return 0;
 }
 
+static int ownedStringSetup(void **state)
+{
+	if (attrstrSetup(state) != 0)
+		return -1;
+	*state = uiNewAttributedString("abcdef");
+	return 0;
+}
+
+static int ownedStringTeardown(void **state)
+{
+	uiFreeAttributedString(*state);
+	return attrstrTeardown(state);
+}
+
 static void attrstrSetAttributeDropsLaterOverlap(void **state)
 {
 	uiAttributedString *s;
 	const struct expectedAttribute expected[] = {
-		{ uiAttributeTypeColor, 1, 5, NULL, 0.0, 0.0, 1.0, 1.0 },
-		{ uiAttributeTypeColor, 5, 6, NULL, 1.0, 0.0, 0.0, 1.0 },
+		{ uiAttributeTypeColor, 1, 5, NULL, 0.0, 0.0, 1.0, 1.0, 0, 0 },
+		{ uiAttributeTypeColor, 5, 6, NULL, 1.0, 0.0, 0.0, 1.0, 0, 0 },
 	};
 
 	(void) state;
@@ -89,9 +115,9 @@ static void attrstrSetAttributeDropsMultipleOverlaps(void **state)
 {
 	uiAttributedString *s;
 	const struct expectedAttribute expected[] = {
-		{ uiAttributeTypeColor, 0, 1, NULL, 1.0, 0.0, 0.0, 1.0 },
-		{ uiAttributeTypeColor, 1, 5, NULL, 0.0, 0.0, 1.0, 1.0 },
-		{ uiAttributeTypeColor, 5, 6, NULL, 1.0, 0.0, 0.0, 1.0 },
+		{ uiAttributeTypeColor, 0, 1, NULL, 1.0, 0.0, 0.0, 1.0, 0, 0 },
+		{ uiAttributeTypeColor, 1, 5, NULL, 0.0, 0.0, 1.0, 1.0, 0, 0 },
+		{ uiAttributeTypeColor, 5, 6, NULL, 1.0, 0.0, 0.0, 1.0, 0, 0 },
 	};
 
 	(void) state;
@@ -107,7 +133,7 @@ static void attrstrSetAttributeMergesAdjacentEqualValues(void **state)
 {
 	uiAttributedString *s;
 	const struct expectedAttribute expected[] = {
-		{ uiAttributeTypeColor, 0, 4, NULL, 1.0, 0.0, 0.0, 1.0 },
+		{ uiAttributeTypeColor, 0, 4, NULL, 1.0, 0.0, 0.0, 1.0, 0, 0 },
 	};
 
 	(void) state;
@@ -122,7 +148,7 @@ static void attrstrSetFamilyAttributeMergesAdjacentEqualValues(void **state)
 {
 	uiAttributedString *s;
 	const struct expectedAttribute expected[] = {
-		{ uiAttributeTypeFamily, 0, 4, "Arial", 0.0, 0.0, 0.0, 0.0 },
+		{ uiAttributeTypeFamily, 0, 4, "Arial", 0.0, 0.0, 0.0, 0.0, 0, 0 },
 	};
 
 	(void) state;
@@ -137,7 +163,7 @@ static void attrstrSetFamilyAttributeMergesAdjacentUnicodeCase(void **state)
 {
 	uiAttributedString *s;
 	const struct expectedAttribute expected[] = {
-		{ uiAttributeTypeFamily, 0, 4, "\303\244lpha", 0.0, 0.0, 0.0, 0.0 },
+		{ uiAttributeTypeFamily, 0, 4, "\303\244lpha", 0.0, 0.0, 0.0, 0.0, 0, 0 },
 	};
 
 	(void) state;
@@ -191,7 +217,7 @@ static void attrstrDeleteMergesAdjacentEqualValues(void **state)
 {
 	uiAttributedString *s;
 	const struct expectedAttribute expected[] = {
-		{ uiAttributeTypeColor, 0, 2, NULL, 1.0, 0.0, 0.0, 1.0 },
+		{ uiAttributeTypeColor, 0, 2, NULL, 1.0, 0.0, 0.0, 1.0, 0, 0 },
 	};
 
 	(void) state;
@@ -236,6 +262,55 @@ static void attrstrEmptyGraphemeIndexes(void **state)
 	uiFreeAttributedString(s);
 }
 
+static void attrstrFeaturesCopyMergeAndDelete(void **state)
+{
+	uiAttributedString *s = *state;
+	uiOpenTypeFeatures *features = uiNewOpenTypeFeatures();
+	const struct expectedAttribute before[] = {
+		{ .type = uiAttributeTypeFeatures, .start = 0, .end = 2, .kern = 0, .hasLiga = 1 },
+		{ .type = uiAttributeTypeFeatures, .start = 2, .end = 4, .kern = 7, .hasLiga = 0 },
+		{ .type = uiAttributeTypeFeatures, .start = 4, .end = 6, .kern = 0, .hasLiga = 1 },
+	};
+	const struct expectedAttribute after[] = {
+		{ .type = uiAttributeTypeFeatures, .start = 0, .end = 4, .kern = 0, .hasLiga = 1 },
+	};
+
+	uiOpenTypeFeaturesAdd(features, 'k', 'e', 'r', 'n', 0);
+	uiOpenTypeFeaturesAdd(features, 'l', 'i', 'g', 'a', 1);
+	uiAttributedStringSetAttribute(s, uiNewFeaturesAttribute(features), 0, 1);
+	/* Equal values from another insertion order still merge. */
+	uiOpenTypeFeaturesRemove(features, 'k', 'e', 'r', 'n');
+	uiOpenTypeFeaturesAdd(features, 'k', 'e', 'r', 'n', 0);
+	uiAttributedStringSetAttribute(s, uiNewFeaturesAttribute(features), 1, 2);
+	uiOpenTypeFeaturesAdd(features, 'k', 'e', 'r', 'n', 7);
+	uiOpenTypeFeaturesRemove(features, 'l', 'i', 'g', 'a');
+	uiAttributedStringSetAttribute(s, uiNewFeaturesAttribute(features), 2, 4);
+	uiOpenTypeFeaturesAdd(features, 'k', 'e', 'r', 'n', 0);
+	uiOpenTypeFeaturesAdd(features, 'l', 'i', 'g', 'a', 1);
+	uiAttributedStringSetAttribute(s, uiNewFeaturesAttribute(features), 4, 6);
+	uiFreeOpenTypeFeatures(features);
+	assertAttributes(s, before, sizeof before / sizeof *before);
+	uiAttributedStringDelete(s, 2, 4);
+	assert_string_equal(uiAttributedStringString(s), "abef");
+	assertAttributes(s, after, sizeof after / sizeof *after);
+}
+
+static void attrstrBackgroundMergesOnlyEqualValues(void **state)
+{
+	uiAttributedString *s = *state;
+	const struct expectedAttribute expected[] = {
+		{ .type = uiAttributeTypeBackground, .start = 0, .end = 2 },
+		{ .type = uiAttributeTypeBackground, .start = 2, .end = 6 },
+	};
+
+	uiAttributedStringSetAttribute(s, uiNewBackgroundAttribute(0, 0.25, 0.5, 1), 0, 1);
+	uiAttributedStringSetAttribute(s, uiNewBackgroundAttribute(0, 0.25, 0.5, 1), 1, 2);
+	uiAttributedStringSetAttribute(s, uiNewBackgroundAttribute(1, 0.25, 0.5, 1), 2, 6);
+	/* An empty run still transfers ownership, but adds no attribute. */
+	uiAttributedStringSetAttribute(s, uiNewBackgroundAttribute(0, 0, 0, 0), 3, 3);
+	assertAttributes(s, expected, sizeof expected / sizeof *expected);
+}
+
 int attrstrRunUnitTests(void)
 {
 	const struct CMUnitTest tests[] = {
@@ -261,6 +336,10 @@ int attrstrRunUnitTests(void)
 			attrstrSetup, attrstrTeardown),
 		cmocka_unit_test_setup_teardown(attrstrEmptyGraphemeIndexes,
 			attrstrSetup, attrstrTeardown),
+		cmocka_unit_test_setup_teardown(attrstrFeaturesCopyMergeAndDelete,
+			ownedStringSetup, ownedStringTeardown),
+		cmocka_unit_test_setup_teardown(attrstrBackgroundMergesOnlyEqualValues,
+			ownedStringSetup, ownedStringTeardown),
 	};
 
 	return cmocka_run_group_tests_name("uiAttributedString", tests, NULL, NULL);

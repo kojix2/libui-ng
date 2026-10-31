@@ -341,3 +341,48 @@ measurements include Xvfb startup and process shutdown. The seven cases also
 passed with ASan + UBSan (`detect_leaks=0`, UBSan halts on errors). Entry's
 notification observation periods are unchanged. Native Windows/macOS Area
 cases are unchanged; this GTK change does not establish new results there.
+
+## OpenType and attribute contracts
+
+Based on `pre-build` `15c0104b` and `dev` `6e507d0d`, eight new portable
+`opentype-unit` cases exercise the public feature-set and attribute value APIs
+through compiled common implementation sources. The test-local allocator counts
+live objects through teardown and uses ordinary zeroed allocations/reallocation;
+it does not test or replace the native allocator. GUI initialization is absent.
+Two new `unit attrstr` cases test feature-copy/merge/delete ownership and
+background run equality, including an empty run whose attribute must be freed.
+All eleven original attrstr cases retain their order. No production code,
+public API, ABI, existing CTest properties or backend conditions change.
+
+Linux Debug validation (GCC 15, GTK 3.24.52, system cmocka 2.0.2):
+
+| Branch | Configuration | CTest | cmocka cases | Result |
+| --- | --- | --- | --- | --- |
+| pre-build | static | 11 | 286 | Passed |
+| pre-build | shared | 11 | 267 | Passed |
+| pre-build | static, ASan + UBSan | 11 | 286 | Passed; leak detection disabled |
+
+Minimum cmocka 1.1.8 also passes the eight headless cases and the seven Area /
+thirteen attrstr cases. The headless executable independently passes ASan +
+UBSan with LeakSanitizer enabled (`detect_leaks=1`), with no suppression. This
+is a leak check of these common-source cases, not the GTK library or whole suite.
+Tests-off and nested add_subdirectory consumer configurations omit the new target.
+
+Temporary builds that overwrite a missing tag's output, or ignore enumeration
+stop, fail four cases and one case respectively. Both complete all eight cases
+without a teardown allocation failure. A separate shared-library interposition
+that suppresses Area scrolling triggers its timeout in 1.14 seconds including
+Xvfb, then successfully tears down and runs the following grab-broken case.
+No mutation or interposition is part of the tracked source.
+
+A fresh full static Debug coverage run (GCC/gcov 15, `--coverage -O0`, execution
+data cleared first) passes 11/11. Merge duplicate production records by source
+and function identity, counting a function as hit if any copy runs; do not add
+common library and standalone copies twice. All functions in `common/opentype.c`
+and `common/attribute.c` now execute, including the previously unexecuted public
+feature-set operations and size/weight/italic/stretch/background/underline/
+features construction/access. Background has no documented public getter;
+its distinct/equal values are checked through attributed-string run boundaries.
+Not every equality branch is covered. `unix/opentype.c`'s native CSS conversion
+still does not execute in these tests; native font shaping and Windows/macOS
+execution of the new cases remain unverified.

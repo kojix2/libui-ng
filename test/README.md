@@ -155,6 +155,30 @@ records by source path and line/function/branch identity before counting hits;
 do not count the library and standalone source copies twice. Keep detailed JSON
 and logs in the build directory and record comparable totals in the baseline.
 
+## OpenType and attribute contracts
+
+`opentype-unit` runs eight portable cases without libui initialization, a display
+or backend linkage. It compiles `common/opentype.c` and `common/attribute.c`
+with a local allocation counter; teardown frees case-owned features, clones and
+attributes after assertions and requires no live allocations. Native allocator
+behavior and family-name comparison remain covered by their existing tests.
+The test never substitutes for platform font shaping or text-layout checks.
+
+The cases cover empty/missing tags (including unchanged output), duplicate
+replacement, zero/UINT32_MAX values, growth/removal, clone independence,
+unordered enumeration and early stop. Attribute cases cover copied family
+names, fractional size, weight boundaries and an unnamed valid weight, all
+italic/stretch/underline modes, RGBA values and owned feature copies. Background
+colors have no documented public getter; `unit attrstr` checks their equality
+through run merging, along with feature-copy/merge/delete ownership and empty
+runs. These two integration cases retain the existing native initialization;
+only the portable executable is headless.
+
+```sh
+ctest --test-dir build -R '^opentype-unit$' --output-on-failure
+xvfb-run -a build/artifacts/Debug/unit attrstr
+```
+
 ## Consumer and manual checks
 
 `cmake/consumer/` exercises `add_subdirectory`, FetchContent, installed-package
