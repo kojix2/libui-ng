@@ -113,15 +113,16 @@ static gint hoursSpinboxInput(GtkSpinButton *sb, gpointer ptr, gpointer data)
 {
 	double *out = (double *) ptr;
 	const gchar *text;
-	int value;
+	double value;
 
 	text = gtk_entry_get_text(GTK_ENTRY(sb));
-	value = (int) g_strtod(text, NULL);
-	if (value < 0 || value > 12)
+	value = g_strtod(text, NULL);
+	// Check the range before converting to int; this also rejects NaN.
+	if (!(value >= 0 && value <= 12))
 		return GTK_INPUT_ERROR;
 	if (value == 12)		// 12 to the user is 0 internally
 		value = 0;
-	*out = (double) value;
+	*out = (int) value;
 	return TRUE;
 }
 

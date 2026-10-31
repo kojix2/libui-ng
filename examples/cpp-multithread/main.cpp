@@ -19,7 +19,7 @@ void sayTime(void *data)
 	char *s = (char *) data;
 
 	uiMultilineEntryAppend(e, s);
-	delete s;
+	delete[] s;
 }
 
 void threadproc(void)

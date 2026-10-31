@@ -118,6 +118,8 @@ void uiSliderSetRange(uiSlider *s, int min, int max)
 	// we need to inhibit sending of ::value-changed because this WILL send a ::value-changed otherwise
 	g_signal_handler_block(s->range, s->onChangedSignal);
 	gtk_range_set_range(s->range, min, max);
+	if (uiSliderHasToolTip(s))
+		_uiSliderUpdateToolTip(s);
 	g_signal_handler_unblock(s->range, s->onChangedSignal);
 }
 
