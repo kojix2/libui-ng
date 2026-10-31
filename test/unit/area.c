@@ -94,7 +94,7 @@ int areaRunUnitTests(void)
 #if !defined(_WIN32) && !defined(__APPLE__)
 		UNIT_TEST_NAMED("scrollingAreaScrollAfterSetSize",
 			scrollingAreaScrollAfterSetSize,
-			scrollingAreaSetup, unitTestTeardown),
+			scrollingAreaSetup, unitTestTeardownHidden),
 		UNIT_TEST_NAMED("areaDragBrokenForImplicitPointerGrab",
 			areaDragBrokenForImplicitPointerGrab,
 			areaSetup, unitTestTeardown),

@@ -1,39 +1,49 @@
 #include "area_test.h"
 #include <gtk/gtk.h>
-#include "../../ui_unix.h"
+
+static void waitForScroll(GtkAdjustment *adj, double upper,
+	double start, double end)
+{
+	gint64 deadline = g_get_monotonic_time() + G_TIME_SPAN_SECOND;
+	double value, page;
+
+	/* Layout updates the range first; the deferred ScrollTo idle then moves
+	 * the page. An empty event queue alone does not imply either is done. */
+	do {
+		if (!g_main_context_iteration(NULL, FALSE))
+			g_usleep(1000);
+		page = gtk_adjustment_get_page_size(adj);
+		value = gtk_adjustment_get_value(adj);
+		if (gtk_adjustment_get_upper(adj) >= upper && page > 0 &&
+			page < upper && value <= start && value + page >= end)
+			return;
+	} while (g_get_monotonic_time() < deadline);
+	fail_msg("scroll timed out: upper=%g (expected >=%g), page=%g, "
+		"value=%g (expected <=%g and value+page >=%g)",
+		gtk_adjustment_get_upper(adj), upper, page, value, start, end);
+}
 
 void scrollingAreaScrollAfterSetSize(void **state)
 {
 	uiArea *area = uiAreaFromState(state);
-	GtkWidget *window;
-	GtkWidget *widget;
+	struct state *s = *state;
 	GtkScrolledWindow *sw;
 	GtkAdjustment *hadj;
 	double value, page;
-	int i;
 
 	sw = GTK_SCROLLED_WINDOW((void *) uiControlHandle(uiControl(area)));
-	widget = uiprivUnixControlPrepareWidget(uiUnixControl(area));
-	window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	gtk_window_set_default_size(GTK_WINDOW(window), 200, 150);
-	gtk_container_add(GTK_CONTAINER(window), widget);
-	gtk_widget_show_all(window);
+	/* Transfer ownership before assertions so teardown also handles failure. */
+	uiWindowSetChild(s->w, s->c);
+	uiWindowSetContentSize(s->w, 200, 150);
+	uiControlShow(uiControl(s->w));
 	uiMainSteps();
-	for (i = 0; i < 30; i++) {
-		while (g_main_context_pending(NULL))
-			g_main_context_iteration(NULL, FALSE);
-		g_usleep(10000);
-	}
 	hadj = gtk_scrolled_window_get_hadjustment(sw);
+	waitForScroll(hadj, 640, 0, 0);
 
 	uiAreaSetSize(area, 1000, 480);
 	uiAreaScrollTo(area, 800, 0, 20, 20);
 	uiAreaScrollTo(area, 900, 0, 20, 20);
-	for (i = 0; i < 30; i++) {
-		while (g_main_context_pending(NULL))
-			g_main_context_iteration(NULL, FALSE);
-		g_usleep(10000);
-	}
+	waitForScroll(hadj, 1000, 900, 920);
 
 	page = gtk_adjustment_get_page_size(hadj);
 	value = gtk_adjustment_get_value(hadj);
@@ -41,8 +51,6 @@ void scrollingAreaScrollAfterSetSize(void **state)
 	assert_true(page > 0);
 	assert_true(value + page >= 920);
 	assert_true(value <= 900);
-	gtk_container_remove(GTK_CONTAINER(window), widget);
-	gtk_widget_destroy(window);
 }
 
 static void emitGrabBroken(uiArea *area, int keyboard, int implicit)

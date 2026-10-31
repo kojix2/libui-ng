@@ -103,8 +103,11 @@ new shared state is introduced.
 
 The CTest entry remains `unit`; `unit entry area` selects these components.
 On GTK, Entry still has 20 cases and Area 7 (`dev`: Area 9). Registration names,
-order, initialization, teardown, native widget ownership and the existing
-bounded waits are unchanged. This source separation still requires a GUI
+order and initialization are unchanged. The scroll-after-resize case now uses
+the fixture window and its hidden teardown, so assertion failures also destroy
+the child. It pumps nonblocking GTK events until the adjustment has the requested
+range and visible rectangle, with a monotonic one-second limit per phase and
+range/page/value diagnostics on timeout. This still requires a GUI
 session for these fixtures; it does not make the API cases headless.
 
 ## Table test boundaries

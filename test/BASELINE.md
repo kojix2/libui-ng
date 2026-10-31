@@ -316,3 +316,28 @@ background/underline/features attribute construction and access. Attribute
 family/color operations do execute. These are candidates for separate contract
 tests after organization; no production behavior or regression cases were
 added here. Windows/macOS and `dev` coverage are unmeasured, not zero coverage.
+
+## Allocator CI confirmation and Area waits
+
+The allocator-change tips passed their full Build + Release workflows:
+[pre-build `15c0104b`](https://github.com/kojix2/libui-ng/actions/runs/41195491068)
+completed all 42 jobs successfully;
+[dev `6e507d0d`](https://github.com/kojix2/libui-ng/actions/runs/41195505263)
+completed with 41 successful jobs and the conditional release job skipped.
+Both static/shared sanitizer jobs and native Windows/macOS jobs passed.
+
+The GTK scroll-after-resize case now waits for a nonzero viewport, the updated
+adjustment upper bound and visibility of the last requested rectangle. Each
+phase processes nonblocking events with a monotonic one-second deadline; an
+empty event queue is not a completion condition. The two ScrollTo requests and
+all original assertions remain. The existing fixture window owns the Area
+before any assertion, and hidden teardown handles success and failure without
+a separate native window.
+
+On the same Linux static Debug build, five separate Xvfb runs of `unit area`
+before the change took 0.754–0.762 seconds (median 0.758); thirty after took
+0.153–0.159 seconds (median 0.155), all seven cases passing each time. These
+measurements include Xvfb startup and process shutdown. The seven cases also
+passed with ASan + UBSan (`detect_leaks=0`, UBSan halts on errors). Entry's
+notification observation periods are unchanged. Native Windows/macOS Area
+cases are unchanged; this GTK change does not establish new results there.
