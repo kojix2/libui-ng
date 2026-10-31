@@ -18,7 +18,7 @@ static void *append(void *thing, int type)
 		cap += grow;
 		things = (struct thing *) realloc(things, cap * sizeof (struct thing));
 		if (things == NULL)
-			die("reallocating things array in test/spaced.c append()");
+			die("reallocating things array in test/tester/spaced.c append()");
 	}
 	things[len].ptr = thing;
 	things[len].type = type;

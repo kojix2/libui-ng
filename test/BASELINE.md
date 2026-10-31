@@ -440,3 +440,26 @@ They supersede the pending hosted checks for the eight OpenType/attribute value
 cases, two attrstr integration cases and conditional GTK Area wait change.
 They do not cover the subsequent event/handler/Focus cleanup changes or the
 optional coverage-report script added in this follow-up.
+
+## Interactive tester directory
+
+The tester's 23 C sources, private header, Windows resource/manifests and image
+assets/generator move together from `test/` into `test/tester/` (32 existing
+files). Its original target definition moves into that directory's CMake file;
+the target remains `tester`, with the same artifact path, linkage and options.
+Only the private header's public-header include and one diagnostic source path
+change in the moved files. Image data, manifests, page logic and drawing cases
+are preserved. `qa`, unit tests and measurement tools retain their locations.
+
+On pre-build, Linux static/shared Debug builds of tester and all eleven CTest
+targets pass. CTest names, commands and properties match the before-move lists.
+In both builds, tester starts from `/tmp`, displays its main window, receives a
+normal WM_DELETE_WINDOW event, reaches uiUninit and exits zero without a native
+allocator leak diagnostic. These are startup/shutdown checks, not visual QA.
+Tests-off and nested-consumer configurations still omit tester.
+
+MinGW windres compiles both static/shared manifest variants before and after
+the move to byte-identical resources. Native Windows/macOS builds and execution
+of this directory change remain unverified locally; their CI configuration is
+unchanged. Build, resource, file-comparison and smoke logs are in the local
+`/tmp/libui-tester-move/` measurement directory.
