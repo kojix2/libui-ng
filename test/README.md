@@ -155,31 +155,23 @@ directory, for example:
 ```sh
 find ../build-coverage -name '*.gcno' -exec gcov --json-format --branch-counts \
   --branch-probabilities --preserve-paths {} + > gcov.log 2>&1
-python3 ../test/coverage.py . --backend unix --output summary.json
-python3 ../test/test_coverage.py
 ```
 
-Adjust paths to the actual build/source tree. The optional Python script uses
-only the standard library and is not a build or CTest dependency. Its default
-source root is the repository containing the script. Process reports from one
-source snapshot, compiler version and configuration; do not mix stale reports.
-Only `common/` and the selected backend under that root count, including their
-internal headers. Tests, examples, dependencies, separate generated sources
-(including `version.c`) and inactive backends are excluded.
+Adjust paths to the actual build/source tree. Process reports from one source
+snapshot, compiler version and configuration; do not mix stale reports. Count
+`common/` and the active backend, including internal headers; exclude tests,
+examples, dependencies, separate generated sources and inactive backends.
 
-Line hits merge by source path and line. Functions merge by name and full
-source span; macro-generated functions on the same line remain distinct.
-Branches merge by that function identity, source line and edge position. GCC
-block IDs can shift between library and fault-test copies, so the script checks
-that overlapping edge lists have matching lengths/fallthrough/throw flags and
-rejects incompatible lists instead of inventing a total. Current direct includes
-rename allocator/protocol callees, not production function definitions. If a
-future test renames definitions, normalize those aliases explicitly before
-aggregation; do not infer aliases from coordinates shared by macro functions.
-
-A key is hit if any copy executes it; execution counts are not added across
-copies. The JSON records merged totals, per-source counts and copy counts.
-Keep original gcov reports/logs and record the tested revision separately.
+When aggregating, merge line hits by source path/line and functions by name/full
+source span. Preserve distinct macro-generated functions on the same line.
+Branch identity also needs that function, source line and edge position; GCC
+block IDs can shift between native and fault-test copies. Check that overlapping
+edge lists have compatible shapes before merging, and normalize explicitly any
+production function definitions renamed by fault tests. A key is hit if any copy
+executes it; do not add execution counts or count each object copy separately.
+Keep original gcov reports/logs and record the tested revision and aggregation
+method with the results. The one-off measurement helper from commit `78a5b6c3`
+is available in Git history; it is not part of the maintained test suite.
 
 ## OpenType and attribute contracts
 

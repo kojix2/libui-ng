@@ -141,9 +141,6 @@ int main(int argc, char *argv[])
 	innerTab = newTab();
 	uiTabAppend(outerTab, "Pages 11-15", uiControl(innerTab));
 
-//	page11 = makePage11();
-//	uiTabAppend(innerTab, "Page 11", uiControl(page11));
-
 	page12 = makePage12();
 	uiTabAppend(innerTab, "Page 12", uiControl(page12));
 

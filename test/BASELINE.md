@@ -405,12 +405,13 @@ The seven pre-build Area cases pass in Linux static Debug and ASan + UBSan
 
 ## Coverage aggregation correction
 
-`test/coverage.py` adds reproducible aggregation of GCC gcov JSON without a new
-build dependency. Its three standalone checks cover duplicate direct-included
-copies, unexecuted denominators, distinct macro-generated functions sharing all
-source coordinates, inactive/test/generated source exclusion, and incompatible
-branch lists. Replaying every report in the measured dev dataset twice leaves
-all hit/total results unchanged while doubling source-copy counts.
+The one-off aggregation helper from commit `78a5b6c3` was checked against
+duplicate direct-included copies, unexecuted denominators, distinct generated
+functions sharing source coordinates, source exclusion and incompatible branch
+lists. Replaying every report in the measured dev dataset twice preserved all
+hit/total results while doubling source-copy counts. The helper and its three
+Python self-checks were later removed from the maintained tree; measurement
+results and the aggregation rules below remain.
 
 The previous temporary summarizer keyed branches only by source/line/edge index.
 Five GTK type-definition macros each generate distinct branch-bearing functions
@@ -424,7 +425,7 @@ Function identity now includes name and source span, preserving macro-generated
 functions with identical coordinates. Branch identity also includes that function
 and the line/edge index. Block IDs themselves differ in native versus fault-test
 copies and are not comparable. Overlapping edge lists agree in this dataset;
-the script rejects incompatible edge-list shapes. Current direct includes change
+the aggregation rejected incompatible edge-list shapes. Current direct includes change
 `calloc`/`free` and `gtk_drag_finish` callees, with no renamed production function
 definitions. Future definition aliases require explicit normalization.
 
@@ -463,3 +464,19 @@ the move to byte-identical resources. Native Windows/macOS builds and execution
 of this directory change remain unverified locally; their CI configuration is
 unchanged. Build, resource, file-comparison and smoke logs are in the local
 `/tmp/libui-tester-move/` measurement directory.
+
+## Removal of unused tooling and tester page
+
+The one-off coverage helper and its Python checks are removed from the repository;
+they were not used by CMake, CTest or CI. The recorded measurements, corrected
+branch totals and aggregation rules remain, with the original implementation
+available in commit `78a5b6c3` for reproducing those historical measurements.
+
+Tester page 11 was compiled but unreachable: its only calls were commented out.
+Its source, private declaration, CMake entry and commented calls are removed.
+No reachable tester page, CTest case, production source or public API changes.
+
+After removal, Linux static/shared Debug tester builds display and close normally
+through uiUninit with exit zero on pre-build. CTest registrations, commands and
+properties are unchanged. No unit implementation changed, so the unit suites
+were not rerun for this cleanup. Logs are in `/tmp/libui-cleanup/`.
