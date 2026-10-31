@@ -82,6 +82,17 @@ Native-widget discovery assertions belong in the case so teardown still runs
 if discovery fails. Setup failure is not the same as a case assertion failure;
 do not rely on per-case teardown after a failed setup.
 
+## Table test boundaries
+
+`unit/table.c` retains the existing `table` component runner and the column,
+selection and model notification scenarios. `table_value.c` contains value
+round trips; `table_width.c` contains width and native width-regression cases.
+`table_fixture.c` and the private `table_test.h` share the existing per-case
+model/window/image fixture and event helpers. The executable, case names,
+registration order, setup/teardown and bounded event stepping are unchanged.
+Run `unit table` to select all of them. Value cases still use the original GUI
+fixture; splitting a source file does not make that case headless.
+
 ## Sanitizers and coverage
 
 ```sh

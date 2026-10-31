@@ -4,7 +4,7 @@ Recorded 2026-10-31. These are executable and cmocka case counts, not coverage
 percentages. Source-only inventories and unexecuted configurations are marked
 explicitly. The initial implementation covers baseline recording, fixture
 extraction, CMake registration and GTK date/time and slider migration.
-Table/Windows source splitting and changes to `dev` remain separate work.
+Later organization and its validation are recorded separately below.
 
 ## Snapshots and results
 
@@ -78,7 +78,7 @@ Counts in this table are Linux counts; platform guards can change them.
 | `grid.c` | Insertion, padding, sizing and lifetime | `unix/grid.c`, `common/gridutil.c` | 8 / 8 |
 | `drawmatrix.c` | Matrix operations and inversion | `common/matrix.c`, `unix/drawmatrix.c` | 10 / 10 |
 | `attrstr.c` | Attribute overlap, self-editing, graphemes | `common/attrstr.c`, `common/attrlist.c`, `common/attribute.c`, `unix/attrstr.c` | 11 / 11 |
-| `table.c` | Values, columns, selection, model notifications, widths | `common/table*.c`, `unix/table*.c` | 11 / 11 |
+| `table.c`, `table_value.c`, `table_width.c` | Values, columns, selection, model notifications, widths | `common/table*.c`, `unix/table*.c` | 11 / 11 |
 
 `unit` requires a GUI session as an aggregate executable. The isolated
 `drawmatrix` component does not initialize libui. Other platforms use the
@@ -152,6 +152,25 @@ consumers built and ran without cmocka. An install contained no support or
 cmocka artifacts. Missing cmocka with fetching disabled produced the existing
 configuration error; the enabled fallback was checked using local cmocka
 1.1.8 sources, without accessing the network.
+
+## Second organization: Table boundaries and existing CI
+
+Starting from `pre-build` `4ef32df0`, value round trips move to `table_value.c`,
+width scenarios to `table_width.c`, and the existing Table-specific fixture to
+`table_fixture.c`/`table_test.h`. `table.c` retains column/selection/model
+scenarios and the same registration array. Every function body, fixture field,
+initialization/destruction sequence and event step is preserved, including
+native conditional cases. No CTest executable or public symbol is added.
+Shared/static/ASan+UBSan static all passed 10/10, with unchanged case
+names/order (255 shared, 274 static) and CTest properties.
+
+Before this second organization, native Windows/macOS CI results were checked
+for both branch tips: [pre-build `4ef32df0`](https://github.com/kojix2/libui-ng/actions/runs/41188661053)
+and [dev `128881ad`](https://github.com/kojix2/libui-ng/actions/runs/41188661580).
+Both runs completed successfully with Windows MSVC/MSYS2 and macOS x64/arm64
+static/shared Debug/Release jobs, along with the minimum-CMake job. This
+supersedes the earlier source-only CI inventory for those commits. Execution of
+the new source/registration changes on Windows/macOS remains pending.
 
 ## Coverage baseline
 
