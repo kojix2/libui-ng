@@ -440,26 +440,19 @@ static void applyAlignment(uiGrid *g)
 	}
 }
 
-static void moveChildren(uiGrid *g, gridLayoutData *ld)
+static void moveChildren(uiGrid *g)
 {
-	int ix, iy;
-	int i;
-	struct gridChild *gc;
-
 	// 8) and FINALLY we resize
-	for (iy = 0; iy < ycount(g); iy++)
-		for (ix = 0; ix < xcount(g); ix++) {
-			i = ld->gg[iy][ix];
-			if (i != -1) {		// treat empty cells like spaces
-				gc = (*(g->children))[i];
-				uiWindowsEnsureMoveWindowDuringResize(
-					(HWND) uiControlHandle(gc->c),
-					gc->finalx,
-					gc->finaly,
-					gc->finalwidth,
-					gc->finalheight);
-			}
-		}
+	for (const struct gridChild *gc : *(g->children)) {
+		if (!uiControlVisible(gc->c))
+			continue;
+		uiWindowsEnsureMoveWindowDuringResize(
+			(HWND) uiControlHandle(gc->c),
+			gc->finalx,
+			gc->finaly,
+			gc->finalwidth,
+			gc->finalheight);
+	}
 }
 
 static void gridRelayout(uiGrid *g)
@@ -492,7 +485,7 @@ static void gridRelayout(uiGrid *g)
 	distributeExtraSpace(g, ld, width, height);
 	computeCellRects(g, ld, xpadding, ypadding);
 	applyAlignment(g);
-	moveChildren(g, ld);
+	moveChildren(g);
 
 	delete ld;
 }

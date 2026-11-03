@@ -2,6 +2,7 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#include <commctrl.h>
 #endif
 
 #define uiGridFromState(s) ((uiGrid *) (((struct state *) *(s))->c))
@@ -145,6 +146,41 @@ static int controlWindowHeight(uiControl *c)
 	return r.bottom - r.top;
 }
 
+static LRESULT CALLBACK countGridChildMoves(HWND hwnd, UINT message,
+	WPARAM wParam, LPARAM lParam, UINT_PTR id, DWORD_PTR data)
+{
+	if (message == WM_WINDOWPOSCHANGING)
+		(*(int *) data)++;
+	return DefSubclassProc(hwnd, message, wParam, lParam);
+}
+
+static void gridSpanningChildMovesOncePerResize(void **state)
+{
+	struct state *s = *state;
+	uiGrid *grid = uiGridFromState(state);
+	uiControl *child;
+	HWND childHWND;
+	int moves = 0;
+
+	child = uiControl(uiNewButton("span"));
+	uiGridAppend(grid, child, 0, 0, 4, 3,
+		1, uiAlignFill, 1, uiAlignFill);
+	uiWindowSetChild(s->w, uiControl(grid));
+	childHWND = (HWND) uiControlHandle(child);
+	assert_true(SetWindowSubclass(childHWND, countGridChildMoves, 0,
+		(DWORD_PTR) &moves));
+	assert_true(SetWindowPos((HWND) uiControlHandle(uiControl(grid)), NULL,
+		0, 0, controlWindowWidth(uiControl(grid)) + 1,
+		controlWindowHeight(uiControl(grid)) + 1,
+		SWP_NOMOVE | SWP_NOACTIVATE | SWP_NOZORDER));
+	assert_true(RemoveWindowSubclass(childHWND, countGridChildMoves, 0));
+	assert_int_equal(moves, 1);
+	assert_int_equal(controlWindowWidth(child),
+		controlWindowWidth(uiControl(grid)));
+	assert_int_equal(controlWindowHeight(child),
+		controlWindowHeight(uiControl(grid)));
+}
+
 static void gridNonExpandingSpanUsesItsMinimumSize(void **state)
 {
 	struct state *s = *state;
@@ -259,6 +295,7 @@ int gridRunUnitTests(void)
 		gridUnitTest(gridDeleteDetachesAndUpdatesChildren),
 		gridUnitTest(gridChildMinimumSizeCanChangeAfterAppend),
 	#ifdef _WIN32
+		gridUnitTest(gridSpanningChildMovesOncePerResize),
 		gridUnitTest(gridNonExpandingSpanUsesItsMinimumSize),
 		gridUnitTest(gridExpandingSpanUsesTheAvailableSize),
 		gridUnitTest(gridMixedSpanUsesItsMinimumWidth),
