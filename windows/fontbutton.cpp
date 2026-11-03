@@ -6,7 +6,6 @@ struct uiFontButton {
 	uiWindowsControl c;
 	HWND hwnd;
 	struct fontDialogParams params;
-	BOOL already;
 	void (*onChanged)(uiFontButton *, void *);
 	void *onChangedData;
 };

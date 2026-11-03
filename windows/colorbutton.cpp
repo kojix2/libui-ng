@@ -69,8 +69,6 @@ static BOOL onWM_NOTIFY(uiControl *c, HWND hwnd, NMHDR *nmhdr, LRESULT *lResult)
 	int x, y;
 	HRESULT hr;
 
-	brush = NULL;
-
 	if (nmhdr->code != NM_CUSTOMDRAW)
 		return FALSE;
 	// and allow the button to draw its background
