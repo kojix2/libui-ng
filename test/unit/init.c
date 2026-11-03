@@ -4,6 +4,10 @@
 #include <pthread.h>
 #endif
 
+#if !defined(_WIN32) && !defined(__APPLE__)
+#include <glib.h>
+#endif
+
 static void versionIsAvailableWithoutInitialization(void **state)
 {
 	const char *version = uiVersion();
@@ -277,6 +281,128 @@ static void timerRepeatThenStop(void **state)
 }
 #endif
 
+#if !defined(_WIN32) && !defined(__APPLE__)
+struct timerYieldState {
+	uiAreaHandler handler;
+	uiArea *area;
+	gint64 deadline;
+	int running;
+	int ticks;
+	int draws;
+	int queued;
+};
+
+static void timerYieldDraw(uiAreaHandler *handler, uiArea *area,
+	uiAreaDrawParams *params)
+{
+	struct timerYieldState *state = (struct timerYieldState *) handler;
+
+	if (state->running && state->ticks > 0)
+		state->draws++;
+}
+
+static void timerYieldMouseEvent(uiAreaHandler *handler, uiArea *area,
+	uiAreaMouseEvent *event)
+{
+}
+
+static void timerYieldMouseCrossed(uiAreaHandler *handler, uiArea *area, int left)
+{
+}
+
+static void timerYieldDragBroken(uiAreaHandler *handler, uiArea *area)
+{
+}
+
+static int timerYieldKeyEvent(uiAreaHandler *handler, uiArea *area,
+	uiAreaKeyEvent *event)
+{
+	return 0;
+}
+
+static void timerYieldQueued(void *data)
+{
+	struct timerYieldState *state = data;
+
+	if (state->running)
+		state->queued++;
+}
+
+static int timerYieldTick(void *data)
+{
+	struct timerYieldState *state = data;
+
+	state->ticks++;
+	if ((state->draws > 0 && state->queued > 0) ||
+		g_get_monotonic_time() >= state->deadline) {
+		state->running = 0;
+		uiQuit();
+		return 0;
+	}
+	uiAreaQueueRedrawAll(state->area);
+	uiQueueMain(timerYieldQueued, state);
+	// Keep this timer overdue without consuming CPU or assuming a frame rate.
+	g_usleep(30000);
+	return 1;
+}
+
+static void timerYieldsToRedraw(void **state)
+{
+	uiInitOptions o = {0};
+	struct timerYieldState timerState = {0};
+	uiWindow *window;
+
+	assert_null(uiInit(&o));
+	timerState.handler.Draw = timerYieldDraw;
+	timerState.handler.MouseEvent = timerYieldMouseEvent;
+	timerState.handler.MouseCrossed = timerYieldMouseCrossed;
+	timerState.handler.DragBroken = timerYieldDragBroken;
+	timerState.handler.KeyEvent = timerYieldKeyEvent;
+	timerState.area = uiNewArea(&timerState.handler);
+	window = uiNewWindow("Timer redraw fairness", 100, 100, 0);
+	uiWindowSetChild(window, uiControl(timerState.area));
+	uiControlShow(uiControl(window));
+	timerState.running = 1;
+	timerState.deadline = g_get_monotonic_time() + 2 * G_TIME_SPAN_SECOND;
+	uiTimer(1, timerYieldTick, &timerState);
+	uiMain();
+	uiControlDestroy(uiControl(window));
+	uiUninit();
+	assert_true(timerState.ticks > 1);
+	assert_true(timerState.draws > 0);
+	assert_true(timerState.queued > 0);
+}
+
+static int countTimerUntilUninit(void *data)
+{
+	int *ticks = data;
+
+	(*ticks)++;
+	return 1;
+}
+
+static void timerAwaitingRearmDoesNotSurviveUninit(void **state)
+{
+	uiInitOptions o = {0};
+	struct timerState stopState = { 0, 1 };
+	int ticks = 0;
+
+	assert_null(uiInit(&o));
+	uiTimer(1, countTimerUntilUninit, &ticks);
+	// A single step returns after the tick, before its new idle can rearm it.
+	while (ticks == 0)
+		uiMainStep(1);
+	uiUninit();
+
+	assert_null(uiInit(&o));
+	uiTimer(20, repeatTimer, &stopState);
+	uiMain();
+	uiUninit();
+	assert_int_equal(ticks, 1);
+	assert_int_equal(stopState.count, 1);
+}
+#endif
+
 int initRunUnitTests(void)
 {
 	const struct CMUnitTest tests[] = {
@@ -296,6 +422,10 @@ int initRunUnitTests(void)
 #if !defined(__APPLE__)
 		cmocka_unit_test(timerOneShot),
 		cmocka_unit_test(timerRepeatThenStop),
+#endif
+#if !defined(_WIN32) && !defined(__APPLE__)
+		cmocka_unit_test(timerYieldsToRedraw),
+		cmocka_unit_test(timerAwaitingRearmDoesNotSurviveUninit),
 #endif
 	};
 

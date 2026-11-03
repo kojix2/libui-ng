@@ -84,6 +84,9 @@ _UI_EXTERN void uiQueueMain(void (*f)(void *data), void *data);
 // Timer callbacks run on the main UI thread. Return 0 from f to stop the timer;
 // return non-zero to keep it running. uiUninit() cancels any active timers.
 // Timer timing, including granularity and the first tick, is OS-defined.
+// GTK rearms repeating timers at idle priority, allowing pending redraws and
+// queued callbacks to run between ticks. Continuously ready higher-priority
+// sources can delay rearming indefinitely. Missed ticks are not replayed.
 // uiQueueMain() may be called from other threads. To quit from another thread,
 // queue uiQuit() with uiQueueMain() instead of calling uiQuit() directly.
 _UI_EXTERN void uiTimer(int milliseconds, int (*f)(void *data), void *data);

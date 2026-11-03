@@ -66,7 +66,10 @@ const char *uiInit(uiInitOptions *o)
 struct timer {
 	int (*f)(void *);
 	void *data;
+	int milliseconds;
 	guint source;
+	guint idleSource;
+	gint64 nextTick;
 };
 
 static void uninitTimer(gpointer key, gpointer value, gpointer data)
@@ -75,6 +78,8 @@ static void uninitTimer(gpointer key, gpointer value, gpointer data)
 
 	if (t->source != 0)
 		g_source_remove(t->source);
+	if (t->idleSource != 0)
+		g_source_remove(t->idleSource);
 	uiprivFree(t);
 }
 
@@ -229,21 +234,39 @@ void uiQueueMain(void (*f)(void *data), void *data)
 	g_mutex_unlock(&queuedMutex);
 }
 
+static gboolean rearmTimer(gpointer data);
+
 static gboolean doTimer(gpointer data)
 {
 	struct timer *t = (struct timer *) data;
 	int repeat;
 
+	t->source = 0;
+	t->nextTick = g_get_monotonic_time() + ((gint64) t->milliseconds * 1000);
 	uiprivUserCallbackEnter(NULL);
 	repeat = (*(t->f))(t->data);
 	uiprivUserCallbackLeave();
 	if (!repeat) {
-		t->source = 0;
 		g_hash_table_remove(timers, t);
 		uiprivFree(t);
 		return FALSE;
 	}
-	return TRUE;
+	// Let redraws and queued callbacks run even when the timer is overdue.
+	t->idleSource = g_idle_add_full(G_PRIORITY_DEFAULT_IDLE, rearmTimer, t, NULL);
+	return FALSE;
+}
+
+static gboolean rearmTimer(gpointer data)
+{
+	struct timer *t = (struct timer *) data;
+	gint64 remaining;
+	guint milliseconds;
+
+	t->idleSource = 0;
+	remaining = t->nextTick - g_get_monotonic_time();
+	milliseconds = remaining <= 0 ? 1 : (guint) ((remaining + 999) / 1000);
+	t->source = g_timeout_add_full(G_PRIORITY_DEFAULT, milliseconds, doTimer, t, NULL);
+	return FALSE;
 }
 
 void uiTimer(int milliseconds, int (*f)(void *data), void *data)
@@ -258,6 +281,7 @@ void uiTimer(int milliseconds, int (*f)(void *data), void *data)
 	t = uiprivNew(struct timer);
 	t->f = f;
 	t->data = data;
-	t->source = g_timeout_add(milliseconds, doTimer, t);
+	t->milliseconds = milliseconds;
+	t->source = g_timeout_add_full(G_PRIORITY_DEFAULT, (guint) milliseconds, doTimer, t, NULL);
 	g_hash_table_add(timers, t);
 }
