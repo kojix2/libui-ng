@@ -1,5 +1,9 @@
 #include "unit.h"
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 #define uiTabPtrFromState(s) uiControlPtrFromState(uiTab, s)
 
 static void onSelectedNoCall(uiTab *t, void *data)
@@ -69,6 +73,52 @@ static void tabSetSelectedNoCallback(void **state)
 	uiTabSetSelected(*t, 0);
 	assert_int_equal(uiTabSelected(*t), 0);
 }
+
+#ifdef _WIN32
+static void tabAppendedChildInheritsDisabledState(void **state)
+{
+	uiTab **t = uiTabPtrFromState(state);
+	uiControl *child;
+
+	*t = uiNewTab();
+	uiControlDisable(uiControl(*t));
+	child = uiControl(uiNewButton("disabled by tab"));
+	uiTabAppend(*t, "Page", child);
+	assert_false(uiControlEnabledToUser(child));
+	assert_false(IsWindowEnabled((HWND) uiControlHandle(child)));
+	uiControlEnable(uiControl(*t));
+	assert_true(IsWindowEnabled((HWND) uiControlHandle(child)));
+	uiControlDisable(child);
+	uiControlDisable(uiControl(*t));
+	uiControlEnable(uiControl(*t));
+	assert_false(IsWindowEnabled((HWND) uiControlHandle(child)));
+	uiTabDelete(*t, 0);
+	assert_false(IsWindowEnabled((HWND) uiControlHandle(child)));
+	uiControlDestroy(child);
+}
+
+static void tabAppendedChildInheritsDisabledAncestor(void **state)
+{
+	struct state *s = *state;
+	uiTab *tab;
+	uiBox *box;
+	uiControl *child;
+
+	box = uiNewVerticalBox();
+	s->c = uiControl(box);
+	tab = uiNewTab();
+	uiBoxAppend(box, uiControl(tab), 1);
+	uiControlDisable(uiControl(box));
+	child = uiControl(uiNewButton("disabled by ancestor"));
+	uiTabAppend(tab, "Page", child);
+	assert_false(uiControlEnabledToUser(child));
+	assert_false(IsWindowEnabled((HWND) uiControlHandle(child)));
+	uiTabDelete(tab, 0);
+	assert_null(uiControlParent(child));
+	assert_true(IsWindowEnabled((HWND) uiControlHandle(child)));
+	uiControlDestroy(child);
+}
+#endif
 
 #if !defined(_WIN32) && !defined(__APPLE__)
 struct tabSelectionState {
@@ -197,6 +247,10 @@ int tabRunUnitTests(void)
 		tabUnitTest(tabAppendInsertDelete),
 		tabUnitTest(tabMargined),
 		tabUnitTest(tabSetSelectedNoCallback),
+#ifdef _WIN32
+		tabUnitTest(tabAppendedChildInheritsDisabledState),
+		tabUnitTest(tabAppendedChildInheritsDisabledAncestor),
+#endif
 #if !defined(_WIN32) && !defined(__APPLE__)
 		tabUnitTest(tabStructureSelectionConsistent),
 		tabUnitTest(tabInsertBeforeSelectionDoesNotNotify),

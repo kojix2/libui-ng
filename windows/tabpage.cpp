@@ -103,7 +103,7 @@ struct tabPage *newTabPage(uiControl *child)
 
 	tp->child = child;
 	if (tp->child != NULL) {
-		uiWindowsEnsureSetParentHWND((HWND) uiControlHandle(tp->child), tp->hwnd);
+		uiWindowsControlSetParentHWND(uiWindowsControl(tp->child), tp->hwnd);
 		uiWindowsControlAssignSoleControlIDZOrder(uiWindowsControl(tp->child));
 	}
 
