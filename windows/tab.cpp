@@ -318,6 +318,10 @@ void uiTabDelete(uiTab *t, int n)
 
 	if (t->pages->size() == 0) {
 		uiWindowsControlMinimumSizeChanged(uiWindowsControl(t));
+		if (deletedCurrent && uiprivUserCallbackEnter(uiControl(t))) {
+			(*t->onSelected)(t, t->onSelectedData);
+			uiprivUserCallbackLeave();
+		}
 		return;
 	}
 

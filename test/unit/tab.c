@@ -75,6 +75,38 @@ static void tabSetSelectedNoCallback(void **state)
 }
 
 #ifdef _WIN32
+struct tabDeleteState {
+	int calls;
+	int pages;
+	int selected;
+};
+
+static void onTabDeleted(uiTab *t, void *data)
+{
+	struct tabDeleteState *selection = data;
+
+	selection->calls++;
+	selection->pages = uiTabNumPages(t);
+	selection->selected = uiTabSelected(t);
+}
+
+static void tabDeleteLastSelectionNotifies(void **state)
+{
+	uiTab **t = uiTabPtrFromState(state);
+	uiControl *child;
+	struct tabDeleteState selection = {0, -1, -2};
+
+	*t = uiNewTab();
+	child = uiControl(uiNewLabel("first"));
+	uiTabAppend(*t, "First", child);
+	uiTabOnSelected(*t, onTabDeleted, &selection);
+	uiTabDelete(*t, 0);
+	uiControlDestroy(child);
+	assert_int_equal(selection.calls, 1);
+	assert_int_equal(selection.pages, 0);
+	assert_int_equal(selection.selected, -1);
+}
+
 static void tabAppendedChildInheritsDisabledState(void **state)
 {
 	uiTab **t = uiTabPtrFromState(state);
@@ -248,6 +280,7 @@ int tabRunUnitTests(void)
 		tabUnitTest(tabMargined),
 		tabUnitTest(tabSetSelectedNoCallback),
 #ifdef _WIN32
+		tabUnitTest(tabDeleteLastSelectionNotifies),
 		tabUnitTest(tabAppendedChildInheritsDisabledState),
 		tabUnitTest(tabAppendedChildInheritsDisabledAncestor),
 #endif
