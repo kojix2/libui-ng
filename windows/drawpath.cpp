@@ -102,6 +102,14 @@ static void drawArc(uiDrawPath *p, struct arc *a, void (*startFunction)(uiDrawPa
 	double absSweep;
 	double clockwiseSweep;
 
+	// Cairo wraps negative sweeps into the positive direction rather than
+	// drawing a full circle when their magnitude exceeds one revolution.
+	if (!a->negative && a->sweep <= -2 * uiPi) {
+		a->sweep = fmod(a->sweep, 2 * uiPi);
+		if (a->sweep < 0)
+			a->sweep += 2 * uiPi;
+	}
+
 	// as above, we can't do a full circle with one arc
 	// simulate it with two half-circles
 	// of course, we have a dragon: equality on floating-point values!
