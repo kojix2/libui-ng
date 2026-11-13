@@ -21,6 +21,17 @@ static LRESULT CALLBACK imageViewWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LP
 
 static ATOM imageViewClass = 0;
 
+void uiprivUninitImageView(void)
+{
+	if (imageViewClass == 0)
+		return;
+	if (UnregisterClassW(MAKEINTATOM(imageViewClass), hInstance) == 0) {
+		logLastError(L"error unregistering uiImageView window class");
+		return;
+	}
+	imageViewClass = 0;
+}
+
 static void releaseImageViewBitmap(uiImageView *iv)
 {
 	if (iv->d2dBitmap != NULL)

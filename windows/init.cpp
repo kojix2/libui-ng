@@ -198,6 +198,7 @@ void uiUninit(void)
 	uiprivUninitShouldQuit();
 	uiprivControlDestroyUninit();
 	uiprivUninitTimers();
+	uiprivUninitImageView();
 	uiprivUninitImage();
 	uninitMenus();
 	unregisterD2DScratchClass();
