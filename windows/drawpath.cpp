@@ -100,6 +100,7 @@ static void drawArc(uiDrawPath *p, struct arc *a, void (*startFunction)(uiDrawPa
 	D2D1_ARC_SEGMENT as;
 	BOOL fullCircle;
 	double absSweep;
+	double clockwiseSweep;
 
 	// as above, we can't do a full circle with one arc
 	// simulate it with two half-circles
@@ -154,13 +155,18 @@ static void drawArc(uiDrawPath *p, struct arc *a, void (*startFunction)(uiDrawPa
 		as.sweepDirection = D2D1_SWEEP_DIRECTION_COUNTER_CLOCKWISE;
 	else
 		as.sweepDirection = D2D1_SWEEP_DIRECTION_CLOCKWISE;
+	// Interpret the endpoint in the chosen direction. A negative sweep has
+	// the same endpoint as its positive equivalent one revolution later.
+	clockwiseSweep = a->sweep;
+	if (clockwiseSweep < 0)
+		clockwiseSweep += 2 * uiPi;
 	if (!a->negative) {
-		if (a->sweep > uiPi)
+		if (clockwiseSweep > uiPi)
 			as.arcSize = D2D1_ARC_SIZE_LARGE;
 		else
 			as.arcSize = D2D1_ARC_SIZE_SMALL;
 	} else {
-		if (a->sweep > uiPi)
+		if (clockwiseSweep > uiPi)
 			as.arcSize = D2D1_ARC_SIZE_SMALL;
 		else
 			as.arcSize = D2D1_ARC_SIZE_LARGE;

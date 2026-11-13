@@ -150,6 +150,41 @@ static void initCanRetryAfterCOMModeConflict(void **state)
 #ifdef _UI_STATIC
 #include "../../common/uipriv.h"
 
+extern float auditPathLength(uiDrawPath *path);
+
+static void arcSweepDirectionMatchesEndpoint(void **state)
+{
+	uiInitOptions options = {0};
+	const double pi = 3.14159265358979323846;
+	const struct {
+		double sweep;
+		int negative;
+		double length;
+	} cases[] = {
+		{ -0.5, 0, 1.5 }, { 0.5, 0, 0.5 },
+		{ -0.5, 1, 0.5 }, { 0.5, 1, 1.5 },
+		{ -1.5, 0, 0.5 }, { 1.5, 0, 1.5 },
+		{ -1.5, 1, 1.5 }, { 1.5, 1, 0.5 },
+	};
+	uiDrawPath *path;
+	float lengths[sizeof cases / sizeof cases[0]];
+	size_t i;
+
+	assert_null(uiInit(&options));
+	for (i = 0; i < sizeof cases / sizeof cases[0]; i++) {
+		path = uiDrawNewPath(uiDrawFillModeWinding);
+		assert_non_null(path);
+		uiDrawPathNewFigureWithArc(path, 0, 0, 100, 0,
+			cases[i].sweep * pi, cases[i].negative);
+		uiDrawPathEnd(path);
+		lengths[i] = auditPathLength(path);
+		uiDrawFreePath(path);
+	}
+	uiUninit();
+	for (i = 0; i < sizeof cases / sizeof cases[0]; i++)
+		assert_float_equal(lengths[i], cases[i].length * 100 * pi, 1);
+}
+
 extern void uiprivWindowsFailNextDestroyPostForTests(void);
 extern void uiprivWindowsDeliverDestroyRetryTimerForTests(void);
 extern HRESULT uiprivWindowsLogLastErrorForTests(DWORD error, DWORD *after);
@@ -981,6 +1016,7 @@ int main(void)
 		cmocka_unit_test(endingPathTwiceIsSafe),
 		cmocka_unit_test(initCanRetryAfterCOMModeConflict),
 #ifdef _UI_STATIC
+		cmocka_unit_test(arcSweepDirectionMatchesEndpoint),
 		cmocka_unit_test(nestedModalPreservesWindowState),
 		cmocka_unit_test(errorLogsReturnWithoutBreaking),
 		cmocka_unit_test(deferredDestroySurvivesFailedPost),
