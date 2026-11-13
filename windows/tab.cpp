@@ -84,6 +84,8 @@ static void showHidePage(uiTab *t, LRESULT which, int hide)
 
 	if (which < 0 || ((size_t) which) >= t->pages->size())
 		return;
+	if (!uiprivUserCallbackEnter(uiControl(t)))
+		return;
 	page = tabPage(t, (int) which);
 	if (hide)
 		ShowWindow(page->hwnd, SW_HIDE);
@@ -91,9 +93,10 @@ static void showHidePage(uiTab *t, LRESULT which, int hide)
 		ShowWindow(page->hwnd, SW_SHOW);
 		// we only resize the current page, so we have to resize it; before we can do that, we need to make sure we are of the right size
 		uiWindowsControlMinimumSizeChanged(uiWindowsControl(t));
-		if (!t->suppressOnSelected)
+		if (!t->suppressOnSelected && !uiprivControlDestroyPending(uiControl(t)))
 			(*t->onSelected)(t, t->onSelectedData);
 	}
+	uiprivUserCallbackLeave();
 }
 
 // control implementation

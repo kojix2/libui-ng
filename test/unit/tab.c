@@ -75,6 +75,67 @@ static void tabSetSelectedNoCallback(void **state)
 }
 
 #ifdef _WIN32
+struct tabDestroyState {
+	uiTab **owner;
+	int destroyed;
+	int destroyedDuringSelection;
+};
+
+static void onTabDestroyed(uiControl *c, void *data)
+{
+	struct tabDestroyState *s = data;
+
+	s->destroyed++;
+}
+
+static void destroyTabOnSelection(uiTab *t, void *data)
+{
+	struct tabDestroyState *s = data;
+
+	uiControlDestroy(uiControl(t));
+	*s->owner = NULL;
+	s->destroyedDuringSelection = s->destroyed;
+}
+
+static void verifyTabDestroyDeferred(struct tabDestroyState *s)
+{
+	int i;
+
+	for (i = 0; i < 100 && !s->destroyed; i++)
+		uiMainStep(0);
+	assert_int_equal(s->destroyedDuringSelection, 0);
+	assert_int_equal(s->destroyed, 1);
+}
+
+static void tabAppendDefersDestructionFromSelection(void **state)
+{
+	uiTab **t = uiTabPtrFromState(state);
+	struct tabDestroyState s = {t, 0, 0};
+
+	*t = uiNewTab();
+	uiControlOnDestroyed(uiControl(*t), onTabDestroyed, &s);
+	uiTabOnSelected(*t, destroyTabOnSelection, &s);
+	uiTabAppend(*t, "First", uiControl(uiNewLabel("first")));
+	verifyTabDestroyDeferred(&s);
+}
+
+static void tabDeleteDefersDestructionFromSelection(void **state)
+{
+	uiTab **t = uiTabPtrFromState(state);
+	struct tabDestroyState s = {t, 0, 0};
+	uiControl *first;
+
+	*t = uiNewTab();
+	first = uiControl(uiNewLabel("first"));
+	uiTabAppend(*t, "First", first);
+	uiTabAppend(*t, "Second", uiControl(uiNewLabel("second")));
+	uiControlOnDestroyed(uiControl(*t), onTabDestroyed, &s);
+	uiTabOnSelected(*t, destroyTabOnSelection, &s);
+	uiTabDelete(*t, 0);
+	uiControlDestroy(first);
+	verifyTabDestroyDeferred(&s);
+}
+
 struct tabDeleteState {
 	int calls;
 	int pages;
@@ -280,6 +341,10 @@ int tabRunUnitTests(void)
 		tabUnitTest(tabMargined),
 		tabUnitTest(tabSetSelectedNoCallback),
 #ifdef _WIN32
+		cmocka_unit_test_setup_teardown(tabAppendDefersDestructionFromSelection,
+			unitTestSetup, unitTestTeardownHidden),
+		cmocka_unit_test_setup_teardown(tabDeleteDefersDestructionFromSelection,
+			unitTestSetup, unitTestTeardownHidden),
 		tabUnitTest(tabDeleteLastSelectionNotifies),
 		tabUnitTest(tabAppendedChildInheritsDisabledState),
 		tabUnitTest(tabAppendedChildInheritsDisabledAncestor),
