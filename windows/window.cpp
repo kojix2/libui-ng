@@ -1,6 +1,7 @@
 // 27 april 2015
 #include "uipriv_windows.hpp"
 #include <cstdlib>
+#include <vector>
 
 #define windowClass L"libui_uiWindowClass"
 
@@ -19,6 +20,10 @@ struct uiWindow {
 	WINDOWPLACEMENT fsPrevPlacement;
 	int borderless;
 	int focused;
+	unsigned int modalBlocks;
+	unsigned int modalRevision;
+	BOOL modalRestore;
+	BOOL modalRestorePending;
 
 	int (*onClosing)(uiWindow *, void *);
 	void *onClosingData;
@@ -32,6 +37,37 @@ struct uiWindow {
 };
 
 static std::set<uiWindow *> windows;
+
+struct modalFrame {
+	std::set<uiWindow *> blocked;
+};
+
+static std::vector<modalFrame *> modalFrames;
+
+static void blockWindow(modalFrame *frame, uiWindow *w)
+{
+	frame->blocked.insert(w);
+	w->modalRevision++;
+	if (w->modalBlocks++ == 0) {
+		if (!w->modalRestorePending)
+			w->modalRestore = IsWindowEnabled(w->hwnd) || !uiControlEnabled(uiControl(w));
+		w->modalRestorePending = FALSE;
+	}
+}
+
+static void syncModalWindow(uiWindow *w)
+{
+	BOOL enabled = uiControlEnabled(uiControl(w)) != 0;
+
+	w->modalRevision++;
+	if (w->modalBlocks != 0)
+		enabled = FALSE;
+	else if (w->modalRestorePending) {
+		enabled = enabled && w->modalRestore;
+		w->modalRestorePending = FALSE;
+	}
+	EnableWindow(w->hwnd, enabled);
+}
 
 static BOOL isMenuCommand(WPARAM wParam, LPARAM lParam)
 {
@@ -296,6 +332,8 @@ static void uiWindowDestroy(uiControl *c)
 	if (w->menubar != NULL)
 		freeMenubar(w->menubar);
 	// and finally free ourselves
+	for (auto frame : modalFrames)
+		frame->blocked.erase(w);
 	windows.erase(w);
 	uiWindowsEnsureDestroyWindow(w->hwnd);
 	uiFreeControl(uiControl(w));
@@ -356,7 +394,14 @@ static void uiWindowHide(uiControl *c)
 uiWindowsControlDefaultEnabled(uiWindow)
 uiWindowsControlDefaultEnable(uiWindow)
 uiWindowsControlDefaultDisable(uiWindow)
-uiWindowsControlDefaultSyncEnableState(uiWindow)
+static void uiWindowSyncEnableState(uiWindowsControl *c, int enabled)
+{
+	uiWindow *w = uiWindow(c);
+
+	if (uiWindowsShouldStopSyncEnableState(c, enabled))
+		return;
+	syncModalWindow(w);
+}
 uiWindowsControlDefaultSetParentHWND(uiWindow)
 
 static void uiWindowMinimumSize(uiWindowsControl *c, int *width, int *height)
@@ -649,6 +694,10 @@ uiWindow *uiNewWindow(const char *title, int width, int height, int hasMenubar)
 	uiWindowOnPositionChanged(w, defaultOnPositionContentSizeChanged, NULL);
 
 	windows.insert(w);
+	for (auto frame : modalFrames)
+		blockWindow(frame, w);
+	if (w->modalBlocks != 0)
+		syncModalWindow(w);
 	return w;
 }
 
@@ -692,20 +741,57 @@ uiWindow *activeWindow(void)
 
 void disableAllWindowsExcept(uiWindow *which)
 {
-	for (auto &w : windows) {
-		if (w == which)
-			continue;
-		EnableWindow(w->hwnd, FALSE);
-	}
+	modalFrame *frame = new modalFrame;
+	std::vector<std::pair<uiWindow *, unsigned int>> affected;
+
+	uiprivUserCallbackEnter(NULL);
+	modalFrames.push_back(frame);
+	for (auto w : windows)
+		if (w != which) {
+			blockWindow(frame, w);
+			affected.push_back(std::make_pair(w, w->modalRevision));
+		}
+	// EnableWindow can invoke user callbacks. Update the complete frame first,
+	// and use a snapshot so reentrant window creation does not invalidate it.
+	for (auto entry : affected)
+		if (windows.find(entry.first) != windows.end() &&
+			entry.first->modalRevision == entry.second &&
+			!uiprivControlDestroyPending(uiControl(entry.first)))
+			syncModalWindow(entry.first);
+	uiprivUserCallbackLeave();
 }
 
 void enableAllWindowsExcept(uiWindow *which)
 {
-	for (auto &w : windows) {
-		if (w == which)
-			continue;
-		if (!uiControlEnabled(uiControl(w)))
-			continue;
-		EnableWindow(w->hwnd, TRUE);
+	modalFrame *frame = modalFrames.back();
+	std::vector<std::pair<uiWindow *, unsigned int>> affected;
+
+	(void) which;
+	uiprivUserCallbackEnter(NULL);
+	modalFrames.pop_back();
+	for (auto w : frame->blocked) {
+		w->modalRevision++;
+		if (--w->modalBlocks == 0)
+			w->modalRestorePending = TRUE;
+		affected.push_back(std::make_pair(w, w->modalRevision));
 	}
+	delete frame;
+	for (auto entry : affected)
+		if (windows.find(entry.first) != windows.end() &&
+			entry.first->modalRevision == entry.second &&
+			!uiprivControlDestroyPending(uiControl(entry.first)))
+			syncModalWindow(entry.first);
+	uiprivUserCallbackLeave();
 }
+
+#ifdef _UI_STATIC
+extern "C" void uiprivWindowsBeginModalForTests(uiWindow *owner)
+{
+	disableAllWindowsExcept(owner);
+}
+
+extern "C" void uiprivWindowsEndModalForTests(void)
+{
+	enableAllWindowsExcept(NULL);
+}
+#endif

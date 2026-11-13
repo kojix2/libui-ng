@@ -35,6 +35,71 @@ extern void uiprivWindowsFailNextDestroyPostForTests(void);
 extern void uiprivWindowsDeliverDestroyRetryTimerForTests(void);
 extern HRESULT uiprivWindowsLogLastErrorForTests(DWORD error, DWORD *after);
 extern HRESULT uiprivWindowsLogHRESULTForTests(HRESULT error, DWORD *after);
+extern void uiprivWindowsBeginModalForTests(uiWindow *owner);
+extern void uiprivWindowsEndModalForTests(void);
+
+struct modalReentry {
+	int called;
+	int stayedDisabled;
+};
+
+static LRESULT CALLBACK modalReentrySubclass(HWND hwnd, UINT message, WPARAM wp,
+	LPARAM lp, UINT_PTR id, DWORD_PTR data)
+{
+	struct modalReentry *r = (struct modalReentry *) data;
+
+	if (message == WM_ENABLE && !wp && !r->called) {
+		r->called = 1;
+		uiprivWindowsBeginModalForTests(NULL);
+		uiprivWindowsEndModalForTests();
+		r->stayedDisabled = !IsWindowEnabled(hwnd);
+	}
+	return DefSubclassProc(hwnd, message, wp, lp);
+}
+
+static void nestedModalPreservesWindowState(void **state)
+{
+	uiInitOptions options = {0};
+	uiWindow *owner, *other, *initiallyDisabled, *created;
+	HWND ownerHWND, otherHWND, disabledHWND;
+	struct modalReentry reentry = {0};
+
+	assert_null(uiInit(&options));
+	owner = uiNewWindow("modal owner", 100, 100, 0);
+	other = uiNewWindow("modal other", 100, 100, 0);
+	initiallyDisabled = uiNewWindow("modal disabled", 100, 100, 0);
+	ownerHWND = (HWND) uiControlHandle(uiControl(owner));
+	otherHWND = (HWND) uiControlHandle(uiControl(other));
+	disabledHWND = (HWND) uiControlHandle(uiControl(initiallyDisabled));
+	uiControlDisable(uiControl(initiallyDisabled));
+	assert_true(SetWindowSubclass(otherHWND, modalReentrySubclass, 1, (DWORD_PTR) &reentry));
+	uiprivWindowsBeginModalForTests(owner);
+	assert_true(reentry.called);
+	assert_true(reentry.stayedDisabled);
+	assert_true(IsWindowEnabled(ownerHWND));
+	assert_false(IsWindowEnabled(otherHWND));
+	uiControlEnable(uiControl(initiallyDisabled));
+	assert_false(IsWindowEnabled(disabledHWND));
+	created = uiNewWindow("created while modal", 100, 100, 0);
+	assert_false(IsWindowEnabled((HWND) uiControlHandle(uiControl(created))));
+	uiControlDestroy(uiControl(created));
+	uiprivWindowsBeginModalForTests(NULL);
+	uiprivWindowsEndModalForTests();
+	assert_false(IsWindowEnabled(otherHWND));
+	assert_false(IsWindowEnabled(disabledHWND));
+	uiprivWindowsEndModalForTests();
+	assert_true(IsWindowEnabled(otherHWND));
+	assert_true(IsWindowEnabled(disabledHWND));
+	EnableWindow(ownerHWND, FALSE);
+	uiprivWindowsBeginModalForTests(NULL);
+	uiprivWindowsEndModalForTests();
+	assert_false(IsWindowEnabled(ownerHWND));
+	RemoveWindowSubclass(otherHWND, modalReentrySubclass, 1);
+	uiControlDestroy(uiControl(initiallyDisabled));
+	uiControlDestroy(uiControl(other));
+	uiControlDestroy(uiControl(owner));
+	uiUninit();
+}
 
 static void errorLogsReturnWithoutBreaking(void **state)
 {
@@ -795,6 +860,7 @@ int main(void)
 	const struct CMUnitTest tests[] = {
 		cmocka_unit_test(initCanRetryAfterCOMModeConflict),
 #ifdef _UI_STATIC
+		cmocka_unit_test(nestedModalPreservesWindowState),
 		cmocka_unit_test(errorLogsReturnWithoutBreaking),
 		cmocka_unit_test(deferredDestroySurvivesFailedPost),
 		cmocka_unit_test(deferredDestroyTimerWaitsForCallback),
