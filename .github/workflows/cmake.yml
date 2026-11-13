@@ -127,7 +127,9 @@ jobs:
         include:
           - {buildtype: Release, buildlabel: release}
           - {buildtype: Debug, buildlabel: debug}
-    runs-on: ubuntu-latest
+    # Ubuntu 26.04 runner Docker profiles can block i386 socketcall:
+    # https://github.com/actions/runner-images/issues/14790
+    runs-on: ubuntu-24.04
     name: Ubuntu-${{ matrix.arch }}-${{ matrix.libtype }}-${{ matrix.buildlabel }}
     steps:
       - uses: actions/checkout@v6
@@ -140,7 +142,7 @@ jobs:
             -v "$GITHUB_WORKSPACE:/workspace" -w /workspace \
             ${{ matrix.arch == 'armv7' && 'debian:12-slim' || 'i386/debian:12-slim' }} \
             bash -c "set -e && \
-              apt-get update -qq && \
+              apt-get update --error-on=any -qq && \
               DEBIAN_FRONTEND=noninteractive apt-get install -y cmake ninja-build gcc g++ libgtk-3-dev libcmocka-dev xvfb && \
               cmake -S . -B builddir-${{ matrix.arch }}-${{ matrix.libtype }}-${{ matrix.buildlabel }} -G Ninja \
                 -DCMAKE_BUILD_TYPE=${{ matrix.buildtype }} \
