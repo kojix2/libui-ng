@@ -197,6 +197,7 @@ extern void uiprivRadioButtonsSetFocus(uiRadioButtons *);
 // tooltip.cpp
 extern void uiprivDestroyTooltip(uiControl *c);
 extern void uiprivAddTooltipToHWND(uiControl *c, HWND hwnd);
+extern void uiprivRemoveTooltipFromHWND(uiControl *c, HWND hwnd);
 
 extern void uiprivSliderSetControlTooltip(uiSlider *s, int active);
 
