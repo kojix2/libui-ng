@@ -149,6 +149,7 @@ static void createUpDown(uiSpinbox *s)
 		std::abort();
 	}
 	SendMessageW(s->updown, UDM_SETBUDDY, (WPARAM) (s->edit), 0);
+	uiprivAddTooltipToHWND(uiControl(s), s->updown);
 }
 
 // an up-down control will only properly position itself the first time
@@ -163,6 +164,7 @@ static void recreateUpDown(uiSpinbox *s)
 
 		current = value(s);
 		SendMessageW(s->updown, UDM_GETRANGE32, (WPARAM) (&min), (LPARAM) (&max));
+		uiprivRemoveTooltipFromHWND(uiControl(s), s->updown);
 		uiWindowsEnsureDestroyWindow(s->updown);
 		s->inhibitChanged = TRUE;
 		createUpDown(s);
