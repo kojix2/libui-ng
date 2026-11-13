@@ -24,7 +24,7 @@ endif()
 if(WIN32)
 	list(APPEND unit_sources resources.rc)
 	libui_add_test(windows-regression-unit regression_windows.c area_state_windows.cpp resources.rc)
-	target_link_libraries(windows-regression-unit PRIVATE libui::ui cmocka::cmocka)
+	target_link_libraries(windows-regression-unit PRIVATE libui::ui cmocka::cmocka ole32)
 	set_tests_properties(windows-regression-unit PROPERTIES
 		TIMEOUT 120 LABELS "contract;backend;gui;windows;${unit_linkage}")
 endif()

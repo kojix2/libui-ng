@@ -3,9 +3,31 @@
 #include <cmocka.h>
 #include <windows.h>
 #include <commctrl.h>
+#include <objbase.h>
 #include <stdlib.h>
 #include <string.h>
 #include "../../ui.h"
+
+static void initCanRetryAfterCOMModeConflict(void **state)
+{
+	uiInitOptions options = {0};
+	const char *error;
+	HRESULT hr;
+
+	hr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
+	assert_true(hr == S_OK || hr == S_FALSE);
+	error = uiInit(&options);
+	assert_non_null(error);
+	uiFreeInitError(error);
+	CoUninitialize();
+	error = uiInit(&options);
+	if (error != NULL) {
+		print_error("uiInit retry failed: %s\n", error);
+		uiFreeInitError(error);
+		fail();
+	}
+	uiUninit();
+}
 #ifdef _UI_STATIC
 #include "../../common/uipriv.h"
 
@@ -771,6 +793,7 @@ static void unwrappedAlignedTextIsVisible(void **data)
 int main(void)
 {
 	const struct CMUnitTest tests[] = {
+		cmocka_unit_test(initCanRetryAfterCOMModeConflict),
 #ifdef _UI_STATIC
 		cmocka_unit_test(errorLogsReturnWithoutBreaking),
 		cmocka_unit_test(deferredDestroySurvivesFailedPost),

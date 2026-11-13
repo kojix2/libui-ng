@@ -134,6 +134,7 @@ void uiprivFlushFailedControlDestroyPost(void)
 const char *initUtilWindow(HICON hDefaultIcon, HCURSOR hDefaultCursor)
 {
 	WNDCLASSW wc;
+	DWORD error;
 
 	ZeroMemory(&wc, sizeof (WNDCLASSW));
 	wc.lpszClassName = utilWindowClass;
@@ -151,8 +152,13 @@ const char *initUtilWindow(HICON hDefaultIcon, HCURSOR hDefaultCursor)
 		WS_OVERLAPPEDWINDOW,
 		0, 0, 100, 100,
 		NULL, NULL, hInstance, NULL);
-	if (utilWindow == NULL)
+	if (utilWindow == NULL) {
+		error = GetLastError();
+		if (UnregisterClassW(utilWindowClass, hInstance) == 0)
+			logLastError(L"error unregistering utility window class");
+		SetLastError(error);
 		return "=creating utility window";
+	}
 	// and just to be safe
 	EnableWindow(utilWindow, FALSE);
 

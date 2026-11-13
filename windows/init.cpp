@@ -85,58 +85,111 @@ const char *uiInit(uiInitOptions *o)
 	if (ce != NULL)
 		return initerr(ce, L"GetLastError() ==", GetLastError());
 
-	if (registerWindowClass(hDefaultIcon, hDefaultCursor) == 0)
-		return ieLastErr("registering uiWindow window class");
+	if (registerWindowClass(hDefaultIcon, hDefaultCursor) == 0) {
+		ce = ieLastErr("registering uiWindow window class");
+		goto failUtilWindow;
+	}
 
 	ZeroMemory(&ncm, sizeof (NONCLIENTMETRICSW));
 	ncm.cbSize = sizeof (NONCLIENTMETRICSW);
-	if (SystemParametersInfoW(SPI_GETNONCLIENTMETRICS, sizeof (NONCLIENTMETRICSW), &ncm, sizeof (NONCLIENTMETRICSW)) == 0)
-		return ieLastErr("getting default fonts");
+	if (SystemParametersInfoW(SPI_GETNONCLIENTMETRICS, sizeof (NONCLIENTMETRICSW), &ncm, sizeof (NONCLIENTMETRICSW)) == 0) {
+		ce = ieLastErr("getting default fonts");
+		goto failWindow;
+	}
 	hMessageFont = CreateFontIndirectW(&(ncm.lfMessageFont));
-	if (hMessageFont == NULL)
-		return ieLastErr("loading default messagebox font; this is the default UI font");
+	if (hMessageFont == NULL) {
+		ce = ieLastErr("loading default messagebox font; this is the default UI font");
+		goto failWindow;
+	}
 
-	if (initContainer(hDefaultIcon, hDefaultCursor) == 0)
-		return ieLastErr("initializing uiWindowsMakeContainer() window class");
+	if (initContainer(hDefaultIcon, hDefaultCursor) == 0) {
+		ce = ieLastErr("initializing uiWindowsMakeContainer() window class");
+		goto failFont;
+	}
 
 	hollowBrush = (HBRUSH) GetStockObject(HOLLOW_BRUSH);
-	if (hollowBrush == NULL)
-		return ieLastErr("getting hollow brush");
+	if (hollowBrush == NULL) {
+		ce = ieLastErr("getting hollow brush");
+		goto failContainer;
+	}
 
 	ZeroMemory(&icc, sizeof (INITCOMMONCONTROLSEX));
 	icc.dwSize = sizeof (INITCOMMONCONTROLSEX);
 	icc.dwICC = wantedICCClasses;
-	if (InitCommonControlsEx(&icc) == 0)
-		return ieLastErr("initializing Common Controls");
+	if (InitCommonControlsEx(&icc) == 0) {
+		ce = ieLastErr("initializing Common Controls");
+		goto failContainer;
+	}
 
 	hr = CoInitialize(NULL);
-	if (hr != S_OK && hr != S_FALSE)
-		return ieHRESULT("initializing COM", hr);
+	if (hr != S_OK && hr != S_FALSE) {
+		ce = ieHRESULT("initializing COM", hr);
+		goto failContainer;
+	}
 	// LONGTERM initialize COM security
 	// LONGTERM (windows vista) turn off COM exception handling
 
 	hr = initDraw();
-	if (hr != S_OK)
-		return ieHRESULT("initializing Direct2D", hr);
+	if (hr != S_OK) {
+		ce = ieHRESULT("initializing Direct2D", hr);
+		goto failCOM;
+	}
 
 	hr = uiprivInitDrawText();
-	if (hr != S_OK)
-		return ieHRESULT("initializing DirectWrite", hr);
+	if (hr != S_OK) {
+		ce = ieHRESULT("initializing DirectWrite", hr);
+		goto failDraw;
+	}
 
-	if (registerAreaClass(hDefaultIcon, hDefaultCursor) == 0)
-		return ieLastErr("registering uiArea window class");
+	if (registerAreaClass(hDefaultIcon, hDefaultCursor) == 0) {
+		ce = ieLastErr("registering uiArea window class");
+		goto failDrawText;
+	}
 
-	if (registerMessageFilter() == 0)
-		return ieLastErr("registering libui message filter");
+	if (registerMessageFilter() == 0) {
+		ce = ieLastErr("registering libui message filter");
+		goto failArea;
+	}
 
-	if (registerD2DScratchClass(hDefaultIcon, hDefaultCursor) == 0)
-		return ieLastErr("initializing D2D scratch window class");
+	if (registerD2DScratchClass(hDefaultIcon, hDefaultCursor) == 0) {
+		ce = ieLastErr("initializing D2D scratch window class");
+		goto failFilter;
+	}
 
 	hr = uiprivInitImage();
-	if (hr != S_OK)
-		return ieHRESULT("initializing WIC", hr);
+	if (hr != S_OK) {
+		ce = ieHRESULT("initializing WIC", hr);
+		goto failScratch;
+	}
 
 	return NULL;
+
+failScratch:
+	unregisterD2DScratchClass();
+failFilter:
+	unregisterMessageFilter();
+failArea:
+	unregisterArea();
+failDrawText:
+	uiprivUninitDrawText();
+failDraw:
+	uninitDraw();
+failCOM:
+	CoUninitialize();
+failContainer:
+	hollowBrush = NULL;
+	uninitContainer();
+failFont:
+	if (DeleteObject(hMessageFont) == 0)
+		logLastError(L"error deleting control font");
+	hMessageFont = NULL;
+failWindow:
+	unregisterWindowClass();
+failUtilWindow:
+	uninitUtilWindow();
+	// The returned error is still owned by the caller, so do not run the
+	// allocation leak check until a successful initialization is uninitialized.
+	return ce;
 }
 
 void uiUninit(void)
