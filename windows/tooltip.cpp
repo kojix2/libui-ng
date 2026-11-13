@@ -1,8 +1,13 @@
 #include "uipriv_windows.hpp"
 
+struct tooltipWindow {
+	HWND tool;
+	HWND tooltip;
+};
+
 struct tooltipState {
 	WCHAR *text;
-	std::vector<HWND> windows;
+	std::vector<struct tooltipWindow> windows;
 };
 
 static HWND createTooltipForControl(HWND tool, const WCHAR *text)
@@ -42,12 +47,16 @@ static HWND createTooltipForControl(HWND tool, const WCHAR *text)
 static void addTooltipToControl(HWND tool, tooltipState *state)
 {
 	HWND tooltip;
+	struct tooltipWindow entry;
 
 	if (tool == NULL)
 		return;
 	tooltip = createTooltipForControl(tool, state->text);
-	if (tooltip != NULL)
-		state->windows.push_back(tooltip);
+	if (tooltip != NULL) {
+		entry.tool = tool;
+		entry.tooltip = tooltip;
+		state->windows.push_back(entry);
+	}
 }
 
 static HWND addTooltipToChild(HWND parent, HWND childAfter,
@@ -119,6 +128,22 @@ void uiprivAddTooltipToHWND(uiControl *c, HWND hwnd)
 		addTooltipToControl(hwnd, state);
 }
 
+void uiprivRemoveTooltipFromHWND(uiControl *c, HWND hwnd)
+{
+	tooltipState *state;
+	size_t i;
+
+	state = (tooltipState *) uiWindowsControl(c)->tooltips;
+	if (state == NULL)
+		return;
+	for (i = 0; i < state->windows.size(); i++)
+		if (state->windows[i].tool == hwnd) {
+			uiWindowsEnsureDestroyWindow(state->windows[i].tooltip);
+			state->windows.erase(state->windows.begin() + i);
+			return;
+		}
+}
+
 void uiprivDestroyTooltip(uiControl *c)
 {
 	tooltipState *state;
@@ -128,8 +153,8 @@ void uiprivDestroyTooltip(uiControl *c)
 		return;
 	uiWindowsControl(c)->tooltips = NULL;
 
-	for (HWND tooltip : state->windows)
-		uiWindowsEnsureDestroyWindow(tooltip);
+	for (const struct tooltipWindow &entry : state->windows)
+		uiWindowsEnsureDestroyWindow(entry.tooltip);
 	uiprivFree(state->text);
 	delete state;
 }
