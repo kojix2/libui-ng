@@ -254,6 +254,8 @@ void uiDrawPathEnd(uiDrawPath *p)
 {
 	HRESULT hr;
 
+	if (p->sink == NULL)
+		return;
 	if (p->inFigure) {
 		p->sink->EndFigure(D2D1_FIGURE_END_OPEN);
 		// needed for uiDrawFreePath()

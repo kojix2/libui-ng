@@ -8,6 +8,24 @@
 #include <string.h>
 #include "../../ui.h"
 
+static void endingPathTwiceIsSafe(void **state)
+{
+	uiInitOptions options = {0};
+	uiDrawPath *path;
+
+	assert_null(uiInit(&options));
+	path = uiDrawNewPath(uiDrawFillModeWinding);
+	assert_non_null(path);
+	uiDrawPathNewFigure(path, 0, 0);
+	uiDrawPathLineTo(path, 1, 1);
+	uiDrawPathEnd(path);
+	assert_true(uiDrawPathEnded(path));
+	uiDrawPathEnd(path);
+	assert_true(uiDrawPathEnded(path));
+	uiDrawFreePath(path);
+	uiUninit();
+}
+
 static void initCanRetryAfterCOMModeConflict(void **state)
 {
 	uiInitOptions options = {0};
@@ -858,6 +876,7 @@ static void unwrappedAlignedTextIsVisible(void **data)
 int main(void)
 {
 	const struct CMUnitTest tests[] = {
+		cmocka_unit_test(endingPathTwiceIsSafe),
 		cmocka_unit_test(initCanRetryAfterCOMModeConflict),
 #ifdef _UI_STATIC
 		cmocka_unit_test(nestedModalPreservesWindowState),
