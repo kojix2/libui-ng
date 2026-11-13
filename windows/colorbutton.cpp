@@ -41,7 +41,8 @@ static BOOL onWM_COMMAND(uiControl *c, HWND hwnd, WORD code, LRESULT *lResult)
 	rgba.g = b->g;
 	rgba.b = b->b;
 	rgba.a = b->a;
-	if (showColorDialog(parent, &rgba)) {
+	if (showColorDialog(parent, &rgba) &&
+		!uiprivControlDestroyPending(uiControl(b))) {
 		b->r = rgba.r;
 		b->g = rgba.g;
 		b->b = rgba.b;

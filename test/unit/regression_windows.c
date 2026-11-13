@@ -6,7 +6,108 @@
 #include <objbase.h>
 #include <stdlib.h>
 #include <string.h>
+#include <wchar.h>
 #include "../../ui.h"
+
+struct dialogButtonState {
+	uiWindow *window;
+	int destroy;
+	int destroyRequested;
+	int changed;
+	int closed;
+	int timedOut;
+};
+
+static struct dialogButtonState *dialogButtonWatch;
+
+static BOOL CALLBACK acceptButtonDialog(HWND hwnd, LPARAM data)
+{
+	struct dialogButtonState *s = (struct dialogButtonState *) data;
+	WCHAR name[32];
+
+	if (GetClassNameW(hwnd, name, 32) && wcscmp(name, L"#32770") == 0) {
+		s->closed++;
+		PostMessageW(hwnd, WM_COMMAND, IDOK, 0);
+	}
+	return TRUE;
+}
+
+static VOID CALLBACK dialogButtonTimeout(HWND hwnd, UINT message, UINT_PTR id,
+	DWORD time)
+{
+	if (dialogButtonWatch == NULL)
+		return;
+	dialogButtonWatch->timedOut = 1;
+	EnumThreadWindows(GetCurrentThreadId(), acceptButtonDialog,
+		(LPARAM) dialogButtonWatch);
+	if (dialogButtonWatch->closed == 0)
+		PostQuitMessage(1);
+}
+
+static void finishButtonDialog(void *data)
+{
+	struct dialogButtonState *s = data;
+
+	if (s->destroy) {
+		uiControlDestroy(uiControl(s->window));
+		s->destroyRequested = 1;
+	}
+	EnumThreadWindows(GetCurrentThreadId(), acceptButtonDialog, (LPARAM) s);
+}
+
+static void colorDialogChanged(uiColorButton *button, void *data)
+{
+	((struct dialogButtonState *) data)->changed++;
+}
+
+static void fontDialogChanged(uiFontButton *button, void *data)
+{
+	((struct dialogButtonState *) data)->changed++;
+}
+
+static void dialogButtonsIgnorePendingDestruction(void **state)
+{
+	uiInitOptions options = {0};
+	struct dialogButtonState s;
+	uiControl *button;
+	int font, destroy, changed, closed, timedOut;
+	UINT_PTR timer;
+
+	for (font = 0; font < 2; font++)
+		for (destroy = 0; destroy < 2; destroy++) {
+			memset(&s, 0, sizeof s);
+			s.destroy = destroy;
+			assert_null(uiInit(&options));
+			s.window = uiNewWindow("dialog pending destruction", 200, 100, 0);
+			if (font) {
+				uiFontButton *b = uiNewFontButton();
+				uiFontButtonOnChanged(b, fontDialogChanged, &s);
+				button = uiControl(b);
+			} else {
+				uiColorButton *b = uiNewColorButton();
+				uiColorButtonOnChanged(b, colorDialogChanged, &s);
+				button = uiControl(b);
+			}
+			uiWindowSetChild(s.window, button);
+			uiQueueMain(finishButtonDialog, &s);
+			dialogButtonWatch = &s;
+			timer = SetTimer(NULL, 0, 5000, dialogButtonTimeout);
+			assert_true(timer != 0);
+			SendMessageW((HWND) uiControlHandle(button), BM_CLICK, 0, 0);
+			KillTimer(NULL, timer);
+			dialogButtonWatch = NULL;
+			changed = s.changed;
+			closed = s.closed;
+			timedOut = s.timedOut;
+			if (!s.destroyRequested)
+				uiControlDestroy(uiControl(s.window));
+			uiUninit();
+			assert_false(timedOut);
+			assert_int_equal(s.destroyRequested, destroy);
+			assert_int_equal(closed, 1);
+			assert_int_equal(changed, destroy ? 0 : 1);
+		}
+}
 
 static void endingPathTwiceIsSafe(void **state)
 {
@@ -876,6 +977,7 @@ static void unwrappedAlignedTextIsVisible(void **data)
 int main(void)
 {
 	const struct CMUnitTest tests[] = {
+		cmocka_unit_test(dialogButtonsIgnorePendingDestruction),
 		cmocka_unit_test(endingPathTwiceIsSafe),
 		cmocka_unit_test(initCanRetryAfterCOMModeConflict),
 #ifdef _UI_STATIC

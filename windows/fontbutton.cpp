@@ -45,9 +45,11 @@ static BOOL onWM_COMMAND(uiControl *c, HWND hwnd, WORD code, LRESULT *lResult)
 		return TRUE;
 	}
 	parent = parentToplevel(b->hwnd);
-	if (uiprivShowFontDialog(parent, &(b->params))) {
+	if (uiprivShowFontDialog(parent, &(b->params)) &&
+		!uiprivControlDestroyPending(uiControl(b))) {
 		updateFontButtonLabel(b);
-		(*(b->onChanged))(b, b->onChangedData);
+		if (!uiprivControlDestroyPending(uiControl(b)))
+			(*(b->onChanged))(b, b->onChangedData);
 	}
 
 	*lResult = 0;
