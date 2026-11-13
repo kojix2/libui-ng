@@ -69,6 +69,8 @@ int main(void)
 	uiImageView *imageView;
 	uiLabel *label;
 	const char *error;
+	HINSTANCE imageViewInstance;
+	WNDCLASSW imageViewClass;
 	int ok;
 
 	error = uiInit(&options);
@@ -80,9 +82,24 @@ int main(void)
 	uiControlSetTooltip(uiControl(label), "label tooltip");
 	uiControlDestroy(uiControl(label));
 	imageView = uiNewImageView();
+	imageViewInstance = (HINSTANCE) GetWindowLongPtrW(
+		(HWND) uiControlHandle(uiControl(imageView)), GWLP_HINSTANCE);
 	uiControlSetTooltip(uiControl(imageView), "image view tooltip");
 	uiControlDestroy(uiControl(imageView));
 	ok = spinboxTooltipSurvivesRelayout();
 	uiUninit();
+	if (GetClassInfoW(imageViewInstance, L"libui_uiImageViewClass", &imageViewClass))
+		ok = 0;
+	// A later initialization must register and release the class again.
+	error = uiInit(&options);
+	if (error != NULL) {
+		uiFreeInitError(error);
+		return 1;
+	}
+	imageView = uiNewImageView();
+	uiControlDestroy(uiControl(imageView));
+	uiUninit();
+	if (GetClassInfoW(imageViewInstance, L"libui_uiImageViewClass", &imageViewClass))
+		ok = 0;
 	return ok ? 0 : 1;
 }
