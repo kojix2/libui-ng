@@ -142,19 +142,28 @@ jobs:
             -v "$GITHUB_WORKSPACE:/workspace" -w /workspace \
             ${{ matrix.arch == 'armv7' && 'debian:12-slim' || 'i386/debian:12-slim' }} \
             bash -c "set -e && \
-              apt-get update --error-on=any -qq && \
-              DEBIAN_FRONTEND=noninteractive apt-get install -y cmake ninja-build gcc g++ libgtk-3-dev libcmocka-dev xvfb && \
+              echo '::group::Install dependencies' && \
+              time apt-get update --error-on=any -qq && \
+              time env DEBIAN_FRONTEND=noninteractive apt-get install -y cmake ninja-build gcc g++ libgtk-3-dev libcmocka-dev xvfb && \
+              echo '::endgroup::' && \
+              echo '::group::Configure and build tests' && \
               cmake -S . -B builddir-${{ matrix.arch }}-${{ matrix.libtype }}-${{ matrix.buildlabel }} -G Ninja \
                 -DCMAKE_BUILD_TYPE=${{ matrix.buildtype }} \
                 -DBUILD_SHARED_LIBS=${{ matrix.libtype == 'shared' && 'ON' || 'OFF' }} \
+                -DLIBUI_BUILD_EXAMPLES=${{ matrix.arch == 'armv7' && 'OFF' || 'ON' }} \
                 -DLIBUI_FETCH_TEST_DEPS=ON && \
-              cmake --build builddir-${{ matrix.arch }}-${{ matrix.libtype }}-${{ matrix.buildlabel }} --verbose && \
-              xvfb-run -a ctest --test-dir builddir-${{ matrix.arch }}-${{ matrix.libtype }}-${{ matrix.buildlabel }} --output-on-failure --timeout 180 && \
+              time cmake --build builddir-${{ matrix.arch }}-${{ matrix.libtype }}-${{ matrix.buildlabel }} --verbose && \
+              echo '::endgroup::' && \
+              echo '::group::Run CTest' && \
+              time xvfb-run -a ctest --test-dir builddir-${{ matrix.arch }}-${{ matrix.libtype }}-${{ matrix.buildlabel }} --output-on-failure --timeout 180 && \
+              echo '::endgroup::' && \
+              echo '::group::Build and run consumer' && \
               cmake -S test/cmake/consumer -B consumer-add-${{ matrix.arch }}-${{ matrix.libtype }}-${{ matrix.buildlabel }} -G Ninja \
                 -DLIBUI_SOURCE_MODE=add_subdirectory -DLIBUI_SOURCE_DIR=/workspace \
                 -DBUILD_SHARED_LIBS=${{ matrix.libtype == 'shared' && 'ON' || 'OFF' }} && \
-              cmake --build consumer-add-${{ matrix.arch }}-${{ matrix.libtype }}-${{ matrix.buildlabel }} && \
-              ./consumer-add-${{ matrix.arch }}-${{ matrix.libtype }}-${{ matrix.buildlabel }}/consumer"
+              time cmake --build consumer-add-${{ matrix.arch }}-${{ matrix.libtype }}-${{ matrix.buildlabel }} && \
+              ./consumer-add-${{ matrix.arch }}-${{ matrix.libtype }}-${{ matrix.buildlabel }}/consumer && \
+              echo '::endgroup::'"
 
   cmake-windows:
     strategy:
