@@ -109,9 +109,15 @@ static HRESULT openEditControl(uiTable *t, int iItem, int iSubItem, uiprivTableC
 	hr = uiprivTableFinishEditingText(t);
 	if (hr != S_OK)
 		return hr;
+	if (uiprivControlDestroyPending(uiControl(t)))
+		return S_OK;
 
 	// the real list view creates the edit control with the string
 	value = uiprivTableModelCellValue(t->model, iItem, p->textModelColumn);
+	if (uiprivControlDestroyPending(uiControl(t))) {
+		uiFreeTableValue(value);
+		return S_OK;
+	}
 	wstr = toUTF16(uiTableValueString(value));
 	uiFreeTableValue(value);
 	// TODO propagate WS_EX_RTLREADING from the list view
@@ -253,6 +259,8 @@ HRESULT uiprivTableHandleNM_CLICK(uiTable *t, NMITEMACTIVATE *nm, LRESULT *lResu
 
 	if (!uiprivTableModelCellEditable(t->model, ht.iItem, editableColumn))
 		goto done;
+	if (uiprivControlDestroyPending(uiControl(t)))
+		goto done;
 
 	if (text) {
 		hr = openEditControl(t, ht.iItem, ht.iSubItem, p);
@@ -264,6 +272,8 @@ HRESULT uiprivTableHandleNM_CLICK(uiTable *t, NMITEMACTIVATE *nm, LRESULT *lResu
 		value = uiprivTableModelCellValue(t->model, ht.iItem, modelColumn);
 		checked = uiTableValueInt(value);
 		uiFreeTableValue(value);
+		if (uiprivControlDestroyPending(uiControl(t)))
+			goto done;
 		value = uiNewTableValueInt(!checked);
 		uiprivTableModelSetCellValue(t->model, ht.iItem, modelColumn, value);
 		uiFreeTableValue(value);

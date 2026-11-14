@@ -496,6 +496,16 @@ static void headerClickStopsAfterSetterDestroysWindow(void **data)
 	assert_int_equal(s->headerCalls, 0);
 }
 
+static void nextEditStopsAfterSetterDestroysWindow(void **data)
+{
+	struct tableState *s = *data;
+
+	assert_non_null(openTableEditor(s, 0));
+	s->destroyWindowInSetter = 1;
+	assert_null(openTableEditor(s, 1));
+	assert_int_equal(s->setterCalls, 1);
+}
+
 static void editFollowsInsertedRow(void **data)
 {
 	struct tableState *s = *data;
@@ -1045,6 +1055,7 @@ int main(void)
 {
 	const struct CMUnitTest tests[] = {
 		cmocka_unit_test_setup_teardown(headerClickStopsAfterSetterDestroysWindow, tableSetup, tableTeardown),
+		cmocka_unit_test_setup_teardown(nextEditStopsAfterSetterDestroysWindow, tableSetup, tableTeardown),
 		cmocka_unit_test(dialogButtonsIgnorePendingDestruction),
 		cmocka_unit_test(endingPathTwiceIsSafe),
 		cmocka_unit_test(initCanRetryAfterCOMModeConflict),
