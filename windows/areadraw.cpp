@@ -79,16 +79,30 @@ static void onWM_PAINT(uiArea *a)
 	HDC dc;
 	HRESULT hr;
 
+	// A Draw callback can run a nested message loop. Do not enter BeginDraw
+	// again on the same render target; repaint after the outer draw finishes.
+	if (a->painting) {
+		a->repaintAfterDraw = TRUE;
+		if (ValidateRect(a->hwnd, NULL) == 0)
+			logLastError(L"error validating nested area paint");
+		return;
+	}
 	if (!uiprivUserCallbackEnter(uiControl(a))) {
 		if (ValidateRect(a->hwnd, NULL) == 0)
 			logLastError(L"error validating rect");
 		return;
 	}
+	a->painting = TRUE;
 	// BeginPaint validates the current update region before Draw can request
 	// another paint. The HDC is not used by the Direct2D HWND render target.
 	dc = BeginPaint(a->hwnd, &ps);
 	if (dc == NULL) {
 		logLastError(L"BeginPaint() for uiArea");
+		a->painting = FALSE;
+		if (a->repaintAfterDraw) {
+			a->repaintAfterDraw = FALSE;
+			invalidateRect(a->hwnd, NULL, FALSE);
+		}
 		uiprivUserCallbackLeave();
 		return;
 	}
@@ -96,6 +110,7 @@ static void onWM_PAINT(uiArea *a)
 	hr = doPaint(a, a->rt, &clip);
 	if (EndPaint(a->hwnd, &ps) == 0)
 		logLastError(L"EndPaint() for uiArea");
+	a->painting = FALSE;
 	switch (hr) {
 	case S_OK:
 		break;
@@ -107,6 +122,10 @@ static void onWM_PAINT(uiArea *a)
 		break;
 	default:
 		logHRESULT(L"error painting", hr);
+	}
+	if (a->repaintAfterDraw) {
+		a->repaintAfterDraw = FALSE;
+		invalidateRect(a->hwnd, NULL, FALSE);
 	}
 	uiprivUserCallbackLeave();
 }

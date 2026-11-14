@@ -23,6 +23,8 @@ struct uiArea {
 
 	BOOL inside;
 	BOOL tracking;
+	BOOL painting;
+	BOOL repaintAfterDraw;
 
 	ID2D1HwndRenderTarget *rt;
 };

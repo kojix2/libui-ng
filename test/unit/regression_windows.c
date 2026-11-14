@@ -760,6 +760,9 @@ struct areaState {
 	uiArea *area;
 	int drawCalls;
 	int queueInDraw;
+	int nestedPaint;
+	int drawDepth;
+	int maxDrawDepth;
 	int leaveCalls;
 	int keyCalls;
 	int destroyCallbackRan;
@@ -772,6 +775,16 @@ static void areaDraw(uiAreaHandler *handler, uiArea *area, uiAreaDrawParams *par
 {
 	struct areaState *s = (struct areaState *) handler;
 	s->drawCalls++;
+	if (s->nestedPaint) {
+		s->drawDepth++;
+		if (s->drawDepth > s->maxDrawDepth)
+			s->maxDrawDepth = s->drawDepth;
+		if (s->drawCalls == 1) {
+			uiAreaQueueRedrawAll(area);
+			UpdateWindow((HWND) uiControlHandle(uiControl(area)));
+		}
+		s->drawDepth--;
+	}
 	if (s->queueInDraw && s->drawCalls == 1)
 		uiAreaQueueRedrawAll(area);
 	if (s->clipTest) {
@@ -920,6 +933,23 @@ static void redrawQueuedInsideDrawSurvives(void **data)
 	assert_true(GetUpdateRect(areaHWND(s), &update, FALSE));
 	UpdateWindow(areaHWND(s));
 	assert_int_equal(s->drawCalls, 2);
+}
+
+static void nestedPaintWaitsForOuterDraw(void **data)
+{
+	struct areaState *s = *data;
+	RECT update;
+
+	s->drawCalls = 0;
+	s->nestedPaint = 1;
+	uiAreaQueueRedrawAll(s->area);
+	UpdateWindow(areaHWND(s));
+	assert_int_equal(s->drawCalls, 1);
+	assert_int_equal(s->maxDrawDepth, 1);
+	assert_true(GetUpdateRect(areaHWND(s), &update, FALSE));
+	UpdateWindow(areaHWND(s));
+	assert_int_equal(s->drawCalls, 2);
+	assert_int_equal(s->maxDrawDepth, 1);
 }
 
 static void largeScrollCoordinatesClamp(void **data)
@@ -1081,6 +1111,7 @@ int main(void)
 		cmocka_unit_test_setup_teardown(mouseTrackingResumesAfterClick, areaSetup, areaTeardown),
 		cmocka_unit_test_setup_teardown(horizontalWheelMovesRight, areaSetup, areaTeardown),
 		cmocka_unit_test_setup_teardown(redrawQueuedInsideDrawSurvives, areaSetup, areaTeardown),
+		cmocka_unit_test_setup_teardown(nestedPaintWaitsForOuterDraw, areaSetup, areaTeardown),
 		cmocka_unit_test_setup_teardown(largeScrollCoordinatesClamp, areaSetup, areaTeardown),
 		cmocka_unit_test_setup_teardown(pendingDestroySuppressesKey, areaSetup, areaTeardown),
 		cmocka_unit_test_setup_teardown(scrollbarVisibilityIsHistoryIndependent, areaSetup, areaTeardown),
