@@ -3,7 +3,7 @@
 ## local build
 - install doxygen: [Doxygen Manual: Installation](https://www.doxygen.nl/manual/install.html)  
     Note: you need v1.9.2+ Or theme will not work.
-- clone this repo: `git clone https://github.com/libui-ng/libui-ng.git`
+- clone this repo: `git clone https://github.com/kojix2/libui-ng.git`
 - switch dir: `cd libui-ng`
 - Clone doxygen theme:
     Or you can follow [doxygen-awesome-css](https://github.com/jothepro/doxygen-awesome-css#installation) installation tutorial.  
@@ -13,7 +13,10 @@
     git clone https://github.com/jothepro/doxygen-awesome-css
     cd doxygen-awesome-css/
     git checkout v1.6.1
+    cd ../..
     ```
+
+Run the following commands from the repository root.
 
 **windows**
 - Open `Doxywizard`

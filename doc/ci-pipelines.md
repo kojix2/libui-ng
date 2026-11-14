@@ -13,7 +13,7 @@ Primary build and release automation is defined in `.github/workflows/cmake.yml`
 The build workflow runs on:
 
 - Pushes to `main`, `pre-build`, and `dev`
-- Tags matching `commit-*`
+- Tags matching `commit-*` or `v*`
 - Pull requests targeting `main`
 - Manual `workflow_dispatch`
 
@@ -35,7 +35,7 @@ covers `FetchContent`.
 
 ### Ubuntu
 
-- Runners: `ubuntu-latest`, `ubuntu-24.04-arm`
+- Runners: `ubuntu-latest`, `ubuntu-26.04-arm`
 - Reported architectures: `x64`, `arm64`
 - Library types: `static`, `shared`
 - Build types: `Release`, `Debug`
