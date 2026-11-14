@@ -107,6 +107,8 @@ static uiEntry *finishNewEntry(DWORD style)
 		style | ES_AUTOHSCROLL | ES_LEFT | ES_NOHIDESEL | WS_TABSTOP,
 		hInstance, NULL,
 		TRUE);
+	// Remove the edit control's default limit on user-entered text.
+	SendMessageW(e->hwnd, EM_SETLIMITTEXT, 0, 0);
 
 	uiWindowsRegisterWM_COMMANDHandler(e->hwnd, onWM_COMMAND, uiControl(e));
 	uiEntryOnChanged(e, defaultOnChanged, NULL);

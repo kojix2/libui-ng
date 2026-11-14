@@ -1,4 +1,30 @@
 #include "entry_test.h"
+#ifdef _WIN32
+#include <windows.h>
+#include <string.h>
+#endif
+
+#ifdef _WIN32
+static void entryLongUserInput(void **state)
+{
+	uiEntry **e = uiEntryPtrFromState(state);
+	struct state *s = *state;
+	WCHAR input[40001];
+	char *actual;
+	size_t length;
+	int i;
+
+	uiWindowSetChild(s->w, uiControl(*e));
+	for (i = 0; i < 40000; i++)
+		input[i] = L'x';
+	input[40000] = 0;
+	SendMessageW((HWND) uiControlHandle(uiControl(*e)), EM_REPLACESEL, TRUE, (LPARAM) input);
+	actual = uiEntryText(*e);
+	length = strlen(actual);
+	uiFreeText(actual);
+	assert_int_equal(length, 40000);
+}
+#endif
 
 static void entryNew(void **state)
 {
@@ -119,6 +145,14 @@ int entryRunUnitTests(void)
 		entryUnitTests(entryTextDefault),
 		entryUnitTests(entrySetText),
 		entryUnitTests(entrySetTextNoCallback),
+#ifdef _WIN32
+		UNIT_TEST_NAMED("uiEntry/entryLongUserInput", entryLongUserInput,
+			entryTestSetup, unitTestTeardownHidden),
+		UNIT_TEST_NAMED("uiPasswordEntry/entryLongUserInput", entryLongUserInput,
+			passwordEntryTestSetup, unitTestTeardownHidden),
+		UNIT_TEST_NAMED("uiSearchEntry/entryLongUserInput", entryLongUserInput,
+			searchEntryTestSetup, unitTestTeardownHidden),
+#endif
 #if !defined(_WIN32) && !defined(__APPLE__)
 		searchEntryUnitTest(searchEntrySetTextDoesNotNotifyLater),
 		searchEntryUnitTest(searchEntrySetterCancelsPendingUserChange),
