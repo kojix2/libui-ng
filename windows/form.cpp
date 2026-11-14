@@ -141,8 +141,10 @@ static void uiFormSyncEnableState(uiWindowsControl *c, int enabled)
 
 	if (uiWindowsShouldStopSyncEnableState(uiWindowsControl(f), enabled))
 		return;
-	for (const struct formChild &fc : *(f->controls))
+	for (const struct formChild &fc : *(f->controls)) {
+		EnableWindow(fc.label, enabled);
 		uiWindowsControlSyncEnableState(uiWindowsControl(fc.c), enabled);
+	}
 }
 
 uiWindowsControlDefaultSetParentHWND(uiForm)
@@ -246,6 +248,7 @@ void uiFormAppend(uiForm *f, const char *label, uiControl *c, int stretchy)
 		TRUE);
 	uiprivFree(wlabel);
 	uiWindowsEnsureSetParentHWND(fc.label, f->hwnd);
+	EnableWindow(fc.label, uiControlEnabledToUser(uiControl(f)));
 	fc.stretchy = stretchy;
 	uiControlSetParent(fc.c, uiControl(f));
 	uiWindowsControlSetParentHWND(uiWindowsControl(fc.c), f->hwnd);

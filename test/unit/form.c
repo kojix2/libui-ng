@@ -1,4 +1,7 @@
 #include "unit.h"
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 #define uiFormFromState(s) ((uiForm *) (((struct state *) *(s))->c))
 
@@ -78,6 +81,41 @@ static void formChildMinimumSizeCanChangeAfterAppend(void **state)
 	uiControlDestroy(child);
 }
 
+#ifdef _WIN32
+static void formLabelsFollowEnabledState(void **state)
+{
+	struct state *s = *state;
+	uiForm *form = uiFormFromState(state);
+	uiBox *box;
+	HWND hwnd, firstLabel, secondLabel;
+
+	box = uiNewVerticalBox();
+	uiBoxAppend(box, uiControl(form), 1);
+	s->c = uiControl(box);
+	uiWindowSetChild(s->w, s->c);
+	uiFormAppend(form, "First", uiControl(uiNewButton("first")), 0);
+	hwnd = (HWND) uiControlHandle(uiControl(form));
+	firstLabel = GetDlgItem(hwnd, 100);
+	assert_non_null(firstLabel);
+	assert_true(IsWindowEnabled(firstLabel));
+	uiControlDisable(uiControl(form));
+	assert_false(IsWindowEnabled(firstLabel));
+	uiFormAppend(form, "Second", uiControl(uiNewButton("second")), 0);
+	secondLabel = GetDlgItem(hwnd, 102);
+	assert_non_null(secondLabel);
+	assert_false(IsWindowEnabled(secondLabel));
+	uiControlEnable(uiControl(form));
+	assert_true(IsWindowEnabled(firstLabel));
+	assert_true(IsWindowEnabled(secondLabel));
+	uiControlDisable(uiControl(box));
+	assert_false(IsWindowEnabled(firstLabel));
+	assert_false(IsWindowEnabled(secondLabel));
+	uiControlEnable(uiControl(box));
+	assert_true(IsWindowEnabled(firstLabel));
+	assert_true(IsWindowEnabled(secondLabel));
+}
+#endif
+
 #define formUnitTest(f) cmocka_unit_test_setup_teardown((f), \
 	formSetup, unitTestTeardown)
 
@@ -89,6 +127,10 @@ int formRunUnitTests(void)
 		formUnitTest(formAppendAndDelete),
 		formUnitTest(formChildVisibilityDoesNotCrash),
 		formUnitTest(formChildMinimumSizeCanChangeAfterAppend),
+#ifdef _WIN32
+		cmocka_unit_test_setup_teardown(formLabelsFollowEnabledState,
+			formSetup, unitTestTeardownHidden),
+#endif
 	};
 
 	return cmocka_run_group_tests_name("uiForm", tests,
