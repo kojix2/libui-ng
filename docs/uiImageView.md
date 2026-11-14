@@ -38,7 +38,7 @@
 - Final size is determined by the parent layout.
 - Preferred size when no image is set: Minimum size constraints apply.
 - Minimum size constraints:
-  - macOS: No minimum size constraint (fully flexible via Auto Layout)
+  - macOS: 16x16 default minimum size; explicit minimum size overrides are supported
   - Windows: 16x16 minimum size (supports icon usage)
   - Linux: 16x16 minimum size (supports icon usage)
 - Images can be displayed smaller than their original size on all platforms.
