@@ -361,6 +361,8 @@ struct tableState {
 	int setterRow;
 	int setterColumn;
 	int resizeInSetter;
+	int destroyWindowInSetter;
+	int headerCalls;
 };
 
 static int tableNumColumns(uiTableModelHandler *mh, uiTableModel *m)
@@ -400,6 +402,8 @@ static void tableSetCellValue(uiTableModelHandler *mh, uiTableModel *m,
 		s->checked[row] = uiTableValueInt(value);
 	if (s->resizeInSetter)
 		uiTableColumnSetWidth(s->table, 0, 170);
+	if (s->destroyWindowInSetter)
+		uiControlDestroy(uiControl(s->window));
 }
 
 static int tableSetup(void **data)
@@ -464,6 +468,32 @@ static HWND openTableEditor(struct tableState *s, int row)
 	SendMessageW((HWND) uiControlHandle(uiControl(s->window)),
 		WM_NOTIFY, nm.hdr.idFrom, (LPARAM) &nm);
 	return FindWindowExW(table, NULL, L"Edit", NULL);
+}
+
+static void countTableHeaderClick(uiTable *t, int column, void *data)
+{
+	struct tableState *s = data;
+
+	s->headerCalls++;
+}
+
+static void headerClickStopsAfterSetterDestroysWindow(void **data)
+{
+	struct tableState *s = *data;
+	HWND table = tableHWND(s);
+	NMLISTVIEW nm = {0};
+
+	assert_non_null(openTableEditor(s, 0));
+	uiTableHeaderOnClicked(s->table, countTableHeaderClick, s);
+	s->destroyWindowInSetter = 1;
+	nm.hdr.hwndFrom = table;
+	nm.hdr.idFrom = GetDlgCtrlID(table);
+	nm.hdr.code = LVN_COLUMNCLICK;
+	nm.iSubItem = 0;
+	SendMessageW((HWND) uiControlHandle(uiControl(s->window)),
+		WM_NOTIFY, nm.hdr.idFrom, (LPARAM) &nm);
+	assert_int_equal(s->setterCalls, 1);
+	assert_int_equal(s->headerCalls, 0);
 }
 
 static void editFollowsInsertedRow(void **data)
@@ -1014,6 +1044,7 @@ static void unwrappedAlignedTextIsVisible(void **data)
 int main(void)
 {
 	const struct CMUnitTest tests[] = {
+		cmocka_unit_test_setup_teardown(headerClickStopsAfterSetterDestroysWindow, tableSetup, tableTeardown),
 		cmocka_unit_test(dialogButtonsIgnorePendingDestruction),
 		cmocka_unit_test(endingPathTwiceIsSafe),
 		cmocka_unit_test(initCanRetryAfterCOMModeConflict),

@@ -679,6 +679,8 @@ static BOOL handleColumnClick(uiTable *t, NMHDR *nmhdr)
 		// TODO decide how a commit failure should affect this notification
 		return FALSE;
 	}
+	if (uiprivControlDestroyPending(uiControl(t)))
+		return TRUE;
 	t->headerOnClicked(t, nm->iSubItem, t->headerOnClickedData);
 	return TRUE;
 }
