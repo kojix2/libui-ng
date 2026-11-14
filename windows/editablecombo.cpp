@@ -115,6 +115,8 @@ uiEditableCombobox *uiNewEditableCombobox(void)
 		CBS_DROPDOWN | CBS_AUTOHSCROLL | WS_TABSTOP | WS_VSCROLL,
 		hInstance, NULL,
 		TRUE);
+	// Remove the edit control's default limit on user-entered text.
+	SendMessageW(c->hwnd, CB_LIMITTEXT, 0, 0);
 
 	uiWindowsRegisterWM_COMMANDHandler(c->hwnd, onWM_COMMAND, uiControl(c));
 	uiEditableComboboxOnChanged(c, defaultOnChanged, NULL);
