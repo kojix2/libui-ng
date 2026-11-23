@@ -52,7 +52,7 @@ static void uiTabDestroy(uiControl *c)
 	}
 	g_array_free(t->pages, TRUE);
 	// and free ourselves
-	g_object_unref(t->widget);
+	uiprivUnixControlFreeWidget(t->widget);
 	uiFreeControl(uiControl(t));
 }
 

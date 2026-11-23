@@ -31,11 +31,19 @@ _UI_EXTERN GtkWidget *uiprivUnixControlPrepareWidget(uiUnixControl *);
 _UI_EXTERN void uiprivUnixControlShow(uiUnixControl *);
 _UI_EXTERN void uiprivUnixControlHide(uiUnixControl *);
 
+// A widget destroyed before its first insertion may still be floating.
+// Sink only that reference; sinking an owned widget would add a reference.
+static inline void uiprivUnixControlFreeWidget(GtkWidget *widget)
+{
+	if (g_object_is_floating(widget))
+		g_object_ref_sink(widget);
+	g_object_unref(widget);
+}
+
 #define uiUnixControlDefaultDestroy(type) \
 	static void type ## Destroy(uiControl *c) \
 	{ \
-		/* TODO is this safe on floating refs? */ \
-		g_object_unref(type(c)->widget); \
+		uiprivUnixControlFreeWidget(type(c)->widget); \
 		uiFreeControl(c); \
 	}
 #define uiUnixControlDefaultHandle(type) \

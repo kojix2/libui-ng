@@ -67,7 +67,7 @@ static void uiBoxDestroy(uiControl *c)
 	}
 	g_array_free(b->controls, TRUE);
 	// and then ourselves
-	g_object_unref(b->widget);
+	uiprivUnixControlFreeWidget(b->widget);
 	uiFreeControl(uiControl(b));
 }
 

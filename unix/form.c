@@ -95,7 +95,7 @@ static void uiFormDestroy(uiControl *c)
 	}
 	g_array_free(f->children, TRUE);
 	// and then ourselves
-	g_object_unref(f->widget);
+	uiprivUnixControlFreeWidget(f->widget);
 	uiFreeControl(uiControl(f));
 }
 

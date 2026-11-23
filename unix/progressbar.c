@@ -21,7 +21,7 @@ static void uiProgressBarDestroy(uiControl *c)
 	// be sure to stop the timeout now
 	if (p->indeterminate)
 		g_source_remove(p->pulser);
-	g_object_unref(p->widget);
+	uiprivUnixControlFreeWidget(p->widget);
 	uiFreeControl(uiControl(p));
 }
 

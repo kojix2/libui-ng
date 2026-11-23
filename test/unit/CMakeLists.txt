@@ -73,6 +73,10 @@ if(UNIX AND NOT APPLE)
 	target_link_libraries(alloc-unix PRIVATE cmocka::cmocka PkgConfig::GTK3)
 	target_compile_definitions(alloc-unix PRIVATE _POSIX_C_SOURCE=200809L)
 
+	libui_add_test(control-lifetime-gtk control_lifetime_gtk.c)
+	set_tests_properties(control-lifetime-gtk PROPERTIES LABELS "contract;backend;gui;gtk;${unit_linkage}")
+	target_link_libraries(control-lifetime-gtk PRIVATE libui::ui)
+
 	libui_add_test(minimumsize-gtk minimumsize_gtk.c)
 	set_tests_properties(minimumsize-gtk PROPERTIES LABELS "contract;backend;gui;gtk;${unit_linkage}")
 	target_link_libraries(minimumsize-gtk PRIVATE libui::ui)

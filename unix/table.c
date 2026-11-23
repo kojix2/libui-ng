@@ -858,7 +858,7 @@ static void uiTableDestroy(uiControl *c)
 	g_hash_table_destroy(t->indeterminatePositions);
 	if (t->lastSelectedRows != NULL)
 		freeSelectedRows(t->lastSelectedRows);
-	g_object_unref(t->widget);
+	uiprivUnixControlFreeWidget(t->widget);
 	uiFreeControl(uiControl(t));
 }
 

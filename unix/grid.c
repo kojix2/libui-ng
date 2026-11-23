@@ -41,7 +41,7 @@ static void uiGridDestroy(uiControl *c)
 	}
 	g_array_free(g->children, TRUE);
 	// and then ourselves
-	g_object_unref(g->widget);
+	uiprivUnixControlFreeWidget(g->widget);
 	uiFreeControl(uiControl(g));
 }
 

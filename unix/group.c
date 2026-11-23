@@ -22,7 +22,7 @@ static void uiGroupDestroy(uiControl *c)
 
 	if (g->child != NULL)
 		uiprivChildDestroy(g->child);
-	g_object_unref(g->widget);
+	uiprivUnixControlFreeWidget(g->widget);
 	uiFreeControl(uiControl(g));
 }
 

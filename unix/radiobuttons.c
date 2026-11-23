@@ -48,7 +48,7 @@ static void uiRadioButtonsDestroy(uiControl *c)
 	}
 	g_ptr_array_free(r->buttons, TRUE);
 	// and free ourselves
-	g_object_unref(r->widget);
+	uiprivUnixControlFreeWidget(r->widget);
 	uiFreeControl(uiControl(r));
 }
 

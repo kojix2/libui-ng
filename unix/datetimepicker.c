@@ -333,7 +333,7 @@ static void uiDateTimePickerDestroy(uiControl *c)
 		g_signal_handler_disconnect(d->d, d->changedHandler);
 		d->changedHandler = 0;
 	}
-	g_object_unref(d->widget);
+	uiprivUnixControlFreeWidget(d->widget);
 	uiFreeControl(uiControl(d));
 }
 

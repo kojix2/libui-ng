@@ -553,7 +553,7 @@ static void uiAreaDestroy(uiControl *c)
 
 	if (a->pendingScrollIdle != 0)
 		g_source_remove(a->pendingScrollIdle);
-	g_object_unref(a->widget);
+	uiprivUnixControlFreeWidget(a->widget);
 	uiFreeControl(c);
 }
 
